@@ -30,7 +30,7 @@ Native Android app for privacy-focused contact card exchange.
 
 - Android SDK: Compile 35, Min 24, Target 35
 - Java 17
-- Rust toolchain (for native library)
+- Rust toolchain (for building native library from source)
 
 ## Project Structure
 
@@ -38,10 +38,57 @@ Native Android app for privacy-focused contact card exchange.
 app/src/main/kotlin/com/vauchi/
 ├── MainActivity.kt      # Entry point
 ├── VauchiApp.kt        # Application class
-├── ui/screens/          # Compose screens (8 total)
+├── ui/screens/          # Compose screens
 ├── data/                # Repository, KeyStore helper
 └── viewmodels/          # ViewModel layer
 ```
+
+## Related Repositories
+
+| Repository | Description |
+|------------|-------------|
+| [vauchi/code](https://gitlab.com/vauchi/code) | Core Rust library (source of UniFFI bindings) |
+| [vauchi/ios](https://gitlab.com/vauchi/ios) | iOS app (SwiftUI) |
+| [vauchi/docs](https://gitlab.com/vauchi/docs) | Documentation |
+| [vauchi/dev-tools](https://gitlab.com/vauchi/dev-tools) | Build scripts and workspace tools |
+
+## Development Workflow
+
+### Getting UniFFI Bindings
+
+This app requires the `vauchi-mobile` UniFFI bindings from the core repo:
+
+```bash
+# Option 1: Download from CI (when available)
+# See dev-tools repo for download script
+
+# Option 2: Build from source
+git clone git@gitlab.com:vauchi/code.git ../code
+cd ../code
+cargo build -p vauchi-mobile --release --target aarch64-linux-android
+```
+
+### Building the App
+
+```bash
+./gradlew assembleDebug    # Debug build
+./gradlew assembleRelease  # Release build
+./gradlew installDebug     # Install to connected device
+```
+
+### Testing
+
+```bash
+./gradlew test                    # Unit tests
+./gradlew connectedAndroidTest    # Instrumented tests
+```
+
+## Contributing
+
+1. Check [vauchi/docs](https://gitlab.com/vauchi/docs) for architecture decisions
+2. Follow Kotlin coding conventions and Material Design 3 guidelines
+3. Write tests for new features
+4. Core library changes go to [vauchi/code](https://gitlab.com/vauchi/code)
 
 ## License
 
