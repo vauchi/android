@@ -246,7 +246,7 @@ fun ContactDetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = contact?.publicKey?.chunked(4)?.joinToString(" ")?.uppercase() ?: "",
+                                text = contact?.id?.chunked(4)?.joinToString(" ")?.uppercase() ?: "",
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 3
                             )

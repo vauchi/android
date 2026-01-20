@@ -65,7 +65,7 @@ class KeyStoreHelper {
      * Returns the encrypted storage key bytes (IV + ciphertext + tag).
      */
     fun generateEncryptedStorageKey(): ByteArray {
-        val storageKey = uniffi.vauchi_mobile.generateStorageKey().toByteArray()
+        val storageKey = uniffi.vauchi_mobile.generateStorageKey()
         return encryptStorageKey(storageKey)
     }
 
@@ -120,6 +120,3 @@ class KeyStoreHelper {
         }
     }
 }
-
-// Extension to convert List<UByte> to ByteArray
-private fun List<UByte>.toByteArray(): ByteArray = ByteArray(size) { this[it].toByte() }

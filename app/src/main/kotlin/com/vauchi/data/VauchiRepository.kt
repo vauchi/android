@@ -36,7 +36,7 @@ class VauchiRepository(context: Context) {
         val storageKeyBytes = getOrCreateStorageKey(dataDir)
 
         // Initialize with secure key from KeyStore
-        vauchi = VauchiMobile.newWithSecureKey(dataDir, relayUrl, storageKeyBytes.toList().map { it.toUByte() })
+        vauchi = VauchiMobile.newWithSecureKey(dataDir, relayUrl, storageKeyBytes)
     }
 
     /**
@@ -168,7 +168,7 @@ class VauchiRepository(context: Context) {
     // Verification operations
     fun verifyContact(id: String) = vauchi.verifyContact(id)
 
-    fun getPublicKey(): String = vauchi.getPublicKey()
+    fun getPublicKey(): String = vauchi.getPublicId()
 
     // Recovery operations
     fun createRecoveryClaim(oldPkHex: String) = vauchi.createRecoveryClaim(oldPkHex)
