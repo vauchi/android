@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.vauchi"
-        minSdk = 24
+        minSdk = 26  // Android 8.0 - 94.8% coverage
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
@@ -18,14 +18,18 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Load native libraries for these ABIs
+        // arm64-v8a: Modern 64-bit ARM devices
+        // armeabi-v7a: Older 32-bit ARM devices (still ~10% of market)
+        // Exclude x86/x86_64 (emulator only) for smaller APK
         ndk {
-            abiFilters.addAll(listOf("arm64-v8a", "x86_64"))
+            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
         }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -48,7 +52,17 @@ android {
 
     packaging {
         resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += listOf(
+                "/META-INF/{AL2.0,LGPL2.1}",
+                "META-INF/LICENSE*",
+                "META-INF/NOTICE*",
+                "META-INF/*.kotlin_module",
+                "META-INF/versions/**"
+            )
+        }
+        jniLibs {
+            useLegacyPackaging = false
+            // Don't keep debug symbols in release for smaller APK
         }
     }
 }
