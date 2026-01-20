@@ -22,7 +22,8 @@ import uniffi.vauchi_mobile.MobileExchangeData
 fun ExchangeScreen(
     onBack: () -> Unit,
     onGenerateQr: suspend () -> MobileExchangeData?,
-    onScanQr: () -> Unit
+    onScanQr: () -> Unit,
+    proximitySupported: Boolean = false
 ) {
     var exchangeData by remember { mutableStateOf<MobileExchangeData?>(null) }
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -123,6 +124,28 @@ fun ExchangeScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+                
+                // Proximity verification status
+                if (proximitySupported) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            painter = androidx.compose.ui.res.painterResource(
+                                android.R.drawable.ic_lock_silent_mode_off
+                            ),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Ultrasonic verification ready",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.weight(1f))

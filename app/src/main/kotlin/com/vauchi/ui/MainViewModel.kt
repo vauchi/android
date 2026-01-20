@@ -23,6 +23,8 @@ import uniffi.vauchi_mobile.MobileRecoveryProgress
 import uniffi.vauchi_mobile.MobileRecoveryVoucher
 import uniffi.vauchi_mobile.MobileSocialNetwork
 import uniffi.vauchi_mobile.MobileSyncResult
+import uniffi.vauchi_mobile.MobileProximityVerifier
+import com.vauchi.proximity.AudioProximityService
 import java.time.Instant
 
 sealed class SyncState {
@@ -50,6 +52,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private val networkMonitor = NetworkMonitor(application)
+    
+    // Proximity verification
+    private val proximityVerifier: MobileProximityVerifier by lazy {
+        val audioHandler = AudioProximityService.getInstance(application)
+        MobileProximityVerifier.new(audioHandler)
+    }
+    
+    private val _proximitySupported = MutableStateFlow(false)
+    val proximitySupported: StateFlow<Boolean> = _proximitySupported.asStateFlow()
+    
+    private val _proximityCapability = MutableStateFlow("none")
+    val proximityCapability: StateFlow<String> = _proximityCapability.asStateFlow()
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -84,6 +98,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         checkIdentity()
+        initProximityVerification()
+    }
+    
+    private fun initProximityVerification() {
+        _proximitySupported.value = proximityVerifier.isSupported()
+        _proximityCapability.value = proximityVerifier.getCapability()
+    }
+    
+    /** Emit a proximity challenge (for QR displayer) */
+    fun emitProximityChallenge(challenge: ByteArray): Boolean {
+        val result = proximityVerifier.emitChallenge(challenge.toList())
+        return result.success
+    }
+    
+    /** Listen for proximity response (for QR scanner) */
+    fun listenForProximityResponse(timeoutMs: ULong = 5000u): ByteArray? {
+        val response = proximityVerifier.listenForResponse(timeoutMs)
+        return if (response.isEmpty()) null else response.toByteArray()
+    }
+    
+    /** Stop any ongoing proximity verification */
+    fun stopProximityVerification() {
+        proximityVerifier.stop()
     }
 
     private fun checkIdentity() {
