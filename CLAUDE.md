@@ -1,0 +1,31 @@
+# CLAUDE.md - Android App
+
+Native Android app using Kotlin and Jetpack Compose.
+
+## Stack
+
+- **Language**: Kotlin
+- **UI**: Jetpack Compose
+- **Build**: Gradle (Kotlin DSL)
+- **Native**: UniFFI bindings from `vauchi-mobile`
+
+## Commands
+
+```bash
+./gradlew build                  # Build
+./gradlew test                   # Run tests
+./gradlew assembleDebug          # Debug APK
+./gradlew assembleRelease        # Release APK
+```
+
+## Rules
+
+- Follow Android/Kotlin conventions
+- Use Compose for all new UI
+- Native bindings via `vauchi-mobile` crate
+- Run `code/scripts/build-android.sh` to rebuild native libs
+
+## Structure
+
+- `app/` - Main application module
+- `gradle/` - Gradle wrapper

@@ -1,12 +1,16 @@
 package com.vauchi.ui
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import com.vauchi.util.ClipboardUtils
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -240,6 +244,45 @@ fun SettingsScreen(
 
             HorizontalDivider()
 
+            // Help & Support Section
+            Text(
+                text = "Help & Support",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            val context = LocalContext.current
+            val openUrl = { url: String ->
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                context.startActivity(intent)
+            }
+
+            HelpLinkItem(
+                title = "User Guide",
+                subtitle = "Learn how to use Vauchi",
+                onClick = { openUrl("https://vauchi.app/user-guide") }
+            )
+
+            HelpLinkItem(
+                title = "FAQ",
+                subtitle = "Frequently asked questions",
+                onClick = { openUrl("https://vauchi.app/faq") }
+            )
+
+            HelpLinkItem(
+                title = "Report Issue",
+                subtitle = "Report bugs or request features",
+                onClick = { openUrl("https://github.com/vauchi/issues") }
+            )
+
+            HelpLinkItem(
+                title = "Privacy Policy",
+                subtitle = "How we protect your data",
+                onClick = { openUrl("https://vauchi.app/privacy") }
+            )
+
+            HorizontalDivider()
+
             // About Section
             Text(
                 text = "About",
@@ -266,8 +309,11 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                    val versionName = packageInfo.versionName ?: "1.0.0"
+                    val versionCode = packageInfo.longVersionCode
                     Text(
-                        text = "Version 0.1.0",
+                        text = "Version $versionName (build $versionCode)",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -670,6 +716,46 @@ fun PasswordStrengthIndicator(strength: PasswordStrengthResult) {
                 text = strength.feedback,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun HelpLinkItem(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                contentDescription = "Open link",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
