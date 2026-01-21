@@ -56,7 +56,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Proximity verification
     private val proximityVerifier: MobileProximityVerifier by lazy {
         val audioHandler = AudioProximityService.getInstance(application)
-        MobileProximityVerifier.new(audioHandler)
+        MobileProximityVerifier(audioHandler)
     }
     
     private val _proximitySupported = MutableStateFlow(false)
@@ -108,14 +108,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     
     /** Emit a proximity challenge (for QR displayer) */
     fun emitProximityChallenge(challenge: ByteArray): Boolean {
-        val result = proximityVerifier.emitChallenge(challenge.toList())
+        val result = proximityVerifier.emitChallenge(challenge)
         return result.success
     }
-    
+
     /** Listen for proximity response (for QR scanner) */
     fun listenForProximityResponse(timeoutMs: ULong = 5000u): ByteArray? {
         val response = proximityVerifier.listenForResponse(timeoutMs)
-        return if (response.isEmpty()) null else response.toByteArray()
+        return if (response.isEmpty()) null else response
     }
     
     /** Stop any ongoing proximity verification */

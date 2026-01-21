@@ -1,0 +1,81 @@
+# Test Coverage Configuration for Android
+
+# Unit test configuration
+android {
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            returnDefaultValues = true
+        }
+    }
+}
+
+# Jacoco for coverage reporting (optional)
+apply plugin: 'jacoco'
+
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+android.applicationVariants.all { variant ->
+    def variantName = variant.name.capitalize()
+    def testTaskName = "test${variantName}UnitTest"
+
+    tasks.register("jacoco${variantName}TestReport", JacocoReport) {
+        dependsOn tasks.named(testTaskName)
+        
+        group = "Reporting"
+        description = "Generate Jacoco coverage reports for ${variantName}."
+        
+        reports {
+            html.required = true
+            xml.required = true
+            csv.required = false
+        }
+        
+        sourceDirectories.setFrom(files([
+            "src/main/java",
+            "src/main/kotlin"
+        ]))
+        
+        classDirectories.setFrom(files(
+            fileTree(dir: "$buildDir/tmp/kotlin-classes/${variant.name}")
+        ))
+        
+        executionData.setFrom(files(
+            fileTree(dir: "$buildDir/jacoco", include: ["*.exec", "*.ec"])
+        ))
+    }
+}
+
+# Ensure test dependencies are included
+dependencies {
+    // Core testing
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.mockito:mockito-core:5.14.2")
+    testImplementation("org.mockito:mockito-inline:5.2.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    
+    # Android testing support
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.test:runner:1.6.2")
+    testImplementation("androidx.test:rules:1.6.1")
+    testImplementation("androidx.test.ext:junit:1.2.1")
+    
+    # Coroutines testing
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    
+    # Robolectric for Android unit tests
+    testImplementation("org.robolectric:robolectric:4.13")
+    
+    # Compose testing
+    testImplementation("androidx.compose.ui:ui-test-junit4:1.7.5")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.7.5")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.7.5")
+    
+    # Espresso for UI tests
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.7.5")
+}
