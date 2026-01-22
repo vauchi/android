@@ -37,7 +37,14 @@ fun SettingsScreen(
     onRecovery: () -> Unit = {},
     onDeliveryStatus: () -> Unit = {},
     failedDeliveryCount: Int = 0,
-    onCheckPasswordStrength: (String) -> PasswordStrengthResult = { PasswordStrengthResult() }
+    onCheckPasswordStrength: (String) -> PasswordStrengthResult = { PasswordStrengthResult() },
+    // Accessibility settings
+    reduceMotion: Boolean = false,
+    onReduceMotionChange: (Boolean) -> Unit = {},
+    highContrast: Boolean = false,
+    onHighContrastChange: (Boolean) -> Unit = {},
+    largeTouchTargets: Boolean = false,
+    onLargeTouchTargetsChange: (Boolean) -> Unit = {}
 ) {
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
@@ -298,6 +305,58 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Recovery")
+                }
+            }
+
+            HorizontalDivider()
+
+            // Accessibility Section
+            Text(
+                text = "Accessibility",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Text(
+                text = "These settings supplement system accessibility features.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    AccessibilityToggle(
+                        title = "Reduce Motion",
+                        description = "Minimize animations and transitions",
+                        checked = reduceMotion,
+                        onCheckedChange = onReduceMotionChange
+                    )
+
+                    HorizontalDivider()
+
+                    AccessibilityToggle(
+                        title = "High Contrast",
+                        description = "Increase color contrast for better visibility",
+                        checked = highContrast,
+                        onCheckedChange = onHighContrastChange
+                    )
+
+                    HorizontalDivider()
+
+                    AccessibilityToggle(
+                        title = "Large Touch Targets",
+                        description = "Increase button and control sizes",
+                        checked = largeTouchTargets,
+                        onCheckedChange = onLargeTouchTargetsChange
+                    )
                 }
             }
 
@@ -817,5 +876,35 @@ fun HelpLinkItem(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@Composable
+fun AccessibilityToggle(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
     }
 }

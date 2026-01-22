@@ -85,6 +85,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _lastSyncTime = MutableStateFlow<Instant?>(null)
     val lastSyncTime: StateFlow<Instant?> = _lastSyncTime.asStateFlow()
 
+    // Accessibility settings
+    private val _reduceMotion = MutableStateFlow(false)
+    val reduceMotion: StateFlow<Boolean> = _reduceMotion.asStateFlow()
+
+    private val _highContrast = MutableStateFlow(false)
+    val highContrast: StateFlow<Boolean> = _highContrast.asStateFlow()
+
+    private val _largeTouchTargets = MutableStateFlow(false)
+    val largeTouchTargets: StateFlow<Boolean> = _largeTouchTargets.asStateFlow()
+
     fun clearSnackbar() {
         _snackbarMessage.value = null
     }
@@ -100,6 +110,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         checkIdentity()
         initProximityVerification()
+        loadAccessibilitySettings()
+    }
+
+    private fun loadAccessibilitySettings() {
+        _reduceMotion.value = repository.getReduceMotion()
+        _highContrast.value = repository.getHighContrast()
+        _largeTouchTargets.value = repository.getLargeTouchTargets()
+    }
+
+    fun setReduceMotion(enabled: Boolean) {
+        _reduceMotion.value = enabled
+        repository.setReduceMotion(enabled)
+    }
+
+    fun setHighContrast(enabled: Boolean) {
+        _highContrast.value = enabled
+        repository.setHighContrast(enabled)
+    }
+
+    fun setLargeTouchTargets(enabled: Boolean) {
+        _largeTouchTargets.value = enabled
+        repository.setLargeTouchTargets(enabled)
     }
     
     private fun initProximityVerification() {

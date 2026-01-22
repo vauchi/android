@@ -191,6 +191,9 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
         }
         Screen.Settings -> {
             val state = uiState
+            val reduceMotion by viewModel.reduceMotion.collectAsState()
+            val highContrast by viewModel.highContrast.collectAsState()
+            val largeTouchTargets by viewModel.largeTouchTargets.collectAsState()
             if (state is UiState.Ready) {
                 SettingsScreen(
                     displayName = state.displayName,
@@ -203,7 +206,13 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     onSync = { viewModel.sync() },
                     onDevices = { currentScreen = Screen.Devices },
                     onRecovery = { currentScreen = Screen.Recovery },
-                    onCheckPasswordStrength = { viewModel.checkPasswordStrength(it) }
+                    onCheckPasswordStrength = { viewModel.checkPasswordStrength(it) },
+                    reduceMotion = reduceMotion,
+                    onReduceMotionChange = { viewModel.setReduceMotion(it) },
+                    highContrast = highContrast,
+                    onHighContrastChange = { viewModel.setHighContrast(it) },
+                    largeTouchTargets = largeTouchTargets,
+                    onLargeTouchTargetsChange = { viewModel.setLargeTouchTargets(it) }
                 )
             }
         }

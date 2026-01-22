@@ -27,6 +27,11 @@ class VauchiRepository(context: Context) {
         private const val KEY_DEMO_CONTACT_DISMISSED = "demo_contact_dismissed"
         private const val DEFAULT_RELAY_URL = "wss://relay.vauchi.app"
         private const val LEGACY_KEY_FILENAME = "storage.key"
+
+        // Accessibility settings keys
+        private const val KEY_REDUCE_MOTION = "accessibility_reduce_motion"
+        private const val KEY_HIGH_CONTRAST = "accessibility_high_contrast"
+        private const val KEY_LARGE_TOUCH_TARGETS = "accessibility_large_touch_targets"
     }
 
     init {
@@ -119,6 +124,25 @@ class VauchiRepository(context: Context) {
             .remove(KEY_ONBOARDING_COMPLETED)
             .remove(KEY_DEMO_CONTACT_DISMISSED)
             .apply()
+    }
+
+    // Accessibility settings
+    fun getReduceMotion(): Boolean = prefs.getBoolean(KEY_REDUCE_MOTION, false)
+
+    fun setReduceMotion(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_REDUCE_MOTION, enabled).apply()
+    }
+
+    fun getHighContrast(): Boolean = prefs.getBoolean(KEY_HIGH_CONTRAST, false)
+
+    fun setHighContrast(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_HIGH_CONTRAST, enabled).apply()
+    }
+
+    fun getLargeTouchTargets(): Boolean = prefs.getBoolean(KEY_LARGE_TOUCH_TARGETS, false)
+
+    fun setLargeTouchTargets(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_LARGE_TOUCH_TARGETS, enabled).apply()
     }
 
     fun sync(): MobileSyncResult = vauchi.sync()
