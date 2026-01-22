@@ -12,6 +12,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
@@ -97,12 +100,17 @@ fun ExchangeScreen(
             } else {
                 Text(
                     text = "Show this QR code to add a contact",
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.semantics { heading() }
                 )
 
                 qrBitmap?.let { bitmap ->
                     Card(
-                        modifier = Modifier.size(280.dp),
+                        modifier = Modifier
+                            .size(280.dp)
+                            .semantics {
+                                contentDescription = "Your contact exchange QR code. Show this to someone to let them scan and add you as a contact."
+                            },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
                         Box(
@@ -111,7 +119,7 @@ fun ExchangeScreen(
                         ) {
                             Image(
                                 bitmap = bitmap.asImageBitmap(),
-                                contentDescription = "QR Code",
+                                contentDescription = null, // Handled by parent Card semantics
                                 modifier = Modifier.size(260.dp)
                             )
                         }
@@ -152,7 +160,11 @@ fun ExchangeScreen(
 
                 Button(
                     onClick = onScanQr,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics {
+                            contentDescription = "Scan QR code. Opens the camera to scan someone else's QR code and add them as a contact."
+                        }
                 ) {
                     Text("Scan Contact's QR Code")
                 }

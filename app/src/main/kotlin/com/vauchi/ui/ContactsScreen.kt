@@ -16,6 +16,9 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import uniffi.vauchi_mobile.MobileContact
 
@@ -157,14 +160,19 @@ fun ContactsScreen(
                 }
             } else if (contacts.isEmpty()) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .semantics {
+                            contentDescription = "No contacts yet. Exchange cards with someone to add contacts."
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "No contacts yet",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.semantics { heading() }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -214,11 +222,15 @@ fun ContactCard(
     onRemove: () -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val verificationStatus = if (contact.isVerified) "verified" else "not verified"
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .semantics {
+                contentDescription = "${contact.displayName}, $verificationStatus. Double tap to view details."
+            },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -237,10 +249,15 @@ fun ContactCard(
                     text = contact.displayName,
                     style = MaterialTheme.typography.titleMedium
                 )
-                IconButton(onClick = { showDeleteDialog = true }) {
+                IconButton(
+                    onClick = { showDeleteDialog = true },
+                    modifier = Modifier.semantics {
+                        contentDescription = "Remove ${contact.displayName} from contacts"
+                    }
+                ) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Remove contact",
+                        contentDescription = null, // Handled by parent semantics
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
