@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,8 @@ fun SettingsScreen(
     onSync: () -> Unit = {},
     onDevices: () -> Unit = {},
     onRecovery: () -> Unit = {},
+    onDeliveryStatus: () -> Unit = {},
+    failedDeliveryCount: Int = 0,
     onCheckPasswordStrength: (String) -> PasswordStrengthResult = { PasswordStrengthResult() }
 ) {
     var showExportDialog by remember { mutableStateOf(false) }
@@ -178,6 +181,62 @@ fun SettingsScreen(
                                 Text("Sync Now")
                             }
                         }
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            // Message Delivery Section
+            Text(
+                text = "Message Delivery",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                onClick = onDeliveryStatus
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Delivery Status",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            text = "View message delivery history",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (failedDeliveryCount > 0) {
+                            Badge(
+                                containerColor = MaterialTheme.colorScheme.error
+                            ) {
+                                Text("$failedDeliveryCount failed")
+                            }
+                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Go",
+                            modifier = Modifier
+                                .size(20.dp)
+                                .graphicsLayer { rotationZ = 180f }
+                        )
                     }
                 }
             }

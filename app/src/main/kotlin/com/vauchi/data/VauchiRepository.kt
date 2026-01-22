@@ -206,4 +206,17 @@ class VauchiRepository(context: Context) {
     fun getRecoveryProof(): String? = vauchi.getRecoveryProof()
 
     fun verifyRecoveryProof(proofB64: String) = vauchi.verifyRecoveryProof(proofB64)
+
+    // Delivery status operations
+    fun getAllDeliveryRecords() = vauchi.getAllDeliveryRecords()
+
+    fun getDeliveryRecordsForContact(contactId: String) = vauchi.getDeliveryRecordsForContact(contactId)
+
+    fun getDeliverySummary(messageId: String) = vauchi.getDeliverySummary(messageId)
+
+    fun getDueRetries() = vauchi.getDueRetries()
+
+    fun countFailedDeliveries(): UInt = vauchi.countFailedDeliveries()
+
+    fun manualRetry(messageId: String): Boolean = vauchi.manualRetry(messageId)
 }
