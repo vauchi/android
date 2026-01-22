@@ -23,6 +23,8 @@ class VauchiRepository(context: Context) {
         private const val PREFS_NAME = "vauchi_settings"
         private const val KEY_RELAY_URL = "relay_url"
         private const val KEY_ENCRYPTED_STORAGE_KEY = "encrypted_storage_key"
+        private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
+        private const val KEY_DEMO_CONTACT_DISMISSED = "demo_contact_dismissed"
         private const val DEFAULT_RELAY_URL = "wss://relay.vauchi.app"
         private const val LEGACY_KEY_FILENAME = "storage.key"
     }
@@ -97,6 +99,26 @@ class VauchiRepository(context: Context) {
 
     fun setRelayUrl(url: String) {
         prefs.edit().putString(KEY_RELAY_URL, url).apply()
+    }
+
+    // Onboarding state management
+    fun hasCompletedOnboarding(): Boolean = prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
+
+    fun setOnboardingCompleted(completed: Boolean) {
+        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
+    }
+
+    fun hasDismissedDemoContact(): Boolean = prefs.getBoolean(KEY_DEMO_CONTACT_DISMISSED, false)
+
+    fun setDemoContactDismissed(dismissed: Boolean) {
+        prefs.edit().putBoolean(KEY_DEMO_CONTACT_DISMISSED, dismissed).apply()
+    }
+
+    fun resetOnboarding() {
+        prefs.edit()
+            .remove(KEY_ONBOARDING_COMPLETED)
+            .remove(KEY_DEMO_CONTACT_DISMISSED)
+            .apply()
     }
 
     fun sync(): MobileSyncResult = vauchi.sync()

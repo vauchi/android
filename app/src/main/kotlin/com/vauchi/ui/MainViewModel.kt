@@ -37,6 +37,7 @@ sealed class SyncState {
 sealed class UiState {
     object Loading : UiState()
     object Setup : UiState()
+    object Onboarding : UiState()
     data class Ready(
         val displayName: String,
         val publicId: String,
@@ -130,12 +131,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     repository.hasIdentity()
                 }
                 if (hasIdentity) {
+                    // Existing user - auto-mark onboarding complete if not set
+                    if (!repository.hasCompletedOnboarding()) {
+                        repository.setOnboardingCompleted(true)
+                    }
                     loadUserData()
                 } else {
-                    _uiState.value = UiState.Setup
+                    // New user - show onboarding flow
+                    _uiState.value = UiState.Onboarding
                 }
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Unknown error")
+            }
+        }
+    }
+
+    fun completeOnboarding(displayName: String, phone: String?, email: String?) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = UiState.Loading
+                withContext(Dispatchers.IO) {
+                    // Create identity
+                    repository.createIdentity(displayName)
+
+                    // Add phone if provided
+                    phone?.let {
+                        repository.addField(MobileFieldType.PHONE, "Phone", it)
+                    }
+
+                    // Add email if provided
+                    email?.let {
+                        repository.addField(MobileFieldType.EMAIL, "Email", it)
+                    }
+
+                    // Mark onboarding complete
+                    repository.setOnboardingCompleted(true)
+                }
+                loadUserData()
+            } catch (e: Exception) {
+                _uiState.value = UiState.Error(e.message ?: "Failed to create identity")
             }
         }
     }

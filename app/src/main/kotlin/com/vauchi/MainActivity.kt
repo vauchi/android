@@ -42,6 +42,7 @@ import com.vauchi.ui.MainViewModel
 import com.vauchi.ui.PasswordStrengthResult
 import com.vauchi.ui.SyncState
 import com.vauchi.ui.UiState
+import com.vauchi.ui.onboarding.OnboardingScreen
 import com.vauchi.ui.theme.VauchiTheme
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -110,6 +111,12 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             when (val state = uiState) {
                 is UiState.Loading -> LoadingScreen()
                 is UiState.Setup -> SetupScreen(onCreateIdentity = viewModel::createIdentity)
+                is UiState.Onboarding -> OnboardingScreen(
+                    onComplete = { displayName, phone, email ->
+                        viewModel.completeOnboarding(displayName, phone, email)
+                    },
+                    onRestore = { /* TODO: implement restore flow */ }
+                )
                 is UiState.Ready -> ReadyScreen(
                     displayName = state.displayName,
                     publicId = state.publicId,
