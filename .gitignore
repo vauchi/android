@@ -16,4 +16,4 @@ app/src/main/jniLibs/
 # NOTE: UniFFI bindings are now tracked in git (matching iOS policy).
 # This prevents drift between platforms and ensures builds work after clone.
 # To regenerate: cd ../code && ./scripts/build-bindings.sh --android
-# See docs/planning/done/POSTMORTEM-ANDROID-BINDINGS-DRIFT.md for rationale.
+# See docs/planning/done/2026-01-21-android-bindings-drift-postmortem.md for rationale.
