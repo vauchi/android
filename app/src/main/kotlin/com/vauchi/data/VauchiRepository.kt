@@ -1,5 +1,30 @@
 package com.vauchi.data
 
+// TODO(core-gap): Field validation UI - vauchi-mobile exposes validateField(),
+// getFieldValidationStatus(), revokeFieldValidation(), listMyValidations(),
+// hasValidatedField(), getFieldValidationCount(). No UI component implemented.
+//
+// TODO(core-gap): Content updates UI - vauchi-mobile exposes isContentUpdatesSupported(),
+// checkContentUpdates(), applyContentUpdates(), reloadSocialNetworks().
+// APIs available but no UI triggering or displaying updates.
+//
+// TODO(core-gap): Aha moments - vauchi-mobile exposes hasSeenAhaMoment(),
+// tryTriggerAhaMoment(), tryTriggerAhaMomentWithContext(), ahaMomentSeenCount(),
+// ahaMomentsTotalCount(), resetAhaMoments(). No progressive onboarding hints.
+//
+// TODO(core-gap): Demo contact - vauchi-mobile exposes initDemoContactIfNeeded(),
+// getDemoContact(), getDemoContactState(), isDemoUpdateAvailable(), triggerDemoUpdate(),
+// dismissDemoContact(), autoRemoveDemoContact(), restoreDemoContact().
+// Blocked by TODO in MainActivity - should show demo in contacts list for onboarding.
+//
+// TODO(core-gap): Visibility labels - advanced label-based visibility grouping.
+// vauchi-mobile exposes listLabels(), createLabel(), getLabel(), renameLabel(),
+// deleteLabel(), addContactToLabel(), removeContactFromLabel(), getLabelsForContact(),
+// setLabelFieldVisibility(), getSuggestedLabels(). Only per-contact visibility implemented.
+//
+// TODO(core-gap): Device linking - DevicesScreen is a stub. vauchi-mobile exposes
+// MobileDeviceLinkData, MobileDeviceInfo, MobileDeviceLinkResult. Multi-device sync not functional.
+
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
