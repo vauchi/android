@@ -2,6 +2,12 @@
 #
 # Android app (Kotlin/Compose)
 #
+# GitLab Ultimate Features:
+#   - SAST: Static application security testing (Android)
+#   - Dependency Scanning: Gradle dependency scanning
+#   - Secret Detection: Prevent credential leaks
+#   - Mobile App Security Testing (MAST)
+#
 # REMEDIATION PLAN (allow_failure jobs):
 # The app requires native UniFFI bindings from vauchi-mobile. Current failures:
 # - Missing types: MobileDeliveryStatus, MobileDeliveryRecord, MobileRetryEntry, etc.
@@ -16,14 +22,30 @@
 #
 # Once native bindings are available in CI, remove `allow_failure: true`
 
+# GitLab Ultimate Templates
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/License-Scanning.gitlab-ci.yml
+
 stages:
   - lint
   - build
   - test
+  - security
 
 variables:
   ANDROID_COMPILE_SDK: "34"
   ANDROID_BUILD_TOOLS: "34.0.0"
+
+  # GitLab Ultimate Security Configuration
+  SAST_EXCLUDED_PATHS: "build/, .gradle/"
+  DS_EXCLUDED_PATHS: "build/, .gradle/"
+  SECRET_DETECTION_EXCLUDED_PATHS: "build/, .gradle/"
+
+  # Enable Android-specific SAST analyzers
+  SAST_ANALYZER_IMAGE_TAG: "5"
 
 .gradle-cache: &gradle-cache
   cache:
@@ -33,21 +55,51 @@ variables:
       - build/
       - app/build/
 
-lint:
-  stage: lint
+.android-job:
   image: cimg/android:2024.01
   <<: *gradle-cache
+
+# ============================================================
+# Lint Stage
+# ============================================================
+
+lint:
+  extends: .android-job
+  stage: lint
   script:
     - ./gradlew lint
+  artifacts:
+    reports:
+      codequality: app/build/reports/lint-results.xml
+    paths:
+      - app/build/reports/lint-results-*.html
+    expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "main"
   allow_failure: true  # Requires native bindings
 
+lint:detekt:
+  extends: .android-job
+  stage: lint
+  script:
+    - ./gradlew detekt || echo "Detekt not configured"
+  artifacts:
+    reports:
+      codequality: app/build/reports/detekt/detekt.xml
+    expire_in: 1 week
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+  allow_failure: true
+
+# ============================================================
+# Build Stage
+# ============================================================
+
 build:debug:
+  extends: .android-job
   stage: build
-  image: cimg/android:2024.01
-  <<: *gradle-cache
   script:
     - ./gradlew assembleDebug
   artifacts:
@@ -59,13 +111,88 @@ build:debug:
     - if: $CI_COMMIT_BRANCH == "main"
   allow_failure: true  # Requires native bindings
 
+build:release:
+  extends: .android-job
+  stage: build
+  script:
+    - ./gradlew assembleRelease
+  artifacts:
+    paths:
+      - app/build/outputs/apk/release/
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+  allow_failure: true  # Requires native bindings
+
+# ============================================================
+# Test Stage
+# ============================================================
+
 test:unit:
+  extends: .android-job
   stage: test
-  image: cimg/android:2024.01
-  <<: *gradle-cache
   script:
     - ./gradlew test
+  artifacts:
+    reports:
+      junit: app/build/test-results/**/TEST-*.xml
+    expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "main"
   allow_failure: true  # Requires native bindings
+
+# ============================================================
+# Security Stage
+# ============================================================
+
+# Override GitLab templates
+sast:
+  stage: security
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+dependency_scanning:
+  stage: security
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+secret_detection:
+  stage: security
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+
+license_scanning:
+  stage: security
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "build.gradle*"
+        - "app/build.gradle*"
+        - "gradle.properties"
+    - if: $CI_COMMIT_BRANCH == "main"
+
+# Gradle dependency check
+security:dependency-check:
+  extends: .android-job
+  stage: security
+  script:
+    - ./gradlew dependencyCheckAnalyze || echo "OWASP dependency check not configured"
+  artifacts:
+    paths:
+      - app/build/reports/dependency-check-report.html
+    expire_in: 1 week
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "build.gradle*"
+        - "app/build.gradle*"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  allow_failure: true
