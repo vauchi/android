@@ -1,3 +1,7 @@
+> [!WARNING]
+> **Pre-Alpha Software** - This project is under heavy development and not ready for production use.
+> APIs may change without notice. Use at your own risk.
+
 # Vauchi Android
 
 Native Android app for privacy-focused contact card exchange.
