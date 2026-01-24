@@ -893,6 +893,52 @@ internal open class UniffiVTableCallbackInterfacePlatformAudioHandler(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -945,9 +991,19 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_add_recovery_voucher(`ptr`: Pointer,`voucherB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_apply_content_updates(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_calculate_retry_backoff(`ptr`: Pointer,`attempt`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_check_content_updates(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_clear_pending_updates_for_contact(`ptr`: Pointer,`contactId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_complete_exchange(`ptr`: Pointer,`qrData`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_contact_count(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_count_failed_deliveries(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Int
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_create_identity(`ptr`: Pointer,`displayName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -959,21 +1015,43 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_delete_label(`ptr`: Pointer,`labelId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_delete_retry(`ptr`: Pointer,`messageId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_export_backup(`ptr`: Pointer,`password`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_export_storage_key(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_generate_exchange_qr(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_all_delivery_records(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_contact(`ptr`: Pointer,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_delivery_count_by_status(`ptr`: Pointer,`status`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_delivery_record(`ptr`: Pointer,`messageId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_delivery_records_for_contact(`ptr`: Pointer,`recipientId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_delivery_summary(`ptr`: Pointer,`messageId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_device_deliveries(`ptr`: Pointer,`messageId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_display_name(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_due_retries(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_label(`ptr`: Pointer,`labelId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_labels_for_contact(`ptr`: Pointer,`contactId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_offline_queue_capacity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_own_card(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_pending_deliveries(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_pending_device_deliveries(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_profile_url(`ptr`: Pointer,`networkId`: RustBuffer.ByValue,`username`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -983,10 +1061,16 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_recovery_status(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_retries_for_contact(`ptr`: Pointer,`contactId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_retry_count(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_suggested_labels(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_sync_status(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_total_pending_count(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_has_identity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_hide_field_from_contact(`ptr`: Pointer,`contactId`: RustBuffer.ByValue,`fieldLabel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -995,7 +1079,11 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_is_certificate_pinning_enabled(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_is_content_updates_supported(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_is_field_visible_to_contact(`ptr`: Pointer,`contactId`: RustBuffer.ByValue,`fieldLabel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_is_offline_queue_full(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_list_contacts(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1003,10 +1091,14 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_list_social_networks(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_manual_retry(`ptr`: Pointer,`messageId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_parse_recovery_claim(`ptr`: Pointer,`claimB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_pending_update_count(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Int
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_reload_social_networks(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_remove_contact(`ptr`: Pointer,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_remove_contact_field_override(`ptr`: Pointer,`contactId`: RustBuffer.ByValue,`fieldLabel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1189,9 +1281,19 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_add_recovery_voucher(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_apply_content_updates(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_calculate_retry_backoff(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_check_content_updates(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_clear_pending_updates_for_contact(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_complete_exchange(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_contact_count(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_count_failed_deliveries(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_create_identity(
     ): Short
@@ -1203,21 +1305,43 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_delete_label(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_delete_retry(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_export_backup(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_export_storage_key(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_generate_exchange_qr(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_all_delivery_records(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_contact(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_delivery_count_by_status(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_delivery_record(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_delivery_records_for_contact(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_delivery_summary(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_device_deliveries(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_display_name(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_due_retries(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_label(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_labels_for_contact(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_offline_queue_capacity(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_own_card(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_pending_deliveries(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_pending_device_deliveries(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_profile_url(
     ): Short
@@ -1227,9 +1351,15 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_recovery_status(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_retries_for_contact(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_retry_count(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_suggested_labels(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_sync_status(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_total_pending_count(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_has_identity(
     ): Short
@@ -1239,7 +1369,11 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_is_certificate_pinning_enabled(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_is_content_updates_supported(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_is_field_visible_to_contact(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_is_offline_queue_full(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_list_contacts(
     ): Short
@@ -1247,9 +1381,13 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_list_social_networks(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_manual_retry(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_parse_recovery_claim(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_pending_update_count(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_reload_social_networks(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_remove_contact(
     ): Short
@@ -1357,10 +1495,25 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_add_recovery_voucher() != 24135.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_apply_content_updates() != 9726.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_calculate_retry_backoff() != 60454.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_check_content_updates() != 7487.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_clear_pending_updates_for_contact() != 25049.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_complete_exchange() != 59225.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_contact_count() != 30960.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_count_failed_deliveries() != 59375.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_create_identity() != 63328.toShort()) {
@@ -1378,6 +1531,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_delete_label() != 49151.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_delete_retry() != 45088.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_export_backup() != 14975.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1387,10 +1543,31 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_generate_exchange_qr() != 23797.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_all_delivery_records() != 60693.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_contact() != 17724.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_delivery_count_by_status() != 25864.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_delivery_record() != 7344.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_delivery_records_for_contact() != 47399.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_delivery_summary() != 26032.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_device_deliveries() != 13834.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_display_name() != 22034.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_due_retries() != 45644.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_label() != 23616.toShort()) {
@@ -1399,7 +1576,16 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_labels_for_contact() != 34054.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_offline_queue_capacity() != 37318.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_own_card() != 41646.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_pending_deliveries() != 20816.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_pending_device_deliveries() != 59136.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_profile_url() != 40964.toShort()) {
@@ -1414,10 +1600,19 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_recovery_status() != 18084.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_retries_for_contact() != 16947.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_retry_count() != 56457.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_suggested_labels() != 35491.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_sync_status() != 18804.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_total_pending_count() != 28547.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_has_identity() != 17028.toShort()) {
@@ -1432,7 +1627,13 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_is_certificate_pinning_enabled() != 31532.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_is_content_updates_supported() != 25945.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_is_field_visible_to_contact() != 31866.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_is_offline_queue_full() != 65171.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_list_contacts() != 21454.toShort()) {
@@ -1444,10 +1645,16 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_list_social_networks() != 64160.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_manual_retry() != 42209.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_parse_recovery_claim() != 19311.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_pending_update_count() != 109.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_reload_social_networks() != 53115.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_remove_contact() != 60263.toShort()) {
@@ -2291,6 +2498,40 @@ public interface VauchiMobileInterface {
     fun `addRecoveryVoucher`(`voucherB64`: kotlin.String): MobileRecoveryProgress
     
     /**
+     * Apply available content updates.
+     *
+     * Downloads and caches any available updates. After applying,
+     * the new content will be used for subsequent operations.
+     *
+     * Note: Returns Disabled if the `content-updates` feature is not enabled.
+     */
+    fun `applyContentUpdates`(): MobileApplyResult
+    
+    /**
+     * Calculate the backoff time for a given retry attempt.
+     *
+     * Returns seconds until next retry: 2^attempt, max 3600 (1 hour).
+     */
+    fun `calculateRetryBackoff`(`attempt`: kotlin.UInt): kotlin.ULong
+    
+    /**
+     * Check for available content updates.
+     *
+     * This is a blocking call that checks the remote server for updates.
+     * Returns the update status indicating what updates are available.
+     *
+     * Note: Returns Disabled if the `content-updates` feature is not enabled.
+     */
+    fun `checkContentUpdates`(): MobileUpdateStatus
+    
+    /**
+     * Clear all pending updates for a contact.
+     *
+     * Returns the number of cleared updates.
+     */
+    fun `clearPendingUpdatesForContact`(`contactId`: kotlin.String): kotlin.UInt
+    
+    /**
      * Complete exchange with scanned QR data.
      */
     fun `completeExchange`(`qrData`: kotlin.String): MobileExchangeResult
@@ -2299,6 +2540,11 @@ public interface VauchiMobileInterface {
      * Get contact count.
      */
     fun `contactCount`(): kotlin.UInt
+    
+    /**
+     * Count failed deliveries.
+     */
+    fun `countFailedDeliveries`(): kotlin.UInt
     
     /**
      * Create a new identity.
@@ -2333,6 +2579,11 @@ public interface VauchiMobileInterface {
     fun `deleteLabel`(`labelId`: kotlin.String)
     
     /**
+     * Delete a retry entry (after successful delivery or max attempts).
+     */
+    fun `deleteRetry`(`messageId`: kotlin.String): kotlin.Boolean
+    
+    /**
      * Export encrypted backup.
      */
     fun `exportBackup`(`password`: kotlin.String): kotlin.String
@@ -2348,14 +2599,49 @@ public interface VauchiMobileInterface {
     fun `generateExchangeQr`(): MobileExchangeData
     
     /**
+     * Get all delivery records.
+     */
+    fun `getAllDeliveryRecords`(): List<MobileDeliveryRecord>
+    
+    /**
      * Get single contact by ID.
      */
     fun `getContact`(`id`: kotlin.String): MobileContact?
     
     /**
+     * Get delivery count by status.
+     */
+    fun `getDeliveryCountByStatus`(`status`: MobileDeliveryStatus): kotlin.UInt
+    
+    /**
+     * Get delivery record for a message.
+     */
+    fun `getDeliveryRecord`(`messageId`: kotlin.String): MobileDeliveryRecord?
+    
+    /**
+     * Get all delivery records for a recipient.
+     */
+    fun `getDeliveryRecordsForContact`(`recipientId`: kotlin.String): List<MobileDeliveryRecord>
+    
+    /**
+     * Get delivery summary for a message (X of Y devices delivered).
+     */
+    fun `getDeliverySummary`(`messageId`: kotlin.String): MobileDeliverySummary
+    
+    /**
+     * Get all device delivery records for a message.
+     */
+    fun `getDeviceDeliveries`(`messageId`: kotlin.String): List<MobileDeviceDeliveryRecord>
+    
+    /**
      * Get display name.
      */
     fun `getDisplayName`(): kotlin.String
+    
+    /**
+     * Get all retry entries that are due for retry.
+     */
+    fun `getDueRetries`(): List<MobileRetryEntry>
     
     /**
      * Get a label by ID with full details.
@@ -2368,9 +2654,24 @@ public interface VauchiMobileInterface {
     fun `getLabelsForContact`(`contactId`: kotlin.String): List<MobileVisibilityLabel>
     
     /**
+     * Get remaining capacity in the offline queue.
+     */
+    fun `getOfflineQueueCapacity`(): kotlin.UInt
+    
+    /**
      * Get own contact card.
      */
     fun `getOwnCard`(): MobileContactCard
+    
+    /**
+     * Get all pending (non-terminal) deliveries.
+     */
+    fun `getPendingDeliveries`(): List<MobileDeliveryRecord>
+    
+    /**
+     * Get all pending device deliveries.
+     */
+    fun `getPendingDeviceDeliveries`(): List<MobileDeviceDeliveryRecord>
     
     /**
      * Get profile URL for a social field.
@@ -2397,6 +2698,16 @@ public interface VauchiMobileInterface {
     fun `getRecoveryStatus`(): MobileRecoveryProgress?
     
     /**
+     * Get all retry entries for a contact.
+     */
+    fun `getRetriesForContact`(`contactId`: kotlin.String): List<MobileRetryEntry>
+    
+    /**
+     * Get the total count of retry entries.
+     */
+    fun `getRetryCount`(): kotlin.UInt
+    
+    /**
      * Get suggested default labels.
      */
     fun `getSuggestedLabels`(): List<kotlin.String>
@@ -2405,6 +2716,11 @@ public interface VauchiMobileInterface {
      * Get sync status.
      */
     fun `getSyncStatus`(): MobileSyncStatus
+    
+    /**
+     * Get total count of all pending updates across all contacts.
+     */
+    fun `getTotalPendingCount`(): kotlin.UInt
     
     /**
      * Check if identity exists.
@@ -2427,9 +2743,23 @@ public interface VauchiMobileInterface {
     fun `isCertificatePinningEnabled`(): kotlin.Boolean
     
     /**
+     * Check if remote content updates are supported.
+     *
+     * Returns true if the content-updates feature is enabled at compile time.
+     */
+    fun `isContentUpdatesSupported`(): kotlin.Boolean
+    
+    /**
      * Check if field is visible to contact.
      */
     fun `isFieldVisibleToContact`(`contactId`: kotlin.String, `fieldLabel`: kotlin.String): kotlin.Boolean
+    
+    /**
+     * Check if the offline queue is full.
+     *
+     * Default max size is 1000 updates.
+     */
+    fun `isOfflineQueueFull`(): kotlin.Boolean
     
     /**
      * List all contacts.
@@ -2447,6 +2777,13 @@ public interface VauchiMobileInterface {
     fun `listSocialNetworks`(): List<MobileSocialNetwork>
     
     /**
+     * Manually retry a failed delivery.
+     *
+     * Returns true if the retry entry was found and rescheduled.
+     */
+    fun `manualRetry`(`messageId`: kotlin.String): kotlin.Boolean
+    
+    /**
      * Parse a recovery claim from base64.
      *
      * Used to inspect a claim before vouching for it.
@@ -2457,6 +2794,14 @@ public interface VauchiMobileInterface {
      * Get pending update count.
      */
     fun `pendingUpdateCount`(): kotlin.UInt
+    
+    /**
+     * Reload social networks from content cache.
+     *
+     * Call this after applying content updates to refresh the
+     * list of social networks available in the app.
+     */
+    fun `reloadSocialNetworks`(): List<MobileSocialNetwork>
     
     /**
      * Remove contact.
@@ -2698,6 +3043,81 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Apply available content updates.
+     *
+     * Downloads and caches any available updates. After applying,
+     * the new content will be used for subsequent operations.
+     *
+     * Note: Returns Disabled if the `content-updates` feature is not enabled.
+     */override fun `applyContentUpdates`(): MobileApplyResult {
+            return FfiConverterTypeMobileApplyResult.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_apply_content_updates(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Calculate the backoff time for a given retry attempt.
+     *
+     * Returns seconds until next retry: 2^attempt, max 3600 (1 hour).
+     */override fun `calculateRetryBackoff`(`attempt`: kotlin.UInt): kotlin.ULong {
+            return FfiConverterULong.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_calculate_retry_backoff(
+        it, FfiConverterUInt.lower(`attempt`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Check for available content updates.
+     *
+     * This is a blocking call that checks the remote server for updates.
+     * Returns the update status indicating what updates are available.
+     *
+     * Note: Returns Disabled if the `content-updates` feature is not enabled.
+     */override fun `checkContentUpdates`(): MobileUpdateStatus {
+            return FfiConverterTypeMobileUpdateStatus.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_check_content_updates(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Clear all pending updates for a contact.
+     *
+     * Returns the number of cleared updates.
+     */
+    @Throws(MobileException::class)override fun `clearPendingUpdatesForContact`(`contactId`: kotlin.String): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_clear_pending_updates_for_contact(
+        it, FfiConverterString.lower(`contactId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Complete exchange with scanned QR data.
      */
     @Throws(MobileException::class)override fun `completeExchange`(`qrData`: kotlin.String): MobileExchangeResult {
@@ -2721,6 +3141,22 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
     callWithPointer {
     uniffiRustCallWithError(MobileException) { _status ->
     UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_contact_count(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Count failed deliveries.
+     */
+    @Throws(MobileException::class)override fun `countFailedDeliveries`(): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_count_failed_deliveries(
         it, _status)
 }
     }
@@ -2815,6 +3251,22 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Delete a retry entry (after successful delivery or max attempts).
+     */
+    @Throws(MobileException::class)override fun `deleteRetry`(`messageId`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_delete_retry(
+        it, FfiConverterString.lower(`messageId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Export encrypted backup.
      */
     @Throws(MobileException::class)override fun `exportBackup`(`password`: kotlin.String): kotlin.String {
@@ -2862,6 +3314,22 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Get all delivery records.
+     */
+    @Throws(MobileException::class)override fun `getAllDeliveryRecords`(): List<MobileDeliveryRecord> {
+            return FfiConverterSequenceTypeMobileDeliveryRecord.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_all_delivery_records(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Get single contact by ID.
      */
     @Throws(MobileException::class)override fun `getContact`(`id`: kotlin.String): MobileContact? {
@@ -2878,6 +3346,86 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Get delivery count by status.
+     */
+    @Throws(MobileException::class)override fun `getDeliveryCountByStatus`(`status`: MobileDeliveryStatus): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_delivery_count_by_status(
+        it, FfiConverterTypeMobileDeliveryStatus.lower(`status`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Get delivery record for a message.
+     */
+    @Throws(MobileException::class)override fun `getDeliveryRecord`(`messageId`: kotlin.String): MobileDeliveryRecord? {
+            return FfiConverterOptionalTypeMobileDeliveryRecord.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_delivery_record(
+        it, FfiConverterString.lower(`messageId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Get all delivery records for a recipient.
+     */
+    @Throws(MobileException::class)override fun `getDeliveryRecordsForContact`(`recipientId`: kotlin.String): List<MobileDeliveryRecord> {
+            return FfiConverterSequenceTypeMobileDeliveryRecord.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_delivery_records_for_contact(
+        it, FfiConverterString.lower(`recipientId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Get delivery summary for a message (X of Y devices delivered).
+     */
+    @Throws(MobileException::class)override fun `getDeliverySummary`(`messageId`: kotlin.String): MobileDeliverySummary {
+            return FfiConverterTypeMobileDeliverySummary.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_delivery_summary(
+        it, FfiConverterString.lower(`messageId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Get all device delivery records for a message.
+     */
+    @Throws(MobileException::class)override fun `getDeviceDeliveries`(`messageId`: kotlin.String): List<MobileDeviceDeliveryRecord> {
+            return FfiConverterSequenceTypeMobileDeviceDeliveryRecord.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_device_deliveries(
+        it, FfiConverterString.lower(`messageId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Get display name.
      */
     @Throws(MobileException::class)override fun `getDisplayName`(): kotlin.String {
@@ -2885,6 +3433,22 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
     callWithPointer {
     uniffiRustCallWithError(MobileException) { _status ->
     UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_display_name(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Get all retry entries that are due for retry.
+     */
+    @Throws(MobileException::class)override fun `getDueRetries`(): List<MobileRetryEntry> {
+            return FfiConverterSequenceTypeMobileRetryEntry.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_due_retries(
         it, _status)
 }
     }
@@ -2926,6 +3490,22 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Get remaining capacity in the offline queue.
+     */
+    @Throws(MobileException::class)override fun `getOfflineQueueCapacity`(): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_offline_queue_capacity(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Get own contact card.
      */
     @Throws(MobileException::class)override fun `getOwnCard`(): MobileContactCard {
@@ -2933,6 +3513,38 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
     callWithPointer {
     uniffiRustCallWithError(MobileException) { _status ->
     UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_own_card(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Get all pending (non-terminal) deliveries.
+     */
+    @Throws(MobileException::class)override fun `getPendingDeliveries`(): List<MobileDeliveryRecord> {
+            return FfiConverterSequenceTypeMobileDeliveryRecord.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_pending_deliveries(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Get all pending device deliveries.
+     */
+    @Throws(MobileException::class)override fun `getPendingDeviceDeliveries`(): List<MobileDeviceDeliveryRecord> {
+            return FfiConverterSequenceTypeMobileDeviceDeliveryRecord.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_pending_device_deliveries(
         it, _status)
 }
     }
@@ -3009,6 +3621,38 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Get all retry entries for a contact.
+     */
+    @Throws(MobileException::class)override fun `getRetriesForContact`(`contactId`: kotlin.String): List<MobileRetryEntry> {
+            return FfiConverterSequenceTypeMobileRetryEntry.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_retries_for_contact(
+        it, FfiConverterString.lower(`contactId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Get the total count of retry entries.
+     */
+    @Throws(MobileException::class)override fun `getRetryCount`(): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_retry_count(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Get suggested default labels.
      */override fun `getSuggestedLabels`(): List<kotlin.String> {
             return FfiConverterSequenceString.lift(
@@ -3030,6 +3674,22 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_sync_status(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Get total count of all pending updates across all contacts.
+     */
+    @Throws(MobileException::class)override fun `getTotalPendingCount`(): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_total_pending_count(
         it, _status)
 }
     }
@@ -3099,6 +3759,23 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Check if remote content updates are supported.
+     *
+     * Returns true if the content-updates feature is enabled at compile time.
+     */override fun `isContentUpdatesSupported`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_is_content_updates_supported(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Check if field is visible to contact.
      */
     @Throws(MobileException::class)override fun `isFieldVisibleToContact`(`contactId`: kotlin.String, `fieldLabel`: kotlin.String): kotlin.Boolean {
@@ -3107,6 +3784,24 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
     uniffiRustCallWithError(MobileException) { _status ->
     UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_is_field_visible_to_contact(
         it, FfiConverterString.lower(`contactId`),FfiConverterString.lower(`fieldLabel`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Check if the offline queue is full.
+     *
+     * Default max size is 1000 updates.
+     */
+    @Throws(MobileException::class)override fun `isOfflineQueueFull`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_is_offline_queue_full(
+        it, _status)
 }
     }
     )
@@ -3162,6 +3857,24 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Manually retry a failed delivery.
+     *
+     * Returns true if the retry entry was found and rescheduled.
+     */
+    @Throws(MobileException::class)override fun `manualRetry`(`messageId`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_manual_retry(
+        it, FfiConverterString.lower(`messageId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Parse a recovery claim from base64.
      *
      * Used to inspect a claim before vouching for it.
@@ -3187,6 +3900,24 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
     callWithPointer {
     uniffiRustCallWithError(MobileException) { _status ->
     UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_pending_update_count(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Reload social networks from content cache.
+     *
+     * Call this after applying content updates to refresh the
+     * list of social networks available in the app.
+     */override fun `reloadSocialNetworks`(): List<MobileSocialNetwork> {
+            return FfiConverterSequenceTypeMobileSocialNetwork.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_reload_social_networks(
         it, _status)
 }
     }
@@ -3505,6 +4236,47 @@ public object FfiConverterTypeVauchiMobile: FfiConverter<VauchiMobile, Pointer> 
 
 
 /**
+ * A failed content update.
+ */
+data class MobileApplyFailure (
+    /**
+     * The content type that failed
+     */
+    var `contentType`: MobileContentType, 
+    /**
+     * The error message
+     */
+    var `error`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileApplyFailure: FfiConverterRustBuffer<MobileApplyFailure> {
+    override fun read(buf: ByteBuffer): MobileApplyFailure {
+        return MobileApplyFailure(
+            FfiConverterTypeMobileContentType.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MobileApplyFailure) = (
+            FfiConverterTypeMobileContentType.allocationSize(value.`contentType`) +
+            FfiConverterString.allocationSize(value.`error`)
+    )
+
+    override fun write(value: MobileApplyFailure, buf: ByteBuffer) {
+            FfiConverterTypeMobileContentType.write(value.`contentType`, buf)
+            FfiConverterString.write(value.`error`, buf)
+    }
+}
+
+
+
+/**
  * Mobile-friendly contact.
  */
 data class MobileContact (
@@ -3624,6 +4396,268 @@ public object FfiConverterTypeMobileContactField: FfiConverterRustBuffer<MobileC
             FfiConverterTypeMobileFieldType.write(value.`fieldType`, buf)
             FfiConverterString.write(value.`label`, buf)
             FfiConverterString.write(value.`value`, buf)
+    }
+}
+
+
+
+/**
+ * Configuration for content updates.
+ */
+data class MobileContentConfig (
+    /**
+     * Whether remote updates are enabled
+     */
+    var `remoteUpdatesEnabled`: kotlin.Boolean, 
+    /**
+     * Content server URL
+     */
+    var `contentUrl`: kotlin.String, 
+    /**
+     * Optional SOCKS5 proxy URL (e.g., for Tor)
+     */
+    var `proxyUrl`: kotlin.String?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileContentConfig: FfiConverterRustBuffer<MobileContentConfig> {
+    override fun read(buf: ByteBuffer): MobileContentConfig {
+        return MobileContentConfig(
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MobileContentConfig) = (
+            FfiConverterBoolean.allocationSize(value.`remoteUpdatesEnabled`) +
+            FfiConverterString.allocationSize(value.`contentUrl`) +
+            FfiConverterOptionalString.allocationSize(value.`proxyUrl`)
+    )
+
+    override fun write(value: MobileContentConfig, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`remoteUpdatesEnabled`, buf)
+            FfiConverterString.write(value.`contentUrl`, buf)
+            FfiConverterOptionalString.write(value.`proxyUrl`, buf)
+    }
+}
+
+
+
+/**
+ * A record tracking delivery status of an outbound message.
+ */
+data class MobileDeliveryRecord (
+    /**
+     * Unique message ID.
+     */
+    var `messageId`: kotlin.String, 
+    /**
+     * Recipient's contact ID.
+     */
+    var `recipientId`: kotlin.String, 
+    /**
+     * Current delivery status.
+     */
+    var `status`: MobileDeliveryStatus, 
+    /**
+     * Error reason if failed.
+     */
+    var `errorReason`: kotlin.String?, 
+    /**
+     * When the message was created (Unix timestamp).
+     */
+    var `createdAt`: kotlin.ULong, 
+    /**
+     * When the status was last updated (Unix timestamp).
+     */
+    var `updatedAt`: kotlin.ULong, 
+    /**
+     * When the message expires (Unix timestamp, optional).
+     */
+    var `expiresAt`: kotlin.ULong?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileDeliveryRecord: FfiConverterRustBuffer<MobileDeliveryRecord> {
+    override fun read(buf: ByteBuffer): MobileDeliveryRecord {
+        return MobileDeliveryRecord(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeMobileDeliveryStatus.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterOptionalULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MobileDeliveryRecord) = (
+            FfiConverterString.allocationSize(value.`messageId`) +
+            FfiConverterString.allocationSize(value.`recipientId`) +
+            FfiConverterTypeMobileDeliveryStatus.allocationSize(value.`status`) +
+            FfiConverterOptionalString.allocationSize(value.`errorReason`) +
+            FfiConverterULong.allocationSize(value.`createdAt`) +
+            FfiConverterULong.allocationSize(value.`updatedAt`) +
+            FfiConverterOptionalULong.allocationSize(value.`expiresAt`)
+    )
+
+    override fun write(value: MobileDeliveryRecord, buf: ByteBuffer) {
+            FfiConverterString.write(value.`messageId`, buf)
+            FfiConverterString.write(value.`recipientId`, buf)
+            FfiConverterTypeMobileDeliveryStatus.write(value.`status`, buf)
+            FfiConverterOptionalString.write(value.`errorReason`, buf)
+            FfiConverterULong.write(value.`createdAt`, buf)
+            FfiConverterULong.write(value.`updatedAt`, buf)
+            FfiConverterOptionalULong.write(value.`expiresAt`, buf)
+    }
+}
+
+
+
+/**
+ * Summary of delivery status across all devices.
+ */
+data class MobileDeliverySummary (
+    /**
+     * Message ID.
+     */
+    var `messageId`: kotlin.String, 
+    /**
+     * Total number of target devices.
+     */
+    var `totalDevices`: kotlin.UInt, 
+    /**
+     * Number of devices that received the message.
+     */
+    var `deliveredDevices`: kotlin.UInt, 
+    /**
+     * Number of devices still pending.
+     */
+    var `pendingDevices`: kotlin.UInt, 
+    /**
+     * Number of devices where delivery failed.
+     */
+    var `failedDevices`: kotlin.UInt, 
+    /**
+     * Whether all devices have received the message.
+     */
+    var `isFullyDelivered`: kotlin.Boolean, 
+    /**
+     * Progress as percentage (0-100).
+     */
+    var `progressPercent`: kotlin.UInt
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileDeliverySummary: FfiConverterRustBuffer<MobileDeliverySummary> {
+    override fun read(buf: ByteBuffer): MobileDeliverySummary {
+        return MobileDeliverySummary(
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MobileDeliverySummary) = (
+            FfiConverterString.allocationSize(value.`messageId`) +
+            FfiConverterUInt.allocationSize(value.`totalDevices`) +
+            FfiConverterUInt.allocationSize(value.`deliveredDevices`) +
+            FfiConverterUInt.allocationSize(value.`pendingDevices`) +
+            FfiConverterUInt.allocationSize(value.`failedDevices`) +
+            FfiConverterBoolean.allocationSize(value.`isFullyDelivered`) +
+            FfiConverterUInt.allocationSize(value.`progressPercent`)
+    )
+
+    override fun write(value: MobileDeliverySummary, buf: ByteBuffer) {
+            FfiConverterString.write(value.`messageId`, buf)
+            FfiConverterUInt.write(value.`totalDevices`, buf)
+            FfiConverterUInt.write(value.`deliveredDevices`, buf)
+            FfiConverterUInt.write(value.`pendingDevices`, buf)
+            FfiConverterUInt.write(value.`failedDevices`, buf)
+            FfiConverterBoolean.write(value.`isFullyDelivered`, buf)
+            FfiConverterUInt.write(value.`progressPercent`, buf)
+    }
+}
+
+
+
+/**
+ * Per-device delivery tracking record.
+ */
+data class MobileDeviceDeliveryRecord (
+    /**
+     * Message ID being tracked.
+     */
+    var `messageId`: kotlin.String, 
+    /**
+     * Recipient's contact ID.
+     */
+    var `recipientId`: kotlin.String, 
+    /**
+     * Target device ID.
+     */
+    var `deviceId`: kotlin.String, 
+    /**
+     * Delivery status for this device.
+     */
+    var `status`: MobileDeviceDeliveryStatus, 
+    /**
+     * When the status was last updated (Unix timestamp).
+     */
+    var `updatedAt`: kotlin.ULong
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileDeviceDeliveryRecord: FfiConverterRustBuffer<MobileDeviceDeliveryRecord> {
+    override fun read(buf: ByteBuffer): MobileDeviceDeliveryRecord {
+        return MobileDeviceDeliveryRecord(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeMobileDeviceDeliveryStatus.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MobileDeviceDeliveryRecord) = (
+            FfiConverterString.allocationSize(value.`messageId`) +
+            FfiConverterString.allocationSize(value.`recipientId`) +
+            FfiConverterString.allocationSize(value.`deviceId`) +
+            FfiConverterTypeMobileDeviceDeliveryStatus.allocationSize(value.`status`) +
+            FfiConverterULong.allocationSize(value.`updatedAt`)
+    )
+
+    override fun write(value: MobileDeviceDeliveryRecord, buf: ByteBuffer) {
+            FfiConverterString.write(value.`messageId`, buf)
+            FfiConverterString.write(value.`recipientId`, buf)
+            FfiConverterString.write(value.`deviceId`, buf)
+            FfiConverterTypeMobileDeviceDeliveryStatus.write(value.`status`, buf)
+            FfiConverterULong.write(value.`updatedAt`, buf)
     }
 }
 
@@ -4255,6 +5289,82 @@ public object FfiConverterTypeMobileRecoveryVoucher: FfiConverterRustBuffer<Mobi
 
 
 /**
+ * A retry queue entry for failed message deliveries.
+ */
+data class MobileRetryEntry (
+    /**
+     * Unique message ID.
+     */
+    var `messageId`: kotlin.String, 
+    /**
+     * Recipient's contact ID.
+     */
+    var `recipientId`: kotlin.String, 
+    /**
+     * Current retry attempt (0 = first attempt).
+     */
+    var `attempt`: kotlin.UInt, 
+    /**
+     * Unix timestamp for next retry.
+     */
+    var `nextRetry`: kotlin.ULong, 
+    /**
+     * When the entry was created (Unix timestamp).
+     */
+    var `createdAt`: kotlin.ULong, 
+    /**
+     * Maximum number of retry attempts.
+     */
+    var `maxAttempts`: kotlin.UInt, 
+    /**
+     * Whether max attempts have been exceeded.
+     */
+    var `isMaxExceeded`: kotlin.Boolean
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileRetryEntry: FfiConverterRustBuffer<MobileRetryEntry> {
+    override fun read(buf: ByteBuffer): MobileRetryEntry {
+        return MobileRetryEntry(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MobileRetryEntry) = (
+            FfiConverterString.allocationSize(value.`messageId`) +
+            FfiConverterString.allocationSize(value.`recipientId`) +
+            FfiConverterUInt.allocationSize(value.`attempt`) +
+            FfiConverterULong.allocationSize(value.`nextRetry`) +
+            FfiConverterULong.allocationSize(value.`createdAt`) +
+            FfiConverterUInt.allocationSize(value.`maxAttempts`) +
+            FfiConverterBoolean.allocationSize(value.`isMaxExceeded`)
+    )
+
+    override fun write(value: MobileRetryEntry, buf: ByteBuffer) {
+            FfiConverterString.write(value.`messageId`, buf)
+            FfiConverterString.write(value.`recipientId`, buf)
+            FfiConverterUInt.write(value.`attempt`, buf)
+            FfiConverterULong.write(value.`nextRetry`, buf)
+            FfiConverterULong.write(value.`createdAt`, buf)
+            FfiConverterUInt.write(value.`maxAttempts`, buf)
+            FfiConverterBoolean.write(value.`isMaxExceeded`, buf)
+    }
+}
+
+
+
+/**
  * Social network info.
  */
 data class MobileSocialNetwork (
@@ -4467,6 +5577,278 @@ public object FfiConverterTypeMobileVisibilityLabelDetail: FfiConverterRustBuffe
             FfiConverterULong.write(value.`modifiedAt`, buf)
     }
 }
+
+
+
+/**
+ * Result of applying content updates.
+ */
+sealed class MobileApplyResult {
+    
+    /**
+     * No updates were available
+     */
+    object NoUpdates : MobileApplyResult()
+    
+    
+    /**
+     * Updates were applied (some may have failed)
+     */
+    data class Applied(
+        /**
+         * Content types that were successfully updated
+         */
+        val `applied`: List<MobileContentType>, 
+        /**
+         * Content types that failed with error messages
+         */
+        val `failed`: List<MobileApplyFailure>) : MobileApplyResult() {
+        companion object
+    }
+    
+    /**
+     * Remote updates are disabled
+     */
+    object Disabled : MobileApplyResult()
+    
+    
+    /**
+     * Apply failed completely
+     */
+    data class Error(
+        val `error`: kotlin.String) : MobileApplyResult() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileApplyResult : FfiConverterRustBuffer<MobileApplyResult>{
+    override fun read(buf: ByteBuffer): MobileApplyResult {
+        return when(buf.getInt()) {
+            1 -> MobileApplyResult.NoUpdates
+            2 -> MobileApplyResult.Applied(
+                FfiConverterSequenceTypeMobileContentType.read(buf),
+                FfiConverterSequenceTypeMobileApplyFailure.read(buf),
+                )
+            3 -> MobileApplyResult.Disabled
+            4 -> MobileApplyResult.Error(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: MobileApplyResult) = when(value) {
+        is MobileApplyResult.NoUpdates -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is MobileApplyResult.Applied -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterSequenceTypeMobileContentType.allocationSize(value.`applied`)
+                + FfiConverterSequenceTypeMobileApplyFailure.allocationSize(value.`failed`)
+            )
+        }
+        is MobileApplyResult.Disabled -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is MobileApplyResult.Error -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`error`)
+            )
+        }
+    }
+
+    override fun write(value: MobileApplyResult, buf: ByteBuffer) {
+        when(value) {
+            is MobileApplyResult.NoUpdates -> {
+                buf.putInt(1)
+                Unit
+            }
+            is MobileApplyResult.Applied -> {
+                buf.putInt(2)
+                FfiConverterSequenceTypeMobileContentType.write(value.`applied`, buf)
+                FfiConverterSequenceTypeMobileApplyFailure.write(value.`failed`, buf)
+                Unit
+            }
+            is MobileApplyResult.Disabled -> {
+                buf.putInt(3)
+                Unit
+            }
+            is MobileApplyResult.Error -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`error`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * Content type for mobile platforms.
+ */
+
+enum class MobileContentType {
+    
+    /**
+     * Social network definitions
+     */
+    NETWORKS,
+    /**
+     * Localization strings
+     */
+    LOCALES,
+    /**
+     * UI themes
+     */
+    THEMES,
+    /**
+     * Help content
+     */
+    HELP;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileContentType: FfiConverterRustBuffer<MobileContentType> {
+    override fun read(buf: ByteBuffer) = try {
+        MobileContentType.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: MobileContentType) = 4UL
+
+    override fun write(value: MobileContentType, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * Delivery status for tracking message delivery progression.
+ */
+
+enum class MobileDeliveryStatus {
+    
+    /**
+     * Message queued locally, not yet sent.
+     */
+    QUEUED,
+    /**
+     * Message sent to relay.
+     */
+    SENT,
+    /**
+     * Relay confirmed storage.
+     */
+    STORED,
+    /**
+     * Recipient confirmed receipt.
+     */
+    DELIVERED,
+    /**
+     * Message expired without delivery.
+     */
+    EXPIRED,
+    /**
+     * Delivery failed.
+     */
+    FAILED;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileDeliveryStatus: FfiConverterRustBuffer<MobileDeliveryStatus> {
+    override fun read(buf: ByteBuffer) = try {
+        MobileDeliveryStatus.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: MobileDeliveryStatus) = 4UL
+
+    override fun write(value: MobileDeliveryStatus, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * Delivery status for a specific device.
+ */
+
+enum class MobileDeviceDeliveryStatus {
+    
+    /**
+     * Message pending delivery to this device.
+     */
+    PENDING,
+    /**
+     * Message stored at relay for this device.
+     */
+    STORED,
+    /**
+     * Message delivered to this device.
+     */
+    DELIVERED,
+    /**
+     * Delivery to this device failed.
+     */
+    FAILED;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileDeviceDeliveryStatus: FfiConverterRustBuffer<MobileDeviceDeliveryStatus> {
+    override fun read(buf: ByteBuffer) = try {
+        MobileDeviceDeliveryStatus.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: MobileDeviceDeliveryStatus) = 4UL
+
+    override fun write(value: MobileDeviceDeliveryStatus, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
 
 
 
@@ -4878,6 +6260,119 @@ public object FfiConverterTypeMobileSyncStatus: FfiConverterRustBuffer<MobileSyn
 
 
 
+/**
+ * Result of checking for content updates.
+ */
+sealed class MobileUpdateStatus {
+    
+    /**
+     * Content is up to date
+     */
+    object UpToDate : MobileUpdateStatus()
+    
+    
+    /**
+     * Updates are available for the specified content types
+     */
+    data class UpdatesAvailable(
+        val `types`: List<MobileContentType>) : MobileUpdateStatus() {
+        companion object
+    }
+    
+    /**
+     * Update check failed
+     */
+    data class CheckFailed(
+        val `error`: kotlin.String) : MobileUpdateStatus() {
+        companion object
+    }
+    
+    /**
+     * Remote updates are disabled
+     */
+    object Disabled : MobileUpdateStatus()
+    
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileUpdateStatus : FfiConverterRustBuffer<MobileUpdateStatus>{
+    override fun read(buf: ByteBuffer): MobileUpdateStatus {
+        return when(buf.getInt()) {
+            1 -> MobileUpdateStatus.UpToDate
+            2 -> MobileUpdateStatus.UpdatesAvailable(
+                FfiConverterSequenceTypeMobileContentType.read(buf),
+                )
+            3 -> MobileUpdateStatus.CheckFailed(
+                FfiConverterString.read(buf),
+                )
+            4 -> MobileUpdateStatus.Disabled
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: MobileUpdateStatus) = when(value) {
+        is MobileUpdateStatus.UpToDate -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is MobileUpdateStatus.UpdatesAvailable -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterSequenceTypeMobileContentType.allocationSize(value.`types`)
+            )
+        }
+        is MobileUpdateStatus.CheckFailed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`error`)
+            )
+        }
+        is MobileUpdateStatus.Disabled -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: MobileUpdateStatus, buf: ByteBuffer) {
+        when(value) {
+            is MobileUpdateStatus.UpToDate -> {
+                buf.putInt(1)
+                Unit
+            }
+            is MobileUpdateStatus.UpdatesAvailable -> {
+                buf.putInt(2)
+                FfiConverterSequenceTypeMobileContentType.write(value.`types`, buf)
+                Unit
+            }
+            is MobileUpdateStatus.CheckFailed -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`error`, buf)
+                Unit
+            }
+            is MobileUpdateStatus.Disabled -> {
+                buf.putInt(4)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
 
 
 /**
@@ -5058,6 +6553,38 @@ public object FfiConverterTypePlatformAudioHandler: FfiConverterCallbackInterfac
 /**
  * @suppress
  */
+public object FfiConverterOptionalULong: FfiConverterRustBuffer<kotlin.ULong?> {
+    override fun read(buf: ByteBuffer): kotlin.ULong? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterULong.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.ULong?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterULong.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.ULong?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterULong.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
     override fun read(buf: ByteBuffer): kotlin.String? {
         if (buf.get().toInt() == 0) {
@@ -5112,6 +6639,38 @@ public object FfiConverterOptionalTypeMobileContact: FfiConverterRustBuffer<Mobi
         } else {
             buf.put(1)
             FfiConverterTypeMobileContact.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeMobileDeliveryRecord: FfiConverterRustBuffer<MobileDeliveryRecord?> {
+    override fun read(buf: ByteBuffer): MobileDeliveryRecord? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeMobileDeliveryRecord.read(buf)
+    }
+
+    override fun allocationSize(value: MobileDeliveryRecord?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeMobileDeliveryRecord.allocationSize(value)
+        }
+    }
+
+    override fun write(value: MobileDeliveryRecord?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeMobileDeliveryRecord.write(value, buf)
         }
     }
 }
@@ -5210,6 +6769,34 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.Str
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeMobileApplyFailure: FfiConverterRustBuffer<List<MobileApplyFailure>> {
+    override fun read(buf: ByteBuffer): List<MobileApplyFailure> {
+        val len = buf.getInt()
+        return List<MobileApplyFailure>(len) {
+            FfiConverterTypeMobileApplyFailure.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<MobileApplyFailure>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeMobileApplyFailure.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<MobileApplyFailure>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeMobileApplyFailure.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeMobileContact: FfiConverterRustBuffer<List<MobileContact>> {
     override fun read(buf: ByteBuffer): List<MobileContact> {
         val len = buf.getInt()
@@ -5266,6 +6853,90 @@ public object FfiConverterSequenceTypeMobileContactField: FfiConverterRustBuffer
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeMobileDeliveryRecord: FfiConverterRustBuffer<List<MobileDeliveryRecord>> {
+    override fun read(buf: ByteBuffer): List<MobileDeliveryRecord> {
+        val len = buf.getInt()
+        return List<MobileDeliveryRecord>(len) {
+            FfiConverterTypeMobileDeliveryRecord.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<MobileDeliveryRecord>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeMobileDeliveryRecord.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<MobileDeliveryRecord>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeMobileDeliveryRecord.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeMobileDeviceDeliveryRecord: FfiConverterRustBuffer<List<MobileDeviceDeliveryRecord>> {
+    override fun read(buf: ByteBuffer): List<MobileDeviceDeliveryRecord> {
+        val len = buf.getInt()
+        return List<MobileDeviceDeliveryRecord>(len) {
+            FfiConverterTypeMobileDeviceDeliveryRecord.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<MobileDeviceDeliveryRecord>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeMobileDeviceDeliveryRecord.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<MobileDeviceDeliveryRecord>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeMobileDeviceDeliveryRecord.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeMobileRetryEntry: FfiConverterRustBuffer<List<MobileRetryEntry>> {
+    override fun read(buf: ByteBuffer): List<MobileRetryEntry> {
+        val len = buf.getInt()
+        return List<MobileRetryEntry>(len) {
+            FfiConverterTypeMobileRetryEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<MobileRetryEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeMobileRetryEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<MobileRetryEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeMobileRetryEntry.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeMobileSocialNetwork: FfiConverterRustBuffer<List<MobileSocialNetwork>> {
     override fun read(buf: ByteBuffer): List<MobileSocialNetwork> {
         val len = buf.getInt()
@@ -5312,6 +6983,34 @@ public object FfiConverterSequenceTypeMobileVisibilityLabel: FfiConverterRustBuf
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeMobileVisibilityLabel.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeMobileContentType: FfiConverterRustBuffer<List<MobileContentType>> {
+    override fun read(buf: ByteBuffer): List<MobileContentType> {
+        val len = buf.getInt()
+        return List<MobileContentType>(len) {
+            FfiConverterTypeMobileContentType.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<MobileContentType>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeMobileContentType.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<MobileContentType>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeMobileContentType.write(it, buf)
         }
     }
 }
