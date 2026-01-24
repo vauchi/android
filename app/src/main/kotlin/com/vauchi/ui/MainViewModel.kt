@@ -15,6 +15,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.vauchi_mobile.MobileContact
 import uniffi.vauchi_mobile.MobileContactCard
+import uniffi.vauchi_mobile.MobileDemoContact
+import uniffi.vauchi_mobile.MobileDemoContactState
 import uniffi.vauchi_mobile.MobileExchangeData
 import uniffi.vauchi_mobile.MobileExchangeResult
 import uniffi.vauchi_mobile.MobileFieldType
@@ -84,6 +86,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Last sync timestamp
     private val _lastSyncTime = MutableStateFlow<Instant?>(null)
     val lastSyncTime: StateFlow<Instant?> = _lastSyncTime.asStateFlow()
+
+    // Demo contact state (for users with no contacts)
+    private val _demoContact = MutableStateFlow<MobileDemoContact?>(null)
+    val demoContact: StateFlow<MobileDemoContact?> = _demoContact.asStateFlow()
+
+    private val _demoContactState = MutableStateFlow<MobileDemoContactState?>(null)
+    val demoContactState: StateFlow<MobileDemoContactState?> = _demoContactState.asStateFlow()
 
     // Accessibility settings
     private val _reduceMotion = MutableStateFlow(false)
@@ -200,6 +209,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     repository.setOnboardingCompleted(true)
                 }
                 loadUserData()
+                // Initialize demo contact for new users
+                initDemoContactIfNeeded()
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Failed to create identity")
             }
@@ -231,6 +242,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
             _uiState.value = UiState.Ready(displayName, publicId, card, contactCount)
+            // Load demo contact state
+            loadDemoContact()
         } catch (e: Exception) {
             _uiState.value = UiState.Error(e.message ?: "Failed to load user data")
         }
@@ -335,6 +348,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 repository.completeExchange(qrData)
             }
             loadUserData()
+            // Auto-remove demo contact after first real exchange
+            if (result != null && result.success) {
+                autoRemoveDemoContact()
+            }
             result
         } catch (e: Exception) {
             null
@@ -563,6 +580,128 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         } catch (e: Exception) {
             null
+        }
+    }
+
+    // Demo contact operations
+    // Based on: features/demo_contact.feature
+
+    /**
+     * Initialize demo contact if user has no real contacts.
+     * Call this after onboarding completes.
+     */
+    fun initDemoContactIfNeeded() {
+        viewModelScope.launch {
+            try {
+                val demo = withContext(Dispatchers.IO) {
+                    repository.initDemoContactIfNeeded()
+                }
+                _demoContact.value = demo
+                _demoContactState.value = repository.getDemoContactState()
+            } catch (e: Exception) {
+                // Silently fail - demo is optional
+            }
+        }
+    }
+
+    /**
+     * Load the current demo contact state
+     */
+    fun loadDemoContact() {
+        viewModelScope.launch {
+            try {
+                val demo = withContext(Dispatchers.IO) {
+                    repository.getDemoContact()
+                }
+                _demoContact.value = demo
+                _demoContactState.value = repository.getDemoContactState()
+            } catch (e: Exception) {
+                _demoContact.value = null
+                _demoContactState.value = repository.getDemoContactState()
+            }
+        }
+    }
+
+    /**
+     * Dismiss the demo contact manually
+     */
+    fun dismissDemoContact() {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.dismissDemoContact()
+                }
+                _demoContact.value = null
+                _demoContactState.value = repository.getDemoContactState()
+            } catch (e: Exception) {
+                showMessage("Failed to dismiss demo: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Auto-remove demo contact after first real exchange.
+     * Called automatically by completeExchange().
+     */
+    private fun autoRemoveDemoContact() {
+        viewModelScope.launch {
+            try {
+                val removed = withContext(Dispatchers.IO) {
+                    repository.autoRemoveDemoContact()
+                }
+                if (removed) {
+                    _demoContact.value = null
+                    _demoContactState.value = repository.getDemoContactState()
+                }
+            } catch (e: Exception) {
+                // Silently fail
+            }
+        }
+    }
+
+    /**
+     * Restore the demo contact from Settings
+     */
+    fun restoreDemoContact() {
+        viewModelScope.launch {
+            try {
+                val demo = withContext(Dispatchers.IO) {
+                    repository.restoreDemoContact()
+                }
+                _demoContact.value = demo
+                _demoContactState.value = repository.getDemoContactState()
+                showMessage("Demo contact restored")
+            } catch (e: Exception) {
+                showMessage("Failed to restore demo: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Trigger a demo update
+     */
+    fun triggerDemoUpdate() {
+        viewModelScope.launch {
+            try {
+                val demo = withContext(Dispatchers.IO) {
+                    repository.triggerDemoUpdate()
+                }
+                _demoContact.value = demo
+                _demoContactState.value = repository.getDemoContactState()
+            } catch (e: Exception) {
+                // Silently fail
+            }
+        }
+    }
+
+    /**
+     * Check if demo update is available
+     */
+    fun isDemoUpdateAvailable(): Boolean {
+        return try {
+            repository.isDemoUpdateAvailable()
+        } catch (e: Exception) {
+            false
         }
     }
 }

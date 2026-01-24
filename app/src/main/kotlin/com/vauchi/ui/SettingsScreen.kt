@@ -38,6 +38,9 @@ fun SettingsScreen(
     onDeliveryStatus: () -> Unit = {},
     failedDeliveryCount: Int = 0,
     onCheckPasswordStrength: (String) -> PasswordStrengthResult = { PasswordStrengthResult() },
+    // Demo contact
+    showRestoreDemoOption: Boolean = false,
+    onRestoreDemo: () -> Unit = {},
     // Accessibility settings
     reduceMotion: Boolean = false,
     onReduceMotionChange: (Boolean) -> Unit = {},
@@ -373,6 +376,15 @@ fun SettingsScreen(
             val openUrl = { url: String ->
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                 context.startActivity(intent)
+            }
+
+            // Demo contact restore option
+            if (showRestoreDemoOption) {
+                HelpLinkItem(
+                    title = "Show Demo Contact",
+                    subtitle = "Learn how updates work",
+                    onClick = onRestoreDemo
+                )
             }
 
             HelpLinkItem(

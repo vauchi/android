@@ -12,10 +12,9 @@ package com.vauchi.data
 // tryTriggerAhaMoment(), tryTriggerAhaMomentWithContext(), ahaMomentSeenCount(),
 // ahaMomentsTotalCount(), resetAhaMoments(). No progressive onboarding hints.
 //
-// TODO(core-gap): Demo contact - vauchi-mobile exposes initDemoContactIfNeeded(),
-// getDemoContact(), getDemoContactState(), isDemoUpdateAvailable(), triggerDemoUpdate(),
+// DONE: Demo contact - implemented initDemoContactIfNeeded(), getDemoContact(),
+// getDemoContactState(), isDemoUpdateAvailable(), triggerDemoUpdate(),
 // dismissDemoContact(), autoRemoveDemoContact(), restoreDemoContact().
-// Blocked by TODO in MainActivity - should show demo in contacts list for onboarding.
 //
 // TODO(core-gap): Visibility labels - advanced label-based visibility grouping.
 // vauchi-mobile exposes listLabels(), createLabel(), getLabel(), renameLabel(),
@@ -268,4 +267,63 @@ class VauchiRepository(context: Context) {
     fun countFailedDeliveries(): UInt = vauchi.countFailedDeliveries()
 
     fun manualRetry(messageId: String): Boolean = vauchi.manualRetry(messageId)
+
+    // Demo contact operations
+    // Based on: features/demo_contact.feature
+
+    /**
+     * Initialize demo contact if user has no real contacts.
+     * Call this after onboarding completes.
+     *
+     * @return The demo contact if created, null if user has contacts or demo was dismissed
+     */
+    fun initDemoContactIfNeeded() = vauchi.initDemoContactIfNeeded()
+
+    /**
+     * Get the current demo contact if active.
+     *
+     * @return The demo contact if active, null otherwise
+     */
+    fun getDemoContact() = vauchi.getDemoContact()
+
+    /**
+     * Get the demo contact state.
+     *
+     * @return Current state of the demo contact
+     */
+    fun getDemoContactState() = vauchi.getDemoContactState()
+
+    /**
+     * Check if a demo update is available.
+     *
+     * @return True if an update is due (based on 2-hour interval)
+     */
+    fun isDemoUpdateAvailable(): Boolean = vauchi.isDemoUpdateAvailable()
+
+    /**
+     * Trigger a demo update and get the new content.
+     *
+     * @return Updated demo contact with new tip, null if demo not active
+     */
+    fun triggerDemoUpdate() = vauchi.triggerDemoUpdate()
+
+    /**
+     * Dismiss the demo contact manually.
+     */
+    fun dismissDemoContact() = vauchi.dismissDemoContact()
+
+    /**
+     * Auto-remove demo contact after first real exchange.
+     * Call this after a successful contact exchange.
+     *
+     * @return True if demo was removed, false if it wasn't active
+     */
+    fun autoRemoveDemoContact(): Boolean = vauchi.autoRemoveDemoContact()
+
+    /**
+     * Restore the demo contact from Settings.
+     *
+     * @return The restored demo contact
+     */
+    fun restoreDemoContact() = vauchi.restoreDemoContact()
 }

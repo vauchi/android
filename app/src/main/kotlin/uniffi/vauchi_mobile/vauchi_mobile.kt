@@ -939,6 +939,46 @@ internal open class UniffiVTableCallbackInterfacePlatformAudioHandler(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -991,8 +1031,14 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_add_recovery_voucher(`ptr`: Pointer,`voucherB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_aha_moments_seen_count(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_aha_moments_total_count(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_apply_content_updates(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_auto_remove_demo_contact(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_calculate_retry_backoff(`ptr`: Pointer,`attempt`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_check_content_updates(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
@@ -1017,6 +1063,8 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_delete_retry(`ptr`: Pointer,`messageId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_dismiss_demo_contact(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_export_backup(`ptr`: Pointer,`password`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_export_storage_key(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
@@ -1035,11 +1083,19 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_delivery_summary(`ptr`: Pointer,`messageId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_demo_contact(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_demo_contact_state(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_device_deliveries(`ptr`: Pointer,`messageId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_display_name(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_due_retries(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_field_validation_count(`ptr`: Pointer,`contactId`: RustBuffer.ByValue,`fieldId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_field_validation_status(`ptr`: Pointer,`contactId`: RustBuffer.ByValue,`fieldId`: RustBuffer.ByValue,`fieldValue`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_get_label(`ptr`: Pointer,`labelId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1073,13 +1129,21 @@ internal interface UniffiLib : Library {
     ): Int
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_has_identity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_has_seen_aha_moment(`ptr`: Pointer,`momentType`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_has_validated_field(`ptr`: Pointer,`contactId`: RustBuffer.ByValue,`fieldId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_hide_field_from_contact(`ptr`: Pointer,`contactId`: RustBuffer.ByValue,`fieldLabel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_import_backup(`ptr`: Pointer,`backupData`: RustBuffer.ByValue,`password`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_init_demo_contact_if_needed(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_is_certificate_pinning_enabled(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_is_content_updates_supported(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_is_demo_update_available(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_is_field_visible_to_contact(`ptr`: Pointer,`contactId`: RustBuffer.ByValue,`fieldLabel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
@@ -1088,6 +1152,8 @@ internal interface UniffiLib : Library {
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_list_contacts(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_list_labels(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_list_my_validations(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_list_social_networks(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1109,6 +1175,12 @@ internal interface UniffiLib : Library {
     ): Byte
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_rename_label(`ptr`: Pointer,`labelId`: RustBuffer.ByValue,`newName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_reset_aha_moments(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_restore_demo_contact(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_revoke_field_validation(`ptr`: Pointer,`contactId`: RustBuffer.ByValue,`fieldId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_search_contacts(`ptr`: Pointer,`query`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_search_social_networks(`ptr`: Pointer,`query`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1125,8 +1197,16 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_sync(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_trigger_demo_update(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_try_trigger_aha_moment(`ptr`: Pointer,`momentType`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_try_trigger_aha_moment_with_context(`ptr`: Pointer,`momentType`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_update_field(`ptr`: Pointer,`label`: RustBuffer.ByValue,`newValue`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_vauchi_mobile_fn_method_vauchimobile_validate_field(`ptr`: Pointer,`contactId`: RustBuffer.ByValue,`fieldId`: RustBuffer.ByValue,`fieldValue`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_verify_contact(`ptr`: Pointer,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     fun uniffi_vauchi_mobile_fn_method_vauchimobile_verify_recovery_proof(`ptr`: Pointer,`proofB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1281,7 +1361,13 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_add_recovery_voucher(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_aha_moments_seen_count(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_aha_moments_total_count(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_apply_content_updates(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_auto_remove_demo_contact(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_calculate_retry_backoff(
     ): Short
@@ -1307,6 +1393,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_delete_retry(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_dismiss_demo_contact(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_export_backup(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_export_storage_key(
@@ -1325,11 +1413,19 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_delivery_summary(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_demo_contact(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_demo_contact_state(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_device_deliveries(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_display_name(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_due_retries(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_field_validation_count(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_field_validation_status(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_get_label(
     ): Short
@@ -1363,13 +1459,21 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_has_identity(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_has_seen_aha_moment(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_has_validated_field(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_hide_field_from_contact(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_import_backup(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_init_demo_contact_if_needed(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_is_certificate_pinning_enabled(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_is_content_updates_supported(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_is_demo_update_available(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_is_field_visible_to_contact(
     ): Short
@@ -1378,6 +1482,8 @@ internal interface UniffiLib : Library {
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_list_contacts(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_list_labels(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_list_my_validations(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_list_social_networks(
     ): Short
@@ -1399,6 +1505,12 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_rename_label(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_reset_aha_moments(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_restore_demo_contact(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_revoke_field_validation(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_search_contacts(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_search_social_networks(
@@ -1415,7 +1527,15 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_sync(
     ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_trigger_demo_update(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_try_trigger_aha_moment(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_try_trigger_aha_moment_with_context(
+    ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_update_field(
+    ): Short
+    fun uniffi_vauchi_mobile_checksum_method_vauchimobile_validate_field(
     ): Short
     fun uniffi_vauchi_mobile_checksum_method_vauchimobile_verify_contact(
     ): Short
@@ -1495,7 +1615,16 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_add_recovery_voucher() != 24135.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_aha_moments_seen_count() != 62433.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_aha_moments_total_count() != 39450.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_apply_content_updates() != 9726.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_auto_remove_demo_contact() != 63912.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_calculate_retry_backoff() != 60454.toShort()) {
@@ -1534,6 +1663,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_delete_retry() != 45088.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_dismiss_demo_contact() != 52421.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_export_backup() != 14975.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1561,6 +1693,12 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_delivery_summary() != 26032.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_demo_contact() != 57328.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_demo_contact_state() != 10277.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_device_deliveries() != 13834.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1568,6 +1706,12 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_due_retries() != 45644.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_field_validation_count() != 23050.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_field_validation_status() != 10695.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_get_label() != 23616.toShort()) {
@@ -1618,16 +1762,28 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_has_identity() != 17028.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_has_seen_aha_moment() != 37304.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_has_validated_field() != 50022.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_hide_field_from_contact() != 26050.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_import_backup() != 16228.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_init_demo_contact_if_needed() != 24963.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_is_certificate_pinning_enabled() != 31532.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_is_content_updates_supported() != 25945.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_is_demo_update_available() != 17863.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_is_field_visible_to_contact() != 31866.toShort()) {
@@ -1640,6 +1796,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_list_labels() != 31739.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_list_my_validations() != 30917.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_list_social_networks() != 64160.toShort()) {
@@ -1672,6 +1831,15 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_rename_label() != 5503.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_reset_aha_moments() != 24810.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_restore_demo_contact() != 31302.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_revoke_field_validation() != 14878.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_search_contacts() != 63776.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1696,7 +1864,19 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_sync() != 44616.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_trigger_demo_update() != 56863.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_try_trigger_aha_moment() != 32158.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_try_trigger_aha_moment_with_context() != 36865.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_update_field() != 13386.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_validate_field() != 21676.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_vauchi_mobile_checksum_method_vauchimobile_verify_contact() != 57061.toShort()) {
@@ -2498,6 +2678,16 @@ public interface VauchiMobileInterface {
     fun `addRecoveryVoucher`(`voucherB64`: kotlin.String): MobileRecoveryProgress
     
     /**
+     * Get the count of seen aha moments.
+     */
+    fun `ahaMomentsSeenCount`(): kotlin.UInt
+    
+    /**
+     * Get the total count of aha moments.
+     */
+    fun `ahaMomentsTotalCount`(): kotlin.UInt
+    
+    /**
      * Apply available content updates.
      *
      * Downloads and caches any available updates. After applying,
@@ -2506,6 +2696,12 @@ public interface VauchiMobileInterface {
      * Note: Returns Disabled if the `content-updates` feature is not enabled.
      */
     fun `applyContentUpdates`(): MobileApplyResult
+    
+    /**
+     * Auto-remove demo contact after first real exchange.
+     * Call this after a successful contact exchange.
+     */
+    fun `autoRemoveDemoContact`(): kotlin.Boolean
     
     /**
      * Calculate the backoff time for a given retry attempt.
@@ -2584,6 +2780,11 @@ public interface VauchiMobileInterface {
     fun `deleteRetry`(`messageId`: kotlin.String): kotlin.Boolean
     
     /**
+     * Dismiss the demo contact.
+     */
+    fun `dismissDemoContact`()
+    
+    /**
      * Export encrypted backup.
      */
     fun `exportBackup`(`password`: kotlin.String): kotlin.String
@@ -2629,6 +2830,16 @@ public interface VauchiMobileInterface {
     fun `getDeliverySummary`(`messageId`: kotlin.String): MobileDeliverySummary
     
     /**
+     * Get the current demo contact if active.
+     */
+    fun `getDemoContact`(): MobileDemoContact?
+    
+    /**
+     * Get the demo contact state.
+     */
+    fun `getDemoContactState`(): MobileDemoContactState
+    
+    /**
      * Get all device delivery records for a message.
      */
     fun `getDeviceDeliveries`(`messageId`: kotlin.String): List<MobileDeviceDeliveryRecord>
@@ -2642,6 +2853,19 @@ public interface VauchiMobileInterface {
      * Get all retry entries that are due for retry.
      */
     fun `getDueRetries`(): List<MobileRetryEntry>
+    
+    /**
+     * Get the validation count for a field (quick check without full status).
+     */
+    fun `getFieldValidationCount`(`contactId`: kotlin.String, `fieldId`: kotlin.String): kotlin.UInt
+    
+    /**
+     * Get validation status for a contact's field.
+     *
+     * Returns aggregated validation information including count, trust level,
+     * and whether you have validated this field.
+     */
+    fun `getFieldValidationStatus`(`contactId`: kotlin.String, `fieldId`: kotlin.String, `fieldValue`: kotlin.String): MobileValidationStatus
     
     /**
      * Get a label by ID with full details.
@@ -2728,6 +2952,16 @@ public interface VauchiMobileInterface {
     fun `hasIdentity`(): kotlin.Boolean
     
     /**
+     * Check if an aha moment has been seen.
+     */
+    fun `hasSeenAhaMoment`(`momentType`: MobileAhaMomentType): kotlin.Boolean
+    
+    /**
+     * Check if you have validated a specific field.
+     */
+    fun `hasValidatedField`(`contactId`: kotlin.String, `fieldId`: kotlin.String): kotlin.Boolean
+    
+    /**
      * Hide field from contact.
      */
     fun `hideFieldFromContact`(`contactId`: kotlin.String, `fieldLabel`: kotlin.String)
@@ -2736,6 +2970,12 @@ public interface VauchiMobileInterface {
      * Import backup.
      */
     fun `importBackup`(`backupData`: kotlin.String, `password`: kotlin.String)
+    
+    /**
+     * Initialize the demo contact if user has no real contacts.
+     * Call this after onboarding completes.
+     */
+    fun `initDemoContactIfNeeded`(): MobileDemoContact?
     
     /**
      * Check if certificate pinning is enabled.
@@ -2748,6 +2988,11 @@ public interface VauchiMobileInterface {
      * Returns true if the content-updates feature is enabled at compile time.
      */
     fun `isContentUpdatesSupported`(): kotlin.Boolean
+    
+    /**
+     * Check if a demo update is available.
+     */
+    fun `isDemoUpdateAvailable`(): kotlin.Boolean
     
     /**
      * Check if field is visible to contact.
@@ -2770,6 +3015,14 @@ public interface VauchiMobileInterface {
      * List all visibility labels.
      */
     fun `listLabels`(): List<MobileVisibilityLabel>
+    
+    /**
+     * List all validations you have made.
+     *
+     * Returns a list of all fields you have validated, sorted by
+     * validation timestamp (most recent first).
+     */
+    fun `listMyValidations`(): List<MobileFieldValidation>
     
     /**
      * List available social networks.
@@ -2829,6 +3082,23 @@ public interface VauchiMobileInterface {
     fun `renameLabel`(`labelId`: kotlin.String, `newName`: kotlin.String)
     
     /**
+     * Reset all aha moments (for testing/debugging).
+     */
+    fun `resetAhaMoments`()
+    
+    /**
+     * Restore the demo contact from Settings.
+     */
+    fun `restoreDemoContact`(): MobileDemoContact?
+    
+    /**
+     * Revoke your validation of a contact's field.
+     *
+     * Returns true if a validation was revoked, false if you hadn't validated.
+     */
+    fun `revokeFieldValidation`(`contactId`: kotlin.String, `fieldId`: kotlin.String): kotlin.Boolean
+    
+    /**
      * Search contacts.
      */
     fun `searchContacts`(`query`: kotlin.String): List<MobileContact>
@@ -2874,9 +3144,33 @@ public interface VauchiMobileInterface {
     fun `sync`(): MobileSyncResult
     
     /**
+     * Trigger a demo update and get the new content.
+     */
+    fun `triggerDemoUpdate`(): MobileDemoContact?
+    
+    /**
+     * Try to trigger an aha moment. Returns the moment if not yet seen, None otherwise.
+     */
+    fun `tryTriggerAhaMoment`(`momentType`: MobileAhaMomentType): MobileAhaMoment?
+    
+    /**
+     * Try to trigger an aha moment with context (e.g., contact name).
+     */
+    fun `tryTriggerAhaMomentWithContext`(`momentType`: MobileAhaMomentType, `context`: kotlin.String): MobileAhaMoment?
+    
+    /**
      * Update field value.
      */
     fun `updateField`(`label`: kotlin.String, `newValue`: kotlin.String)
+    
+    /**
+     * Validate a contact's field.
+     *
+     * Creates a cryptographically signed validation record attesting
+     * that you believe this field value belongs to this contact.
+     * Returns the created validation.
+     */
+    fun `validateField`(`contactId`: kotlin.String, `fieldId`: kotlin.String, `fieldValue`: kotlin.String): MobileFieldValidation
     
     /**
      * Verify contact fingerprint.
@@ -3043,6 +3337,36 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Get the count of seen aha moments.
+     */override fun `ahaMomentsSeenCount`(): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_aha_moments_seen_count(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Get the total count of aha moments.
+     */override fun `ahaMomentsTotalCount`(): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_aha_moments_total_count(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Apply available content updates.
      *
      * Downloads and caches any available updates. After applying,
@@ -3054,6 +3378,23 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_apply_content_updates(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Auto-remove demo contact after first real exchange.
+     * Call this after a successful contact exchange.
+     */
+    @Throws(MobileException::class)override fun `autoRemoveDemoContact`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_auto_remove_demo_contact(
         it, _status)
 }
     }
@@ -3267,6 +3608,21 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Dismiss the demo contact.
+     */
+    @Throws(MobileException::class)override fun `dismissDemoContact`()
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_dismiss_demo_contact(
+        it, _status)
+}
+    }
+    
+    
+
+    
+    /**
      * Export encrypted backup.
      */
     @Throws(MobileException::class)override fun `exportBackup`(`password`: kotlin.String): kotlin.String {
@@ -3410,6 +3766,37 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Get the current demo contact if active.
+     */
+    @Throws(MobileException::class)override fun `getDemoContact`(): MobileDemoContact? {
+            return FfiConverterOptionalTypeMobileDemoContact.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_demo_contact(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Get the demo contact state.
+     */override fun `getDemoContactState`(): MobileDemoContactState {
+            return FfiConverterTypeMobileDemoContactState.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_demo_contact_state(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Get all device delivery records for a message.
      */
     @Throws(MobileException::class)override fun `getDeviceDeliveries`(`messageId`: kotlin.String): List<MobileDeviceDeliveryRecord> {
@@ -3450,6 +3837,41 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
     uniffiRustCallWithError(MobileException) { _status ->
     UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_due_retries(
         it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Get the validation count for a field (quick check without full status).
+     */
+    @Throws(MobileException::class)override fun `getFieldValidationCount`(`contactId`: kotlin.String, `fieldId`: kotlin.String): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_field_validation_count(
+        it, FfiConverterString.lower(`contactId`),FfiConverterString.lower(`fieldId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Get validation status for a contact's field.
+     *
+     * Returns aggregated validation information including count, trust level,
+     * and whether you have validated this field.
+     */
+    @Throws(MobileException::class)override fun `getFieldValidationStatus`(`contactId`: kotlin.String, `fieldId`: kotlin.String, `fieldValue`: kotlin.String): MobileValidationStatus {
+            return FfiConverterTypeMobileValidationStatus.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_get_field_validation_status(
+        it, FfiConverterString.lower(`contactId`),FfiConverterString.lower(`fieldId`),FfiConverterString.lower(`fieldValue`),_status)
 }
     }
     )
@@ -3714,6 +4136,37 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Check if an aha moment has been seen.
+     */override fun `hasSeenAhaMoment`(`momentType`: MobileAhaMomentType): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_has_seen_aha_moment(
+        it, FfiConverterTypeMobileAhaMomentType.lower(`momentType`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Check if you have validated a specific field.
+     */
+    @Throws(MobileException::class)override fun `hasValidatedField`(`contactId`: kotlin.String, `fieldId`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_has_validated_field(
+        it, FfiConverterString.lower(`contactId`),FfiConverterString.lower(`fieldId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Hide field from contact.
      */
     @Throws(MobileException::class)override fun `hideFieldFromContact`(`contactId`: kotlin.String, `fieldLabel`: kotlin.String)
@@ -3744,6 +4197,23 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Initialize the demo contact if user has no real contacts.
+     * Call this after onboarding completes.
+     */
+    @Throws(MobileException::class)override fun `initDemoContactIfNeeded`(): MobileDemoContact? {
+            return FfiConverterOptionalTypeMobileDemoContact.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_init_demo_contact_if_needed(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Check if certificate pinning is enabled.
      */override fun `isCertificatePinningEnabled`(): kotlin.Boolean {
             return FfiConverterBoolean.lift(
@@ -3767,6 +4237,21 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
     callWithPointer {
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_is_content_updates_supported(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Check if a demo update is available.
+     */override fun `isDemoUpdateAvailable`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_is_demo_update_available(
         it, _status)
 }
     }
@@ -3833,6 +4318,25 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
     callWithPointer {
     uniffiRustCallWithError(MobileException) { _status ->
     UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_list_labels(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * List all validations you have made.
+     *
+     * Returns a list of all fields you have validated, sorted by
+     * validation timestamp (most recent first).
+     */
+    @Throws(MobileException::class)override fun `listMyValidations`(): List<MobileFieldValidation> {
+            return FfiConverterSequenceTypeMobileFieldValidation.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_list_my_validations(
         it, _status)
 }
     }
@@ -4004,6 +4508,55 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Reset all aha moments (for testing/debugging).
+     */
+    @Throws(MobileException::class)override fun `resetAhaMoments`()
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_reset_aha_moments(
+        it, _status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Restore the demo contact from Settings.
+     */
+    @Throws(MobileException::class)override fun `restoreDemoContact`(): MobileDemoContact? {
+            return FfiConverterOptionalTypeMobileDemoContact.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_restore_demo_contact(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Revoke your validation of a contact's field.
+     *
+     * Returns true if a validation was revoked, false if you hadn't validated.
+     */
+    @Throws(MobileException::class)override fun `revokeFieldValidation`(`contactId`: kotlin.String, `fieldId`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_revoke_field_validation(
+        it, FfiConverterString.lower(`contactId`),FfiConverterString.lower(`fieldId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Search contacts.
      */
     @Throws(MobileException::class)override fun `searchContacts`(`query`: kotlin.String): List<MobileContact> {
@@ -4130,6 +4683,54 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 
     
     /**
+     * Trigger a demo update and get the new content.
+     */
+    @Throws(MobileException::class)override fun `triggerDemoUpdate`(): MobileDemoContact? {
+            return FfiConverterOptionalTypeMobileDemoContact.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_trigger_demo_update(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Try to trigger an aha moment. Returns the moment if not yet seen, None otherwise.
+     */
+    @Throws(MobileException::class)override fun `tryTriggerAhaMoment`(`momentType`: MobileAhaMomentType): MobileAhaMoment? {
+            return FfiConverterOptionalTypeMobileAhaMoment.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_try_trigger_aha_moment(
+        it, FfiConverterTypeMobileAhaMomentType.lower(`momentType`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Try to trigger an aha moment with context (e.g., contact name).
+     */
+    @Throws(MobileException::class)override fun `tryTriggerAhaMomentWithContext`(`momentType`: MobileAhaMomentType, `context`: kotlin.String): MobileAhaMoment? {
+            return FfiConverterOptionalTypeMobileAhaMoment.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_try_trigger_aha_moment_with_context(
+        it, FfiConverterTypeMobileAhaMomentType.lower(`momentType`),FfiConverterString.lower(`context`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Update field value.
      */
     @Throws(MobileException::class)override fun `updateField`(`label`: kotlin.String, `newValue`: kotlin.String)
@@ -4141,6 +4742,26 @@ open class VauchiMobile: Disposable, AutoCloseable, VauchiMobileInterface {
 }
     }
     
+    
+
+    
+    /**
+     * Validate a contact's field.
+     *
+     * Creates a cryptographically signed validation record attesting
+     * that you believe this field value belongs to this contact.
+     * Returns the created validation.
+     */
+    @Throws(MobileException::class)override fun `validateField`(`contactId`: kotlin.String, `fieldId`: kotlin.String, `fieldValue`: kotlin.String): MobileFieldValidation {
+            return FfiConverterTypeMobileFieldValidation.lift(
+    callWithPointer {
+    uniffiRustCallWithError(MobileException) { _status ->
+    UniffiLib.INSTANCE.uniffi_vauchi_mobile_fn_method_vauchimobile_validate_field(
+        it, FfiConverterString.lower(`contactId`),FfiConverterString.lower(`fieldId`),FfiConverterString.lower(`fieldValue`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -4230,6 +4851,61 @@ public object FfiConverterTypeVauchiMobile: FfiConverter<VauchiMobile, Pointer> 
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
+    }
+}
+
+
+
+/**
+ * An aha moment to display to the user.
+ */
+data class MobileAhaMoment (
+    /**
+     * The type of milestone
+     */
+    var `momentType`: MobileAhaMomentType, 
+    /**
+     * Title to display
+     */
+    var `title`: kotlin.String, 
+    /**
+     * Message to display
+     */
+    var `message`: kotlin.String, 
+    /**
+     * Whether to show animation
+     */
+    var `hasAnimation`: kotlin.Boolean
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileAhaMoment: FfiConverterRustBuffer<MobileAhaMoment> {
+    override fun read(buf: ByteBuffer): MobileAhaMoment {
+        return MobileAhaMoment(
+            FfiConverterTypeMobileAhaMomentType.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MobileAhaMoment) = (
+            FfiConverterTypeMobileAhaMomentType.allocationSize(value.`momentType`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`message`) +
+            FfiConverterBoolean.allocationSize(value.`hasAnimation`)
+    )
+
+    override fun write(value: MobileAhaMoment, buf: ByteBuffer) {
+            FfiConverterTypeMobileAhaMomentType.write(value.`momentType`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`message`, buf)
+            FfiConverterBoolean.write(value.`hasAnimation`, buf)
     }
 }
 
@@ -4602,6 +5278,130 @@ public object FfiConverterTypeMobileDeliverySummary: FfiConverterRustBuffer<Mobi
 
 
 /**
+ * Demo contact card representation for display.
+ */
+data class MobileDemoContact (
+    /**
+     * Contact ID
+     */
+    var `id`: kotlin.String, 
+    /**
+     * Display name
+     */
+    var `displayName`: kotlin.String, 
+    /**
+     * Flag indicating this is a demo
+     */
+    var `isDemo`: kotlin.Boolean, 
+    /**
+     * Current tip title
+     */
+    var `tipTitle`: kotlin.String, 
+    /**
+     * Current tip content
+     */
+    var `tipContent`: kotlin.String, 
+    /**
+     * Tip category
+     */
+    var `tipCategory`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileDemoContact: FfiConverterRustBuffer<MobileDemoContact> {
+    override fun read(buf: ByteBuffer): MobileDemoContact {
+        return MobileDemoContact(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MobileDemoContact) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`displayName`) +
+            FfiConverterBoolean.allocationSize(value.`isDemo`) +
+            FfiConverterString.allocationSize(value.`tipTitle`) +
+            FfiConverterString.allocationSize(value.`tipContent`) +
+            FfiConverterString.allocationSize(value.`tipCategory`)
+    )
+
+    override fun write(value: MobileDemoContact, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`displayName`, buf)
+            FfiConverterBoolean.write(value.`isDemo`, buf)
+            FfiConverterString.write(value.`tipTitle`, buf)
+            FfiConverterString.write(value.`tipContent`, buf)
+            FfiConverterString.write(value.`tipCategory`, buf)
+    }
+}
+
+
+
+/**
+ * Demo contact state for persistence.
+ */
+data class MobileDemoContactState (
+    /**
+     * Whether the demo contact is active
+     */
+    var `isActive`: kotlin.Boolean, 
+    /**
+     * Whether it was manually dismissed
+     */
+    var `wasDismissed`: kotlin.Boolean, 
+    /**
+     * Whether it was auto-removed after first real exchange
+     */
+    var `autoRemoved`: kotlin.Boolean, 
+    /**
+     * Number of updates sent
+     */
+    var `updateCount`: kotlin.UInt
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileDemoContactState: FfiConverterRustBuffer<MobileDemoContactState> {
+    override fun read(buf: ByteBuffer): MobileDemoContactState {
+        return MobileDemoContactState(
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MobileDemoContactState) = (
+            FfiConverterBoolean.allocationSize(value.`isActive`) +
+            FfiConverterBoolean.allocationSize(value.`wasDismissed`) +
+            FfiConverterBoolean.allocationSize(value.`autoRemoved`) +
+            FfiConverterUInt.allocationSize(value.`updateCount`)
+    )
+
+    override fun write(value: MobileDemoContactState, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`isActive`, buf)
+            FfiConverterBoolean.write(value.`wasDismissed`, buf)
+            FfiConverterBoolean.write(value.`autoRemoved`, buf)
+            FfiConverterUInt.write(value.`updateCount`, buf)
+    }
+}
+
+
+
+/**
  * Per-device delivery tracking record.
  */
 data class MobileDeviceDeliveryRecord (
@@ -4960,6 +5760,61 @@ public object FfiConverterTypeMobileExchangeResult: FfiConverterRustBuffer<Mobil
             FfiConverterString.write(value.`contactName`, buf)
             FfiConverterBoolean.write(value.`success`, buf)
             FfiConverterOptionalString.write(value.`errorMessage`, buf)
+    }
+}
+
+
+
+/**
+ * A validation record for a contact's field.
+ */
+data class MobileFieldValidation (
+    /**
+     * Contact ID that was validated.
+     */
+    var `contactId`: kotlin.String, 
+    /**
+     * Field name that was validated (e.g., "twitter", "email").
+     */
+    var `fieldName`: kotlin.String, 
+    /**
+     * Field value at time of validation.
+     */
+    var `fieldValue`: kotlin.String, 
+    /**
+     * Timestamp when validation was created.
+     */
+    var `validatedAt`: kotlin.ULong
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileFieldValidation: FfiConverterRustBuffer<MobileFieldValidation> {
+    override fun read(buf: ByteBuffer): MobileFieldValidation {
+        return MobileFieldValidation(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MobileFieldValidation) = (
+            FfiConverterString.allocationSize(value.`contactId`) +
+            FfiConverterString.allocationSize(value.`fieldName`) +
+            FfiConverterString.allocationSize(value.`fieldValue`) +
+            FfiConverterULong.allocationSize(value.`validatedAt`)
+    )
+
+    override fun write(value: MobileFieldValidation, buf: ByteBuffer) {
+            FfiConverterString.write(value.`contactId`, buf)
+            FfiConverterString.write(value.`fieldName`, buf)
+            FfiConverterString.write(value.`fieldValue`, buf)
+            FfiConverterULong.write(value.`validatedAt`, buf)
     }
 }
 
@@ -5452,6 +6307,75 @@ public object FfiConverterTypeMobileSyncResult: FfiConverterRustBuffer<MobileSyn
 
 
 /**
+ * Validation status for a field.
+ */
+data class MobileValidationStatus (
+    /**
+     * Total number of validations.
+     */
+    var `count`: kotlin.UInt, 
+    /**
+     * Trust level based on count.
+     */
+    var `trustLevel`: MobileTrustLevel, 
+    /**
+     * Trust level label for display.
+     */
+    var `trustLevelLabel`: kotlin.String, 
+    /**
+     * Color indicator for UI (grey, yellow, light_green, green).
+     */
+    var `color`: kotlin.String, 
+    /**
+     * Whether the current user has validated this field.
+     */
+    var `validatedByMe`: kotlin.Boolean, 
+    /**
+     * Display text (e.g., "Verified by Bob and 2 others").
+     */
+    var `displayText`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileValidationStatus: FfiConverterRustBuffer<MobileValidationStatus> {
+    override fun read(buf: ByteBuffer): MobileValidationStatus {
+        return MobileValidationStatus(
+            FfiConverterUInt.read(buf),
+            FfiConverterTypeMobileTrustLevel.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MobileValidationStatus) = (
+            FfiConverterUInt.allocationSize(value.`count`) +
+            FfiConverterTypeMobileTrustLevel.allocationSize(value.`trustLevel`) +
+            FfiConverterString.allocationSize(value.`trustLevelLabel`) +
+            FfiConverterString.allocationSize(value.`color`) +
+            FfiConverterBoolean.allocationSize(value.`validatedByMe`) +
+            FfiConverterString.allocationSize(value.`displayText`)
+    )
+
+    override fun write(value: MobileValidationStatus, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`count`, buf)
+            FfiConverterTypeMobileTrustLevel.write(value.`trustLevel`, buf)
+            FfiConverterString.write(value.`trustLevelLabel`, buf)
+            FfiConverterString.write(value.`color`, buf)
+            FfiConverterBoolean.write(value.`validatedByMe`, buf)
+            FfiConverterString.write(value.`displayText`, buf)
+    }
+}
+
+
+
+/**
  * Visibility label for organizing contacts.
  */
 data class MobileVisibilityLabel (
@@ -5577,6 +6501,57 @@ public object FfiConverterTypeMobileVisibilityLabelDetail: FfiConverterRustBuffe
             FfiConverterULong.write(value.`modifiedAt`, buf)
     }
 }
+
+
+
+/**
+ * Type of aha moment milestone.
+ */
+
+enum class MobileAhaMomentType {
+    
+    /**
+     * Shown when card creation completes
+     */
+    CARD_CREATION_COMPLETE,
+    /**
+     * Shown on first edit (before having contacts)
+     */
+    FIRST_EDIT,
+    /**
+     * Shown when first contact is added
+     */
+    FIRST_CONTACT_ADDED,
+    /**
+     * Shown when receiving first update from a contact
+     */
+    FIRST_UPDATE_RECEIVED,
+    /**
+     * Shown when first outbound update is delivered
+     */
+    FIRST_OUTBOUND_DELIVERED;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileAhaMomentType: FfiConverterRustBuffer<MobileAhaMomentType> {
+    override fun read(buf: ByteBuffer) = try {
+        MobileAhaMomentType.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: MobileAhaMomentType) = 4UL
+
+    override fun write(value: MobileAhaMomentType, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
 
 
 
@@ -6261,6 +7236,53 @@ public object FfiConverterTypeMobileSyncStatus: FfiConverterRustBuffer<MobileSyn
 
 
 /**
+ * Trust level based on validation count.
+ */
+
+enum class MobileTrustLevel {
+    
+    /**
+     * No validations yet.
+     */
+    UNVERIFIED,
+    /**
+     * 1 validation.
+     */
+    LOW_CONFIDENCE,
+    /**
+     * 2-4 validations.
+     */
+    PARTIAL_CONFIDENCE,
+    /**
+     * 5+ validations.
+     */
+    HIGH_CONFIDENCE;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMobileTrustLevel: FfiConverterRustBuffer<MobileTrustLevel> {
+    override fun read(buf: ByteBuffer) = try {
+        MobileTrustLevel.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: MobileTrustLevel) = 4UL
+
+    override fun write(value: MobileTrustLevel, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
  * Result of checking for content updates.
  */
 sealed class MobileUpdateStatus {
@@ -6617,6 +7639,38 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeMobileAhaMoment: FfiConverterRustBuffer<MobileAhaMoment?> {
+    override fun read(buf: ByteBuffer): MobileAhaMoment? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeMobileAhaMoment.read(buf)
+    }
+
+    override fun allocationSize(value: MobileAhaMoment?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeMobileAhaMoment.allocationSize(value)
+        }
+    }
+
+    override fun write(value: MobileAhaMoment?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeMobileAhaMoment.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeMobileContact: FfiConverterRustBuffer<MobileContact?> {
     override fun read(buf: ByteBuffer): MobileContact? {
         if (buf.get().toInt() == 0) {
@@ -6671,6 +7725,38 @@ public object FfiConverterOptionalTypeMobileDeliveryRecord: FfiConverterRustBuff
         } else {
             buf.put(1)
             FfiConverterTypeMobileDeliveryRecord.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeMobileDemoContact: FfiConverterRustBuffer<MobileDemoContact?> {
+    override fun read(buf: ByteBuffer): MobileDemoContact? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeMobileDemoContact.read(buf)
+    }
+
+    override fun allocationSize(value: MobileDemoContact?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeMobileDemoContact.allocationSize(value)
+        }
+    }
+
+    override fun write(value: MobileDemoContact?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeMobileDemoContact.write(value, buf)
         }
     }
 }
@@ -6899,6 +7985,34 @@ public object FfiConverterSequenceTypeMobileDeviceDeliveryRecord: FfiConverterRu
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeMobileDeviceDeliveryRecord.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeMobileFieldValidation: FfiConverterRustBuffer<List<MobileFieldValidation>> {
+    override fun read(buf: ByteBuffer): List<MobileFieldValidation> {
+        val len = buf.getInt()
+        return List<MobileFieldValidation>(len) {
+            FfiConverterTypeMobileFieldValidation.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<MobileFieldValidation>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeMobileFieldValidation.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<MobileFieldValidation>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeMobileFieldValidation.write(it, buf)
         }
     }
 }

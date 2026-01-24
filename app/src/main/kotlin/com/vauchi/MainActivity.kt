@@ -159,6 +159,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             )
         }
         Screen.Contacts -> {
+            val demoContact by viewModel.demoContact.collectAsState()
             ContactsScreen(
                 onBack = { currentScreen = Screen.Home },
                 onListContacts = { viewModel.listContacts() },
@@ -168,7 +169,9 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     currentScreen = Screen.ContactDetail
                 },
                 syncState = syncState,
-                onSync = { viewModel.sync() }
+                onSync = { viewModel.sync() },
+                demoContact = demoContact,
+                onDismissDemo = { viewModel.dismissDemoContact() }
             )
         }
         Screen.ContactDetail -> {
@@ -194,6 +197,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             val reduceMotion by viewModel.reduceMotion.collectAsState()
             val highContrast by viewModel.highContrast.collectAsState()
             val largeTouchTargets by viewModel.largeTouchTargets.collectAsState()
+            val demoContactState by viewModel.demoContactState.collectAsState()
             if (state is UiState.Ready) {
                 SettingsScreen(
                     displayName = state.displayName,
@@ -207,6 +211,8 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     onDevices = { currentScreen = Screen.Devices },
                     onRecovery = { currentScreen = Screen.Recovery },
                     onCheckPasswordStrength = { viewModel.checkPasswordStrength(it) },
+                    showRestoreDemoOption = demoContactState?.let { !it.isActive } ?: false,
+                    onRestoreDemo = { viewModel.restoreDemoContact() },
                     reduceMotion = reduceMotion,
                     onReduceMotionChange = { viewModel.setReduceMotion(it) },
                     highContrast = highContrast,
