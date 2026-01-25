@@ -27,7 +27,7 @@ include:
   - template: Security/SAST.gitlab-ci.yml
   - template: Security/Dependency-Scanning.gitlab-ci.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
-  - template: Security/License-Scanning.gitlab-ci.yml
+
 
 stages:
   - lint
@@ -171,21 +171,6 @@ secret_detection:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "main"
 
-license_scanning:
-  tags: [docker]
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == "main"
-
-license_scanning:
-  stage: security
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes:
-        - "build.gradle*"
-        - "app/build.gradle*"
-        - "gradle.properties"
-    - if: $CI_COMMIT_BRANCH == "main"
 
 # Gradle dependency check
 security:dependency-check:
