@@ -56,7 +56,7 @@ import com.vauchi.ui.ContentApplyResult
 import com.vauchi.ui.ContentUpdateType
 import uniffi.vauchi_mobile.MobileUpdateStatus
 import uniffi.vauchi_mobile.MobileApplyResult
-import uniffi.vauchi_mobile.MobileUpdateType
+import uniffi.vauchi_mobile.MobileContentType
 import com.vauchi.ui.onboarding.OnboardingScreen
 import com.vauchi.ui.theme.VauchiTheme
 import androidx.lifecycle.Lifecycle
@@ -901,7 +901,7 @@ private fun mapMobileUpdateStatus(status: MobileUpdateStatus): ContentUpdateStat
     return when (status) {
         is MobileUpdateStatus.UpToDate -> ContentUpdateStatus.UpToDate
         is MobileUpdateStatus.UpdatesAvailable -> ContentUpdateStatus.UpdatesAvailable(
-            status.types.map { mapMobileUpdateType(it) }
+            status.types.map { mapMobileContentType(it) }
         )
         is MobileUpdateStatus.CheckFailed -> ContentUpdateStatus.CheckFailed(status.error)
         is MobileUpdateStatus.Disabled -> ContentUpdateStatus.Disabled
@@ -912,20 +912,20 @@ private fun mapMobileApplyResult(result: MobileApplyResult): ContentApplyResult 
     return when (result) {
         is MobileApplyResult.NoUpdates -> ContentApplyResult.NoUpdates
         is MobileApplyResult.Applied -> ContentApplyResult.Applied(
-            applied = result.applied.map { mapMobileUpdateType(it) },
-            failed = result.failed.map { mapMobileUpdateType(it) }
+            applied = result.applied.map { mapMobileContentType(it) },
+            failed = result.failed.map { mapMobileContentType(it.contentType) }
         )
         is MobileApplyResult.Disabled -> ContentApplyResult.Disabled
         is MobileApplyResult.Error -> ContentApplyResult.Error(result.error)
     }
 }
 
-private fun mapMobileUpdateType(type: MobileUpdateType): ContentUpdateType {
+private fun mapMobileContentType(type: MobileContentType): ContentUpdateType {
     return when (type) {
-        MobileUpdateType.NETWORKS -> ContentUpdateType.Networks
-        MobileUpdateType.LOCALES -> ContentUpdateType.Locales
-        MobileUpdateType.THEMES -> ContentUpdateType.Themes
-        MobileUpdateType.HELP -> ContentUpdateType.Help
+        MobileContentType.NETWORKS -> ContentUpdateType.Networks
+        MobileContentType.LOCALES -> ContentUpdateType.Locales
+        MobileContentType.THEMES -> ContentUpdateType.Themes
+        MobileContentType.HELP -> ContentUpdateType.Help
     }
 }
 
