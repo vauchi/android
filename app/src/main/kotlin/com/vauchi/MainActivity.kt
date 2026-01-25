@@ -243,7 +243,10 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                         viewModel.applyContentUpdates()?.let { result ->
                             mapMobileApplyResult(result)
                         }
-                    }
+                    },
+                    // Certificate Pinning
+                    isCertificatePinningEnabled = viewModel.isCertificatePinningEnabled(),
+                    onSetPinnedCertificate = { certPem -> viewModel.setPinnedCertificate(certPem) }
                 )
             }
         }

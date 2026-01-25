@@ -19,6 +19,9 @@ package com.vauchi.data
 // deleteLabel(), addContactToLabel(), removeContactFromLabel(), getLabelsForContact(),
 // setLabelFieldVisibility(), getSuggestedLabels().
 //
+// DONE: Certificate pinning - isCertificatePinningEnabled(), setPinnedCertificate()
+// methods implemented. UI added to Settings under Security section.
+//
 // TODO(core-gap): Device linking - DevicesScreen is a stub. vauchi-mobile exposes
 // MobileDeviceLinkData, MobileDeviceInfo, MobileDeviceLinkResult. Multi-device sync not functional.
 
@@ -391,6 +394,19 @@ class VauchiRepository(context: Context) {
      * Reset all aha moments (for development/testing)
      */
     fun resetAhaMoments() = vauchi.resetAhaMoments()
+
+    // Certificate Pinning operations
+
+    /**
+     * Check if certificate pinning is enabled
+     */
+    fun isCertificatePinningEnabled(): Boolean = vauchi.isCertificatePinningEnabled()
+
+    /**
+     * Set the pinned certificate for relay TLS connections
+     * @param certPem Certificate in PEM format
+     */
+    fun setPinnedCertificate(certPem: String) = vauchi.setPinnedCertificate(certPem)
 
     // Verification operations
     fun verifyContact(id: String) = vauchi.verifyContact(id)

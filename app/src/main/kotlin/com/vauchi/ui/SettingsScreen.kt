@@ -55,7 +55,10 @@ fun SettingsScreen(
     // Content Updates
     isContentUpdatesSupported: Boolean = false,
     onCheckContentUpdates: suspend () -> ContentUpdateStatus? = { null },
-    onApplyContentUpdates: suspend () -> ContentApplyResult? = { null }
+    onApplyContentUpdates: suspend () -> ContentApplyResult? = { null },
+    // Certificate Pinning
+    isCertificatePinningEnabled: Boolean = false,
+    onSetPinnedCertificate: (String) -> Unit = {}
 ) {
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
@@ -340,6 +343,12 @@ fun SettingsScreen(
                     Text("Recovery")
                 }
             }
+
+            // Certificate Pinning Section
+            CertificatePinningSection(
+                isEnabled = isCertificatePinningEnabled,
+                onSetCertificate = onSetPinnedCertificate
+            )
 
             // Content Updates Section (only if supported)
             if (isContentUpdatesSupported) {
@@ -1210,4 +1219,174 @@ private fun ContentUpdateType.toDisplayName(): String = when (this) {
     ContentUpdateType.Locales -> "Languages"
     ContentUpdateType.Themes -> "Themes"
     ContentUpdateType.Help -> "Help Content"
+}
+
+// Certificate Pinning Section
+
+@Composable
+fun CertificatePinningSection(
+    isEnabled: Boolean,
+    onSetCertificate: (String) -> Unit
+) {
+    var showSetCertificateDialog by remember { mutableStateOf(false) }
+    var showClearConfirmation by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        HorizontalDivider()
+
+        Text(
+            text = "Security",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Status row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Certificate Pinning",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = if (isEnabled) "Enabled" else "Disabled",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Text(
+                    text = "Certificate pinning ensures the app only connects to relay servers presenting a specific certificate.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Set Certificate button
+                OutlinedButton(
+                    onClick = { showSetCertificateDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Set Certificate")
+                }
+
+                // Clear Certificate button (only if enabled)
+                if (isEnabled) {
+                    TextButton(
+                        onClick = { showClearConfirmation = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Clear Certificate")
+                    }
+                }
+            }
+        }
+    }
+
+    if (showSetCertificateDialog) {
+        SetCertificateDialog(
+            onDismiss = { showSetCertificateDialog = false },
+            onSetCertificate = { certPem ->
+                onSetCertificate(certPem)
+                showSetCertificateDialog = false
+            }
+        )
+    }
+
+    if (showClearConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmation = false },
+            title = { Text("Clear Certificate?") },
+            text = { Text("This will disable certificate pinning and allow connections to any valid relay server.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onSetCertificate("")
+                        showClearConfirmation = false
+                    }
+                ) {
+                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun SetCertificateDialog(
+    onDismiss: () -> Unit,
+    onSetCertificate: (String) -> Unit
+) {
+    var certificateText by remember { mutableStateOf("") }
+
+    val isValidPem = certificateText.trim().let { text ->
+        text.startsWith("-----BEGIN CERTIFICATE-----") &&
+        text.endsWith("-----END CERTIFICATE-----")
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Set Certificate") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "Paste the certificate in PEM format. This is typically provided by your organization's IT department.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                OutlinedTextField(
+                    value = certificateText,
+                    onValueChange = { certificateText = it },
+                    label = { Text("Certificate (PEM)") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    textStyle = MaterialTheme.typography.bodySmall
+                )
+
+                if (certificateText.isNotEmpty() && !isValidPem) {
+                    Text(
+                        text = "Invalid PEM format. Must begin with '-----BEGIN CERTIFICATE-----'",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSetCertificate(certificateText.trim()) },
+                enabled = isValidPem
+            ) {
+                Text("Set")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

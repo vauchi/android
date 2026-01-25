@@ -635,6 +635,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Certificate Pinning operations
+    fun isCertificatePinningEnabled(): Boolean {
+        return try {
+            repository.isCertificatePinningEnabled()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun setPinnedCertificate(certPem: String) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.setPinnedCertificate(certPem)
+                }
+                showMessage("Certificate pinning updated")
+            } catch (e: Exception) {
+                showMessage("Failed to set certificate: ${e.message}")
+            }
+        }
+    }
+
     // Recovery operations
     suspend fun createRecoveryClaim(oldPkHex: String): MobileRecoveryClaim? {
         return try {
