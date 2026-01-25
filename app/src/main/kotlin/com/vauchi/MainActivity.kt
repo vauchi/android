@@ -89,6 +89,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
     var currentScreen by remember { mutableStateOf(Screen.Home) }
     var selectedContactId by remember { mutableStateOf<String?>(null) }
     var selectedLabelId by remember { mutableStateOf<String?>(null) }
+    var showRestoreDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -120,12 +121,28 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             when (val state = uiState) {
                 is UiState.Loading -> LoadingScreen()
                 is UiState.Setup -> SetupScreen(onCreateIdentity = viewModel::createIdentity)
-                is UiState.Onboarding -> OnboardingScreen(
-                    onComplete = { displayName, phone, email ->
-                        viewModel.completeOnboarding(displayName, phone, email)
-                    },
-                    onRestore = { /* TODO: implement restore flow */ }
-                )
+                is UiState.Onboarding -> {
+                    OnboardingScreen(
+                        onComplete = { displayName, phone, email ->
+                            viewModel.completeOnboarding(displayName, phone, email)
+                        },
+                        onRestore = { showRestoreDialog = true }
+                    )
+
+                    if (showRestoreDialog) {
+                        RestoreIdentityDialog(
+                            onDismiss = { showRestoreDialog = false },
+                            onRestore = { backupData, password ->
+                                coroutineScope.launch {
+                                    val success = viewModel.importBackup(backupData, password)
+                                    if (success) {
+                                        showRestoreDialog = false
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
                 is UiState.Ready -> ReadyScreen(
                     displayName = state.displayName,
                     publicId = state.publicId,
@@ -882,4 +899,77 @@ private fun mapMobileUpdateType(type: MobileUpdateType): ContentUpdateType {
         MobileUpdateType.THEMES -> ContentUpdateType.Themes
         MobileUpdateType.HELP -> ContentUpdateType.Help
     }
+}
+
+// Restore Identity Dialog
+@Composable
+fun RestoreIdentityDialog(
+    onDismiss: () -> Unit,
+    onRestore: (backupData: String, password: String) -> Unit
+) {
+    var backupData by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var isRestoring by remember { mutableStateOf(false) }
+
+    val canRestore = backupData.isNotBlank() && password.isNotEmpty()
+
+    AlertDialog(
+        onDismissRequest = { if (!isRestoring) onDismiss() },
+        title = { Text("Restore Identity") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    "Enter your backup data and password to restore your identity. This will replace any existing identity on this device.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                OutlinedTextField(
+                    value = backupData,
+                    onValueChange = { backupData = it },
+                    label = { Text("Backup Data") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    enabled = !isRestoring
+                )
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    enabled = !isRestoring
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    isRestoring = true
+                    onRestore(backupData.trim(), password)
+                },
+                enabled = canRestore && !isRestoring
+            ) {
+                if (isRestoring) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text("Restore")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isRestoring
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
 }
