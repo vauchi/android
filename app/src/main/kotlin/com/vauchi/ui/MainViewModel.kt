@@ -26,6 +26,8 @@ import uniffi.vauchi_mobile.MobileRecoveryVoucher
 import uniffi.vauchi_mobile.MobileSocialNetwork
 import uniffi.vauchi_mobile.MobileSyncResult
 import uniffi.vauchi_mobile.MobileProximityVerifier
+import uniffi.vauchi_mobile.MobileVisibilityLabel
+import uniffi.vauchi_mobile.MobileVisibilityLabelDetail
 import com.vauchi.proximity.AudioProximityService
 import java.time.Instant
 
@@ -94,6 +96,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _demoContactState = MutableStateFlow<MobileDemoContactState?>(null)
     val demoContactState: StateFlow<MobileDemoContactState?> = _demoContactState.asStateFlow()
 
+    // Visibility labels (for organizing contacts)
+    // Based on: features/visibility_labels.feature
+    private val _visibilityLabels = MutableStateFlow<List<MobileVisibilityLabel>>(emptyList())
+    val visibilityLabels: StateFlow<List<MobileVisibilityLabel>> = _visibilityLabels.asStateFlow()
+
+    private val _suggestedLabels = MutableStateFlow<List<String>>(emptyList())
+    val suggestedLabels: StateFlow<List<String>> = _suggestedLabels.asStateFlow()
+
     // Accessibility settings
     private val _reduceMotion = MutableStateFlow(false)
     val reduceMotion: StateFlow<Boolean> = _reduceMotion.asStateFlow()
@@ -103,6 +113,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _largeTouchTargets = MutableStateFlow(false)
     val largeTouchTargets: StateFlow<Boolean> = _largeTouchTargets.asStateFlow()
+
+    // Aha moments (progressive onboarding)
+    private val _currentAhaMoment = MutableStateFlow<uniffi.vauchi_mobile.MobileAhaMoment?>(null)
+    val currentAhaMoment: StateFlow<uniffi.vauchi_mobile.MobileAhaMoment?> = _currentAhaMoment.asStateFlow()
 
     fun clearSnackbar() {
         _snackbarMessage.value = null
@@ -518,6 +532,109 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Content Updates operations
+    fun isContentUpdatesSupported(): Boolean {
+        return try {
+            repository.isContentUpdatesSupported()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun checkContentUpdates(): MobileUpdateStatus? {
+        return try {
+            withContext(Dispatchers.IO) {
+                repository.checkContentUpdates()
+            }
+        } catch (e: Exception) {
+            showMessage("Failed to check updates: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun applyContentUpdates(): MobileApplyResult? {
+        return try {
+            withContext(Dispatchers.IO) {
+                repository.applyContentUpdates()
+            }
+        } catch (e: Exception) {
+            showMessage("Failed to apply updates: ${e.message}")
+            null
+        }
+    }
+
+    fun reloadSocialNetworks() {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.reloadSocialNetworks()
+                }
+            } catch (e: Exception) {
+                // Silently fail - networks will reload on next access
+            }
+        }
+    }
+
+    // Aha Moments operations (Progressive Onboarding)
+    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_mobile.MobileAhaMomentType) {
+        viewModelScope.launch {
+            try {
+                val moment = withContext(Dispatchers.IO) {
+                    repository.tryTriggerAhaMoment(momentType)
+                }
+                _currentAhaMoment.value = moment
+            } catch (e: Exception) {
+                // Silently fail - aha moments are non-critical
+            }
+        }
+    }
+
+    fun tryTriggerAhaMomentWithContext(momentType: uniffi.vauchi_mobile.MobileAhaMomentType, context: String) {
+        viewModelScope.launch {
+            try {
+                val moment = withContext(Dispatchers.IO) {
+                    repository.tryTriggerAhaMomentWithContext(momentType, context)
+                }
+                _currentAhaMoment.value = moment
+            } catch (e: Exception) {
+                // Silently fail - aha moments are non-critical
+            }
+        }
+    }
+
+    fun dismissAhaMoment() {
+        _currentAhaMoment.value = null
+    }
+
+    fun hasSeenAhaMoment(momentType: uniffi.vauchi_mobile.MobileAhaMomentType): Boolean {
+        return try {
+            repository.hasSeenAhaMoment(momentType)
+        } catch (e: Exception) {
+            true // Default to "seen" on error to avoid repeated triggers
+        }
+    }
+
+    fun ahaMomentsProgress(): Pair<Int, Int> {
+        return try {
+            Pair(repository.ahaMomentsSeenCount().toInt(), repository.ahaMomentsTotalCount().toInt())
+        } catch (e: Exception) {
+            Pair(0, 0)
+        }
+    }
+
+    fun resetAhaMoments() {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.resetAhaMoments()
+                }
+                showMessage("Tips reset")
+            } catch (e: Exception) {
+                showMessage("Failed to reset tips: ${e.message}")
+            }
+        }
+    }
+
     // Recovery operations
     suspend fun createRecoveryClaim(oldPkHex: String): MobileRecoveryClaim? {
         return try {
@@ -702,6 +819,156 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.isDemoUpdateAvailable()
         } catch (e: Exception) {
             false
+        }
+    }
+
+    // MARK: - Visibility Labels
+    // Based on: features/visibility_labels.feature
+
+    /**
+     * Load all visibility labels
+     */
+    fun loadLabels() {
+        viewModelScope.launch {
+            try {
+                val labels = withContext(Dispatchers.IO) {
+                    repository.listLabels()
+                }
+                _visibilityLabels.value = labels
+                _suggestedLabels.value = repository.getSuggestedLabels()
+            } catch (e: Exception) {
+                _visibilityLabels.value = emptyList()
+            }
+        }
+    }
+
+    /**
+     * Create a new visibility label
+     */
+    fun createLabel(name: String, onSuccess: (MobileVisibilityLabel) -> Unit = {}, onError: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val label = withContext(Dispatchers.IO) {
+                    repository.createLabel(name)
+                }
+                loadLabels()
+                onSuccess(label)
+                showMessage("Label \"$name\" created")
+            } catch (e: Exception) {
+                onError(e.message ?: "Failed to create label")
+                showMessage("Failed to create label: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Get label details
+     */
+    fun getLabel(labelId: String): MobileVisibilityLabelDetail? {
+        return try {
+            repository.getLabel(labelId)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Rename a visibility label
+     */
+    fun renameLabel(labelId: String, newName: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.renameLabel(labelId, newName)
+                }
+                loadLabels()
+                onSuccess()
+                showMessage("Label renamed to \"$newName\"")
+            } catch (e: Exception) {
+                onError(e.message ?: "Failed to rename label")
+                showMessage("Failed to rename label: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Delete a visibility label
+     */
+    fun deleteLabel(labelId: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.deleteLabel(labelId)
+                }
+                loadLabels()
+                onSuccess()
+                showMessage("Label deleted")
+            } catch (e: Exception) {
+                onError(e.message ?: "Failed to delete label")
+                showMessage("Failed to delete label: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Add contact to a label
+     */
+    fun addContactToLabel(labelId: String, contactId: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.addContactToLabel(labelId, contactId)
+                }
+                loadLabels()
+                onSuccess()
+            } catch (e: Exception) {
+                showMessage("Failed to add contact to label: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Remove contact from a label
+     */
+    fun removeContactFromLabel(labelId: String, contactId: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.removeContactFromLabel(labelId, contactId)
+                }
+                loadLabels()
+                onSuccess()
+            } catch (e: Exception) {
+                showMessage("Failed to remove contact from label: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Get all labels for a contact
+     */
+    fun getLabelsForContact(contactId: String): List<MobileVisibilityLabel> {
+        return try {
+            repository.getLabelsForContact(contactId)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /**
+     * Set field visibility for a label
+     */
+    fun setLabelFieldVisibility(labelId: String, fieldId: String, visible: Boolean, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.setLabelFieldVisibility(labelId, fieldId, visible)
+                }
+                loadLabels()
+                onSuccess()
+            } catch (e: Exception) {
+                showMessage("Failed to update field visibility: ${e.message}")
+            }
         }
     }
 }

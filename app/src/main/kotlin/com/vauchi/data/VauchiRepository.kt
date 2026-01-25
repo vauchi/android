@@ -1,25 +1,23 @@
 package com.vauchi.data
 
-// TODO(core-gap): Field validation UI - vauchi-mobile exposes validateField(),
-// getFieldValidationStatus(), revokeFieldValidation(), listMyValidations(),
-// hasValidatedField(), getFieldValidationCount(). No UI component implemented.
+// DONE: Field validation - validateField(), getFieldValidationStatus(),
+// revokeFieldValidation(), listMyValidations(), hasValidatedField(),
+// getFieldValidationCount() methods implemented.
 //
-// TODO(core-gap): Content updates UI - vauchi-mobile exposes isContentUpdatesSupported(),
-// checkContentUpdates(), applyContentUpdates(), reloadSocialNetworks().
-// APIs available but no UI triggering or displaying updates.
+// DONE: Content updates - isContentUpdatesSupported(), checkContentUpdates(),
+// applyContentUpdates(), reloadSocialNetworks() methods implemented.
 //
-// TODO(core-gap): Aha moments - vauchi-mobile exposes hasSeenAhaMoment(),
-// tryTriggerAhaMoment(), tryTriggerAhaMomentWithContext(), ahaMomentSeenCount(),
-// ahaMomentsTotalCount(), resetAhaMoments(). No progressive onboarding hints.
+// DONE: Aha moments - hasSeenAhaMoment(), tryTriggerAhaMoment(),
+// tryTriggerAhaMomentWithContext(), ahaMomentsSeenCount(), ahaMomentsTotalCount(),
+// resetAhaMoments() methods implemented for progressive onboarding hints.
 //
 // DONE: Demo contact - implemented initDemoContactIfNeeded(), getDemoContact(),
 // getDemoContactState(), isDemoUpdateAvailable(), triggerDemoUpdate(),
 // dismissDemoContact(), autoRemoveDemoContact(), restoreDemoContact().
 //
-// TODO(core-gap): Visibility labels - advanced label-based visibility grouping.
-// vauchi-mobile exposes listLabels(), createLabel(), getLabel(), renameLabel(),
+// DONE: Visibility labels - listLabels(), createLabel(), getLabel(), renameLabel(),
 // deleteLabel(), addContactToLabel(), removeContactFromLabel(), getLabelsForContact(),
-// setLabelFieldVisibility(), getSuggestedLabels(). Only per-contact visibility implemented.
+// setLabelFieldVisibility(), getSuggestedLabels().
 //
 // TODO(core-gap): Device linking - DevicesScreen is a stub. vauchi-mobile exposes
 // MobileDeviceLinkData, MobileDeviceInfo, MobileDeviceLinkResult. Multi-device sync not functional.
@@ -218,6 +216,107 @@ class VauchiRepository(context: Context) {
         return vauchi.isFieldVisibleToContact(contactId, fieldLabel)
     }
 
+    // Visibility Labels operations
+    // Based on: features/visibility_labels.feature
+
+    /**
+     * List all visibility labels
+     */
+    fun listLabels() = vauchi.listLabels()
+
+    /**
+     * Create a new visibility label
+     */
+    fun createLabel(name: String) = vauchi.createLabel(name)
+
+    /**
+     * Get label details by ID
+     */
+    fun getLabel(labelId: String) = vauchi.getLabel(labelId)
+
+    /**
+     * Rename a visibility label
+     */
+    fun renameLabel(labelId: String, newName: String) {
+        vauchi.renameLabel(labelId, newName)
+    }
+
+    /**
+     * Delete a visibility label
+     */
+    fun deleteLabel(labelId: String) {
+        vauchi.deleteLabel(labelId)
+    }
+
+    /**
+     * Add contact to a label
+     */
+    fun addContactToLabel(labelId: String, contactId: String) {
+        vauchi.addContactToLabel(labelId, contactId)
+    }
+
+    /**
+     * Remove contact from a label
+     */
+    fun removeContactFromLabel(labelId: String, contactId: String) {
+        vauchi.removeContactFromLabel(labelId, contactId)
+    }
+
+    /**
+     * Get all labels for a contact
+     */
+    fun getLabelsForContact(contactId: String) = vauchi.getLabelsForContact(contactId)
+
+    /**
+     * Set field visibility for a label
+     */
+    fun setLabelFieldVisibility(labelId: String, fieldId: String, visible: Boolean) {
+        vauchi.setLabelFieldVisibility(labelId, fieldId, visible)
+    }
+
+    /**
+     * Get suggested label names
+     */
+    fun getSuggestedLabels(): List<String> = vauchi.getSuggestedLabels()
+
+    // Field Validation operations
+    // Based on: features/field_validation.feature
+
+    /**
+     * Validate a contact's field
+     */
+    fun validateField(contactId: String, fieldId: String, fieldValue: String) =
+        vauchi.validateField(contactId, fieldId, fieldValue)
+
+    /**
+     * Get validation status for a contact's field
+     */
+    fun getFieldValidationStatus(contactId: String, fieldId: String, fieldValue: String) =
+        vauchi.getFieldValidationStatus(contactId, fieldId, fieldValue)
+
+    /**
+     * Revoke your validation of a contact's field
+     */
+    fun revokeFieldValidation(contactId: String, fieldId: String): Boolean =
+        vauchi.revokeFieldValidation(contactId, fieldId)
+
+    /**
+     * List all validations you have made
+     */
+    fun listMyValidations() = vauchi.listMyValidations()
+
+    /**
+     * Check if you have validated a specific field
+     */
+    fun hasValidatedField(contactId: String, fieldId: String): Boolean =
+        vauchi.hasValidatedField(contactId, fieldId)
+
+    /**
+     * Get the validation count for a field
+     */
+    fun getFieldValidationCount(contactId: String, fieldId: String): UInt =
+        vauchi.getFieldValidationCount(contactId, fieldId)
+
     // Backup operations
     fun exportBackup(password: String): String = vauchi.exportBackup(password)
 
@@ -234,6 +333,64 @@ class VauchiRepository(context: Context) {
 
     fun getProfileUrl(networkId: String, username: String): String? =
         vauchi.getProfileUrl(networkId, username)
+
+    // Content Updates operations
+    // Based on: features/content_updates.feature
+
+    /**
+     * Check if content updates feature is supported
+     */
+    fun isContentUpdatesSupported(): Boolean = vauchi.isContentUpdatesSupported()
+
+    /**
+     * Check for available content updates
+     */
+    fun checkContentUpdates() = vauchi.checkContentUpdates()
+
+    /**
+     * Apply available content updates
+     */
+    fun applyContentUpdates() = vauchi.applyContentUpdates()
+
+    /**
+     * Reload social networks after content updates
+     */
+    fun reloadSocialNetworks() = vauchi.reloadSocialNetworks()
+
+    // Aha Moments operations (Progressive Onboarding)
+
+    /**
+     * Check if user has seen a specific aha moment
+     */
+    fun hasSeenAhaMoment(momentType: uniffi.vauchi_mobile.MobileAhaMomentType): Boolean =
+        vauchi.hasSeenAhaMoment(momentType)
+
+    /**
+     * Try to trigger an aha moment (returns null if already seen)
+     */
+    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_mobile.MobileAhaMomentType) =
+        vauchi.tryTriggerAhaMoment(momentType)
+
+    /**
+     * Try to trigger an aha moment with context (returns null if already seen)
+     */
+    fun tryTriggerAhaMomentWithContext(momentType: uniffi.vauchi_mobile.MobileAhaMomentType, context: String) =
+        vauchi.tryTriggerAhaMomentWithContext(momentType, context)
+
+    /**
+     * Get count of seen aha moments
+     */
+    fun ahaMomentsSeenCount(): UInt = vauchi.ahaMomentsSeenCount()
+
+    /**
+     * Get total count of aha moments
+     */
+    fun ahaMomentsTotalCount(): UInt = vauchi.ahaMomentsTotalCount()
+
+    /**
+     * Reset all aha moments (for development/testing)
+     */
+    fun resetAhaMoments() = vauchi.resetAhaMoments()
 
     // Verification operations
     fun verifyContact(id: String) = vauchi.verifyContact(id)

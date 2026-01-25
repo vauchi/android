@@ -35,19 +35,27 @@ fun SettingsScreen(
     onSync: () -> Unit = {},
     onDevices: () -> Unit = {},
     onRecovery: () -> Unit = {},
+    onLabels: () -> Unit = {},
     onDeliveryStatus: () -> Unit = {},
     failedDeliveryCount: Int = 0,
     onCheckPasswordStrength: (String) -> PasswordStrengthResult = { PasswordStrengthResult() },
     // Demo contact
     showRestoreDemoOption: Boolean = false,
     onRestoreDemo: () -> Unit = {},
+    // Aha moments (tips)
+    ahaMomentsProgress: Pair<Int, Int> = Pair(0, 0),
+    onResetAhaMoments: () -> Unit = {},
     // Accessibility settings
     reduceMotion: Boolean = false,
     onReduceMotionChange: (Boolean) -> Unit = {},
     highContrast: Boolean = false,
     onHighContrastChange: (Boolean) -> Unit = {},
     largeTouchTargets: Boolean = false,
-    onLargeTouchTargetsChange: (Boolean) -> Unit = {}
+    onLargeTouchTargetsChange: (Boolean) -> Unit = {},
+    // Content Updates
+    isContentUpdatesSupported: Boolean = false,
+    onCheckContentUpdates: suspend () -> ContentUpdateStatus? = { null },
+    onApplyContentUpdates: suspend () -> ContentApplyResult? = { null }
 ) {
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
@@ -286,6 +294,28 @@ fun SettingsScreen(
 
             HorizontalDivider()
 
+            // Privacy Section
+            Text(
+                text = "Privacy",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            OutlinedButton(
+                onClick = onLabels,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Visibility Labels")
+            }
+
+            Text(
+                text = "Organize contacts into groups and control what they can see",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            HorizontalDivider()
+
             // Devices & Recovery Section
             Text(
                 text = "Devices & Recovery",
@@ -309,6 +339,16 @@ fun SettingsScreen(
                 ) {
                     Text("Recovery")
                 }
+            }
+
+            // Content Updates Section (only if supported)
+            if (isContentUpdatesSupported) {
+                HorizontalDivider()
+
+                ContentUpdatesSection(
+                    onCheckUpdates = onCheckContentUpdates,
+                    onApplyUpdates = onApplyContentUpdates
+                )
             }
 
             HorizontalDivider()
@@ -386,6 +426,13 @@ fun SettingsScreen(
                     onClick = onRestoreDemo
                 )
             }
+
+            // Reset tips (aha moments)
+            HelpLinkItem(
+                title = "Reset Tips",
+                subtitle = "${ahaMomentsProgress.first}/${ahaMomentsProgress.second} seen",
+                onClick = onResetAhaMoments
+            )
 
             HelpLinkItem(
                 title = "User Guide",
@@ -919,4 +966,248 @@ fun AccessibilityToggle(
             onCheckedChange = onCheckedChange
         )
     }
+}
+
+// Content Updates types and UI
+
+enum class ContentUpdateType {
+    Networks,
+    Locales,
+    Themes,
+    Help
+}
+
+sealed class ContentUpdateStatus {
+    data object UpToDate : ContentUpdateStatus()
+    data class UpdatesAvailable(val types: List<ContentUpdateType>) : ContentUpdateStatus()
+    data class CheckFailed(val error: String) : ContentUpdateStatus()
+    data object Disabled : ContentUpdateStatus()
+}
+
+sealed class ContentApplyResult {
+    data object NoUpdates : ContentApplyResult()
+    data class Applied(val applied: List<ContentUpdateType>, val failed: List<ContentUpdateType>) : ContentApplyResult()
+    data object Disabled : ContentApplyResult()
+    data class Error(val error: String) : ContentApplyResult()
+}
+
+@Composable
+fun ContentUpdatesSection(
+    onCheckUpdates: suspend () -> ContentUpdateStatus?,
+    onApplyUpdates: suspend () -> ContentApplyResult?
+) {
+    var updateStatus by remember { mutableStateOf<ContentUpdateStatus?>(null) }
+    var isChecking by remember { mutableStateOf(false) }
+    var isApplying by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var successMessage by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "Content Updates",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        Text(
+            text = "Updates include new social networks, localization improvements, and themes.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Status row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Status",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    if (isChecking || isApplying) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        updateStatus?.let { status ->
+                            ContentUpdateStatusBadge(status = status)
+                        } ?: Text(
+                            text = "Not checked",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Check button
+                OutlinedButton(
+                    onClick = {
+                        isChecking = true
+                        errorMessage = null
+                        successMessage = null
+                        coroutineScope.launch {
+                            val result = onCheckUpdates()
+                            updateStatus = result
+                            when (result) {
+                                is ContentUpdateStatus.UpToDate -> {
+                                    successMessage = "Everything is up to date"
+                                }
+                                is ContentUpdateStatus.UpdatesAvailable -> {
+                                    val typeNames = result.types.map { it.toDisplayName() }
+                                    successMessage = "Updates available: ${typeNames.joinToString(", ")}"
+                                }
+                                is ContentUpdateStatus.CheckFailed -> {
+                                    errorMessage = "Check failed: ${result.error}"
+                                }
+                                is ContentUpdateStatus.Disabled -> {
+                                    errorMessage = "Content updates are disabled"
+                                }
+                                null -> {
+                                    errorMessage = "Failed to check for updates"
+                                }
+                            }
+                            isChecking = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isChecking && !isApplying
+                ) {
+                    if (isChecking) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text("Check for Updates")
+                }
+
+                // Apply button (only when updates available)
+                val hasUpdates = updateStatus is ContentUpdateStatus.UpdatesAvailable
+                if (hasUpdates) {
+                    Button(
+                        onClick = {
+                            isApplying = true
+                            errorMessage = null
+                            successMessage = null
+                            coroutineScope.launch {
+                                val result = onApplyUpdates()
+                                when (result) {
+                                    is ContentApplyResult.NoUpdates -> {
+                                        successMessage = "No updates to apply"
+                                    }
+                                    is ContentApplyResult.Applied -> {
+                                        if (result.failed.isEmpty()) {
+                                            successMessage = "Applied ${result.applied.size} update(s)"
+                                        } else {
+                                            successMessage = "Applied ${result.applied.size}, failed ${result.failed.size}"
+                                        }
+                                    }
+                                    is ContentApplyResult.Disabled -> {
+                                        errorMessage = "Content updates are disabled"
+                                    }
+                                    is ContentApplyResult.Error -> {
+                                        errorMessage = "Apply failed: ${result.error}"
+                                    }
+                                    null -> {
+                                        errorMessage = "Failed to apply updates"
+                                    }
+                                }
+                                // Reset status after applying
+                                updateStatus = null
+                                isApplying = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isChecking && !isApplying
+                    ) {
+                        if (isApplying) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text("Apply Updates")
+                    }
+                }
+
+                // Error message
+                errorMessage?.let { error ->
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                // Success message
+                successMessage?.let { success ->
+                    Text(
+                        text = success,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ContentUpdateStatusBadge(status: ContentUpdateStatus) {
+    when (status) {
+        is ContentUpdateStatus.UpToDate -> {
+            Text(
+                text = "Up to date",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        is ContentUpdateStatus.UpdatesAvailable -> {
+            Text(
+                text = "${status.types.size} available",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.tertiary
+            )
+        }
+        is ContentUpdateStatus.CheckFailed -> {
+            Text(
+                text = "Error",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+        is ContentUpdateStatus.Disabled -> {
+            Text(
+                text = "Disabled",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun ContentUpdateType.toDisplayName(): String = when (this) {
+    ContentUpdateType.Networks -> "Social Networks"
+    ContentUpdateType.Locales -> "Languages"
+    ContentUpdateType.Themes -> "Themes"
+    ContentUpdateType.Help -> "Help Content"
 }

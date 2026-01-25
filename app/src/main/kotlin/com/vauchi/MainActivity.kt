@@ -29,6 +29,8 @@ import com.vauchi.ui.QrScannerScreen
 import com.vauchi.ui.SettingsScreen
 import com.vauchi.ui.DevicesScreen
 import com.vauchi.ui.RecoveryScreen
+import com.vauchi.ui.LabelsScreen
+import com.vauchi.ui.LabelDetailScreen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,6 +44,12 @@ import com.vauchi.ui.MainViewModel
 import com.vauchi.ui.PasswordStrengthResult
 import com.vauchi.ui.SyncState
 import com.vauchi.ui.UiState
+import com.vauchi.ui.ContentUpdateStatus
+import com.vauchi.ui.ContentApplyResult
+import com.vauchi.ui.ContentUpdateType
+import uniffi.vauchi_mobile.MobileUpdateStatus
+import uniffi.vauchi_mobile.MobileApplyResult
+import uniffi.vauchi_mobile.MobileUpdateType
 import com.vauchi.ui.onboarding.OnboardingScreen
 import com.vauchi.ui.theme.VauchiTheme
 import androidx.lifecycle.Lifecycle
@@ -68,7 +76,7 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class Screen {
-    Home, Exchange, Contacts, ContactDetail, QrScanner, Settings, Devices, Recovery
+    Home, Exchange, Contacts, ContactDetail, QrScanner, Settings, Devices, Recovery, Labels, LabelDetail
 }
 
 @Composable
@@ -80,6 +88,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
     val lastSyncTime by viewModel.lastSyncTime.collectAsState()
     var currentScreen by remember { mutableStateOf(Screen.Home) }
     var selectedContactId by remember { mutableStateOf<String?>(null) }
+    var selectedLabelId by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -210,15 +219,31 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     onSync = { viewModel.sync() },
                     onDevices = { currentScreen = Screen.Devices },
                     onRecovery = { currentScreen = Screen.Recovery },
+                    onLabels = { currentScreen = Screen.Labels },
                     onCheckPasswordStrength = { viewModel.checkPasswordStrength(it) },
                     showRestoreDemoOption = demoContactState?.let { !it.isActive } ?: false,
                     onRestoreDemo = { viewModel.restoreDemoContact() },
+                    // Aha moments (tips)
+                    ahaMomentsProgress = viewModel.ahaMomentsProgress(),
+                    onResetAhaMoments = { viewModel.resetAhaMoments() },
                     reduceMotion = reduceMotion,
                     onReduceMotionChange = { viewModel.setReduceMotion(it) },
                     highContrast = highContrast,
                     onHighContrastChange = { viewModel.setHighContrast(it) },
                     largeTouchTargets = largeTouchTargets,
-                    onLargeTouchTargetsChange = { viewModel.setLargeTouchTargets(it) }
+                    onLargeTouchTargetsChange = { viewModel.setLargeTouchTargets(it) },
+                    // Content Updates
+                    isContentUpdatesSupported = viewModel.isContentUpdatesSupported(),
+                    onCheckContentUpdates = {
+                        viewModel.checkContentUpdates()?.let { status ->
+                            mapMobileUpdateStatus(status)
+                        }
+                    },
+                    onApplyContentUpdates = {
+                        viewModel.applyContentUpdates()?.let { result ->
+                            mapMobileApplyResult(result)
+                        }
+                    }
                 )
             }
         }
@@ -238,6 +263,44 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                 viewModel = viewModel,
                 onBack = { currentScreen = Screen.Settings }
             )
+        }
+        Screen.Labels -> {
+            val labels by viewModel.visibilityLabels.collectAsState()
+            val suggestedLabels by viewModel.suggestedLabels.collectAsState()
+            LabelsScreen(
+                labels = labels,
+                suggestedLabels = suggestedLabels,
+                onBack = { currentScreen = Screen.Settings },
+                onLabelClick = { labelId ->
+                    selectedLabelId = labelId
+                    currentScreen = Screen.LabelDetail
+                },
+                onCreateLabel = { name -> viewModel.createLabel(name) },
+                onDeleteLabel = { labelId -> viewModel.deleteLabel(labelId) },
+                onRefresh = { viewModel.loadLabels() }
+            )
+        }
+        Screen.LabelDetail -> {
+            val state = uiState
+            selectedLabelId?.let { labelId ->
+                if (state is UiState.Ready) {
+                    LabelDetailScreen(
+                        labelId = labelId,
+                        onBack = { currentScreen = Screen.Labels },
+                        onGetLabel = { viewModel.getLabel(it) },
+                        onRenameLabel = { id, newName -> viewModel.renameLabel(id, newName) },
+                        onDeleteLabel = { id ->
+                            viewModel.deleteLabel(id)
+                            currentScreen = Screen.Labels
+                        },
+                        onSetFieldVisibility = { lid, fid, visible ->
+                            viewModel.setLabelFieldVisibility(lid, fid, visible)
+                        },
+                        ownCardFields = state.card.fields,
+                        contacts = emptyList() // Would need to pass contacts from ViewModel
+                    )
+                }
+            }
         }
         }
 
@@ -782,5 +845,38 @@ fun SyncStatusChip(
             style = MaterialTheme.typography.labelMedium,
             color = color
         )
+    }
+}
+
+// Content Updates mapping functions
+private fun mapMobileUpdateStatus(status: MobileUpdateStatus): ContentUpdateStatus {
+    return when (status) {
+        is MobileUpdateStatus.UpToDate -> ContentUpdateStatus.UpToDate
+        is MobileUpdateStatus.UpdatesAvailable -> ContentUpdateStatus.UpdatesAvailable(
+            status.types.map { mapMobileUpdateType(it) }
+        )
+        is MobileUpdateStatus.CheckFailed -> ContentUpdateStatus.CheckFailed(status.error)
+        is MobileUpdateStatus.Disabled -> ContentUpdateStatus.Disabled
+    }
+}
+
+private fun mapMobileApplyResult(result: MobileApplyResult): ContentApplyResult {
+    return when (result) {
+        is MobileApplyResult.NoUpdates -> ContentApplyResult.NoUpdates
+        is MobileApplyResult.Applied -> ContentApplyResult.Applied(
+            applied = result.applied.map { mapMobileUpdateType(it) },
+            failed = result.failed.map { mapMobileUpdateType(it) }
+        )
+        is MobileApplyResult.Disabled -> ContentApplyResult.Disabled
+        is MobileApplyResult.Error -> ContentApplyResult.Error(result.error)
+    }
+}
+
+private fun mapMobileUpdateType(type: MobileUpdateType): ContentUpdateType {
+    return when (type) {
+        MobileUpdateType.NETWORKS -> ContentUpdateType.Networks
+        MobileUpdateType.LOCALES -> ContentUpdateType.Locales
+        MobileUpdateType.THEMES -> ContentUpdateType.Themes
+        MobileUpdateType.HELP -> ContentUpdateType.Help
     }
 }
