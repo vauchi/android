@@ -26,8 +26,8 @@ package com.vauchi.data
 // DONE: Certificate pinning - isCertificatePinningEnabled(), setPinnedCertificate()
 // methods implemented. UI added to Settings under Security section.
 //
-// TODO(core-gap): Device linking - DevicesScreen is a stub. vauchi-mobile exposes
-// MobileDeviceLinkData, MobileDeviceInfo, MobileDeviceLinkResult. Multi-device sync not functional.
+// DONE: Device linking - getDevices(), generateDeviceLinkQr(), parseDeviceLinkQr(),
+// deviceCount(), unlinkDevice(), isPrimaryDevice() methods implemented.
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -503,4 +503,52 @@ class VauchiRepository(context: Context) {
      * @return The restored demo contact
      */
     fun restoreDemoContact() = vauchi.restoreDemoContact()
+
+    // Device Linking operations
+    // Based on: features/device_management.feature
+
+    /**
+     * Get list of linked devices.
+     *
+     * @return List of device info for all linked devices
+     */
+    fun getDevices() = vauchi.getDevices()
+
+    /**
+     * Generate a device link QR code for a new device to scan.
+     *
+     * @return QR code data with expiration info
+     */
+    fun generateDeviceLinkQr() = vauchi.generateDeviceLinkQr()
+
+    /**
+     * Parse a device link QR code scanned from another device.
+     *
+     * @param qrData The raw QR code data string
+     * @return Parsed device link info
+     */
+    fun parseDeviceLinkQr(qrData: String) = vauchi.parseDeviceLinkQr(qrData)
+
+    /**
+     * Get the number of linked devices.
+     *
+     * @return Count of linked devices
+     */
+    fun deviceCount(): UInt = vauchi.deviceCount()
+
+    /**
+     * Unlink a device by its index in the device list.
+     * Cannot unlink the current device.
+     *
+     * @param deviceIndex The index of the device to unlink
+     * @return True if the device was successfully unlinked
+     */
+    fun unlinkDevice(deviceIndex: UInt): Boolean = vauchi.unlinkDevice(deviceIndex)
+
+    /**
+     * Check if this is the primary (first) device.
+     *
+     * @return True if this is the primary device
+     */
+    fun isPrimaryDevice(): Boolean = vauchi.isPrimaryDevice()
 }

@@ -997,6 +997,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    // MARK: - Device Management
+    // Based on: features/device_management.feature
+
+    /**
+     * Get list of linked devices
+     */
+    fun getDevices() = repository.getDevices()
+
+    /**
+     * Generate device link QR code for a new device to scan
+     */
+    fun generateDeviceLinkQr() = repository.generateDeviceLinkQr()
+
+    /**
+     * Parse device link QR code
+     */
+    fun parseDeviceLinkQr(qrData: String) = repository.parseDeviceLinkQr(qrData)
+
+    /**
+     * Get the number of linked devices
+     */
+    fun deviceCount(): UInt = repository.deviceCount()
+
+    /**
+     * Unlink a device by index
+     */
+    fun unlinkDevice(deviceIndex: UInt): Boolean = repository.unlinkDevice(deviceIndex)
+
+    /**
+     * Check if this is the primary device
+     */
+    fun isPrimaryDevice(): Boolean = repository.isPrimaryDevice()
 }
 
 private data class Tuple4<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)

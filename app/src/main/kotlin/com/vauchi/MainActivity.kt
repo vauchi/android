@@ -272,15 +272,13 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             }
         }
         Screen.Devices -> {
-            val state = uiState
-            if (state is UiState.Ready) {
-                DevicesScreen(
-                    displayName = state.displayName,
-                    publicId = state.publicId,
-                    onBack = { currentScreen = Screen.Settings },
-                    onGenerateLink = { null } // TODO: implement device linking
-                )
-            }
+            DevicesScreen(
+                onBack = { currentScreen = Screen.Settings },
+                getDevices = { viewModel.getDevices() },
+                generateLinkQr = { viewModel.generateDeviceLinkQr() },
+                unlinkDevice = { index -> viewModel.unlinkDevice(index) },
+                isPrimaryDevice = { viewModel.isPrimaryDevice() }
+            )
         }
         Screen.Recovery -> {
             RecoveryScreen(
