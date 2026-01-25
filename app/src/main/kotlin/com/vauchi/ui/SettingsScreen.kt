@@ -62,7 +62,14 @@ fun SettingsScreen(
     onApplyContentUpdates: suspend () -> ContentApplyResult? = { null },
     // Certificate Pinning
     isCertificatePinningEnabled: Boolean = false,
-    onSetPinnedCertificate: (String) -> Unit = {}
+    onSetPinnedCertificate: (String) -> Unit = {},
+    // Appearance
+    onThemeSettings: () -> Unit = {},
+    onLanguageSettings: () -> Unit = {},
+    currentThemeName: String = "System",
+    currentLanguageName: String = "English",
+    // Help
+    onHelp: () -> Unit = {}
 ) {
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
@@ -366,6 +373,61 @@ fun SettingsScreen(
 
             HorizontalDivider()
 
+            // Appearance Section
+            Text(
+                text = "Appearance",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onThemeSettings() }
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Theme", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            currentThemeName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    HorizontalDivider()
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onLanguageSettings() }
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Language", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            currentLanguageName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
             // Accessibility Section
             Text(
                 text = "Accessibility",
@@ -454,9 +516,9 @@ fun SettingsScreen(
             )
 
             HelpLinkItem(
-                title = "FAQ",
+                title = "Help & FAQ",
                 subtitle = "Frequently asked questions",
-                onClick = { openUrl("https://vauchi.app/faq") }
+                onClick = onHelp
             )
 
             HelpLinkItem(

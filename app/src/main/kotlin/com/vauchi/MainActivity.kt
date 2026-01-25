@@ -35,6 +35,9 @@ import com.vauchi.ui.DevicesScreen
 import com.vauchi.ui.RecoveryScreen
 import com.vauchi.ui.LabelsScreen
 import com.vauchi.ui.LabelDetailScreen
+import com.vauchi.ui.ThemeSettingsScreen
+import com.vauchi.ui.LanguageSettingsScreen
+import com.vauchi.ui.HelpScreen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -80,7 +83,8 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class Screen {
-    Home, Exchange, Contacts, ContactDetail, QrScanner, Settings, Devices, Recovery, Labels, LabelDetail
+    Home, Exchange, Contacts, ContactDetail, QrScanner, Settings, Devices, Recovery, Labels, LabelDetail,
+    ThemeSettings, LanguageSettings, Help
 }
 
 @Composable
@@ -267,7 +271,14 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     },
                     // Certificate Pinning
                     isCertificatePinningEnabled = viewModel.isCertificatePinningEnabled(),
-                    onSetPinnedCertificate = { certPem -> viewModel.setPinnedCertificate(certPem) }
+                    onSetPinnedCertificate = { certPem -> viewModel.setPinnedCertificate(certPem) },
+                    // Appearance
+                    onThemeSettings = { currentScreen = Screen.ThemeSettings },
+                    onLanguageSettings = { currentScreen = Screen.LanguageSettings },
+                    currentThemeName = com.vauchi.util.ThemeManager.getInstance(context).currentTheme?.name ?: "System",
+                    currentLanguageName = com.vauchi.util.LocalizationManager.getInstance(context).currentLocaleInfo.name,
+                    // Help
+                    onHelp = { currentScreen = Screen.Help }
                 )
             }
         }
@@ -323,6 +334,21 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     )
                 }
             }
+        }
+        Screen.ThemeSettings -> {
+            ThemeSettingsScreen(
+                onBack = { currentScreen = Screen.Settings }
+            )
+        }
+        Screen.LanguageSettings -> {
+            LanguageSettingsScreen(
+                onBack = { currentScreen = Screen.Settings }
+            )
+        }
+        Screen.Help -> {
+            HelpScreen(
+                onBack = { currentScreen = Screen.Settings }
+            )
         }
         }
 
