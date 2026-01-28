@@ -39,6 +39,11 @@ variables:
   DS_EXCLUDED_PATHS: "build/, .gradle/"
   SECRET_DETECTION_EXCLUDED_PATHS: "build/, .gradle/"
 
+  # Exclude gemnasium-maven analyzer — Gradle is covered by gemnasium.
+  # The maven analyzer fails on test-only Compose dependencies that are
+  # not fully resolvable outside Android SDK (ui-tooling, ui-test-manifest).
+  DS_EXCLUDED_ANALYZERS: "gemnasium-maven"
+
   # Enable Android-specific SAST analyzers
   SAST_ANALYZER_IMAGE_TAG: "5"
 

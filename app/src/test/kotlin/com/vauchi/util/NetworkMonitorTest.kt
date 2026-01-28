@@ -4,7 +4,6 @@
 
 package com.vauchi.util
 
-import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
@@ -27,9 +26,6 @@ import kotlin.test.assertTrue
 class NetworkMonitorTest {
 
     @Mock
-    private lateinit var mockApplication: Application
-
-    @Mock
     private lateinit var mockContext: Context
 
     @Mock
@@ -46,11 +42,10 @@ class NetworkMonitorTest {
     @Before
     fun setUp() {
         MockitoAnnotations.openMocks(this)
-        whenever(mockApplication.applicationContext).thenReturn(mockContext)
         whenever(mockContext.getSystemService(Context.CONNECTIVITY_SERVICE))
             .thenReturn(mockConnectivityManager)
 
-        networkMonitor = NetworkMonitor(mockApplication)
+        networkMonitor = NetworkMonitor(mockContext)
     }
 
     @Test
