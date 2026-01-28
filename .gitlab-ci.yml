@@ -11,6 +11,11 @@
 #   The vauchi/core release pipeline builds UniFFI bindings, packages them,
 #   and triggers vauchi-mobile-android to publish an AAR to Maven.
 #
+# Performance optimizations:
+#   - Change-based rules: Jobs run only when relevant files change
+#   - Timeouts: Prevent runaway jobs from blocking runners
+#   - Interruptible: Auto-cancel on new commits
+#
 # GitLab Ultimate Features:
 #   - SAST: Static application security testing (Android)
 #   - Dependency Scanning: Gradle dependency scanning
@@ -47,6 +52,10 @@ variables:
   # Enable Android-specific SAST analyzers
   SAST_ANALYZER_IMAGE_TAG: "5"
 
+# Interruptible default for auto-cancel
+default:
+  interruptible: true
+
 .gradle-cache: &gradle-cache
   cache:
     key: ${CI_COMMIT_REF_SLUG}-gradle
@@ -59,13 +68,26 @@ variables:
   image: cimg/android:2024.01
   <<: *gradle-cache
 
+# Timeout templates
+.timeout-quick:
+  timeout: 10 minutes
+
+.timeout-standard:
+  timeout: 30 minutes
+
+.timeout-long:
+  timeout: 1 hour
+
 # ============================================================
-# Lint Stage
+# Lint Stage (change-based)
 # ============================================================
 
 lint:
-  extends: .android-job
+  extends: [.android-job, .timeout-standard]
   stage: lint
+  cache:
+    <<: *gradle-cache
+    policy: pull  # Read-only for lint
   script:
     - ./gradlew lint
   artifacts:
@@ -76,12 +98,22 @@ lint:
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "**/*.kt"
+        - "**/*.java"
+        - "**/*.xml"
+        - "build.gradle*"
+        - "app/build.gradle*"
+        - ".gitlab-ci.yml"
     - if: $CI_COMMIT_BRANCH == "main"
   allow_failure: true  # Pre-existing: MobileUpdateType/kotlinx.serialization not yet available
 
 lint:detekt:
-  extends: .android-job
+  extends: [.android-job, .timeout-quick]
   stage: lint
+  cache:
+    <<: *gradle-cache
+    policy: pull  # Read-only for lint
   script:
     - ./gradlew detekt || echo "Detekt not configured"
   artifacts:
@@ -90,15 +122,19 @@ lint:detekt:
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "**/*.kt"
+        - "detekt.yml"
+        - ".gitlab-ci.yml"
     - if: $CI_COMMIT_BRANCH == "main"
   allow_failure: true
 
 # ============================================================
-# Build Stage
+# Build Stage (change-based)
 # ============================================================
 
 build:debug:
-  extends: .android-job
+  extends: [.android-job, .timeout-standard]
   stage: build
   script:
     - ./gradlew assembleDebug
@@ -108,11 +144,18 @@ build:debug:
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "**/*.kt"
+        - "**/*.java"
+        - "**/*.xml"
+        - "build.gradle*"
+        - "app/build.gradle*"
+        - ".gitlab-ci.yml"
     - if: $CI_COMMIT_BRANCH == "main"
   allow_failure: true  # Pre-existing: MobileUpdateType/kotlinx.serialization not yet available
 
 build:release:
-  extends: .android-job
+  extends: [.android-job, .timeout-long]
   stage: build
   script:
     - ./gradlew assembleRelease
@@ -125,11 +168,11 @@ build:release:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
 
 # ============================================================
-# Test Stage
+# Test Stage (change-based)
 # ============================================================
 
 test:unit:
-  extends: .android-job
+  extends: [.android-job, .timeout-standard]
   stage: test
   script:
     - ./gradlew test
@@ -139,11 +182,17 @@ test:unit:
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "**/*.kt"
+        - "**/*.java"
+        - "build.gradle*"
+        - "app/build.gradle*"
+        - ".gitlab-ci.yml"
     - if: $CI_COMMIT_BRANCH == "main"
   allow_failure: true  # Pre-existing: MobileUpdateType/kotlinx.serialization not yet available
 
 # ============================================================
-# Security Stage
+# Security Stage (change-based)
 # ============================================================
 
 # GitLab security templates configuration
@@ -153,6 +202,10 @@ semgrep-sast:
   tags: [docker]
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "**/*.kt"
+        - "**/*.java"
+        - ".gitlab-ci.yml"
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_PIPELINE_SOURCE == "schedule"
 
@@ -161,6 +214,11 @@ gemnasium-dependency_scanning:
   tags: [docker]
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "build.gradle*"
+        - "app/build.gradle*"
+        - "gradle.properties"
+        - ".gitlab-ci.yml"
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_PIPELINE_SOURCE == "schedule"
 
@@ -171,10 +229,13 @@ secret_detection:
     - if: $CI_COMMIT_BRANCH == "main"
 
 
-# Gradle dependency check
+# Gradle dependency check (runs on dependency changes)
 security:dependency-check:
-  extends: .android-job
+  extends: [.android-job, .timeout-standard]
   stage: security
+  cache:
+    <<: *gradle-cache
+    policy: pull  # Read-only
   script:
     - ./gradlew dependencyCheckAnalyze || echo "OWASP dependency check not configured"
   artifacts:
@@ -186,6 +247,7 @@ security:dependency-check:
       changes:
         - "build.gradle*"
         - "app/build.gradle*"
+        - ".gitlab-ci.yml"
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_PIPELINE_SOURCE == "schedule"
   allow_failure: true
