@@ -1,0 +1,73 @@
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+version = 1
+SPDX-PackageName = "vauchi-android"
+SPDX-PackageSupplier = "Mattia Egloff <mattia.egloff@pm.me>"
+
+# License files
+[[annotations]]
+path = ["LICENSES/**"]
+SPDX-FileCopyrightText = "Free Software Foundation"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Lock files
+[[annotations]]
+path = ["**/Cargo.lock", "**/package-lock.json", "**/yarn.lock", "**/*.lock"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Git and editor config files
+[[annotations]]
+path = [".gitignore", "**/.gitignore", ".DS_Store", "**/.gitkeep", ".dockerignore"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# JSON config files
+[[annotations]]
+path = ["**/*.json"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Binary/media files
+[[annotations]]
+path = ["**/*.png", "**/*.jpg", "**/*.jpeg", "**/*.gif", "**/*.ico", "**/*.svg", "**/*.webp"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Font files
+[[annotations]]
+path = ["**/*.ttf", "**/*.otf", "**/*.woff", "**/*.woff2", "**/*.eot"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Gradle wrapper (Apache-2.0 licensed by Gradle Inc)
+[[annotations]]
+path = ["gradlew", "gradlew.bat", "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties"]
+SPDX-FileCopyrightText = "Gradle Inc"
+SPDX-License-Identifier = "Apache-2.0"
+
+# Android build files
+[[annotations]]
+path = ["**/*.kts", "**/proguard-rules.pro", "**/*.gradle", "**/*.properties"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Android XML resources
+[[annotations]]
+path = ["**/*.xml", "**/AndroidManifest.xml"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Xcode project files
+[[annotations]]
+path = ["**/*.pbxproj", "**/*.xcworkspacedata", "**/contents.xcworkspacedata"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Android resource files
+[[annotations]]
+path = ["**/*.webp"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
