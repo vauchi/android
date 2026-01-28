@@ -56,8 +56,8 @@ variables:
 default:
   interruptible: true
 
-.gradle-cache: &gradle-cache
-  cache:
+.gradle-cache:
+  cache: &gradle-cache
     key: ${CI_COMMIT_REF_SLUG}-gradle
     paths:
       - .gradle/
@@ -66,7 +66,8 @@ default:
 
 .android-job:
   image: cimg/android:2024.01
-  <<: *gradle-cache
+  cache:
+    <<: *gradle-cache
 
 # Timeout templates
 .timeout-quick:
@@ -86,7 +87,11 @@ lint:
   extends: [.android-job, .timeout-standard]
   stage: lint
   cache:
-    <<: *gradle-cache
+    key: ${CI_COMMIT_REF_SLUG}-gradle
+    paths:
+      - .gradle/
+      - build/
+      - app/build/
     policy: pull  # Read-only for lint
   script:
     - ./gradlew lint
@@ -112,7 +117,11 @@ lint:detekt:
   extends: [.android-job, .timeout-quick]
   stage: lint
   cache:
-    <<: *gradle-cache
+    key: ${CI_COMMIT_REF_SLUG}-gradle
+    paths:
+      - .gradle/
+      - build/
+      - app/build/
     policy: pull  # Read-only for lint
   script:
     - ./gradlew detekt || echo "Detekt not configured"
@@ -234,7 +243,11 @@ security:dependency-check:
   extends: [.android-job, .timeout-standard]
   stage: security
   cache:
-    <<: *gradle-cache
+    key: ${CI_COMMIT_REF_SLUG}-gradle
+    paths:
+      - .gradle/
+      - build/
+      - app/build/
     policy: pull  # Read-only
   script:
     - ./gradlew dependencyCheckAnalyze || echo "OWASP dependency check not configured"
