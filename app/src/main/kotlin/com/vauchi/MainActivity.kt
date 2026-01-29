@@ -913,7 +913,7 @@ private fun mapMobileApplyResult(result: MobileApplyResult): ContentApplyResult 
         is MobileApplyResult.NoUpdates -> ContentApplyResult.NoUpdates
         is MobileApplyResult.Applied -> ContentApplyResult.Applied(
             applied = result.applied.map { mapMobileContentType(it) },
-            failed = result.failed.map { mapMobileContentType(it.contentType) }
+            failed = result.failed.map { mapMobileContentType(it) }
         )
         is MobileApplyResult.Disabled -> ContentApplyResult.Disabled
         is MobileApplyResult.Error -> ContentApplyResult.Error(result.error)
