@@ -104,8 +104,8 @@ dependencies {
     // ML Kit for barcode scanning
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
-    // JNA for UniFFI (required for loading native libraries)
-    implementation("net.java.dev.jna:jna:5.15.0@aar")
+    // VauchiMobile native bindings (includes JNA + JNI libs)
+    implementation("com.vauchi:vauchi-mobile:0.1.1")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

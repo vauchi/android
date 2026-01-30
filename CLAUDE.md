@@ -10,7 +10,7 @@ Native Android app using Kotlin and Jetpack Compose.
 - **Language**: Kotlin
 - **UI**: Jetpack Compose
 - **Build**: Gradle (Kotlin DSL)
-- **Native**: UniFFI bindings from `vauchi-mobile`
+- **Native**: UniFFI bindings via `vauchi-mobile-android` Maven package
 
 ## Commands
 
@@ -25,8 +25,7 @@ Native Android app using Kotlin and Jetpack Compose.
 
 - Follow Android/Kotlin conventions
 - Use Compose for all new UI
-- Native bindings via `vauchi-mobile` crate
-- Run `code/scripts/build-android.sh` to rebuild native libs
+- Native bindings via `vauchi-mobile-android` Maven package (no local build needed)
 
 ## Structure
 
