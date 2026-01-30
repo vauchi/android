@@ -101,6 +101,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
 
     // Auto-sync when app comes to foreground
     DisposableEffect(lifecycleOwner) {
@@ -913,7 +914,7 @@ private fun mapMobileApplyResult(result: MobileApplyResult): ContentApplyResult 
         is MobileApplyResult.NoUpdates -> ContentApplyResult.NoUpdates
         is MobileApplyResult.Applied -> ContentApplyResult.Applied(
             applied = result.applied.map { mapMobileContentType(it) },
-            failed = result.failed.map { mapMobileContentType(it) }
+            failed = result.failed.map { mapMobileContentType(it.contentType) }
         )
         is MobileApplyResult.Disabled -> ContentApplyResult.Disabled
         is MobileApplyResult.Error -> ContentApplyResult.Error(result.error)

@@ -27,8 +27,10 @@ import uniffi.vauchi_mobile.MobileFieldType
 import uniffi.vauchi_mobile.MobileRecoveryClaim
 import uniffi.vauchi_mobile.MobileRecoveryProgress
 import uniffi.vauchi_mobile.MobileRecoveryVoucher
+import uniffi.vauchi_mobile.MobileApplyResult
 import uniffi.vauchi_mobile.MobileSocialNetwork
 import uniffi.vauchi_mobile.MobileSyncResult
+import uniffi.vauchi_mobile.MobileUpdateStatus
 import uniffi.vauchi_mobile.MobileProximityVerifier
 import uniffi.vauchi_mobile.MobileVisibilityLabel
 import uniffi.vauchi_mobile.MobileVisibilityLabelDetail
