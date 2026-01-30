@@ -21,6 +21,20 @@ Native Android app using Kotlin and Jetpack Compose.
 ./gradlew assembleRelease        # Release APK
 ```
 
+## Pre-MR Checklist
+
+Run before submitting a merge request:
+
+```bash
+# From workspace root:
+just check-android
+
+# Or manually from android/:
+./gradlew lint assembleDebug test
+```
+
+CI runs the same checks (lint, build, test) on MR pipelines. No `allow_failure` — all jobs must pass.
+
 ## Rules
 
 - Follow Android/Kotlin conventions
