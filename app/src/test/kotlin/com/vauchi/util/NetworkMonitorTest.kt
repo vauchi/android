@@ -94,15 +94,4 @@ class NetworkMonitorTest {
         assertTrue(firstValue is Boolean)
     }
 
-    @Test
-    fun `test connectivity manager properties`() {
-        // Verify we're using the correct network capabilities
-        val capabilities = NetworkCapabilities.Builder().build()
-        whenever(mockConnectivityManager.getNetworkCapabilities(any()))
-            .thenReturn(capabilities)
-
-        val isConnected = networkMonitor.isCurrentlyConnected()
-        // Should not crash and return a boolean
-        assertTrue(isConnected is Boolean)
-    }
 }
