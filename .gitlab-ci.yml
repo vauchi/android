@@ -176,12 +176,14 @@ lint:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - "**/*.kt"
-        - "**/*.java"
-        - "**/*.xml"
-        - "build.gradle*"
-        - "app/build.gradle*"
-        - ".gitlab-ci.yml"
+        compare_to: refs/heads/main
+        paths:
+          - "**/*.kt"
+          - "**/*.java"
+          - "**/*.xml"
+          - "build.gradle*"
+          - "app/build.gradle*"
+          - ".gitlab-ci.yml"
 
 # ============================================================
 # Build Stage (MR: debug, Tag: release)
@@ -199,12 +201,14 @@ build:debug:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - "**/*.kt"
-        - "**/*.java"
-        - "**/*.xml"
-        - "build.gradle*"
-        - "app/build.gradle*"
-        - ".gitlab-ci.yml"
+        compare_to: refs/heads/main
+        paths:
+          - "**/*.kt"
+          - "**/*.java"
+          - "**/*.xml"
+          - "build.gradle*"
+          - "app/build.gradle*"
+          - ".gitlab-ci.yml"
 
 build:release:
   extends: [.android-job, .timeout-long]
@@ -234,11 +238,13 @@ test:unit:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - "**/*.kt"
-        - "**/*.java"
-        - "build.gradle*"
-        - "app/build.gradle*"
-        - ".gitlab-ci.yml"
+        compare_to: refs/heads/main
+        paths:
+          - "**/*.kt"
+          - "**/*.java"
+          - "build.gradle*"
+          - "app/build.gradle*"
+          - ".gitlab-ci.yml"
 
 # ============================================================
 # Security Stage (MR + scheduled)
@@ -252,9 +258,11 @@ semgrep-sast:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - "**/*.kt"
-        - "**/*.java"
-        - ".gitlab-ci.yml"
+        compare_to: refs/heads/main
+        paths:
+          - "**/*.kt"
+          - "**/*.java"
+          - ".gitlab-ci.yml"
     - if: $CI_PIPELINE_SOURCE == "schedule"
 
 # Gemnasium for Gradle dependencies
@@ -263,10 +271,12 @@ gemnasium-dependency_scanning:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - "build.gradle*"
-        - "app/build.gradle*"
-        - "gradle.properties"
-        - ".gitlab-ci.yml"
+        compare_to: refs/heads/main
+        paths:
+          - "build.gradle*"
+          - "app/build.gradle*"
+          - "gradle.properties"
+          - ".gitlab-ci.yml"
     - if: $CI_PIPELINE_SOURCE == "schedule"
 
 secret_detection:
