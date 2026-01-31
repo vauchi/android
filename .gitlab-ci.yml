@@ -28,12 +28,16 @@
 #   - Dependency Scanning: Gradle dependency scanning (gemnasium)
 #   - Secret Detection: Prevent credential leaks
 
-# GitLab Ultimate Templates
+# GitLab Ultimate Templates + shared timeout definitions
 include:
   - template: Security/SAST.gitlab-ci.yml
   - template: Security/Dependency-Scanning.gitlab-ci.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
-
+  - project: 'vauchi/scripts'
+    ref: main
+    file:
+      - '/ci-templates/timeouts.yml'
+      - '/ci-templates/reuse.yml'
 
 stages:
   - update
@@ -63,6 +67,10 @@ variables:
 default:
   interruptible: true
 
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+
 .gradle-cache:
   cache: &gradle-cache
     key: ${CI_COMMIT_REF_SLUG}-gradle
@@ -76,15 +84,7 @@ default:
   cache:
     <<: *gradle-cache
 
-# Timeout templates
-.timeout-quick:
-  timeout: 10 minutes
-
-.timeout-standard:
-  timeout: 30 minutes
-
-.timeout-long:
-  timeout: 1 hour
+# Timeout templates provided by vauchi/scripts ci-templates/timeouts.yml
 
 # ============================================================
 # Update Stage (triggered by upstream distribution repo)
