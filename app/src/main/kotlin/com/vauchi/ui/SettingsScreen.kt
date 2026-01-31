@@ -7,6 +7,7 @@ package com.vauchi.ui
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.core.content.pm.PackageInfoCompat
 import com.vauchi.util.ClipboardUtils
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -563,7 +564,7 @@ fun SettingsScreen(
                     )
                     val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
                     val versionName = packageInfo.versionName ?: "1.0.0"
-                    val versionCode = packageInfo.longVersionCode
+                    val versionCode = PackageInfoCompat.getLongVersionCode(packageInfo)
                     Text(
                         text = "Version $versionName (build $versionCode)",
                         style = MaterialTheme.typography.bodySmall,
