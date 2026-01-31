@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.pm.PackageInfoCompat
+import com.vauchi.ui.model.*
 import com.vauchi.util.ClipboardUtils
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -883,21 +884,7 @@ fun EditDisplayNameDialog(
     )
 }
 
-// Password strength types and UI
-
-enum class PasswordStrengthLevel {
-    TooWeak,
-    Fair,
-    Strong,
-    VeryStrong
-}
-
-data class PasswordStrengthResult(
-    val level: PasswordStrengthLevel = PasswordStrengthLevel.TooWeak,
-    val description: String = "",
-    val feedback: String = "",
-    val isAcceptable: Boolean = false
-)
+// Password strength UI
 
 @Composable
 fun PasswordStrengthIndicator(strength: PasswordStrengthResult) {
@@ -1044,28 +1031,7 @@ fun AccessibilityToggle(
     }
 }
 
-// Content Updates types and UI
-
-enum class ContentUpdateType {
-    Networks,
-    Locales,
-    Themes,
-    Help
-}
-
-sealed class ContentUpdateStatus {
-    data object UpToDate : ContentUpdateStatus()
-    data class UpdatesAvailable(val types: List<ContentUpdateType>) : ContentUpdateStatus()
-    data class CheckFailed(val error: String) : ContentUpdateStatus()
-    data object Disabled : ContentUpdateStatus()
-}
-
-sealed class ContentApplyResult {
-    data object NoUpdates : ContentApplyResult()
-    data class Applied(val applied: List<ContentUpdateType>, val failed: List<ContentUpdateType>) : ContentApplyResult()
-    data object Disabled : ContentApplyResult()
-    data class Error(val error: String) : ContentApplyResult()
-}
+// Content Updates UI
 
 @Composable
 fun ContentUpdatesSection(

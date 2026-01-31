@@ -46,27 +46,19 @@ import java.io.File
 class VauchiRepository(context: Context) {
     private val vauchi: VauchiMobile
     private val prefs: SharedPreferences
+    private val preferences: VauchiPreferences
     private val keyStoreHelper = KeyStoreHelper()
 
     companion object {
-        private const val PREFS_NAME = "vauchi_settings"
-        private const val KEY_RELAY_URL = "relay_url"
         private const val KEY_ENCRYPTED_STORAGE_KEY = "encrypted_storage_key"
-        private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
-        private const val KEY_DEMO_CONTACT_DISMISSED = "demo_contact_dismissed"
-        private const val DEFAULT_RELAY_URL = "wss://relay.vauchi.app"
         private const val LEGACY_KEY_FILENAME = "storage.key"
-
-        // Accessibility settings keys
-        private const val KEY_REDUCE_MOTION = "accessibility_reduce_motion"
-        private const val KEY_HIGH_CONTRAST = "accessibility_high_contrast"
-        private const val KEY_LARGE_TOUCH_TARGETS = "accessibility_large_touch_targets"
     }
 
     init {
         val dataDir = context.filesDir.absolutePath
-        prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val relayUrl = prefs.getString(KEY_RELAY_URL, DEFAULT_RELAY_URL) ?: DEFAULT_RELAY_URL
+        prefs = context.getSharedPreferences(VauchiPreferences.PREFS_NAME, Context.MODE_PRIVATE)
+        preferences = VauchiPreferences(prefs)
+        val relayUrl = preferences.getRelayUrl()
 
         // Get or create storage key using Android KeyStore
         val storageKeyBytes = getOrCreateStorageKey(dataDir)
@@ -129,50 +121,33 @@ class VauchiRepository(context: Context) {
      */
     fun exportStorageKey(): ByteArray = vauchi.exportStorageKey().map { it.toByte() }.toByteArray()
 
-    fun getRelayUrl(): String = prefs.getString(KEY_RELAY_URL, DEFAULT_RELAY_URL) ?: DEFAULT_RELAY_URL
+    fun getRelayUrl(): String = preferences.getRelayUrl()
 
-    fun setRelayUrl(url: String) {
-        prefs.edit().putString(KEY_RELAY_URL, url).apply()
-    }
+    fun setRelayUrl(url: String) = preferences.setRelayUrl(url)
 
     // Onboarding state management
-    fun hasCompletedOnboarding(): Boolean = prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
+    fun hasCompletedOnboarding(): Boolean = preferences.hasCompletedOnboarding()
 
-    fun setOnboardingCompleted(completed: Boolean) {
-        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
-    }
+    fun setOnboardingCompleted(completed: Boolean) = preferences.setOnboardingCompleted(completed)
 
-    fun hasDismissedDemoContact(): Boolean = prefs.getBoolean(KEY_DEMO_CONTACT_DISMISSED, false)
+    fun hasDismissedDemoContact(): Boolean = preferences.hasDismissedDemoContact()
 
-    fun setDemoContactDismissed(dismissed: Boolean) {
-        prefs.edit().putBoolean(KEY_DEMO_CONTACT_DISMISSED, dismissed).apply()
-    }
+    fun setDemoContactDismissed(dismissed: Boolean) = preferences.setDemoContactDismissed(dismissed)
 
-    fun resetOnboarding() {
-        prefs.edit()
-            .remove(KEY_ONBOARDING_COMPLETED)
-            .remove(KEY_DEMO_CONTACT_DISMISSED)
-            .apply()
-    }
+    fun resetOnboarding() = preferences.resetOnboarding()
 
     // Accessibility settings
-    fun getReduceMotion(): Boolean = prefs.getBoolean(KEY_REDUCE_MOTION, false)
+    fun getReduceMotion(): Boolean = preferences.getReduceMotion()
 
-    fun setReduceMotion(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_REDUCE_MOTION, enabled).apply()
-    }
+    fun setReduceMotion(enabled: Boolean) = preferences.setReduceMotion(enabled)
 
-    fun getHighContrast(): Boolean = prefs.getBoolean(KEY_HIGH_CONTRAST, false)
+    fun getHighContrast(): Boolean = preferences.getHighContrast()
 
-    fun setHighContrast(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_HIGH_CONTRAST, enabled).apply()
-    }
+    fun setHighContrast(enabled: Boolean) = preferences.setHighContrast(enabled)
 
-    fun getLargeTouchTargets(): Boolean = prefs.getBoolean(KEY_LARGE_TOUCH_TARGETS, false)
+    fun getLargeTouchTargets(): Boolean = preferences.getLargeTouchTargets()
 
-    fun setLargeTouchTargets(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_LARGE_TOUCH_TARGETS, enabled).apply()
-    }
+    fun setLargeTouchTargets(enabled: Boolean) = preferences.setLargeTouchTargets(enabled)
 
     fun sync(): MobileSyncResult = vauchi.sync()
 

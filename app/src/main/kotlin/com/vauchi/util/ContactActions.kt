@@ -79,7 +79,7 @@ object ContactActions {
 
     /**
      * Converts a website value to a URI, adding https:// if needed.
-     * Uses vauchi-core for scheme validation.
+     * Uses vauchi-core for scheme validation; URL normalization delegated to [ContactPatterns].
      */
     private fun websiteToUri(value: String): Uri? {
         // Check for blocked schemes using vauchi-core
@@ -88,36 +88,18 @@ object ContactActions {
             if (uniffi.vauchi_mobile.isBlockedScheme(scheme)) return null
         }
 
-        return when {
-            value.startsWith("https://") || value.startsWith("http://") -> Uri.parse(value)
-            value.contains("://") -> null // Unknown scheme
-            else -> Uri.parse("https://$value")
-        }
+        return ContactPatterns.normalizeWebsiteUrl(value)?.let { Uri.parse(it) }
     }
 
     /**
      * Converts a social media field to a profile URL.
-     * Uses vauchi-core's social network registry (40+ networks).
-     * 
+     * URL building logic delegated to [ContactPatterns].
+     *
      * Note: For full social network support, use VauchiMobile.getProfileUrl() directly.
      */
     private fun socialToUri(label: String, value: String): Uri? {
-        // Normalize username (remove @ prefix)
-        val username = value.trimStart('@')
-        
-        // Use vauchi-core's social network registry
-        // Note: This requires a VauchiMobile instance; fallback to basic URL if not available
-        // For now, construct basic URL for common networks, but prefer using VauchiMobile.getProfileUrl()
         return try {
-            // Try to use the network label as a domain hint for common patterns
-            val network = label.lowercase()
-            when (network) {
-                "twitter", "x" -> Uri.parse("https://twitter.com/$username")
-                "github" -> Uri.parse("https://github.com/$username")
-                "linkedin" -> Uri.parse("https://linkedin.com/in/$username")
-                "instagram" -> Uri.parse("https://instagram.com/$username")
-                else -> null // Use VauchiMobile.getProfileUrl() for full support
-            }
+            ContactPatterns.buildSocialProfileUrl(label, value)?.let { Uri.parse(it) }
         } catch (e: Exception) {
             null
         }
@@ -125,24 +107,14 @@ object ContactActions {
 
     /**
      * Detects the type of value and converts to appropriate URI.
-     * Used for Custom fields.
+     * Used for Custom fields. Detection logic delegated to [ContactPatterns].
      */
     private fun detectAndConvert(value: String): Uri? {
-        return when {
-            // URL pattern
-            value.startsWith("https://") || value.startsWith("http://") -> Uri.parse(value)
-
-            // Email pattern
-            value.contains("@") && value.contains(".") && !value.contains(" ") ->
-                Uri.parse("mailto:$value")
-
-            // Phone pattern (has enough digits)
-            value.count { it.isDigit() } >= 7 &&
-                value.all { it.isDigit() || it in " -+()./" } ->
-                Uri.parse("tel:$value")
-
-            // No pattern detected
-            else -> null
+        return when (ContactPatterns.detectValueType(value)) {
+            ContactPatterns.DetectedType.URL -> Uri.parse(value)
+            ContactPatterns.DetectedType.EMAIL -> Uri.parse("mailto:$value")
+            ContactPatterns.DetectedType.PHONE -> Uri.parse("tel:$value")
+            ContactPatterns.DetectedType.UNKNOWN -> null
         }
     }
 

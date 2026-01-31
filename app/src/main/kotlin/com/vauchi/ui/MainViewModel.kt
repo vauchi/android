@@ -8,6 +8,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vauchi.data.VauchiRepository
+import com.vauchi.ui.model.PasswordStrengthLevel
+import com.vauchi.ui.model.PasswordStrengthResult
 import com.vauchi.util.NetworkMonitor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

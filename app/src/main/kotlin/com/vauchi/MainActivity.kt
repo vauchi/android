@@ -48,12 +48,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vauchi.ui.MainViewModel
-import com.vauchi.ui.PasswordStrengthResult
 import com.vauchi.ui.SyncState
 import com.vauchi.ui.UiState
-import com.vauchi.ui.ContentUpdateStatus
-import com.vauchi.ui.ContentApplyResult
-import com.vauchi.ui.ContentUpdateType
+import com.vauchi.ui.model.ContentApplyResult
+import com.vauchi.ui.model.ContentUpdateStatus
+import com.vauchi.ui.model.ContentUpdateType
+import com.vauchi.ui.model.PasswordStrengthResult
 import uniffi.vauchi_mobile.MobileUpdateStatus
 import uniffi.vauchi_mobile.MobileApplyResult
 import uniffi.vauchi_mobile.MobileContentType
