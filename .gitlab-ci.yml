@@ -246,6 +246,30 @@ test:unit:
           - "app/build.gradle*"
           - ".gitlab-ci.yml"
 
+test:screenshots:
+  extends: [.android-job, .timeout-standard]
+  stage: test
+  allow_failure: true
+  script:
+    - ./gradlew validateDebugScreenshotTest
+  artifacts:
+    when: on_failure
+    paths:
+      - app/build/reports/screenshotTest/
+      - app/src/screenshotTestDebug/reference/
+    expire_in: 7 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        compare_to: refs/heads/main
+        paths:
+          - "**/*.kt"
+          - "**/*.java"
+          - "build.gradle*"
+          - "app/build.gradle*"
+          - "gradle.properties"
+          - ".gitlab-ci.yml"
+
 # ============================================================
 # Security Stage (MR + scheduled)
 # ============================================================

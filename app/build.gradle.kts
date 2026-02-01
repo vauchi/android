@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.android.compose.screenshot")
 }
 
 android {
@@ -50,6 +51,8 @@ android {
     buildFeatures {
         compose = true
     }
+
+    experimentalProperties["android.experimental.enableScreenshotTest"] = true
 
     packaging {
         resources {
@@ -127,4 +130,8 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // Screenshot testing (Compose Preview Screenshot Testing)
+    screenshotTestImplementation("com.android.tools.screenshot:screenshot-validation-api:0.0.1-alpha13")
+    screenshotTestImplementation("androidx.compose.ui:ui-tooling")
 }
