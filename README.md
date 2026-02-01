@@ -97,6 +97,14 @@ cargo build -p vauchi-mobile --release --target aarch64-linux-android
 3. Write tests for new features
 4. Core library changes go to [vauchi/code](https://gitlab.com/vauchi/code)
 
+## Support the Project
+
+Vauchi is open source and community-funded — no VC money, no data harvesting.
+
+- [GitHub Sponsors](https://github.com/sponsors/vauchi)
+- [Liberapay](https://liberapay.com/Vauchi/donate)
+- [SUPPORTERS.md](https://gitlab.com/vauchi/vauchi/-/blob/main/SUPPORTERS.md) for sponsorship tiers
+
 ## License
 
 MIT
