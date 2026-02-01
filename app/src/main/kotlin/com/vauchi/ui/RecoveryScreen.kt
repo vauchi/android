@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import com.vauchi.util.ClipboardUtils
+import com.vauchi.util.LocalizationManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,13 +32,14 @@ fun RecoveryScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Recovery") },
+                title = { Text(localizationManager.t("recovery.title")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -82,6 +84,7 @@ fun RecoverIdentityContent(
     context: Context,
     scope: kotlinx.coroutines.CoroutineScope
 ) {
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     var oldPublicKey by remember { mutableStateOf("") }
     var showClaimDialog by remember { mutableStateOf(false) }
     var isCreatingClaim by remember { mutableStateOf(false) }
@@ -177,7 +180,7 @@ fun RecoverIdentityContent(
 
         // Steps
         Text(
-            text = "How Recovery Works",
+            text = localizationManager.t("recovery.how_it_works"),
             style = MaterialTheme.typography.titleMedium
         )
 
@@ -318,7 +321,7 @@ fun RecoverIdentityContent(
                         onClick = { showClaimDialog = false },
                         enabled = !isCreatingClaim
                     ) {
-                        Text("Cancel")
+                        Text(localizationManager.t("action.cancel"))
                     }
                 }
             }
@@ -332,6 +335,7 @@ fun HelpOthersContent(
     context: Context,
     scope: kotlinx.coroutines.CoroutineScope
 ) {
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     var claimData by remember { mutableStateOf("") }
     var showVouchDialog by remember { mutableStateOf(false) }
     var isCreatingVoucher by remember { mutableStateOf(false) }
@@ -635,7 +639,7 @@ fun HelpOthersContent(
                         },
                         enabled = !isCreatingVoucher && !isParsing
                     ) {
-                        Text(if (parsedClaimInfo != null) "Back" else "Cancel")
+                        Text(if (parsedClaimInfo != null) "Back" else localizationManager.t("action.cancel"))
                     }
                 }
             }

@@ -19,8 +19,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vauchi.util.LocalizationManager
 import uniffi.vauchi_mobile.MobileVisibilityLabel
 
 /**
@@ -38,6 +40,9 @@ fun LabelsScreen(
     onDeleteLabel: (String) -> Unit,
     onRefresh: () -> Unit
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
+
     var showCreateDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf<MobileVisibilityLabel?>(null) }
     var newLabelName by remember { mutableStateOf("") }
@@ -49,7 +54,7 @@ fun LabelsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Visibility Labels") },
+                title = { Text(localizationManager.t("visibility.title")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -181,7 +186,7 @@ fun LabelsScreen(
                     showCreateDialog = false
                     newLabelName = ""
                 }) {
-                    Text("Cancel")
+                    Text(localizationManager.t("action.cancel"))
                 }
             }
         )
@@ -202,12 +207,12 @@ fun LabelsScreen(
                         showDeleteDialog = null
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(localizationManager.t("action.delete"), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("Cancel")
+                    Text(localizationManager.t("action.cancel"))
                 }
             }
         )

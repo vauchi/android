@@ -286,3 +286,169 @@ fun LabelsScreenWithLabelsScreenshot() {
         )
     }
 }
+
+// =============================================================
+// Dark Mode Variants
+// =============================================================
+
+@PreviewTest
+@Preview(showSystemUi = true)
+@Composable
+fun WelcomeStepDarkScreenshot() {
+    VauchiTheme(darkTheme = true, dynamicColor = false) {
+        WelcomeStep(onContinue = {}, onRestore = {})
+    }
+}
+
+@PreviewTest
+@Preview(showSystemUi = true)
+@Composable
+fun CreateIdentityStepFilledDarkScreenshot() {
+    VauchiTheme(darkTheme = true, dynamicColor = false) {
+        CreateIdentityStep(
+            displayName = "Alice",
+            onDisplayNameChange = {},
+            onContinue = {},
+            onBack = {}
+        )
+    }
+}
+
+@PreviewTest
+@Preview(showSystemUi = true)
+@Composable
+fun PreviewStepDarkScreenshot() {
+    VauchiTheme(darkTheme = true, dynamicColor = false) {
+        PreviewStep(
+            data = OnboardingData(
+                displayName = "Alice",
+                phone = "+41 79 123 45 67",
+                email = "alice@example.com"
+            ),
+            onContinue = {},
+            onBack = {}
+        )
+    }
+}
+
+@PreviewTest
+@Preview(showSystemUi = true)
+@Composable
+fun SettingsScreenDarkScreenshot() {
+    VauchiTheme(darkTheme = true, dynamicColor = false) {
+        SettingsScreen(
+            displayName = "Alice",
+            onBack = {},
+            onExportBackup = { "" },
+            onImportBackup = { _, _ -> false }
+        )
+    }
+}
+
+@PreviewTest
+@Preview(showSystemUi = true)
+@Composable
+fun ContactsScreenDarkScreenshot() {
+    VauchiTheme(darkTheme = true, dynamicColor = false) {
+        ContactsScreen(
+            onBack = {},
+            onListContacts = { emptyList() },
+            onRemoveContact = {},
+            onContactClick = {},
+            syncState = SyncState.Idle
+        )
+    }
+}
+
+@PreviewTest
+@Preview(showSystemUi = true)
+@Composable
+fun ExchangeScreenDarkScreenshot() {
+    VauchiTheme(darkTheme = true, dynamicColor = false) {
+        ExchangeScreen(
+            onBack = {},
+            onGenerateQr = { null },
+            onScanQr = {}
+        )
+    }
+}
+
+@PreviewTest
+@Preview(showSystemUi = true)
+@Composable
+fun DeliveryStatusWithRecordsDarkScreenshot() {
+    VauchiTheme(darkTheme = true, dynamicColor = false) {
+        DeliveryStatusScreen(
+            deliveryRecords = listOf(
+                MobileDeliveryRecord(
+                    messageId = "msg-1",
+                    recipientId = "recipient-1",
+                    status = MobileDeliveryStatus.DELIVERED,
+                    errorReason = null,
+                    createdAt = 1706745600UL,
+                    updatedAt = 1706745700UL,
+                    expiresAt = null
+                ),
+                MobileDeliveryRecord(
+                    messageId = "msg-2",
+                    recipientId = "recipient-2",
+                    status = MobileDeliveryStatus.FAILED,
+                    errorReason = "Recipient offline",
+                    createdAt = 1706745500UL,
+                    updatedAt = 1706745600UL,
+                    expiresAt = null
+                )
+            ),
+            retryEntries = listOf(
+                MobileRetryEntry(
+                    messageId = "msg-2",
+                    recipientId = "recipient-2",
+                    attempt = 2U,
+                    nextRetry = 1706746000UL,
+                    createdAt = 1706745500UL,
+                    maxAttempts = 5U,
+                    isMaxExceeded = false
+                )
+            ),
+            failedCount = 1,
+            isLoading = false,
+            onBack = {},
+            onRetry = {},
+            onRefresh = {}
+        )
+    }
+}
+
+@PreviewTest
+@Preview(showSystemUi = true)
+@Composable
+fun LabelsScreenWithLabelsDarkScreenshot() {
+    VauchiTheme(darkTheme = true, dynamicColor = false) {
+        LabelsScreen(
+            labels = listOf(
+                MobileVisibilityLabel(
+                    id = "label-1",
+                    name = "Work",
+                    contactCount = 5U,
+                    visibleFieldCount = 3U,
+                    createdAt = 1706745600UL,
+                    modifiedAt = 1706745600UL
+                ),
+                MobileVisibilityLabel(
+                    id = "label-2",
+                    name = "Family",
+                    contactCount = 12U,
+                    visibleFieldCount = 5U,
+                    createdAt = 1706745500UL,
+                    modifiedAt = 1706745700UL
+                )
+            ),
+            suggestedLabels = emptyList(),
+            onBack = {},
+            onLabelClick = {},
+            onCreateLabel = {},
+            onDeleteLabel = {},
+            onRefresh = {}
+        )
+    }
+}

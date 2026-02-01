@@ -17,8 +17,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vauchi.util.LocalizationManager
 import uniffi.vauchi_mobile.MobileContact
 import uniffi.vauchi_mobile.MobileContactField
 import uniffi.vauchi_mobile.MobileVisibilityLabelDetail
@@ -39,6 +41,9 @@ fun LabelDetailScreen(
     ownCardFields: List<MobileContactField>,
     contacts: List<MobileContact>
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
+
     var labelDetail by remember { mutableStateOf<MobileVisibilityLabelDetail?>(null) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -291,7 +296,7 @@ fun LabelDetailScreen(
                     showRenameDialog = false
                     newName = ""
                 }) {
-                    Text("Cancel")
+                    Text(localizationManager.t("action.cancel"))
                 }
             }
         )
@@ -313,12 +318,12 @@ fun LabelDetailScreen(
                         onBack()
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(localizationManager.t("action.delete"), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(localizationManager.t("action.cancel"))
                 }
             }
         )

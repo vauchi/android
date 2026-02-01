@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.vauchi.util.ClipboardUtils
+import com.vauchi.util.LocalizationManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import uniffi.vauchi_mobile.MobileDeviceInfo
@@ -51,6 +52,8 @@ fun DevicesScreen(
     unlinkDevice: (UInt) -> Boolean,
     isPrimaryDevice: () -> Boolean
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     var devices by remember { mutableStateOf<List<MobileDeviceInfo>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -89,7 +92,7 @@ fun DevicesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Linked Devices") },
+                title = { Text(localizationManager.t("devices.linked")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -146,7 +149,7 @@ fun DevicesScreen(
                 ) {
                     item {
                         Text(
-                            text = "Devices (${devices.size})",
+                            text = "${localizationManager.t("devices.title")} (${devices.size})",
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -253,7 +256,7 @@ fun DevicesScreen(
                     showUnlinkDialog = false
                     deviceToUnlink = null
                 }) {
-                    Text("Cancel")
+                    Text(localizationManager.t("action.cancel"))
                 }
             }
         )
@@ -270,6 +273,7 @@ fun DeviceLinkDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var timeRemaining by remember { mutableStateOf(0L) }
     val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     val coroutineScope = rememberCoroutineScope()
 
     // Generate QR on first composition
@@ -375,7 +379,7 @@ fun DeviceLinkDialog(
                                     isGenerating = false
                                 }
                             }) {
-                                Text("Generate New Code")
+                                Text(localizationManager.t("devices.generate_link"))
                             }
                         }
 
@@ -410,7 +414,7 @@ fun DeviceLinkDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Done")
+                Text(localizationManager.t("action.done"))
             }
         }
     )

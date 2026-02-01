@@ -26,10 +26,12 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.vauchi.util.LocalizationManager
 import kotlinx.coroutines.delay
 
 /**
@@ -146,6 +148,9 @@ fun WelcomeStep(
     onContinue: () -> Unit,
     onRestore: () -> Unit
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -180,14 +185,14 @@ fun WelcomeStep(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            "Vauchi",
+            localizationManager.t("app.name"),
             style = MaterialTheme.typography.displaySmall
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            "Contact cards that stay up to date",
+            localizationManager.t("welcome.subtitle"),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -220,13 +225,13 @@ fun WelcomeStep(
             onClick = onContinue,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Get Started")
+            Text(localizationManager.t("setup.create"))
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         TextButton(onClick = onRestore) {
-            Text("I have a backup")
+            Text(localizationManager.t("setup.import"))
         }
     }
 }
@@ -267,6 +272,8 @@ fun CreateIdentityStep(
     onContinue: () -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     val focusRequester = remember { FocusRequester() }
     val isValid = displayName.isNotBlank()
 
@@ -322,7 +329,7 @@ fun CreateIdentityStep(
             OutlinedTextField(
                 value = displayName,
                 onValueChange = onDisplayNameChange,
-                label = { Text("Your name") },
+                label = { Text(localizationManager.t("settings.display_name")) },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -339,7 +346,7 @@ fun CreateIdentityStep(
             enabled = isValid,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Continue")
+            Text(localizationManager.t("action.next"))
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -364,6 +371,9 @@ fun AddFieldsStep(
     onBack: () -> Unit,
     onSkip: () -> Unit
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -446,7 +456,7 @@ fun AddFieldsStep(
             onClick = onContinue,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Continue")
+            Text(localizationManager.t("action.next"))
         }
 
         Spacer(modifier = Modifier.height(12.dp))

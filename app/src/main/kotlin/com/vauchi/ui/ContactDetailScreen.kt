@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vauchi.util.ContactActions
+import com.vauchi.util.LocalizationManager
 import kotlinx.coroutines.launch
 import uniffi.vauchi_mobile.MobileContact
 import uniffi.vauchi_mobile.MobileContactCard
@@ -35,6 +36,9 @@ fun ContactDetailScreen(
     onVerifyContact: suspend (String) -> Boolean,
     onGetOwnPublicKey: suspend () -> String?
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
+
     var contact by remember { mutableStateOf<MobileContact?>(null) }
     var ownCard by remember { mutableStateOf<MobileContactCard?>(null) }
     var ownPublicKey by remember { mutableStateOf<String?>(null) }
@@ -88,7 +92,7 @@ fun ContactDetailScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Contact not found")
+                Text(localizationManager.t("contacts.not_found"))
             }
         } else {
             LazyColumn(
@@ -144,7 +148,7 @@ fun ContactDetailScreen(
                             ) {
                                 Column {
                                     Text(
-                                        text = if (c.isVerified) "Verified" else "Not Verified",
+                                        text = if (c.isVerified) localizationManager.t("contacts.verified") else localizationManager.t("contacts.not_verified"),
                                         style = MaterialTheme.typography.titleSmall,
                                         color = if (c.isVerified)
                                             MaterialTheme.colorScheme.onPrimaryContainer
@@ -314,7 +318,7 @@ fun ContactDetailScreen(
                     onClick = { showVerification = false },
                     enabled = !isVerifying
                 ) {
-                    Text("Cancel")
+                    Text(localizationManager.t("action.cancel"))
                 }
             }
         )

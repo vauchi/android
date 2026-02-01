@@ -15,7 +15,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.vauchi.util.LocalizationManager
 import uniffi.vauchi_mobile.MobileDeliveryRecord
 import uniffi.vauchi_mobile.MobileDeliveryStatus
 import uniffi.vauchi_mobile.MobileDeliverySummary
@@ -239,6 +241,8 @@ fun FailedDeliveryCard(
     record: MobileDeliveryRecord,
     onRetry: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -285,7 +289,7 @@ fun FailedDeliveryCard(
             ) {
                 Icon(Icons.Default.Refresh, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Retry")
+                Text(localizationManager.t("action.retry"))
             }
         }
     }

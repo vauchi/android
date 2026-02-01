@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.vauchi.util.LocalizationManager
 import com.vauchi.util.ThemeManager
 import com.vauchi.util.hexToColor
 import uniffi.vauchi_mobile.MobileTheme
@@ -33,6 +34,7 @@ fun ThemeSettingsScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     val themeManager = remember { ThemeManager.getInstance(context) }
     val isDarkMode = isSystemInDarkTheme()
 
@@ -45,7 +47,7 @@ fun ThemeSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Theme") },
+                title = { Text(localizationManager.t("settings.theme")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

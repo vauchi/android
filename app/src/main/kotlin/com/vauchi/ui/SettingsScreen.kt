@@ -10,6 +10,7 @@ import android.net.Uri
 import androidx.core.content.pm.PackageInfoCompat
 import com.vauchi.ui.model.*
 import com.vauchi.util.ClipboardUtils
+import com.vauchi.util.LocalizationManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -73,6 +74,8 @@ fun SettingsScreen(
     // Help
     onHelp: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var showEditNameDialog by remember { mutableStateOf(false) }
@@ -90,7 +93,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(localizationManager.t("settings.title")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -110,7 +113,7 @@ fun SettingsScreen(
         ) {
             // Account Section
             Text(
-                text = "Account",
+                text = localizationManager.t("settings.account"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -131,7 +134,7 @@ fun SettingsScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Display Name",
+                            text = localizationManager.t("settings.display_name"),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -141,7 +144,7 @@ fun SettingsScreen(
                         )
                     }
                     Text(
-                        text = "Edit",
+                        text = localizationManager.t("action.edit"),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -152,7 +155,7 @@ fun SettingsScreen(
 
             // Sync Section
             Text(
-                text = "Sync",
+                text = localizationManager.t("sync.title"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -170,7 +173,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = editableRelayUrl,
                         onValueChange = { editableRelayUrl = it },
-                        label = { Text("Relay URL") },
+                        label = { Text(localizationManager.t("settings.relay")) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -191,8 +194,8 @@ fun SettingsScreen(
                     ) {
                         Text(
                             text = when (syncState) {
-                                is SyncState.Idle -> "Ready to sync"
-                                is SyncState.Syncing -> "Syncing..."
+                                is SyncState.Idle -> localizationManager.t("sync.connected")
+                                is SyncState.Syncing -> localizationManager.t("sync.syncing")
                                 is SyncState.Success -> "Sync complete"
                                 is SyncState.Error -> "Sync failed"
                             },
@@ -212,7 +215,7 @@ fun SettingsScreen(
                                     strokeWidth = 2.dp
                                 )
                             } else {
-                                Text("Sync Now")
+                                Text(localizationManager.t("sync.title"))
                             }
                         }
                     }
@@ -279,7 +282,7 @@ fun SettingsScreen(
 
             // Backup Section
             Text(
-                text = "Backup & Restore",
+                text = localizationManager.t("backup.title"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -298,13 +301,13 @@ fun SettingsScreen(
                     onClick = { showExportDialog = true },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Export Backup")
+                    Text(localizationManager.t("backup.export"))
                 }
                 OutlinedButton(
                     onClick = { showImportDialog = true },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Import Backup")
+                    Text(localizationManager.t("backup.import"))
                 }
             }
 
@@ -312,7 +315,7 @@ fun SettingsScreen(
 
             // Privacy Section
             Text(
-                text = "Privacy",
+                text = localizationManager.t("settings.privacy"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -321,7 +324,7 @@ fun SettingsScreen(
                 onClick = onLabels,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Visibility Labels")
+                Text(localizationManager.t("visibility.title"))
             }
 
             Text(
@@ -353,7 +356,7 @@ fun SettingsScreen(
                     onClick = onRecovery,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Recovery")
+                    Text(localizationManager.t("recovery.title"))
                 }
             }
 
@@ -377,7 +380,7 @@ fun SettingsScreen(
 
             // Appearance Section
             Text(
-                text = "Appearance",
+                text = localizationManager.t("settings.appearance"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -400,7 +403,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Theme", style = MaterialTheme.typography.bodyLarge)
+                        Text(localizationManager.t("settings.theme"), style = MaterialTheme.typography.bodyLarge)
                         Text(
                             currentThemeName,
                             style = MaterialTheme.typography.bodyMedium,
@@ -418,7 +421,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Language", style = MaterialTheme.typography.bodyLarge)
+                        Text(localizationManager.t("settings.language"), style = MaterialTheme.typography.bodyLarge)
                         Text(
                             currentLanguageName,
                             style = MaterialTheme.typography.bodyMedium,
@@ -484,12 +487,11 @@ fun SettingsScreen(
 
             // Help & Support Section
             Text(
-                text = "Help & Support",
+                text = localizationManager.t("settings.help_support"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
 
-            val context = LocalContext.current
             val openUrl = { url: String ->
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                 context.startActivity(intent)
@@ -539,7 +541,7 @@ fun SettingsScreen(
 
             // About Section
             Text(
-                text = "About",
+                text = localizationManager.t("settings.about"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -625,6 +627,7 @@ fun ExportBackupDialog(
     var backupCode by remember { mutableStateOf<String?>(null) }
     var passwordStrength by remember { mutableStateOf(PasswordStrengthResult()) }
     val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     val coroutineScope = rememberCoroutineScope()
 
     // Check password strength as user types
@@ -638,7 +641,7 @@ fun ExportBackupDialog(
 
     AlertDialog(
         onDismissRequest = { if (!isLoading) onDismiss() },
-        title = { Text(if (backupCode == null) "Export Backup" else "Backup Code") },
+        title = { Text(if (backupCode == null) localizationManager.t("backup.export") else "Backup Code") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 if (backupCode == null) {
@@ -649,7 +652,7 @@ fun ExportBackupDialog(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text("Password") },
+                        label = { Text(localizationManager.t("backup.password")) },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -726,14 +729,14 @@ fun ExportBackupDialog(
                 }
             } else {
                 TextButton(onClick = { onResult(true, "Backup exported successfully") }) {
-                    Text("Done")
+                    Text(localizationManager.t("action.done"))
                 }
             }
         },
         dismissButton = {
             if (backupCode == null) {
                 TextButton(onClick = onDismiss, enabled = !isLoading) {
-                    Text("Cancel")
+                    Text(localizationManager.t("action.cancel"))
                 }
             }
         }
@@ -746,6 +749,8 @@ fun ImportBackupDialog(
     onImport: suspend (String, String) -> Boolean,
     onResult: (Boolean, String) -> Unit
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     var backupData by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -753,7 +758,7 @@ fun ImportBackupDialog(
 
     AlertDialog(
         onDismissRequest = { if (!isLoading) onDismiss() },
-        title = { Text("Import Backup") },
+        title = { Text(localizationManager.t("backup.import")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
@@ -771,7 +776,7 @@ fun ImportBackupDialog(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password") },
+                    label = { Text(localizationManager.t("backup.password")) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -800,13 +805,13 @@ fun ImportBackupDialog(
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp))
                 } else {
-                    Text("Import")
+                    Text(localizationManager.t("backup.import"))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isLoading) {
-                Text("Cancel")
+                Text(localizationManager.t("action.cancel"))
             }
         }
     )
@@ -819,13 +824,15 @@ fun EditDisplayNameDialog(
     onUpdateName: suspend (String) -> Boolean,
     onResult: (Boolean, String) -> Unit
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     var newName by remember { mutableStateOf(currentName) }
     var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
     AlertDialog(
         onDismissRequest = { if (!isLoading) onDismiss() },
-        title = { Text("Edit Display Name") },
+        title = { Text("${localizationManager.t("action.edit")} ${localizationManager.t("settings.display_name")}") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
@@ -835,7 +842,7 @@ fun EditDisplayNameDialog(
                 OutlinedTextField(
                     value = newName,
                     onValueChange = { newName = it },
-                    label = { Text("Display Name") },
+                    label = { Text(localizationManager.t("settings.display_name")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isLoading
@@ -872,13 +879,13 @@ fun EditDisplayNameDialog(
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp))
                 } else {
-                    Text("Save")
+                    Text(localizationManager.t("action.save"))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isLoading) {
-                Text("Cancel")
+                Text(localizationManager.t("action.cancel"))
             }
         }
     )
@@ -1261,6 +1268,8 @@ fun CertificatePinningSection(
     isEnabled: Boolean,
     onSetCertificate: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     var showSetCertificateDialog by remember { mutableStateOf(false) }
     var showClearConfirmation by remember { mutableStateOf(false) }
 
@@ -1360,7 +1369,7 @@ fun CertificatePinningSection(
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirmation = false }) {
-                    Text("Cancel")
+                    Text(localizationManager.t("action.cancel"))
                 }
             }
         )
@@ -1372,6 +1381,8 @@ fun SetCertificateDialog(
     onDismiss: () -> Unit,
     onSetCertificate: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
     var certificateText by remember { mutableStateOf("") }
 
     val isValidPem = certificateText.trim().let { text ->
@@ -1418,7 +1429,7 @@ fun SetCertificateDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(localizationManager.t("action.cancel"))
             }
         }
     )

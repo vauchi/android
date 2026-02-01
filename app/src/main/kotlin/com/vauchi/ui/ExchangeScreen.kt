@@ -16,12 +16,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import com.vauchi.util.LocalizationManager
 import uniffi.vauchi_mobile.MobileExchangeData
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,6 +34,9 @@ fun ExchangeScreen(
     onScanQr: () -> Unit,
     proximitySupported: Boolean = false
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
+
     var exchangeData by remember { mutableStateOf<MobileExchangeData?>(null) }
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -55,7 +60,7 @@ fun ExchangeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Exchange Contact") },
+                title = { Text(localizationManager.t("exchange.title")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -74,7 +79,7 @@ fun ExchangeScreen(
         ) {
             if (isLoading) {
                 CircularProgressIndicator()
-                Text("Generating QR code...")
+                Text(localizationManager.t("sync.syncing"))
             } else if (hasError) {
                 // Error state
                 Icon(
@@ -85,7 +90,7 @@ fun ExchangeScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Failed to generate QR code",
+                    text = localizationManager.t("exchange.qr_error"),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -99,11 +104,11 @@ fun ExchangeScreen(
                 Button(onClick = { retryTrigger++ }) {
                     Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Retry")
+                    Text(localizationManager.t("action.retry"))
                 }
             } else {
                 Text(
-                    text = "Show this QR code to add a contact",
+                    text = localizationManager.t("exchange.your_qr"),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.semantics { heading() }
                 )
@@ -132,7 +137,7 @@ fun ExchangeScreen(
 
                 exchangeData?.let { data ->
                     Text(
-                        text = "Expires: ${formatExpiry(data.expiresAt)}",
+                        text = localizationManager.t("exchange.expires_in", mapOf("time" to formatExpiry(data.expiresAt))),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -170,7 +175,7 @@ fun ExchangeScreen(
                             contentDescription = "Scan QR code. Opens the camera to scan someone else's QR code and add them as a contact."
                         }
                 ) {
-                    Text("Scan Contact's QR Code")
+                    Text(localizationManager.t("exchange.scan"))
                 }
             }
         }
@@ -182,11 +187,14 @@ fun ScanQrDialog(
     onDismiss: () -> Unit,
     onScan: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
+
     var manualInput by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Scan QR Code") },
+        title = { Text(localizationManager.t("exchange.scan")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
@@ -207,12 +215,12 @@ fun ScanQrDialog(
                 onClick = { onScan(manualInput) },
                 enabled = manualInput.isNotBlank()
             ) {
-                Text("Add Contact")
+                Text(localizationManager.t("contacts.add"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(localizationManager.t("action.cancel"))
             }
         }
     )

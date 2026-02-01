@@ -23,8 +23,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vauchi.util.LocalizationManager
 import uniffi.vauchi_mobile.MobileContact
 import uniffi.vauchi_mobile.MobileDemoContact
 
@@ -40,6 +42,9 @@ fun ContactsScreen(
     demoContact: MobileDemoContact? = null,
     onDismissDemo: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
+
     var contacts by remember { mutableStateOf<List<MobileContact>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var hasError by remember { mutableStateOf(false) }
@@ -84,7 +89,7 @@ fun ContactsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Contacts") },
+                title = { Text(localizationManager.t("contacts.title")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -112,7 +117,7 @@ fun ContactsScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .padding(bottom = 8.dp),
-                    placeholder = { Text("Search contacts...") },
+                    placeholder = { Text(localizationManager.t("contacts.search")) },
                     leadingIcon = {
                         Icon(Icons.Default.Search, contentDescription = "Search")
                     },
@@ -148,13 +153,13 @@ fun ContactsScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Failed to load contacts",
+                            text = localizationManager.t("error.generic"),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Please try again",
+                            text = localizationManager.t("action.retry"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -162,7 +167,7 @@ fun ContactsScreen(
                         Button(onClick = { retryTrigger++ }) {
                             Icon(Icons.Default.Refresh, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Retry")
+                            Text(localizationManager.t("action.retry"))
                         }
                     }
                 }
@@ -188,7 +193,7 @@ fun ContactsScreen(
                     }
 
                     Text(
-                        text = "No contacts yet",
+                        text = localizationManager.t("contacts.empty"),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.semantics { heading() }
@@ -206,7 +211,7 @@ fun ContactsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No contacts match \"$searchQuery\"",
+                        text = localizationManager.t("contacts.no_match"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -239,6 +244,9 @@ fun ContactCard(
     onClick: () -> Unit,
     onRemove: () -> Unit
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
+
     var showDeleteDialog by remember { mutableStateOf(false) }
     val verificationStatus = if (contact.isVerified) "verified" else "not verified"
 
@@ -316,7 +324,7 @@ fun ContactCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Remove Contact") },
+            title = { Text(localizationManager.t("action.delete")) },
             text = { Text("Are you sure you want to remove ${contact.displayName} from your contacts?") },
             confirmButton = {
                 TextButton(
@@ -325,12 +333,12 @@ fun ContactCard(
                         onRemove()
                     }
                 ) {
-                    Text("Remove", color = MaterialTheme.colorScheme.error)
+                    Text(localizationManager.t("action.delete"), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(localizationManager.t("action.cancel"))
                 }
             }
         )
