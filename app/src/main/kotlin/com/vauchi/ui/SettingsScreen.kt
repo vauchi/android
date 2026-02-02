@@ -27,6 +27,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import uniffi.vauchi_mobile.MobileConsentType
+import uniffi.vauchi_mobile.MobileConsentRecord
+import uniffi.vauchi_mobile.MobileDeletionInfo
+import uniffi.vauchi_mobile.MobileDeletionState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,7 +76,15 @@ fun SettingsScreen(
     currentThemeName: String = "System",
     currentLanguageName: String = "English",
     // Help
-    onHelp: () -> Unit = {}
+    onHelp: () -> Unit = {},
+    // GDPR / Privacy
+    onExportGdprData: () -> Unit = {},
+    onScheduleDeletion: () -> Unit = {},
+    onCancelDeletion: () -> Unit = {},
+    deletionState: MobileDeletionInfo? = null,
+    consentRecords: List<MobileConsentRecord> = emptyList(),
+    onGrantConsent: (MobileConsentType) -> Unit = {},
+    onRevokeConsent: (MobileConsentType) -> Unit = {}
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -315,7 +327,7 @@ fun SettingsScreen(
 
             // Privacy Section
             Text(
-                text = localizationManager.t("settings.privacy"),
+                text = localizationManager.t("privacy.title"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -332,6 +344,129 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // GDPR Export
+            OutlinedButton(
+                onClick = onExportGdprData,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(localizationManager.t("privacy.export_data"))
+            }
+
+            Text(
+                text = localizationManager.t("privacy.export_description"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Account Deletion
+            if (deletionState?.state == MobileDeletionState.SCHEDULED) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = localizationManager.t("privacy.deletion_scheduled")
+                                .replace("{days}", deletionState.daysRemaining.toString()),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(onClick = onCancelDeletion) {
+                            Text(localizationManager.t("privacy.cancel_deletion"))
+                        }
+                    }
+                }
+            } else {
+                var showDeleteConfirm by remember { mutableStateOf(false) }
+
+                OutlinedButton(
+                    onClick = { showDeleteConfirm = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(localizationManager.t("privacy.delete_account"))
+                }
+
+                Text(
+                    text = localizationManager.t("privacy.deletion_grace_period"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (showDeleteConfirm) {
+                    AlertDialog(
+                        onDismissRequest = { showDeleteConfirm = false },
+                        title = { Text("Confirm Account Deletion") },
+                        text = { Text("Are you sure? Your account will be permanently deleted after 7 days. You can cancel during the grace period.") },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showDeleteConfirm = false
+                                    onScheduleDeletion()
+                                }
+                            ) {
+                                Text("Delete", color = MaterialTheme.colorScheme.error)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDeleteConfirm = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Consent Toggles
+            Text(
+                text = localizationManager.t("privacy.consent"),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            val consentTypes = listOf(
+                MobileConsentType.DATA_PROCESSING to localizationManager.t("privacy.consent_data_processing"),
+                MobileConsentType.CONTACT_SHARING to localizationManager.t("privacy.consent_contact_sharing"),
+                MobileConsentType.ANALYTICS to localizationManager.t("privacy.consent_analytics"),
+                MobileConsentType.RECOVERY_VOUCHING to localizationManager.t("privacy.consent_recovery_vouching")
+            )
+
+            consentTypes.forEach { (type, label) ->
+                val isGranted = consentRecords.lastOrNull {
+                    it.consentType == type
+                }?.granted ?: false
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Switch(
+                        checked = isGranted,
+                        onCheckedChange = { checked ->
+                            if (checked) onGrantConsent(type) else onRevokeConsent(type)
+                        }
+                    )
+                }
+            }
 
             HorizontalDivider()
 

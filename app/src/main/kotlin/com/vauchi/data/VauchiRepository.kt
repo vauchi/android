@@ -526,4 +526,62 @@ class VauchiRepository(context: Context) {
      * @return True if this is the primary device
      */
     fun isPrimaryDevice(): Boolean = vauchi.isPrimaryDevice()
+
+    // GDPR operations
+    // Based on: features/privacy_compliance.feature
+
+    /**
+     * Export all user data as GDPR-compliant JSON.
+     *
+     * @return GDPR export with JSON data, timestamp, and version
+     */
+    fun exportGdprData() = vauchi.exportGdprData()
+
+    /**
+     * Schedule account deletion with 7-day grace period.
+     *
+     * @return Deletion info with state and timing
+     */
+    fun scheduleAccountDeletion() = vauchi.scheduleAccountDeletion()
+
+    /**
+     * Cancel a scheduled account deletion.
+     */
+    fun cancelAccountDeletion() = vauchi.cancelAccountDeletion()
+
+    /**
+     * Get current deletion state.
+     *
+     * @return Current deletion info
+     */
+    fun getDeletionState() = vauchi.getDeletionState()
+
+    /**
+     * Grant consent for a specific type.
+     *
+     * @param consentType The type of consent to grant
+     */
+    fun grantConsent(consentType: uniffi.vauchi_mobile.MobileConsentType) = vauchi.grantConsent(consentType)
+
+    /**
+     * Revoke consent for a specific type.
+     *
+     * @param consentType The type of consent to revoke
+     */
+    fun revokeConsent(consentType: uniffi.vauchi_mobile.MobileConsentType) = vauchi.revokeConsent(consentType)
+
+    /**
+     * Check if consent is granted for a specific type.
+     *
+     * @param consentType The type to check
+     * @return True if consent is currently granted
+     */
+    fun checkConsent(consentType: uniffi.vauchi_mobile.MobileConsentType): Boolean = vauchi.checkConsent(consentType)
+
+    /**
+     * Get all consent records.
+     *
+     * @return List of all consent records
+     */
+    fun getConsentRecords() = vauchi.getConsentRecords()
 }

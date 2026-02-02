@@ -36,6 +36,11 @@ import uniffi.vauchi_mobile.MobileUpdateStatus
 import uniffi.vauchi_mobile.MobileProximityVerifier
 import uniffi.vauchi_mobile.MobileVisibilityLabel
 import uniffi.vauchi_mobile.MobileVisibilityLabelDetail
+import uniffi.vauchi_mobile.MobileConsentType
+import uniffi.vauchi_mobile.MobileConsentRecord
+import uniffi.vauchi_mobile.MobileDeletionInfo
+import uniffi.vauchi_mobile.MobileDeletionState
+import uniffi.vauchi_mobile.MobileGdprExport
 import com.vauchi.proximity.AudioProximityService
 import java.time.Instant
 
@@ -125,6 +130,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Aha moments (progressive onboarding)
     private val _currentAhaMoment = MutableStateFlow<uniffi.vauchi_mobile.MobileAhaMoment?>(null)
     val currentAhaMoment: StateFlow<uniffi.vauchi_mobile.MobileAhaMoment?> = _currentAhaMoment.asStateFlow()
+
+    // GDPR state
+    private val _deletionState = MutableStateFlow<MobileDeletionInfo?>(null)
+    val deletionState: StateFlow<MobileDeletionInfo?> = _deletionState.asStateFlow()
+
+    private val _consentRecords = MutableStateFlow<List<MobileConsentRecord>>(emptyList())
+    val consentRecords: StateFlow<List<MobileConsentRecord>> = _consentRecords.asStateFlow()
 
     fun clearSnackbar() {
         _snackbarMessage.value = null
@@ -1034,6 +1046,102 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Check if this is the primary device
      */
     fun isPrimaryDevice(): Boolean = repository.isPrimaryDevice()
+
+    // MARK: - GDPR Operations
+
+    /** Export all user data as GDPR JSON. */
+    fun exportGdprData(): MobileGdprExport? {
+        return try {
+            repository.exportGdprData()
+        } catch (e: Exception) {
+            showMessage("Export failed: ${e.message}")
+            null
+        }
+    }
+
+    /** Schedule account deletion with 7-day grace period. */
+    fun scheduleAccountDeletion() {
+        viewModelScope.launch {
+            try {
+                val info = withContext(Dispatchers.IO) {
+                    repository.scheduleAccountDeletion()
+                }
+                _deletionState.value = info
+            } catch (e: Exception) {
+                showMessage("Schedule failed: ${e.message}")
+            }
+        }
+    }
+
+    /** Cancel a scheduled account deletion. */
+    fun cancelAccountDeletion() {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.cancelAccountDeletion()
+                }
+                _deletionState.value = withContext(Dispatchers.IO) {
+                    repository.getDeletionState()
+                }
+            } catch (e: Exception) {
+                showMessage("Cancel failed: ${e.message}")
+            }
+        }
+    }
+
+    /** Load current deletion state. */
+    fun loadDeletionState() {
+        viewModelScope.launch {
+            try {
+                _deletionState.value = withContext(Dispatchers.IO) {
+                    repository.getDeletionState()
+                }
+            } catch (e: Exception) {
+                // Silently handle — state stays null
+            }
+        }
+    }
+
+    /** Grant consent for a type. */
+    fun grantConsent(type: MobileConsentType) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.grantConsent(type)
+                }
+                loadConsentRecords()
+            } catch (e: Exception) {
+                showMessage("Grant failed: ${e.message}")
+            }
+        }
+    }
+
+    /** Revoke consent for a type. */
+    fun revokeConsent(type: MobileConsentType) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.revokeConsent(type)
+                }
+                loadConsentRecords()
+            } catch (e: Exception) {
+                showMessage("Revoke failed: ${e.message}")
+            }
+        }
+    }
+
+    /** Load all consent records. */
+    fun loadConsentRecords() {
+        viewModelScope.launch {
+            try {
+                _consentRecords.value = withContext(Dispatchers.IO) {
+                    repository.getConsentRecords()
+                }
+            } catch (e: Exception) {
+                // Silently handle
+            }
+        }
+    }
 }
 
 private data class Tuple4<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)

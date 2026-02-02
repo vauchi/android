@@ -233,7 +233,13 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             val highContrast by viewModel.highContrast.collectAsState()
             val largeTouchTargets by viewModel.largeTouchTargets.collectAsState()
             val demoContactState by viewModel.demoContactState.collectAsState()
+            val deletionState by viewModel.deletionState.collectAsState()
+            val consentRecords by viewModel.consentRecords.collectAsState()
             if (state is UiState.Ready) {
+                LaunchedEffect(Unit) {
+                    viewModel.loadDeletionState()
+                    viewModel.loadConsentRecords()
+                }
                 SettingsScreen(
                     displayName = state.displayName,
                     onBack = { currentScreen = Screen.Home },
@@ -279,7 +285,26 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     currentThemeName = com.vauchi.util.ThemeManager.getInstance(context).currentTheme?.name ?: "System",
                     currentLanguageName = com.vauchi.util.LocalizationManager.getInstance(context).currentLocaleInfo.name,
                     // Help
-                    onHelp = { currentScreen = Screen.Help }
+                    onHelp = { currentScreen = Screen.Help },
+                    // GDPR
+                    onExportGdprData = {
+                        val export = viewModel.exportGdprData()
+                        if (export != null) {
+                            // Share JSON data
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "application/json"
+                                putExtra(Intent.EXTRA_TEXT, export.jsonData)
+                                putExtra(Intent.EXTRA_SUBJECT, "Vauchi GDPR Export")
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Export Data"))
+                        }
+                    },
+                    onScheduleDeletion = { viewModel.scheduleAccountDeletion() },
+                    onCancelDeletion = { viewModel.cancelAccountDeletion() },
+                    deletionState = deletionState,
+                    consentRecords = consentRecords,
+                    onGrantConsent = { viewModel.grantConsent(it) },
+                    onRevokeConsent = { viewModel.revokeConsent(it) }
                 )
             }
         }
