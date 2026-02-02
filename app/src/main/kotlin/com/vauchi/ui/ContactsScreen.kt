@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
@@ -35,6 +36,8 @@ import uniffi.vauchi_mobile.MobileDemoContact
 fun ContactsScreen(
     onBack: () -> Unit,
     onListContacts: suspend () -> List<MobileContact>,
+    onSearchContacts: suspend (String) -> List<MobileContact> = { emptyList() },
+    onListContactsPaginated: suspend (UInt, UInt) -> List<MobileContact> = { _, _ -> emptyList() },
     onRemoveContact: (String) -> Unit,
     onContactClick: (String) -> Unit,
     syncState: SyncState = SyncState.Idle,
@@ -71,20 +74,23 @@ fun ContactsScreen(
         }
     }
 
-    // Filter contacts based on search query
-    val filteredContacts = remember(contacts, searchQuery) {
+    var searchResults by remember { mutableStateOf<List<MobileContact>?>(null) }
+
+    // Backend search with debounce
+    LaunchedEffect(searchQuery) {
         if (searchQuery.isBlank()) {
-            contacts
-        } else {
-            contacts.filter { contact ->
-                contact.displayName.contains(searchQuery, ignoreCase = true) ||
-                contact.card.fields.any { field ->
-                    field.value.contains(searchQuery, ignoreCase = true) ||
-                    field.label.contains(searchQuery, ignoreCase = true)
-                }
-            }
+            searchResults = null
+            return@LaunchedEffect
+        }
+        kotlinx.coroutines.delay(300)
+        try {
+            searchResults = onSearchContacts(searchQuery)
+        } catch (_: Exception) {
+            searchResults = emptyList()
         }
     }
+
+    val filteredContacts = if (searchQuery.isBlank()) contacts else (searchResults ?: emptyList())
 
     Scaffold(
         topBar = {
@@ -224,7 +230,7 @@ fun ContactsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
-                    items(filteredContacts) { contact ->
+                    itemsIndexed(filteredContacts) { index, contact ->
                         ContactCard(
                             contact = contact,
                             onClick = { onContactClick(contact.id) },

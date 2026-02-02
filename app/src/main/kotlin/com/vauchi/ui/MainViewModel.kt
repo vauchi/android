@@ -402,6 +402,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    suspend fun listContactsPaginated(offset: UInt, limit: UInt): List<MobileContact> {
+        return withContext(Dispatchers.IO) {
+            repository.listContactsPaginated(offset, limit)
+        }
+    }
+
+    suspend fun searchContacts(query: String): List<MobileContact> {
+        return withContext(Dispatchers.IO) {
+            repository.searchContacts(query)
+        }
+    }
+
     fun removeContact(id: String) {
         viewModelScope.launch {
             try {

@@ -181,6 +181,10 @@ class VauchiRepository(context: Context) {
 
     fun listContacts() = vauchi.listContacts()
 
+    fun listContactsPaginated(offset: UInt, limit: UInt) = vauchi.listContactsPaginated(offset, limit)
+
+    fun searchContacts(query: String) = vauchi.searchContacts(query)
+
     fun getContact(id: String) = vauchi.getContact(id)
 
     fun removeContact(id: String) = vauchi.removeContact(id)

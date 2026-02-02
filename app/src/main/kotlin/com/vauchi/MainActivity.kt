@@ -198,6 +198,8 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             ContactsScreen(
                 onBack = { currentScreen = Screen.Home },
                 onListContacts = { viewModel.listContacts() },
+                onSearchContacts = { query -> viewModel.searchContacts(query) },
+                onListContactsPaginated = { offset, limit -> viewModel.listContactsPaginated(offset, limit) },
                 onRemoveContact = { id -> viewModel.removeContact(id) },
                 onContactClick = { id ->
                     selectedContactId = id
