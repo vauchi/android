@@ -6,6 +6,7 @@ package com.vauchi.data
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.security.keystore.UserNotAuthenticatedException
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -17,6 +18,10 @@ import javax.crypto.spec.GCMParameterSpec
  *
  * The storage encryption key is generated and stored in the Android KeyStore,
  * which provides hardware-backed security on supported devices.
+ *
+ * Keys require user authentication (device unlock via PIN/pattern/biometric)
+ * within the last [AUTH_VALIDITY_SECONDS] seconds. This satisfies
+ * OWASP MASVS-STORAGE-2.
  */
 class KeyStoreHelper {
     companion object {
@@ -28,6 +33,11 @@ class KeyStoreHelper {
 
         // Prefix for encrypted data: 12-byte IV + ciphertext + 16-byte tag
         private const val GCM_IV_LENGTH = 12
+
+        // Key is usable for 5 minutes after device unlock (PIN/pattern/biometric).
+        // This avoids excessive authentication prompts while still requiring
+        // recent user presence verification.
+        private const val AUTH_VALIDITY_SECONDS = 300
     }
 
     private val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
@@ -57,7 +67,8 @@ class KeyStoreHelper {
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(KEY_SIZE_BITS)
-            .setUserAuthenticationRequired(false) // Allow access without biometric
+            .setUserAuthenticationRequired(true)
+            .setUserAuthenticationValidityDurationSeconds(AUTH_VALIDITY_SECONDS)
             .build()
 
         keyGenerator.init(keySpec)
@@ -75,37 +86,53 @@ class KeyStoreHelper {
 
     /**
      * Encrypt a storage key using the master key.
+     *
+     * @throws AuthenticationRequiredException if the device has not been unlocked recently.
      */
     fun encryptStorageKey(storageKey: ByteArray): ByteArray {
-        val masterKey = getOrCreateMasterKey()
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, masterKey)
+        try {
+            val masterKey = getOrCreateMasterKey()
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, masterKey)
 
-        val iv = cipher.iv
-        val encrypted = cipher.doFinal(storageKey)
+            val iv = cipher.iv
+            val encrypted = cipher.doFinal(storageKey)
 
-        // Return IV + encrypted data
-        return iv + encrypted
+            // Return IV + encrypted data
+            return iv + encrypted
+        } catch (e: UserNotAuthenticatedException) {
+            throw AuthenticationRequiredException(
+                "Device must be unlocked to access encryption keys", e
+            )
+        }
     }
 
     /**
      * Decrypt a storage key using the master key.
+     *
+     * @throws AuthenticationRequiredException if the device has not been unlocked recently.
      */
     fun decryptStorageKey(encryptedData: ByteArray): ByteArray {
         if (encryptedData.size < GCM_IV_LENGTH + STORAGE_KEY_LENGTH) {
             throw IllegalArgumentException("Invalid encrypted data length")
         }
 
-        val masterKey = getOrCreateMasterKey()
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        try {
+            val masterKey = getOrCreateMasterKey()
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
 
-        val iv = encryptedData.sliceArray(0 until GCM_IV_LENGTH)
-        val encrypted = encryptedData.sliceArray(GCM_IV_LENGTH until encryptedData.size)
+            val iv = encryptedData.sliceArray(0 until GCM_IV_LENGTH)
+            val encrypted = encryptedData.sliceArray(GCM_IV_LENGTH until encryptedData.size)
 
-        val spec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
-        cipher.init(Cipher.DECRYPT_MODE, masterKey, spec)
+            val spec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
+            cipher.init(Cipher.DECRYPT_MODE, masterKey, spec)
 
-        return cipher.doFinal(encrypted)
+            return cipher.doFinal(encrypted)
+        } catch (e: UserNotAuthenticatedException) {
+            throw AuthenticationRequiredException(
+                "Device must be unlocked to access encryption keys", e
+            )
+        }
     }
 
     /**
@@ -124,3 +151,15 @@ class KeyStoreHelper {
         }
     }
 }
+
+/**
+ * Thrown when KeyStore operations require user authentication (device unlock)
+ * but the device has not been unlocked within the required time window.
+ *
+ * The caller should prompt the user to unlock their device (e.g., via
+ * [android.app.KeyguardManager.createConfirmDeviceCredentialIntent]) and retry.
+ */
+class AuthenticationRequiredException(
+    message: String,
+    cause: Throwable? = null
+) : Exception(message, cause)

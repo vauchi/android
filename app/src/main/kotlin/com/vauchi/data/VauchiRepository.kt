@@ -78,6 +78,9 @@ class VauchiRepository(context: Context) {
             try {
                 val encryptedKey = Base64.decode(encryptedKeyBase64, Base64.DEFAULT)
                 return keyStoreHelper.decryptStorageKey(encryptedKey)
+            } catch (e: AuthenticationRequiredException) {
+                // Device must be unlocked — propagate to caller
+                throw e
             } catch (e: Exception) {
                 // Key decryption failed, might need to regenerate
                 // Clear the invalid key
@@ -101,6 +104,9 @@ class VauchiRepository(context: Context) {
 
                     return legacyKey
                 }
+            } catch (e: AuthenticationRequiredException) {
+                // Device must be unlocked — propagate to caller
+                throw e
             } catch (e: Exception) {
                 // Failed to migrate, generate new key
             }
