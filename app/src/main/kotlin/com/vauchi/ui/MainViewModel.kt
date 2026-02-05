@@ -40,7 +40,9 @@ import uniffi.vauchi_mobile.MobileConsentType
 import uniffi.vauchi_mobile.MobileConsentRecord
 import uniffi.vauchi_mobile.MobileDeletionInfo
 import uniffi.vauchi_mobile.MobileDeletionState
+import uniffi.vauchi_mobile.MobileFieldValidation
 import uniffi.vauchi_mobile.MobileGdprExport
+import uniffi.vauchi_mobile.MobileValidationStatus
 import com.vauchi.proximity.AudioProximityService
 import java.time.Instant
 
@@ -497,6 +499,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             true // Default to visible on error
         }
     }
+
+    // MARK: - Field Validation
+
+    suspend fun getFieldValidationStatus(contactId: String, fieldId: String, fieldValue: String) =
+        withContext(Dispatchers.IO) {
+            repository.getFieldValidationStatus(contactId, fieldId, fieldValue)
+        }
+
+    suspend fun validateField(contactId: String, fieldId: String, fieldValue: String) =
+        withContext(Dispatchers.IO) {
+            repository.validateField(contactId, fieldId, fieldValue)
+        }
+
+    suspend fun revokeFieldValidation(contactId: String, fieldId: String): Boolean =
+        withContext(Dispatchers.IO) {
+            repository.revokeFieldValidation(contactId, fieldId)
+        }
+
+    suspend fun getFieldValidationCount(contactId: String, fieldId: String): UInt =
+        withContext(Dispatchers.IO) {
+            repository.getFieldValidationCount(contactId, fieldId)
+        }
 
     suspend fun exportBackup(password: String): String? {
         return try {

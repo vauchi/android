@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import uniffi.vauchi_mobile.MobileContact
 import uniffi.vauchi_mobile.MobileContactCard
 import uniffi.vauchi_mobile.MobileContactField
+import uniffi.vauchi_mobile.MobileValidationStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +35,10 @@ fun ContactDetailScreen(
     onSetFieldVisibility: (String, String, Boolean) -> Unit,
     onIsFieldVisible: suspend (String, String) -> Boolean,
     onVerifyContact: suspend (String) -> Boolean,
-    onGetOwnPublicKey: suspend () -> String?
+    onGetOwnPublicKey: suspend () -> String?,
+    onGetValidationStatus: (suspend (String, String, String) -> MobileValidationStatus)? = null,
+    onValidateField: (suspend (String, String, String) -> Unit)? = null,
+    onRevokeValidation: (suspend (String, String) -> Boolean)? = null
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -123,7 +127,13 @@ fun ContactDetailScreen(
                         }
                     } else {
                         items(c.card.fields) { field ->
-                            ContactFieldItem(field = field)
+                            ContactFieldItem(
+                                field = field,
+                                contactId = contactId,
+                                onGetValidationStatus = onGetValidationStatus,
+                                onValidateField = onValidateField,
+                                onRevokeValidation = onRevokeValidation
+                            )
                         }
                     }
 
@@ -326,8 +336,28 @@ fun ContactDetailScreen(
 }
 
 @Composable
-fun ContactFieldItem(field: MobileContactField) {
+fun ContactFieldItem(
+    field: MobileContactField,
+    contactId: String = "",
+    onGetValidationStatus: (suspend (String, String, String) -> MobileValidationStatus)? = null,
+    onValidateField: (suspend (String, String, String) -> Unit)? = null,
+    onRevokeValidation: (suspend (String, String) -> Boolean)? = null
+) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var validationStatus by remember { mutableStateOf<MobileValidationStatus?>(null) }
+    var isValidating by remember { mutableStateOf(false) }
+
+    // Load validation status on first composition
+    LaunchedEffect(contactId, field.id) {
+        if (contactId.isNotEmpty() && onGetValidationStatus != null) {
+            try {
+                validationStatus = onGetValidationStatus(contactId, field.id, field.value)
+            } catch (_: Exception) {
+                // Status unavailable
+            }
+        }
+    }
 
     Card(
         modifier = Modifier
@@ -354,17 +384,139 @@ fun ContactFieldItem(field: MobileContactField) {
                     text = field.value,
                     style = MaterialTheme.typography.bodyLarge
                 )
-                Text(
-                    text = ContactActions.getActionDescription(field.fieldType),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = ContactActions.getActionDescription(field.fieldType),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    // Validation badge
+                    validationStatus?.let { status ->
+                        ValidationBadge(
+                            status = status,
+                            isLoading = isValidating,
+                            onValidate = if (onValidateField != null && !status.validatedByMe) {
+                                {
+                                    scope.launch {
+                                        isValidating = true
+                                        try {
+                                            onValidateField(contactId, field.id, field.value)
+                                            onGetValidationStatus?.let {
+                                                validationStatus = it(contactId, field.id, field.value)
+                                            }
+                                        } catch (_: Exception) {}
+                                        isValidating = false
+                                    }
+                                }
+                            } else null,
+                            onRevoke = if (onRevokeValidation != null && status.validatedByMe) {
+                                {
+                                    scope.launch {
+                                        isValidating = true
+                                        try {
+                                            onRevokeValidation(contactId, field.id)
+                                            onGetValidationStatus?.let {
+                                                validationStatus = it(contactId, field.id, field.value)
+                                            }
+                                        } catch (_: Exception) {}
+                                        isValidating = false
+                                    }
+                                }
+                            } else null
+                        )
+                    }
+                }
             }
             Icon(
                 imageVector = Icons.Filled.ChevronRight,
                 contentDescription = "Open",
                 tint = MaterialTheme.colorScheme.primary
             )
+        }
+    }
+}
+
+@Composable
+fun ValidationBadge(
+    status: MobileValidationStatus,
+    isLoading: Boolean = false,
+    onValidate: (() -> Unit)? = null,
+    onRevoke: (() -> Unit)? = null
+) {
+    val badgeColor = when (status.color) {
+        "green" -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
+        "light_green" -> androidx.compose.ui.graphics.Color(0xFF8BC34A)
+        "yellow" -> androidx.compose.ui.graphics.Color(0xFFFFC107)
+        else -> androidx.compose.ui.graphics.Color.Gray
+    }
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Trust badge
+        Surface(
+            color = badgeColor.copy(alpha = 0.15f),
+            shape = MaterialTheme.shapes.extraSmall
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (status.count.toInt() > 0) {
+                    Text(
+                        text = "✓ ${status.count}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = badgeColor
+                    )
+                } else {
+                    Text(
+                        text = status.trustLevelLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = badgeColor
+                    )
+                }
+            }
+        }
+
+        // Action button
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(12.dp),
+                strokeWidth = 1.5.dp
+            )
+        } else {
+            onValidate?.let {
+                TextButton(
+                    onClick = it,
+                    modifier = Modifier.height(24.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        text = "Validate",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            onRevoke?.let {
+                TextButton(
+                    onClick = it,
+                    modifier = Modifier.height(24.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        text = "Revoke",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
         }
     }
 }

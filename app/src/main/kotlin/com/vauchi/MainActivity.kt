@@ -225,7 +225,16 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                         viewModel.isFieldVisibleToContact(cId, label)
                     },
                     onVerifyContact = { viewModel.verifyContact(it) },
-                    onGetOwnPublicKey = { viewModel.getOwnPublicKey() }
+                    onGetOwnPublicKey = { viewModel.getOwnPublicKey() },
+                    onGetValidationStatus = { cId, fId, fVal ->
+                        viewModel.getFieldValidationStatus(cId, fId, fVal)
+                    },
+                    onValidateField = { cId, fId, fVal ->
+                        viewModel.validateField(cId, fId, fVal)
+                    },
+                    onRevokeValidation = { cId, fId ->
+                        viewModel.revokeFieldValidation(cId, fId)
+                    }
                 )
             }
         }
