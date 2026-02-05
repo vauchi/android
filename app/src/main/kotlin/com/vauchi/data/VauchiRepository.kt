@@ -37,7 +37,6 @@ import uniffi.vauchi_mobile.MobileExchangeData
 import uniffi.vauchi_mobile.MobileFieldType
 import uniffi.vauchi_mobile.MobileSyncResult
 import uniffi.vauchi_mobile.VauchiMobile
-import java.io.File
 
 /**
  * Repository class wrapping VauchiMobile UniFFI bindings.
@@ -51,7 +50,6 @@ class VauchiRepository(context: Context) {
 
     companion object {
         private const val KEY_ENCRYPTED_STORAGE_KEY = "encrypted_storage_key"
-        private const val LEGACY_KEY_FILENAME = "storage.key"
     }
 
     init {
@@ -69,7 +67,6 @@ class VauchiRepository(context: Context) {
 
     /**
      * Get or create storage key from Android KeyStore.
-     * Handles migration from legacy file-based key storage.
      */
     private fun getOrCreateStorageKey(dataDir: String): ByteArray {
         // Try to load encrypted key from preferences
@@ -85,30 +82,6 @@ class VauchiRepository(context: Context) {
                 // Key decryption failed, might need to regenerate
                 // Clear the invalid key
                 prefs.edit().remove(KEY_ENCRYPTED_STORAGE_KEY).apply()
-            }
-        }
-
-        // Check for legacy file-based key (migration scenario)
-        val legacyKeyFile = File(dataDir, LEGACY_KEY_FILENAME)
-        if (legacyKeyFile.exists()) {
-            try {
-                val legacyKey = legacyKeyFile.readBytes()
-                if (legacyKey.size == 32) {
-                    // Encrypt and save to preferences
-                    val encryptedKey = keyStoreHelper.encryptStorageKey(legacyKey)
-                    val encryptedBase64 = Base64.encodeToString(encryptedKey, Base64.DEFAULT)
-                    prefs.edit().putString(KEY_ENCRYPTED_STORAGE_KEY, encryptedBase64).apply()
-
-                    // Securely delete legacy file
-                    legacyKeyFile.delete()
-
-                    return legacyKey
-                }
-            } catch (e: AuthenticationRequiredException) {
-                // Device must be unlocked — propagate to caller
-                throw e
-            } catch (e: Exception) {
-                // Failed to migrate, generate new key
             }
         }
 
