@@ -36,6 +36,8 @@ fun ContactDetailScreen(
     onIsFieldVisible: suspend (String, String) -> Boolean,
     onVerifyContact: suspend (String) -> Boolean,
     onGetOwnPublicKey: suspend () -> String?,
+    onTrustForRecovery: (suspend (String) -> Boolean)? = null,
+    onUntrustForRecovery: (suspend (String) -> Boolean)? = null,
     onGetValidationStatus: (suspend (String, String, String) -> MobileValidationStatus)? = null,
     onValidateField: (suspend (String, String, String) -> Unit)? = null,
     onRevokeValidation: (suspend (String, String) -> Boolean)? = null
@@ -50,6 +52,7 @@ fun ContactDetailScreen(
     var isLoading by remember { mutableStateOf(true) }
     var showVerification by remember { mutableStateOf(false) }
     var isVerifying by remember { mutableStateOf(false) }
+    var isTogglingTrust by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(contactId) {
@@ -184,6 +187,73 @@ fun ContactDetailScreen(
                                         Text("Verify")
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // Recovery trust status
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (c.isRecoveryTrusted)
+                                MaterialTheme.colorScheme.tertiaryContainer
+                            else
+                                MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (c.isRecoveryTrusted) "Recovery Trusted" else "Not Recovery Trusted",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = if (c.isRecoveryTrusted)
+                                        MaterialTheme.colorScheme.onTertiaryContainer
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = if (c.isRecoveryTrusted)
+                                        "This contact can vouch for your identity recovery"
+                                    else
+                                        "Trust this contact to help recover your identity",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (c.isRecoveryTrusted)
+                                        MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        isTogglingTrust = true
+                                        val success = if (c.isRecoveryTrusted) {
+                                            onUntrustForRecovery?.invoke(contactId) ?: false
+                                        } else {
+                                            onTrustForRecovery?.invoke(contactId) ?: false
+                                        }
+                                        if (success) {
+                                            contact = onGetContact(contactId)
+                                        }
+                                        isTogglingTrust = false
+                                    }
+                                },
+                                enabled = !isTogglingTrust,
+                                colors = if (c.isRecoveryTrusted)
+                                    ButtonDefaults.outlinedButtonColors()
+                                else
+                                    ButtonDefaults.buttonColors()
+                            ) {
+                                Text(if (c.isRecoveryTrusted) "Remove" else "Trust")
                             }
                         }
                     }

@@ -402,6 +402,13 @@ class VauchiRepository(context: Context) {
 
     fun getPublicKey(): String = vauchi.getPublicId()
 
+    // Recovery trust operations
+    fun trustContactForRecovery(id: String) = vauchi.trustContactForRecovery(id)
+
+    fun untrustContactForRecovery(id: String) = vauchi.untrustContactForRecovery(id)
+
+    fun trustedContactCount(): UInt = vauchi.trustedContactCount()
+
     // Recovery operations
     fun createRecoveryClaim(oldPkHex: String) = vauchi.createRecoveryClaim(oldPkHex)
 

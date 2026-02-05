@@ -89,6 +89,11 @@ fun RecoverIdentityContent(
     var showClaimDialog by remember { mutableStateOf(false) }
     var isCreatingClaim by remember { mutableStateOf(false) }
     var generatedClaimData by remember { mutableStateOf<String?>(null) }
+    var trustedCount by remember { mutableStateOf(0u) }
+
+    LaunchedEffect(Unit) {
+        trustedCount = viewModel.trustedContactCount()
+    }
 
     fun copyToClipboard(text: String, label: String) {
         // Auto-clear after 30 seconds for sensitive recovery data
@@ -173,6 +178,32 @@ fun RecoverIdentityContent(
                         text = "7 days",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Trusted contacts:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                    Text(
+                        text = "${trustedCount}/3",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (trustedCount >= 3u)
+                            MaterialTheme.colorScheme.onTertiaryContainer
+                        else
+                            MaterialTheme.colorScheme.error
+                    )
+                }
+                if (trustedCount < 3u) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Mark ${3u - trustedCount} more contact(s) as trusted for recovery",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
                     )
                 }
             }

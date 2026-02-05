@@ -453,6 +453,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    suspend fun trustContactForRecovery(id: String): Boolean {
+        return try {
+            withContext(Dispatchers.IO) {
+                repository.trustContactForRecovery(id)
+            }
+            showMessage("Contact trusted for recovery")
+            true
+        } catch (e: Exception) {
+            showMessage("Failed to trust contact: ${e.message}")
+            false
+        }
+    }
+
+    suspend fun untrustContactForRecovery(id: String): Boolean {
+        return try {
+            withContext(Dispatchers.IO) {
+                repository.untrustContactForRecovery(id)
+            }
+            showMessage("Recovery trust removed")
+            true
+        } catch (e: Exception) {
+            showMessage("Failed to remove trust: ${e.message}")
+            false
+        }
+    }
+
+    suspend fun trustedContactCount(): UInt {
+        return try {
+            withContext(Dispatchers.IO) {
+                repository.trustedContactCount()
+            }
+        } catch (e: Exception) {
+            0u
+        }
+    }
+
     suspend fun getOwnPublicKey(): String? {
         return try {
             withContext(Dispatchers.IO) {
