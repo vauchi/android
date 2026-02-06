@@ -23,21 +23,21 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import com.vauchi.data.ExchangeData
 import com.vauchi.util.LocalizationManager
-import uniffi.vauchi_mobile.MobileExchangeData
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExchangeScreen(
     onBack: () -> Unit,
-    onGenerateQr: suspend () -> MobileExchangeData?,
+    onGenerateQr: suspend () -> ExchangeData?,
     onScanQr: () -> Unit,
     proximitySupported: Boolean = false
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
 
-    var exchangeData by remember { mutableStateOf<MobileExchangeData?>(null) }
+    var exchangeData by remember { mutableStateOf<ExchangeData?>(null) }
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var hasError by remember { mutableStateOf(false) }

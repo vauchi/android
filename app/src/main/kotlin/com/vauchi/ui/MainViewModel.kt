@@ -23,7 +23,7 @@ import uniffi.vauchi_mobile.MobileContact
 import uniffi.vauchi_mobile.MobileContactCard
 import uniffi.vauchi_mobile.MobileDemoContact
 import uniffi.vauchi_mobile.MobileDemoContactState
-import uniffi.vauchi_mobile.MobileExchangeData
+import com.vauchi.data.ExchangeData
 import uniffi.vauchi_mobile.MobileExchangeResult
 import uniffi.vauchi_mobile.MobileFieldType
 import uniffi.vauchi_mobile.MobileRecoveryClaim
@@ -368,7 +368,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    suspend fun generateExchangeQr(): MobileExchangeData? {
+    suspend fun generateExchangeQr(): ExchangeData? {
         return try {
             withContext(Dispatchers.IO) {
                 repository.generateExchangeQr()
@@ -385,7 +385,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             loadUserData()
             // Auto-remove demo contact after first real exchange
-            if (result != null && result.success) {
+            if (result.success) {
                 autoRemoveDemoContact()
             }
             result

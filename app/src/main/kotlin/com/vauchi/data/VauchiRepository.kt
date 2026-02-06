@@ -33,10 +33,20 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
 import uniffi.vauchi_mobile.MobileContactCard
-import uniffi.vauchi_mobile.MobileExchangeData
+import uniffi.vauchi_mobile.MobileExchangeResult
+import uniffi.vauchi_mobile.MobileExchangeSession
 import uniffi.vauchi_mobile.MobileFieldType
 import uniffi.vauchi_mobile.MobileSyncResult
 import uniffi.vauchi_mobile.VauchiMobile
+
+/**
+ * Exchange data for QR display (replaces deleted MobileExchangeData).
+ */
+data class ExchangeData(
+    val qrData: String,
+    val publicId: String,
+    val expiresAt: ULong,
+)
 
 /**
  * Repository class wrapping VauchiMobile UniFFI bindings.
@@ -152,9 +162,32 @@ class VauchiRepository(context: Context) {
 
     fun removeField(label: String): Boolean = vauchi.removeField(label)
 
-    fun generateExchangeQr(): MobileExchangeData = vauchi.generateExchangeQr()
+    /**
+     * Generate exchange QR data using ExchangeSession state machine.
+     * Returns the QR data string (with wb:// prefix).
+     */
+    fun generateExchangeQr(): ExchangeData {
+        val session = vauchi.createExchangeInitiatorManual()
+        val qrData = session.generateQr()
+        val expiresAt = System.currentTimeMillis() / 1000 + 300 // 5 minutes
+        return ExchangeData(
+            qrData = qrData,
+            publicId = vauchi.getPublicId(),
+            expiresAt = expiresAt.toULong(),
+        )
+    }
 
-    fun completeExchange(qrData: String) = vauchi.completeExchange(qrData)
+    /**
+     * Complete exchange by driving the ExchangeSession state machine as responder.
+     */
+    fun completeExchange(qrData: String): MobileExchangeResult {
+        val session = vauchi.createExchangeResponderManual()
+        session.processQr(qrData)
+        session.verifyProximity()
+        session.performKeyAgreement()
+        session.completeCardExchange("New Contact")
+        return vauchi.finalizeExchange(session)
+    }
 
     fun contactCount(): UInt = vauchi.contactCount()
 
