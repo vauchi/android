@@ -37,12 +37,17 @@ import uniffi.vauchi_mobile.MobileContactField
 import uniffi.vauchi_mobile.MobileFieldType
 import java.util.Locale
 
+// VRT device spec: 360dp wide, 800dp tall, xhdpi (2x) = 720×1600 px.
+// Large enough to catch layout issues, small enough to keep baselines under 60 KB each.
+// Using xhdpi (320dpi/2x) instead of default xxhdpi (480dpi/3x) reduces file size by ~55%.
+private const val VRT_DEVICE = "spec:width=360dp,height=800dp,dpi=320"
+
 // =============================================================
 // Onboarding Steps - Light Theme
 // =============================================================
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun WelcomeStepScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -51,7 +56,7 @@ fun WelcomeStepScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun CreateIdentityStepEmptyScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -65,7 +70,7 @@ fun CreateIdentityStepEmptyScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun CreateIdentityStepFilledScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -79,7 +84,7 @@ fun CreateIdentityStepFilledScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun AddFieldsStepScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -96,7 +101,7 @@ fun AddFieldsStepScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun AddFieldsStepFilledScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -113,7 +118,7 @@ fun AddFieldsStepFilledScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun PreviewStepScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -130,7 +135,7 @@ fun PreviewStepScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun SecurityStepScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -139,7 +144,7 @@ fun SecurityStepScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun ReadyStepScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -152,7 +157,7 @@ fun ReadyStepScreenshot() {
 // =============================================================
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun SettingsScreenScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -166,7 +171,7 @@ fun SettingsScreenScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun ContactsScreenEmptyScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -181,7 +186,7 @@ fun ContactsScreenEmptyScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun ContactsScreenWithContactsScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -198,7 +203,7 @@ fun ContactsScreenWithContactsScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun ExchangeScreenScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -211,7 +216,7 @@ fun ExchangeScreenScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun DeliveryStatusEmptyScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -228,7 +233,7 @@ fun DeliveryStatusEmptyScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun DeliveryStatusWithRecordsScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -274,7 +279,7 @@ fun DeliveryStatusWithRecordsScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun LabelsScreenEmptyScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -291,7 +296,7 @@ fun LabelsScreenEmptyScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun LabelsScreenWithLabelsScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -337,7 +342,7 @@ fun LabelsScreenWithLabelsScreenshot() {
 // =============================================================
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun HomeScreenEmptyCardScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -359,7 +364,7 @@ fun HomeScreenEmptyCardScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun HomeScreenWithFieldsScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -400,7 +405,7 @@ fun HomeScreenWithFieldsScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun HomeScreenSyncingScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -431,7 +436,7 @@ fun HomeScreenSyncingScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun HomeScreenOfflineScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -468,7 +473,7 @@ fun HomeScreenOfflineScreenshot() {
 // =============================================================
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun ContactFieldItemScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -506,7 +511,7 @@ fun ContactFieldItemScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun VisibilityToggleItemScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -545,7 +550,7 @@ fun VisibilityToggleItemScreenshot() {
 // =============================================================
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun RecoveryStepComponentScreenshot() {
     VauchiTheme(dynamicColor = false) {
@@ -589,7 +594,7 @@ fun RecoveryStepComponentScreenshot() {
 // =============================================================
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun WelcomeStepDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -598,7 +603,7 @@ fun WelcomeStepDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun CreateIdentityStepFilledDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -612,7 +617,7 @@ fun CreateIdentityStepFilledDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun AddFieldsStepDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -629,7 +634,7 @@ fun AddFieldsStepDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun PreviewStepDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -646,7 +651,7 @@ fun PreviewStepDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun SecurityStepDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -655,7 +660,7 @@ fun SecurityStepDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun ReadyStepDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -664,7 +669,7 @@ fun ReadyStepDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun SettingsScreenDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -678,7 +683,7 @@ fun SettingsScreenDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun ContactsScreenDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -693,7 +698,7 @@ fun ContactsScreenDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun ExchangeScreenDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -706,7 +711,7 @@ fun ExchangeScreenDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun DeliveryStatusWithRecordsDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -752,7 +757,7 @@ fun DeliveryStatusWithRecordsDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun LabelsScreenWithLabelsDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -786,7 +791,7 @@ fun LabelsScreenWithLabelsDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun HomeScreenWithFieldsDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -821,7 +826,7 @@ fun HomeScreenWithFieldsDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun ContactFieldItemDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -850,7 +855,7 @@ fun ContactFieldItemDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
 fun RecoveryStepComponentDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -900,7 +905,7 @@ private fun GermanLocaleWrapper(content: @Composable () -> Unit) {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true, locale = "de")
+@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
 fun WelcomeStepGermanScreenshot() {
     GermanLocaleWrapper {
@@ -911,7 +916,7 @@ fun WelcomeStepGermanScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true, locale = "de")
+@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
 fun CreateIdentityStepGermanScreenshot() {
     GermanLocaleWrapper {
@@ -927,7 +932,7 @@ fun CreateIdentityStepGermanScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true, locale = "de")
+@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
 fun AddFieldsStepGermanScreenshot() {
     GermanLocaleWrapper {
@@ -946,7 +951,7 @@ fun AddFieldsStepGermanScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true, locale = "de")
+@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
 fun PreviewStepGermanScreenshot() {
     GermanLocaleWrapper {
@@ -965,7 +970,7 @@ fun PreviewStepGermanScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true, locale = "de")
+@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
 fun SecurityStepGermanScreenshot() {
     GermanLocaleWrapper {
@@ -976,7 +981,7 @@ fun SecurityStepGermanScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true, locale = "de")
+@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
 fun SettingsScreenGermanScreenshot() {
     GermanLocaleWrapper {
@@ -992,7 +997,7 @@ fun SettingsScreenGermanScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true, locale = "de")
+@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
 fun ContactsScreenGermanScreenshot() {
     GermanLocaleWrapper {
@@ -1009,7 +1014,7 @@ fun ContactsScreenGermanScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true, locale = "de")
+@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
 fun ExchangeScreenGermanScreenshot() {
     GermanLocaleWrapper {
@@ -1024,7 +1029,7 @@ fun ExchangeScreenGermanScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true, locale = "de")
+@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
 fun HomeScreenGermanScreenshot() {
     GermanLocaleWrapper {
@@ -1061,7 +1066,7 @@ fun HomeScreenGermanScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true, locale = "de")
+@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
 fun LabelsScreenGermanScreenshot() {
     GermanLocaleWrapper {
@@ -1101,7 +1106,7 @@ fun LabelsScreenGermanScreenshot() {
 // =============================================================
 
 @PreviewTest
-@Preview(showSystemUi = true, locale = "de")
+@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
 fun WelcomeStepGermanDarkScreenshot() {
     GermanLocaleWrapper {
@@ -1112,7 +1117,7 @@ fun WelcomeStepGermanDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true, locale = "de")
+@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
 fun SettingsScreenGermanDarkScreenshot() {
     GermanLocaleWrapper {
@@ -1128,7 +1133,7 @@ fun SettingsScreenGermanDarkScreenshot() {
 }
 
 @PreviewTest
-@Preview(showSystemUi = true, locale = "de")
+@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
 fun HomeScreenGermanDarkScreenshot() {
     GermanLocaleWrapper {
