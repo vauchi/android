@@ -167,7 +167,7 @@ class VauchiRepository(context: Context) {
      * Returns the QR data string (with wb:// prefix).
      */
     fun generateExchangeQr(): ExchangeData {
-        val session = vauchi.createExchangeInitiatorManual()
+        val session = vauchi.createQrExchangeManual()
         val qrData = session.generateQr()
         val expiresAt = System.currentTimeMillis() / 1000 + 300 // 5 minutes
         return ExchangeData(
@@ -178,12 +178,13 @@ class VauchiRepository(context: Context) {
     }
 
     /**
-     * Complete exchange by driving the ExchangeSession state machine as responder.
+     * Complete exchange by driving the ExchangeSession state machine (mutual QR flow).
      */
     fun completeExchange(qrData: String): MobileExchangeResult {
-        val session = vauchi.createExchangeResponderManual()
+        val session = vauchi.createQrExchangeManual()
+        session.generateQr()
         session.processQr(qrData)
-        session.verifyProximity()
+        session.theyScannedOurQr()
         session.performKeyAgreement()
         session.completeCardExchange("New Contact")
         return vauchi.finalizeExchange(session)
