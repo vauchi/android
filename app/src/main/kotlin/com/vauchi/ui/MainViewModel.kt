@@ -749,6 +749,46 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Duress PIN operations
+    private val _isDuressEnabled = MutableStateFlow(false)
+    val isDuressEnabled: StateFlow<Boolean> = _isDuressEnabled.asStateFlow()
+
+    fun loadDuressStatus() {
+        _isDuressEnabled.value = try {
+            repository.isDuressEnabled()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun setupDuressPassword(pin: String) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.setupDuressPassword(pin)
+                }
+                _isDuressEnabled.value = true
+                showMessage("Duress PIN configured")
+            } catch (e: Exception) {
+                showMessage("Failed to set duress PIN: ${e.message}")
+            }
+        }
+    }
+
+    fun disableDuress() {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.disableDuress()
+                }
+                _isDuressEnabled.value = false
+                showMessage("Duress PIN disabled")
+            } catch (e: Exception) {
+                showMessage("Failed to disable duress PIN: ${e.message}")
+            }
+        }
+    }
+
     // Recovery operations
     suspend fun createRecoveryClaim(oldPkHex: String): MobileRecoveryClaim? {
         return try {

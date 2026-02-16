@@ -73,6 +73,10 @@ fun SettingsScreen(
     // Certificate Pinning
     isCertificatePinningEnabled: Boolean = false,
     onSetPinnedCertificate: (String) -> Unit = {},
+    // Duress PIN
+    isDuressEnabled: Boolean = false,
+    onSetupDuressPin: (String) -> Unit = {},
+    onDisableDuress: () -> Unit = {},
     // Appearance
     onThemeSettings: () -> Unit = {},
     onLanguageSettings: () -> Unit = {},
@@ -508,6 +512,13 @@ fun SettingsScreen(
             CertificatePinningSection(
                 isEnabled = isCertificatePinningEnabled,
                 onSetCertificate = onSetPinnedCertificate
+            )
+
+            // Duress PIN Section
+            DuressPinSection(
+                isDuressEnabled = isDuressEnabled,
+                onSetupDuressPin = onSetupDuressPin,
+                onDisableDuress = onDisableDuress
             )
 
             // Content Updates Section (only if supported)
@@ -1524,6 +1535,170 @@ fun CertificatePinningSection(
             }
         )
     }
+}
+
+// Duress PIN Section
+
+@Composable
+fun DuressPinSection(
+    isDuressEnabled: Boolean,
+    onSetupDuressPin: (String) -> Unit,
+    onDisableDuress: () -> Unit
+) {
+    var showSetupDialog by remember { mutableStateOf(false) }
+    var showDisableConfirmation by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Duress PIN",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { heading() }
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "When entered, contacts are replaced with decoy data for plausible deniability.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Duress PIN")
+                Text(
+                    text = if (isDuressEnabled) "Enabled" else "Not set",
+                    color = if (isDuressEnabled) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (!isDuressEnabled) {
+                Button(
+                    onClick = { showSetupDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Set Duress PIN")
+                }
+            } else {
+                OutlinedButton(
+                    onClick = { showDisableConfirmation = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Disable Duress PIN")
+                }
+            }
+        }
+    }
+
+    if (showSetupDialog) {
+        DuressPinSetupDialog(
+            onDismiss = { showSetupDialog = false },
+            onConfirm = { pin ->
+                onSetupDuressPin(pin)
+                showSetupDialog = false
+            }
+        )
+    }
+
+    if (showDisableConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDisableConfirmation = false },
+            title = { Text("Disable Duress PIN") },
+            text = { Text("Are you sure you want to disable the duress PIN?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDisableDuress()
+                    showDisableConfirmation = false
+                }) {
+                    Text("Disable", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDisableConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun DuressPinSetupDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var pin by remember { mutableStateOf("") }
+    var confirmPin by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Set Duress PIN") },
+        text = {
+            Column {
+                Text(
+                    "Enter a PIN that, when used instead of the app password, shows decoy contacts.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = pin,
+                    onValueChange = { pin = it; error = "" },
+                    label = { Text("Duress PIN") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = confirmPin,
+                    onValueChange = { confirmPin = it; error = "" },
+                    label = { Text("Confirm PIN") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (error.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                when {
+                    pin.length < 4 -> error = "PIN must be at least 4 characters"
+                    pin != confirmPin -> error = "PINs do not match"
+                    else -> onConfirm(pin)
+                }
+            }) {
+                Text("Set PIN")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable

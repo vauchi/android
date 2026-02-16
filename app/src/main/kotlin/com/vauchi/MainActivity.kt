@@ -248,10 +248,12 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             val demoContactState by viewModel.demoContactState.collectAsState()
             val deletionState by viewModel.deletionState.collectAsState()
             val consentRecords by viewModel.consentRecords.collectAsState()
+            val isDuressEnabled by viewModel.isDuressEnabled.collectAsState()
             if (state is UiState.Ready) {
                 LaunchedEffect(Unit) {
                     viewModel.loadDeletionState()
                     viewModel.loadConsentRecords()
+                    viewModel.loadDuressStatus()
                 }
                 SettingsScreen(
                     displayName = state.displayName,
@@ -292,6 +294,10 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     // Certificate Pinning
                     isCertificatePinningEnabled = viewModel.isCertificatePinningEnabled(),
                     onSetPinnedCertificate = { certPem -> viewModel.setPinnedCertificate(certPem) },
+                    // Duress PIN
+                    isDuressEnabled = isDuressEnabled,
+                    onSetupDuressPin = { pin -> viewModel.setupDuressPassword(pin) },
+                    onDisableDuress = { viewModel.disableDuress() },
                     // Appearance
                     onThemeSettings = { currentScreen = Screen.ThemeSettings },
                     onLanguageSettings = { currentScreen = Screen.LanguageSettings },

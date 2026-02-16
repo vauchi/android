@@ -404,6 +404,23 @@ class VauchiRepository(context: Context) {
      */
     fun setPinnedCertificate(certPem: String) = vauchi.setPinnedCertificate(certPem)
 
+    // Duress PIN operations
+
+    /**
+     * Check if duress PIN is enabled
+     */
+    fun isDuressEnabled(): Boolean = vauchi.isDuressEnabled()
+
+    /**
+     * Set up duress PIN (requires app password to be set first)
+     */
+    fun setupDuressPassword(duressPassword: String) = vauchi.setupDuressPassword(duressPassword)
+
+    /**
+     * Disable duress PIN
+     */
+    fun disableDuress() = vauchi.disableDuress()
+
     // Verification operations
     fun verifyContact(id: String) = vauchi.verifyContact(id)
 
