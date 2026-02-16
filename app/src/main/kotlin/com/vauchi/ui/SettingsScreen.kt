@@ -24,6 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -127,7 +130,8 @@ fun SettingsScreen(
             Text(
                 text = localizationManager.t("settings.account"),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { heading() }
             )
 
             Card(
@@ -169,7 +173,8 @@ fun SettingsScreen(
             Text(
                 text = localizationManager.t("sync.title"),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { heading() }
             )
 
             Card(
@@ -240,7 +245,8 @@ fun SettingsScreen(
             Text(
                 text = "Message Delivery",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { heading() }
             )
 
             Card(
@@ -296,7 +302,8 @@ fun SettingsScreen(
             Text(
                 text = localizationManager.t("backup.title"),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { heading() }
             )
 
             Text(
@@ -329,7 +336,8 @@ fun SettingsScreen(
             Text(
                 text = localizationManager.t("privacy.title"),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { heading() }
             )
 
             OutlinedButton(
@@ -474,7 +482,8 @@ fun SettingsScreen(
             Text(
                 text = "Devices & Recovery",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { heading() }
             )
 
             Row(
@@ -517,7 +526,8 @@ fun SettingsScreen(
             Text(
                 text = localizationManager.t("settings.appearance"),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { heading() }
             )
 
             Card(
@@ -572,7 +582,8 @@ fun SettingsScreen(
             Text(
                 text = "Accessibility",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { heading() }
             )
 
             Text(
@@ -624,7 +635,8 @@ fun SettingsScreen(
             Text(
                 text = localizationManager.t("settings.help_support"),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { heading() }
             )
 
             val openUrl = { url: String ->
@@ -678,7 +690,8 @@ fun SettingsScreen(
             Text(
                 text = localizationManager.t("settings.about"),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { heading() }
             )
 
             Card(
@@ -1194,7 +1207,8 @@ fun ContentUpdatesSection(
         Text(
             text = "Content Updates",
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.semantics { heading() }
         )
 
         Text(
@@ -1417,7 +1431,8 @@ fun CertificatePinningSection(
         Text(
             text = "Security",
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.semantics { heading() }
         )
 
         Card(
