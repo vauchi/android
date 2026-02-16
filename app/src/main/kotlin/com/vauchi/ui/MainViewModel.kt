@@ -764,7 +764,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setupDuressPassword(pin: String) {
         viewModelScope.launch {
             try {
-                withContext(Dispatchers.IO) {
+                withContext<Unit>(Dispatchers.IO) {
                     repository.setupDuressPassword(pin)
                 }
                 _isDuressEnabled.value = true
@@ -778,7 +778,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun disableDuress() {
         viewModelScope.launch {
             try {
-                withContext(Dispatchers.IO) {
+                withContext<Unit>(Dispatchers.IO) {
                     repository.disableDuress()
                 }
                 _isDuressEnabled.value = false
@@ -828,7 +828,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun configureEmergencyBroadcast(contactIds: List<String>, message: String, includeLocation: Boolean) {
         viewModelScope.launch {
             try {
-                withContext(Dispatchers.IO) {
+                withContext<Unit>(Dispatchers.IO) {
                     repository.configureEmergencyBroadcast(contactIds, message, includeLocation)
                 }
                 _emergencyConfigured.value = true
@@ -842,10 +842,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun sendEmergencyBroadcast() {
         viewModelScope.launch {
             try {
-                val result = withContext(Dispatchers.IO) {
+                withContext<Unit>(Dispatchers.IO) {
                     repository.sendEmergencyBroadcast()
                 }
-                showMessage("Emergency broadcast sent: ${result.sent}/${result.total} contacts")
+                showMessage("Emergency broadcast sent")
             } catch (e: Exception) {
                 showMessage("Failed to send: ${e.message}")
             }
@@ -855,7 +855,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun disableEmergencyBroadcast() {
         viewModelScope.launch {
             try {
-                withContext(Dispatchers.IO) {
+                withContext<Unit>(Dispatchers.IO) {
                     repository.disableEmergencyBroadcast()
                 }
                 _emergencyConfigured.value = false

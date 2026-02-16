@@ -405,21 +405,29 @@ class VauchiRepository(context: Context) {
     fun setPinnedCertificate(certPem: String) = vauchi.setPinnedCertificate(certPem)
 
     // Duress PIN operations
+    // NOTE: These methods are stubs until vauchi-core duress bindings
+    // are published via vauchi-mobile-android.
 
     /**
      * Check if duress PIN is enabled
      */
-    fun isDuressEnabled(): Boolean = vauchi.isDuressEnabled()
+    fun isDuressEnabled(): Boolean = false // TODO: Replace with vauchi.isDuressEnabled()
 
     /**
      * Set up duress PIN (requires app password to be set first)
      */
-    fun setupDuressPassword(duressPassword: String) = vauchi.setupDuressPassword(duressPassword)
+    fun setupDuressPassword(duressPassword: String) {
+        // TODO: Replace with vauchi.setupDuressPassword(duressPassword)
+        throw UnsupportedOperationException("Duress PIN not yet available in bindings")
+    }
 
     /**
      * Disable duress PIN
      */
-    fun disableDuress() = vauchi.disableDuress()
+    fun disableDuress() {
+        // TODO: Replace with vauchi.disableDuress()
+        throw UnsupportedOperationException("Duress PIN not yet available in bindings")
+    }
 
     // Panic Shred operations
 
@@ -429,28 +437,37 @@ class VauchiRepository(context: Context) {
     fun panicShred() = vauchi.panicShred()
 
     // Emergency Broadcast operations
+    // NOTE: These methods are stubs until vauchi-core emergency broadcast bindings
+    // are published via vauchi-mobile-android.
 
     /**
      * Configure emergency broadcast
      */
     fun configureEmergencyBroadcast(contactIds: List<String>, message: String, includeLocation: Boolean) {
-        vauchi.configureEmergencyBroadcast(contactIds, message, includeLocation)
+        // TODO: Replace with vauchi.configureEmergencyBroadcast(contactIds, message, includeLocation)
+        throw UnsupportedOperationException("Emergency broadcast not yet available in bindings")
     }
 
     /**
      * Get emergency broadcast config
      */
-    fun getEmergencyConfig() = vauchi.getEmergencyConfig()
+    fun getEmergencyConfig(): Any? = null // TODO: Replace with vauchi.getEmergencyConfig()
 
     /**
      * Send emergency broadcast
      */
-    fun sendEmergencyBroadcast() = vauchi.sendEmergencyBroadcast()
+    fun sendEmergencyBroadcast() {
+        // TODO: Replace with vauchi.sendEmergencyBroadcast()
+        throw UnsupportedOperationException("Emergency broadcast not yet available in bindings")
+    }
 
     /**
      * Disable emergency broadcast
      */
-    fun disableEmergencyBroadcast() = vauchi.disableEmergencyBroadcast()
+    fun disableEmergencyBroadcast() {
+        // TODO: Replace with vauchi.disableEmergencyBroadcast()
+        throw UnsupportedOperationException("Emergency broadcast not yet available in bindings")
+    }
 
     // Tor Mode Operations
     // Based on: features/tor_mode.feature - R4 Tor Mode
