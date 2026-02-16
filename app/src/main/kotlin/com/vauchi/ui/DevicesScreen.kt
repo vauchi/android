@@ -29,6 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
@@ -150,7 +153,8 @@ fun DevicesScreen(
                     item {
                         Text(
                             text = "${localizationManager.t("devices.title")} (${devices.size})",
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.semantics { heading() }
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -457,7 +461,8 @@ fun DeviceCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = device.deviceName,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.semantics { heading() }
                     )
                     if (device.isCurrent) {
                         Spacer(modifier = Modifier.width(8.dp))
