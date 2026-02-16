@@ -421,6 +421,13 @@ class VauchiRepository(context: Context) {
      */
     fun disableDuress() = vauchi.disableDuress()
 
+    // Panic Shred operations
+
+    /**
+     * Execute emergency panic shred — destroys all data immediately
+     */
+    fun panicShred() = vauchi.panicShred()
+
     // Verification operations
     fun verifyContact(id: String) = vauchi.verifyContact(id)
 

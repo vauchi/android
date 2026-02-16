@@ -91,7 +91,8 @@ fun SettingsScreen(
     deletionState: MobileDeletionInfo? = null,
     consentRecords: List<MobileConsentRecord> = emptyList(),
     onGrantConsent: (MobileConsentType) -> Unit = {},
-    onRevokeConsent: (MobileConsentType) -> Unit = {}
+    onRevokeConsent: (MobileConsentType) -> Unit = {},
+    onPanicShred: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -478,6 +479,49 @@ fun SettingsScreen(
                         }
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Emergency Shred
+            var showShredConfirm by remember { mutableStateOf(false) }
+            Button(
+                onClick = { showShredConfirm = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
+                )
+            ) {
+                Text("Emergency Shred")
+            }
+            Text(
+                text = "Immediately destroy all data. No grace period. Irreversible.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            if (showShredConfirm) {
+                AlertDialog(
+                    onDismissRequest = { showShredConfirm = false },
+                    title = { Text("Emergency Shred") },
+                    text = {
+                        Text("This will immediately and irreversibly destroy all data including contacts, identity, and encryption keys. This cannot be undone.")
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            onPanicShred()
+                            showShredConfirm = false
+                        }) {
+                            Text("Destroy All Data", color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showShredConfirm = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
 
             HorizontalDivider()

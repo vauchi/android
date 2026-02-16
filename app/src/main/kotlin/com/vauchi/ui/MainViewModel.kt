@@ -789,6 +789,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Panic Shred operations
+    fun panicShred() {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.panicShred()
+                }
+                showMessage("Emergency shred complete. All data destroyed.")
+            } catch (e: Exception) {
+                showMessage("Failed to shred: ${e.message}")
+            }
+        }
+    }
+
     // Recovery operations
     suspend fun createRecoveryClaim(oldPkHex: String): MobileRecoveryClaim? {
         return try {

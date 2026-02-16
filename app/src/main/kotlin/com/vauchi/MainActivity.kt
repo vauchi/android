@@ -323,7 +323,8 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     deletionState = deletionState,
                     consentRecords = consentRecords,
                     onGrantConsent = { viewModel.grantConsent(it) },
-                    onRevokeConsent = { viewModel.revokeConsent(it) }
+                    onRevokeConsent = { viewModel.revokeConsent(it) },
+                    onPanicShred = { viewModel.panicShred() }
                 )
             }
         }
