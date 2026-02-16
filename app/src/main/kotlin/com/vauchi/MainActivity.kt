@@ -741,7 +741,7 @@ fun AddFieldDialog(
                         label = { Text("Type") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier
-                            .menuAnchor()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                             .fillMaxWidth()
                     )
                     ExposedDropdownMenu(
@@ -783,7 +783,7 @@ fun AddFieldDialog(
                             label = { Text("Social Network") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = socialExpanded) },
                             modifier = Modifier
-                                .menuAnchor()
+                                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
                                 .fillMaxWidth()
                         )
                         ExposedDropdownMenu(

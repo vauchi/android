@@ -411,20 +411,3 @@ private fun ContactChip(
         }
     }
 }
-
-// Extension function to copy MobileVisibilityLabelDetail
-private fun MobileVisibilityLabelDetail.copy(
-    id: String = this.id,
-    name: String = this.name,
-    contactIds: List<String> = this.contactIds,
-    visibleFieldIds: List<String> = this.visibleFieldIds,
-    createdAt: ULong = this.createdAt,
-    modifiedAt: ULong = this.modifiedAt
-): MobileVisibilityLabelDetail = MobileVisibilityLabelDetail(
-    id = id,
-    name = name,
-    contactIds = contactIds,
-    visibleFieldIds = visibleFieldIds,
-    createdAt = createdAt,
-    modifiedAt = modifiedAt
-)

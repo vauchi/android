@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -129,7 +130,7 @@ private fun getMomentIcon(momentType: MobileAhaMomentType): ImageVector {
         MobileAhaMomentType.FIRST_EDIT -> Icons.Default.Edit
         MobileAhaMomentType.FIRST_CONTACT_ADDED -> Icons.Default.PersonAdd
         MobileAhaMomentType.FIRST_UPDATE_RECEIVED -> Icons.Default.Download
-        MobileAhaMomentType.FIRST_OUTBOUND_DELIVERED -> Icons.Default.Send
+        MobileAhaMomentType.FIRST_OUTBOUND_DELIVERED -> Icons.AutoMirrored.Filled.Send
     }
 }
 

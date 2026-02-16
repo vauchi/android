@@ -68,7 +68,10 @@ class KeyStoreHelper {
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(KEY_SIZE_BITS)
             .setUserAuthenticationRequired(true)
-            .setUserAuthenticationValidityDurationSeconds(AUTH_VALIDITY_SECONDS)
+            .setUserAuthenticationParameters(
+                AUTH_VALIDITY_SECONDS,
+                KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG
+            )
             .build()
 
         keyGenerator.init(keySpec)
