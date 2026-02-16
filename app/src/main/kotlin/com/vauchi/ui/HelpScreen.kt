@@ -19,6 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.vauchi.util.LocalizationManager
@@ -119,7 +122,7 @@ private fun CategoriesSection(
     allFaqs: List<MobileFaqItem>,
     onSelectCategory: (MobileHelpCategory) -> Unit
 ) {
-    Text("Categories", style = MaterialTheme.typography.titleMedium)
+    Text("Categories", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         categories.forEach { categoryInfo ->
             val count = allFaqs.count { it.category == categoryInfo.category }
