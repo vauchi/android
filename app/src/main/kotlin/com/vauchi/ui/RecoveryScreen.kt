@@ -19,6 +19,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -124,7 +127,8 @@ fun RecoverIdentityContent(
                 Text(
                     text = "Lost Your Device?",
                     style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { heading() }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -212,7 +216,8 @@ fun RecoverIdentityContent(
         // Steps
         Text(
             text = localizationManager.t("recovery.how_it_works"),
-            style = MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() }
         )
 
         RecoveryStep(
@@ -403,7 +408,8 @@ fun HelpOthersContent(
                 Text(
                     text = "Help a Contact Recover",
                     style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { heading() }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -443,7 +449,8 @@ fun HelpOthersContent(
         // Steps
         Text(
             text = "How to Vouch",
-            style = MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() }
         )
 
         RecoveryStep(
