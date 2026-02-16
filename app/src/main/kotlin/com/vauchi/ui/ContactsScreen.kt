@@ -4,7 +4,9 @@
 
 package com.vauchi.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,23 +17,27 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vauchi.util.LocalizationManager
 import uniffi.vauchi_mobile.MobileContact
 import uniffi.vauchi_mobile.MobileDemoContact
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ContactsScreen(
     onBack: () -> Unit,
@@ -43,24 +49,33 @@ fun ContactsScreen(
     syncState: SyncState = SyncState.Idle,
     onSync: () -> Unit = {},
     demoContact: MobileDemoContact? = null,
-    onDismissDemo: () -> Unit = {}
+    onDismissDemo: () -> Unit = {},
+    onListHiddenContacts: suspend () -> List<MobileContact> = { emptyList() },
+    onHideContact: suspend (String) -> Unit = {},
+    onUnhideContact: suspend (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
+    val haptic = LocalHapticFeedback.current
 
     var contacts by remember { mutableStateOf<List<MobileContact>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var hasError by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var retryTrigger by remember { mutableStateOf(0) }
+    var showHiddenContacts by remember { mutableStateOf(false) }
 
     val isRefreshing = syncState is SyncState.Syncing
 
-    LaunchedEffect(retryTrigger) {
+    LaunchedEffect(retryTrigger, showHiddenContacts) {
         isLoading = true
         hasError = false
         try {
-            contacts = onListContacts()
+            contacts = if (showHiddenContacts) {
+                onListHiddenContacts()
+            } else {
+                onListContacts()
+            }
         } catch (e: Exception) {
             hasError = true
         }
@@ -70,7 +85,11 @@ fun ContactsScreen(
     // Refresh contacts list when sync completes successfully
     LaunchedEffect(syncState) {
         if (syncState is SyncState.Success) {
-            contacts = onListContacts()
+            contacts = if (showHiddenContacts) {
+                onListHiddenContacts()
+            } else {
+                onListContacts()
+            }
         }
     }
 
@@ -95,11 +114,48 @@ fun ContactsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(localizationManager.t("contacts.title")) },
+                title = {
+                    Row(
+                        modifier = Modifier
+                            .combinedClickable(
+                                onClick = {},
+                                onLongClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showHiddenContacts = !showHiddenContacts
+                                }
+                            )
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            if (showHiddenContacts) {
+                                "Hidden Contacts"
+                            } else {
+                                localizationManager.t("contacts.title")
+                            }
+                        )
+                        if (showHiddenContacts) {
+                            Icon(
+                                Icons.Default.VisibilityOff,
+                                contentDescription = "Hidden contacts mode active",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
+                },
+                colors = if (showHiddenContacts) {
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    )
+                } else {
+                    TopAppBarDefaults.topAppBarColors()
                 }
             )
         }
@@ -234,7 +290,10 @@ fun ContactsScreen(
                         ContactCard(
                             contact = contact,
                             onClick = { onContactClick(contact.id) },
-                            onRemove = { onRemoveContact(contact.id) }
+                            onRemove = { onRemoveContact(contact.id) },
+                            isHiddenMode = showHiddenContacts,
+                            onHide = { onHideContact(contact.id) },
+                            onUnhide = { onUnhideContact(contact.id) }
                         )
                     }
                 }
@@ -244,24 +303,42 @@ fun ContactsScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ContactCard(
     contact: MobileContact,
     onClick: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    isHiddenMode: Boolean = false,
+    onHide: suspend () -> Unit = {},
+    onUnhide: suspend () -> Unit = {}
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
+    val haptic = LocalHapticFeedback.current
+    val coroutineScope = rememberCoroutineScope()
 
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showHideDialog by remember { mutableStateOf(false) }
+    var showUnhideDialog by remember { mutableStateOf(false) }
     val verificationStatus = if (contact.isVerified) "verified" else "not verified"
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    if (isHiddenMode) {
+                        showUnhideDialog = true
+                    } else {
+                        showHideDialog = true
+                    }
+                }
+            )
             .semantics {
-                contentDescription = "${contact.displayName}, $verificationStatus. Double tap to view details."
+                contentDescription = "${contact.displayName}, $verificationStatus. Double tap to view details. Long press to ${if (isHiddenMode) "unhide" else "hide"} contact."
             },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -344,6 +421,56 @@ fun ContactCard(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(localizationManager.t("action.cancel"))
+                }
+            }
+        )
+    }
+
+    if (showHideDialog) {
+        AlertDialog(
+            onDismissRequest = { showHideDialog = false },
+            title = { Text("Hide Contact") },
+            text = { Text("Hide ${contact.displayName}? You can view hidden contacts by long-pressing the Contacts title.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showHideDialog = false
+                        coroutineScope.launch {
+                            onHide()
+                        }
+                    }
+                ) {
+                    Text("Hide")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showHideDialog = false }) {
+                    Text(localizationManager.t("action.cancel"))
+                }
+            }
+        )
+    }
+
+    if (showUnhideDialog) {
+        AlertDialog(
+            onDismissRequest = { showUnhideDialog = false },
+            title = { Text("Unhide Contact") },
+            text = { Text("Unhide ${contact.displayName}? They will be visible in your normal contacts list.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showUnhideDialog = false
+                        coroutineScope.launch {
+                            onUnhide()
+                        }
+                    }
+                ) {
+                    Text("Unhide")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUnhideDialog = false }) {
                     Text(localizationManager.t("action.cancel"))
                 }
             }
