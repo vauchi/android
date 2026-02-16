@@ -4,6 +4,7 @@
 
 package com.vauchi.data
 
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.security.keystore.UserNotAuthenticatedException
@@ -68,10 +69,17 @@ class KeyStoreHelper {
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(KEY_SIZE_BITS)
             .setUserAuthenticationRequired(true)
-            .setUserAuthenticationParameters(
-                AUTH_VALIDITY_SECONDS,
-                KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG
-            )
+            .apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    setUserAuthenticationParameters(
+                        AUTH_VALIDITY_SECONDS,
+                        KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    setUserAuthenticationValidityDurationSeconds(AUTH_VALIDITY_SECONDS)
+                }
+            }
             .build()
 
         keyGenerator.init(keySpec)
