@@ -167,6 +167,46 @@ fun ExchangeScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
+                // BLE Exchange stub
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Bluetooth Exchange",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.semantics { heading() }
+                        )
+                        Icon(
+                            painter = androidx.compose.ui.res.painterResource(
+                                android.R.drawable.stat_sys_data_bluetooth
+                            ),
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Coming soon",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "Exchange contact cards via Bluetooth when both devices are nearby. Requires Bluetooth hardware.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                    }
+                }
+
                 Button(
                     onClick = onScanQr,
                     modifier = Modifier
