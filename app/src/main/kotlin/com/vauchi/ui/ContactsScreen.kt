@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.vauchi.util.LocalizationManager
 import uniffi.vauchi_mobile.MobileContact
 import uniffi.vauchi_mobile.MobileDemoContact
