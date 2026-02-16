@@ -452,6 +452,23 @@ class VauchiRepository(context: Context) {
      */
     fun disableEmergencyBroadcast() = vauchi.disableEmergencyBroadcast()
 
+    // Tor Mode Operations
+    // Based on: features/tor_mode.feature - R4 Tor Mode
+    // NOTE: These methods are stubs until vauchi-core tor bindings
+    // are published via vauchi-mobile-android.
+
+    fun isTorEnabled(): Boolean = false
+
+    fun getTorConfig(): Triple<Boolean, List<String>, Boolean> {
+        // Returns (enabled, bridges, preferOnion)
+        return Triple(false, emptyList(), true)
+    }
+
+    fun saveTorConfig(enabled: Boolean, bridges: List<String>, preferOnion: Boolean) {
+        // TODO: Replace with actual UniFFI call once bindings are published
+        throw UnsupportedOperationException("Tor mode not yet available in bindings")
+    }
+
     // Verification operations
     fun verifyContact(id: String) = vauchi.verifyContact(id)
 

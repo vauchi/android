@@ -82,6 +82,11 @@ fun SettingsScreen(
     onConfigureEmergency: (List<String>, String, Boolean) -> Unit = { _, _, _ -> },
     onSendEmergency: () -> Unit = {},
     onDisableEmergency: () -> Unit = {},
+    // Tor Mode
+    isTorEnabled: Boolean = false,
+    torPreferOnion: Boolean = true,
+    torBridges: List<String> = emptyList(),
+    onSaveTorConfig: (Boolean, List<String>, Boolean) -> Unit = { _, _, _ -> },
     // Appearance
     onThemeSettings: () -> Unit = {},
     onLanguageSettings: () -> Unit = {},
@@ -576,6 +581,14 @@ fun SettingsScreen(
                 onConfigure = onConfigureEmergency,
                 onSend = onSendEmergency,
                 onDisable = onDisableEmergency
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            TorSettingsSection(
+                isTorEnabled = isTorEnabled,
+                torPreferOnion = torPreferOnion,
+                torBridges = torBridges,
+                onSaveTorConfig = onSaveTorConfig
             )
 
             // Content Updates Section (only if supported)
@@ -1956,4 +1969,123 @@ fun SetCertificateDialog(
             }
         }
     )
+}
+
+@Composable
+fun TorSettingsSection(
+    isTorEnabled: Boolean,
+    torPreferOnion: Boolean,
+    torBridges: List<String>,
+    onSaveTorConfig: (Boolean, List<String>, Boolean) -> Unit
+) {
+    var showBridgeDialog by remember { mutableStateOf(false) }
+    var bridgeText by remember { mutableStateOf(torBridges.joinToString("\n")) }
+    var message by remember { mutableStateOf("") }
+
+    Text(
+        text = "Tor Mode",
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(vertical = 8.dp)
+    )
+    Text(
+        text = "Route all relay traffic through Tor for enhanced anonymity.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("Enable Tor")
+        Switch(
+            checked = isTorEnabled,
+            onCheckedChange = { newValue ->
+                val bridges = bridgeText.split("\n").filter { it.isNotBlank() }
+                onSaveTorConfig(newValue, bridges, torPreferOnion)
+            }
+        )
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("Prefer .onion Addresses")
+        Switch(
+            checked = torPreferOnion,
+            onCheckedChange = { newValue ->
+                val bridges = bridgeText.split("\n").filter { it.isNotBlank() }
+                onSaveTorConfig(isTorEnabled, bridges, newValue)
+            }
+        )
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("Bridges: ${torBridges.size} configured")
+        TextButton(onClick = {
+            message = ""
+            bridgeText = torBridges.joinToString("\n")
+            showBridgeDialog = true
+        }) {
+            Text("Manage")
+        }
+    }
+
+    if (message.isNotEmpty()) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(vertical = 4.dp)
+        )
+    }
+
+    if (showBridgeDialog) {
+        AlertDialog(
+            onDismissRequest = { showBridgeDialog = false },
+            title = { Text("Manage Bridges") },
+            text = {
+                Column {
+                    Text(
+                        "Add obfs4 bridge addresses for censored networks. One per line.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = bridgeText,
+                        onValueChange = { bridgeText = it },
+                        label = { Text("Bridge Addresses") },
+                        modifier = Modifier.fillMaxWidth().height(150.dp),
+                        maxLines = 10
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val bridges = bridgeText.split("\n").filter { it.isNotBlank() }.map { it.trim() }
+                    onSaveTorConfig(isTorEnabled, bridges, torPreferOnion)
+                    showBridgeDialog = false
+                    message = "${bridges.size} bridge(s) saved"
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBridgeDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }

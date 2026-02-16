@@ -250,12 +250,16 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             val consentRecords by viewModel.consentRecords.collectAsState()
             val isDuressEnabled by viewModel.isDuressEnabled.collectAsState()
             val isEmergencyConfigured by viewModel.emergencyConfigured.collectAsState()
+            val isTorEnabled by viewModel.isTorEnabled.collectAsState()
+            val torPreferOnion by viewModel.torPreferOnion.collectAsState()
+            val torBridges by viewModel.torBridges.collectAsState()
             if (state is UiState.Ready) {
                 LaunchedEffect(Unit) {
                     viewModel.loadDeletionState()
                     viewModel.loadConsentRecords()
                     viewModel.loadDuressStatus()
                     viewModel.loadEmergencyConfig()
+                    viewModel.loadTorConfig()
                 }
                 SettingsScreen(
                     displayName = state.displayName,
@@ -305,6 +309,13 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     onConfigureEmergency = { ids, msg, loc -> viewModel.configureEmergencyBroadcast(ids, msg, loc) },
                     onSendEmergency = { viewModel.sendEmergencyBroadcast() },
                     onDisableEmergency = { viewModel.disableEmergencyBroadcast() },
+                    // Tor Mode
+                    isTorEnabled = isTorEnabled,
+                    torPreferOnion = torPreferOnion,
+                    torBridges = torBridges,
+                    onSaveTorConfig = { enabled, bridges, preferOnion ->
+                        viewModel.saveTorConfig(enabled, bridges, preferOnion)
+                    },
                     // Appearance
                     onThemeSettings = { currentScreen = Screen.ThemeSettings },
                     onLanguageSettings = { currentScreen = Screen.LanguageSettings },

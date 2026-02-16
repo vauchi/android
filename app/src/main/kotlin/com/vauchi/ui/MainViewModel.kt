@@ -803,6 +803,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Tor Mode state
+    private val _isTorEnabled = MutableStateFlow(false)
+    val isTorEnabled: StateFlow<Boolean> = _isTorEnabled.asStateFlow()
+
+    private val _torPreferOnion = MutableStateFlow(true)
+    val torPreferOnion: StateFlow<Boolean> = _torPreferOnion.asStateFlow()
+
+    private val _torBridges = MutableStateFlow<List<String>>(emptyList())
+    val torBridges: StateFlow<List<String>> = _torBridges.asStateFlow()
+
     // Emergency Broadcast operations
     private val _emergencyConfigured = MutableStateFlow(false)
     val emergencyConfigured: StateFlow<Boolean> = _emergencyConfigured.asStateFlow()
@@ -852,6 +862,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 showMessage("Emergency broadcast disabled")
             } catch (e: Exception) {
                 showMessage("Failed to disable: ${e.message}")
+            }
+        }
+    }
+
+    // Tor Mode operations
+    fun loadTorConfig() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                try {
+                    val (enabled, bridges, preferOnion) = repository.getTorConfig()
+                    _isTorEnabled.value = enabled
+                    _torBridges.value = bridges
+                    _torPreferOnion.value = preferOnion
+                } catch (e: Exception) {
+                    // Config not available yet
+                }
+            }
+        }
+    }
+
+    fun saveTorConfig(enabled: Boolean, bridges: List<String>, preferOnion: Boolean) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                try {
+                    repository.saveTorConfig(enabled, bridges, preferOnion)
+                    _isTorEnabled.value = enabled
+                    _torBridges.value = bridges
+                    _torPreferOnion.value = preferOnion
+                } catch (e: Exception) {
+                    // Save failed - bindings not yet available
+                }
             }
         }
     }
