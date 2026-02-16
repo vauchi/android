@@ -803,6 +803,59 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Emergency Broadcast operations
+    private val _emergencyConfigured = MutableStateFlow(false)
+    val emergencyConfigured: StateFlow<Boolean> = _emergencyConfigured.asStateFlow()
+
+    fun loadEmergencyConfig() {
+        _emergencyConfigured.value = try {
+            repository.getEmergencyConfig() != null
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun configureEmergencyBroadcast(contactIds: List<String>, message: String, includeLocation: Boolean) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.configureEmergencyBroadcast(contactIds, message, includeLocation)
+                }
+                _emergencyConfigured.value = true
+                showMessage("Emergency broadcast configured")
+            } catch (e: Exception) {
+                showMessage("Failed to configure: ${e.message}")
+            }
+        }
+    }
+
+    fun sendEmergencyBroadcast() {
+        viewModelScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    repository.sendEmergencyBroadcast()
+                }
+                showMessage("Emergency broadcast sent: ${result.sent}/${result.total} contacts")
+            } catch (e: Exception) {
+                showMessage("Failed to send: ${e.message}")
+            }
+        }
+    }
+
+    fun disableEmergencyBroadcast() {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.disableEmergencyBroadcast()
+                }
+                _emergencyConfigured.value = false
+                showMessage("Emergency broadcast disabled")
+            } catch (e: Exception) {
+                showMessage("Failed to disable: ${e.message}")
+            }
+        }
+    }
+
     // Recovery operations
     suspend fun createRecoveryClaim(oldPkHex: String): MobileRecoveryClaim? {
         return try {

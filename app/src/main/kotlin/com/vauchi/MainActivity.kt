@@ -249,11 +249,13 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             val deletionState by viewModel.deletionState.collectAsState()
             val consentRecords by viewModel.consentRecords.collectAsState()
             val isDuressEnabled by viewModel.isDuressEnabled.collectAsState()
+            val isEmergencyConfigured by viewModel.emergencyConfigured.collectAsState()
             if (state is UiState.Ready) {
                 LaunchedEffect(Unit) {
                     viewModel.loadDeletionState()
                     viewModel.loadConsentRecords()
                     viewModel.loadDuressStatus()
+                    viewModel.loadEmergencyConfig()
                 }
                 SettingsScreen(
                     displayName = state.displayName,
@@ -298,6 +300,11 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     isDuressEnabled = isDuressEnabled,
                     onSetupDuressPin = { pin -> viewModel.setupDuressPassword(pin) },
                     onDisableDuress = { viewModel.disableDuress() },
+                    // Emergency Broadcast
+                    isEmergencyConfigured = isEmergencyConfigured,
+                    onConfigureEmergency = { ids, msg, loc -> viewModel.configureEmergencyBroadcast(ids, msg, loc) },
+                    onSendEmergency = { viewModel.sendEmergencyBroadcast() },
+                    onDisableEmergency = { viewModel.disableEmergencyBroadcast() },
                     // Appearance
                     onThemeSettings = { currentScreen = Screen.ThemeSettings },
                     onLanguageSettings = { currentScreen = Screen.LanguageSettings },

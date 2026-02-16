@@ -428,6 +428,30 @@ class VauchiRepository(context: Context) {
      */
     fun panicShred() = vauchi.panicShred()
 
+    // Emergency Broadcast operations
+
+    /**
+     * Configure emergency broadcast
+     */
+    fun configureEmergencyBroadcast(contactIds: List<String>, message: String, includeLocation: Boolean) {
+        vauchi.configureEmergencyBroadcast(contactIds, message, includeLocation)
+    }
+
+    /**
+     * Get emergency broadcast config
+     */
+    fun getEmergencyConfig() = vauchi.getEmergencyConfig()
+
+    /**
+     * Send emergency broadcast
+     */
+    fun sendEmergencyBroadcast() = vauchi.sendEmergencyBroadcast()
+
+    /**
+     * Disable emergency broadcast
+     */
+    fun disableEmergencyBroadcast() = vauchi.disableEmergencyBroadcast()
+
     // Verification operations
     fun verifyContact(id: String) = vauchi.verifyContact(id)
 

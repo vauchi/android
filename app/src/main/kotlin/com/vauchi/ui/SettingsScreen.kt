@@ -77,6 +77,11 @@ fun SettingsScreen(
     isDuressEnabled: Boolean = false,
     onSetupDuressPin: (String) -> Unit = {},
     onDisableDuress: () -> Unit = {},
+    // Emergency Broadcast
+    isEmergencyConfigured: Boolean = false,
+    onConfigureEmergency: (List<String>, String, Boolean) -> Unit = { _, _, _ -> },
+    onSendEmergency: () -> Unit = {},
+    onDisableEmergency: () -> Unit = {},
     // Appearance
     onThemeSettings: () -> Unit = {},
     onLanguageSettings: () -> Unit = {},
@@ -563,6 +568,14 @@ fun SettingsScreen(
                 isDuressEnabled = isDuressEnabled,
                 onSetupDuressPin = onSetupDuressPin,
                 onDisableDuress = onDisableDuress
+            )
+
+            // Emergency Broadcast Section
+            EmergencyBroadcastSection(
+                isConfigured = isEmergencyConfigured,
+                onConfigure = onConfigureEmergency,
+                onSend = onSendEmergency,
+                onDisable = onDisableEmergency
             )
 
             // Content Updates Section (only if supported)
@@ -1741,6 +1754,147 @@ fun DuressPinSetupDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
+        }
+    )
+}
+
+@Composable
+fun EmergencyBroadcastSection(
+    isConfigured: Boolean,
+    onConfigure: (List<String>, String, Boolean) -> Unit,
+    onSend: () -> Unit,
+    onDisable: () -> Unit
+) {
+    var showConfigDialog by remember { mutableStateOf(false) }
+    var showSendConfirm by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Emergency Broadcast",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { heading() }
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Send encrypted emergency alerts to trusted contacts.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Status")
+                Text(
+                    text = if (isConfigured) "Configured" else "Not configured",
+                    color = if (isConfigured) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (!isConfigured) {
+                Button(onClick = { showConfigDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Configure")
+                }
+            } else {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { showSendConfirm = true },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Send Alert")
+                    }
+                    OutlinedButton(onClick = { onDisable() }, modifier = Modifier.weight(1f)) {
+                        Text("Disable")
+                    }
+                }
+            }
+        }
+    }
+
+    if (showConfigDialog) {
+        EmergencyConfigDialog(
+            onDismiss = { showConfigDialog = false },
+            onConfirm = { ids, msg, loc ->
+                onConfigure(ids, msg, loc)
+                showConfigDialog = false
+            }
+        )
+    }
+
+    if (showSendConfirm) {
+        AlertDialog(
+            onDismissRequest = { showSendConfirm = false },
+            title = { Text("Send Emergency Broadcast") },
+            text = { Text("Send an encrypted emergency alert to all trusted contacts?") },
+            confirmButton = {
+                TextButton(onClick = { onSend(); showSendConfirm = false }) {
+                    Text("Send", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSendConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
+}
+
+@Composable
+fun EmergencyConfigDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (List<String>, String, Boolean) -> Unit
+) {
+    var contactIds by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("I may be in danger. Please check on me.") }
+    var includeLocation by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Configure Emergency Broadcast") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = contactIds,
+                    onValueChange = { contactIds = it },
+                    label = { Text("Contact IDs (comma-separated)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = message,
+                    onValueChange = { message = it },
+                    label = { Text("Alert message") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Include location")
+                    Switch(checked = includeLocation, onCheckedChange = { includeLocation = it })
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val ids = contactIds.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                onConfirm(ids, message, includeLocation)
+            }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }
