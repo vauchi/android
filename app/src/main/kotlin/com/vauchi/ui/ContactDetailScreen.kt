@@ -567,7 +567,7 @@ fun ValidationBadge(
             onValidate?.let {
                 TextButton(
                     onClick = it,
-                    modifier = Modifier.height(24.dp),
+                    modifier = Modifier.sizeIn(minHeight = 48.dp),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                 ) {
                     Text(
@@ -580,7 +580,7 @@ fun ValidationBadge(
             onRevoke?.let {
                 TextButton(
                     onClick = it,
-                    modifier = Modifier.height(24.dp),
+                    modifier = Modifier.sizeIn(minHeight = 48.dp),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                 ) {
                     Text(
