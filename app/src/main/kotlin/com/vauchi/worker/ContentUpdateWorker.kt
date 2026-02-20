@@ -19,7 +19,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
@@ -45,6 +47,9 @@ class ContentUpdateWorker(
         private const val KEY_CACHED_MANIFEST = "cached_manifest"
 
         private const val DEFAULT_CONTENT_URL = "https://vauchi.app/app-files/"
+
+        /** Maximum content download size (5 MB, matches vauchi-core). */
+        private const val MAX_CONTENT_SIZE = 5L * 1024 * 1024
 
         /**
          * Schedule periodic content update checks.
@@ -227,7 +232,7 @@ class ContentUpdateWorker(
         type: ContentType,
         filename: String
     ) = withContext(Dispatchers.IO) {
-        val data = url.readBytes()
+        val data = downloadWithSizeLimit(url, filename)
 
         // Verify checksum
         val actualChecksum = computeChecksum(data)
@@ -247,6 +252,47 @@ class ContentUpdateWorker(
         tempFile.renameTo(file)
 
         Log.d(TAG, "Cached $filename (${data.size} bytes)")
+    }
+
+    /**
+     * Downloads content with a size limit to prevent memory exhaustion.
+     * Matches vauchi-core's 5 MB limit (content/config.rs).
+     */
+    private fun downloadWithSizeLimit(url: URL, filename: String): ByteArray {
+        val connection = url.openConnection() as HttpURLConnection
+        try {
+            connection.connectTimeout = 30_000
+            connection.readTimeout = 30_000
+
+            // Pre-flight size check via Content-Length header
+            val contentLength = connection.contentLengthLong
+            if (contentLength > MAX_CONTENT_SIZE) {
+                throw SecurityException(
+                    "Content too large for $filename: $contentLength bytes (max $MAX_CONTENT_SIZE)"
+                )
+            }
+
+            // Stream with per-chunk size enforcement
+            val buffer = ByteArrayOutputStream()
+            var totalRead = 0L
+            connection.inputStream.use { input ->
+                val chunk = ByteArray(8192)
+                var bytesRead: Int
+                while (input.read(chunk).also { bytesRead = it } != -1) {
+                    totalRead += bytesRead
+                    if (totalRead > MAX_CONTENT_SIZE) {
+                        throw SecurityException(
+                            "Content too large for $filename: $totalRead+ bytes (max $MAX_CONTENT_SIZE)"
+                        )
+                    }
+                    buffer.write(chunk, 0, bytesRead)
+                }
+            }
+
+            return buffer.toByteArray()
+        } finally {
+            connection.disconnect()
+        }
     }
 
     private fun computeChecksum(data: ByteArray): String {
