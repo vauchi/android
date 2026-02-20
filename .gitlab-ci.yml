@@ -50,6 +50,7 @@ stages:
 variables:
   ANDROID_COMPILE_SDK: "35"
   ANDROID_BUILD_TOOLS: "35.0.0"
+  GIT_DEPTH: "1"
 
   # GitLab Ultimate Security Configuration
   SAST_EXCLUDED_PATHS: "build/, .gradle/"
@@ -80,6 +81,8 @@ workflow:
       - gradle
     paths:
       - .gradle/
+      - ~/.gradle/caches/
+      - ~/.gradle/wrapper/
 
 .android-job:
   image: cimg/android:2024.01
@@ -239,6 +242,7 @@ lint:
 build:debug:
   extends: [.android-job, .timeout-standard]
   stage: build
+  needs: []
   script:
     - ./gradlew assembleDebug
   artifacts:
