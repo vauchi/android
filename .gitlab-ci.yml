@@ -75,10 +75,11 @@ workflow:
 .gradle-cache:
   cache: &gradle-cache
     key: ${CI_COMMIT_REF_SLUG}-gradle
+    fallback_keys:
+      - ${CI_DEFAULT_BRANCH}-gradle
+      - gradle
     paths:
       - .gradle/
-      - build/
-      - app/build/
 
 .android-job:
   image: cimg/android:2024.01
@@ -205,10 +206,11 @@ lint:
   stage: lint
   cache:
     key: ${CI_COMMIT_REF_SLUG}-gradle
+    fallback_keys:
+      - ${CI_DEFAULT_BRANCH}-gradle
+      - gradle
     paths:
       - .gradle/
-      - build/
-      - app/build/
     policy: pull  # Read-only for lint
   script:
     - ./gradlew lint
