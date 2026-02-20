@@ -184,7 +184,6 @@ class VauchiRepository(context: Context) {
         val session = vauchi.createQrExchangeManual()
         session.generateQr()
         session.processQr(qrData)
-        session.confirmProximity()
         session.theyScannedOurQr()
         session.performKeyAgreement()
         session.completeCardExchange("New Contact")
