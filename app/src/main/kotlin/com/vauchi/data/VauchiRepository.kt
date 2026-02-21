@@ -52,7 +52,9 @@ data class ExchangeData(
  * Repository class wrapping VauchiMobile UniFFI bindings.
  * Uses Android KeyStore for secure storage key management.
  */
-class VauchiRepository(context: Context) {
+class VauchiRepository(
+    context: Context,
+) {
     private val vauchi: VauchiMobile
     private val prefs: SharedPreferences
     private val preferences: VauchiPreferences
@@ -152,11 +154,18 @@ class VauchiRepository(context: Context) {
 
     fun getOwnCard(): MobileContactCard = vauchi.getOwnCard()
 
-    fun addField(fieldType: MobileFieldType, label: String, value: String) {
+    fun addField(
+        fieldType: MobileFieldType,
+        label: String,
+        value: String,
+    ) {
         vauchi.addField(fieldType, label, value)
     }
 
-    fun updateField(label: String, newValue: String) {
+    fun updateField(
+        label: String,
+        newValue: String,
+    ) {
         vauchi.updateField(label, newValue)
     }
 
@@ -194,7 +203,10 @@ class VauchiRepository(context: Context) {
 
     fun listContacts() = vauchi.listContacts()
 
-    fun listContactsPaginated(offset: UInt, limit: UInt) = vauchi.listContactsPaginated(offset, limit)
+    fun listContactsPaginated(
+        offset: UInt,
+        limit: UInt,
+    ) = vauchi.listContactsPaginated(offset, limit)
 
     fun searchContacts(query: String) = vauchi.searchContacts(query)
 
@@ -203,17 +215,24 @@ class VauchiRepository(context: Context) {
     fun removeContact(id: String) = vauchi.removeContact(id)
 
     // Visibility operations
-    fun hideFieldFromContact(contactId: String, fieldLabel: String) {
+    fun hideFieldFromContact(
+        contactId: String,
+        fieldLabel: String,
+    ) {
         vauchi.hideFieldFromContact(contactId, fieldLabel)
     }
 
-    fun showFieldToContact(contactId: String, fieldLabel: String) {
+    fun showFieldToContact(
+        contactId: String,
+        fieldLabel: String,
+    ) {
         vauchi.showFieldToContact(contactId, fieldLabel)
     }
 
-    fun isFieldVisibleToContact(contactId: String, fieldLabel: String): Boolean {
-        return vauchi.isFieldVisibleToContact(contactId, fieldLabel)
-    }
+    fun isFieldVisibleToContact(
+        contactId: String,
+        fieldLabel: String,
+    ): Boolean = vauchi.isFieldVisibleToContact(contactId, fieldLabel)
 
     // Visibility Labels operations
     // Based on: features/visibility_labels.feature
@@ -236,7 +255,10 @@ class VauchiRepository(context: Context) {
     /**
      * Rename a visibility label
      */
-    fun renameLabel(labelId: String, newName: String) {
+    fun renameLabel(
+        labelId: String,
+        newName: String,
+    ) {
         vauchi.renameLabel(labelId, newName)
     }
 
@@ -250,14 +272,20 @@ class VauchiRepository(context: Context) {
     /**
      * Add contact to a label
      */
-    fun addContactToLabel(labelId: String, contactId: String) {
+    fun addContactToLabel(
+        labelId: String,
+        contactId: String,
+    ) {
         vauchi.addContactToLabel(labelId, contactId)
     }
 
     /**
      * Remove contact from a label
      */
-    fun removeContactFromLabel(labelId: String, contactId: String) {
+    fun removeContactFromLabel(
+        labelId: String,
+        contactId: String,
+    ) {
         vauchi.removeContactFromLabel(labelId, contactId)
     }
 
@@ -269,7 +297,11 @@ class VauchiRepository(context: Context) {
     /**
      * Set field visibility for a label
      */
-    fun setLabelFieldVisibility(labelId: String, fieldId: String, visible: Boolean) {
+    fun setLabelFieldVisibility(
+        labelId: String,
+        fieldId: String,
+        visible: Boolean,
+    ) {
         vauchi.setLabelFieldVisibility(labelId, fieldId, visible)
     }
 
@@ -284,20 +316,28 @@ class VauchiRepository(context: Context) {
     /**
      * Validate a contact's field
      */
-    fun validateField(contactId: String, fieldId: String, fieldValue: String) =
-        vauchi.validateField(contactId, fieldId, fieldValue)
+    fun validateField(
+        contactId: String,
+        fieldId: String,
+        fieldValue: String,
+    ) = vauchi.validateField(contactId, fieldId, fieldValue)
 
     /**
      * Get validation status for a contact's field
      */
-    fun getFieldValidationStatus(contactId: String, fieldId: String, fieldValue: String) =
-        vauchi.getFieldValidationStatus(contactId, fieldId, fieldValue)
+    fun getFieldValidationStatus(
+        contactId: String,
+        fieldId: String,
+        fieldValue: String,
+    ) = vauchi.getFieldValidationStatus(contactId, fieldId, fieldValue)
 
     /**
      * Revoke your validation of a contact's field
      */
-    fun revokeFieldValidation(contactId: String, fieldId: String): Boolean =
-        vauchi.revokeFieldValidation(contactId, fieldId)
+    fun revokeFieldValidation(
+        contactId: String,
+        fieldId: String,
+    ): Boolean = vauchi.revokeFieldValidation(contactId, fieldId)
 
     /**
      * List all validations you have made
@@ -307,19 +347,26 @@ class VauchiRepository(context: Context) {
     /**
      * Check if you have validated a specific field
      */
-    fun hasValidatedField(contactId: String, fieldId: String): Boolean =
-        vauchi.hasValidatedField(contactId, fieldId)
+    fun hasValidatedField(
+        contactId: String,
+        fieldId: String,
+    ): Boolean = vauchi.hasValidatedField(contactId, fieldId)
 
     /**
      * Get the validation count for a field
      */
-    fun getFieldValidationCount(contactId: String, fieldId: String): UInt =
-        vauchi.getFieldValidationCount(contactId, fieldId)
+    fun getFieldValidationCount(
+        contactId: String,
+        fieldId: String,
+    ): UInt = vauchi.getFieldValidationCount(contactId, fieldId)
 
     // Backup operations
     fun exportBackup(password: String): String = vauchi.exportBackup(password)
 
-    fun importBackup(backupData: String, password: String) {
+    fun importBackup(
+        backupData: String,
+        password: String,
+    ) {
         vauchi.importBackup(backupData, password)
     }
 
@@ -330,8 +377,10 @@ class VauchiRepository(context: Context) {
 
     fun searchSocialNetworks(query: String) = vauchi.searchSocialNetworks(query)
 
-    fun getProfileUrl(networkId: String, username: String): String? =
-        vauchi.getProfileUrl(networkId, username)
+    fun getProfileUrl(
+        networkId: String,
+        username: String,
+    ): String? = vauchi.getProfileUrl(networkId, username)
 
     // Content Updates operations
     // Based on: features/content_updates.feature
@@ -361,20 +410,20 @@ class VauchiRepository(context: Context) {
     /**
      * Check if user has seen a specific aha moment
      */
-    fun hasSeenAhaMoment(momentType: uniffi.vauchi_mobile.MobileAhaMomentType): Boolean =
-        vauchi.hasSeenAhaMoment(momentType)
+    fun hasSeenAhaMoment(momentType: uniffi.vauchi_mobile.MobileAhaMomentType): Boolean = vauchi.hasSeenAhaMoment(momentType)
 
     /**
      * Try to trigger an aha moment (returns null if already seen)
      */
-    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_mobile.MobileAhaMomentType) =
-        vauchi.tryTriggerAhaMoment(momentType)
+    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_mobile.MobileAhaMomentType) = vauchi.tryTriggerAhaMoment(momentType)
 
     /**
      * Try to trigger an aha moment with context (returns null if already seen)
      */
-    fun tryTriggerAhaMomentWithContext(momentType: uniffi.vauchi_mobile.MobileAhaMomentType, context: String) =
-        vauchi.tryTriggerAhaMomentWithContext(momentType, context)
+    fun tryTriggerAhaMomentWithContext(
+        momentType: uniffi.vauchi_mobile.MobileAhaMomentType,
+        context: String,
+    ) = vauchi.tryTriggerAhaMomentWithContext(momentType, context)
 
     /**
      * Get count of seen aha moments
@@ -443,7 +492,11 @@ class VauchiRepository(context: Context) {
     /**
      * Configure emergency broadcast
      */
-    fun configureEmergencyBroadcast(contactIds: List<String>, message: String, includeLocation: Boolean) {
+    fun configureEmergencyBroadcast(
+        contactIds: List<String>,
+        message: String,
+        includeLocation: Boolean,
+    ) {
         // TODO: Replace with vauchi.configureEmergencyBroadcast(contactIds, message, includeLocation)
         throw UnsupportedOperationException("Emergency broadcast not yet available in bindings")
     }
@@ -481,7 +534,11 @@ class VauchiRepository(context: Context) {
         return Triple(false, emptyList(), true)
     }
 
-    fun saveTorConfig(enabled: Boolean, bridges: List<String>, preferOnion: Boolean) {
+    fun saveTorConfig(
+        enabled: Boolean,
+        bridges: List<String>,
+        preferOnion: Boolean,
+    ) {
         // TODO: Replace with actual UniFFI call once bindings are published
         throw UnsupportedOperationException("Tor mode not yet available in bindings")
     }
@@ -632,6 +689,72 @@ class VauchiRepository(context: Context) {
      * @return True if this is the primary device
      */
     fun isPrimaryDevice(): Boolean = vauchi.isPrimaryDevice()
+
+    // Device Linking Protocol operations (relay transport)
+
+    /**
+     * Start the device link protocol as initiator (primary device).
+     * Returns an initiator state machine that generates QR data and drives the protocol.
+     *
+     * NOTE: Stub until relay transport bindings are published via vauchi-mobile-android.
+     */
+    fun startDeviceLink(): Any {
+        // TODO: Replace with vauchi.startDeviceLink() once bindings are published
+        throw UnsupportedOperationException("Relay transport not yet available in bindings")
+    }
+
+    /**
+     * Start the device link protocol as responder (new device joining).
+     *
+     * NOTE: Stub until relay transport bindings are published via vauchi-mobile-android.
+     */
+    fun startDeviceJoin(
+        qrData: String,
+        deviceName: String,
+    ): Any {
+        // TODO: Replace with vauchi.startDeviceJoin(qrData, deviceName) once bindings are published
+        throw UnsupportedOperationException("Relay transport not yet available in bindings")
+    }
+
+    /**
+     * Listen for an incoming device link request via the relay.
+     *
+     * NOTE: Stub until relay transport bindings are published via vauchi-mobile-android.
+     */
+    fun listenForDeviceLinkRequest(timeoutSecs: ULong): Any {
+        // TODO: Replace with vauchi.listenForDeviceLinkRequest(timeoutSecs) once bindings are published
+        throw UnsupportedOperationException("Relay transport not yet available in bindings")
+    }
+
+    /**
+     * Send a device link response back via the relay.
+     *
+     * NOTE: Stub until relay transport bindings are published via vauchi-mobile-android.
+     */
+    fun sendDeviceLinkResponse(
+        senderToken: String,
+        encryptedResponse: ByteArray,
+    ) {
+        // TODO: Replace with vauchi.sendDeviceLinkResponse(senderToken, encryptedResponse.toList())
+        throw UnsupportedOperationException("Relay transport not yet available in bindings")
+    }
+
+    /**
+     * Send a device link request via the relay and wait for a response.
+     *
+     * NOTE: Stub until relay transport bindings are published via vauchi-mobile-android.
+     */
+    fun sendDeviceLinkRequest(
+        targetIdentity: String,
+        senderToken: String,
+        encryptedRequest: ByteArray,
+        timeoutSecs: ULong,
+    ): ByteArray {
+        // TODO: Replace with vauchi.sendDeviceLinkRequest(
+        //     targetIdentity, senderToken, encryptedRequest.toList(), timeoutSecs
+        // ).toByteArray()
+        throw UnsupportedOperationException("Relay transport not yet available in bindings")
+    }
 
     // GDPR operations
     // Based on: features/privacy_compliance.feature

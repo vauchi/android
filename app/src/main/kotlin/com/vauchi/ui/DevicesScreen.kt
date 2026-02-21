@@ -13,21 +13,22 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DesktopWindows
+import androidx.compose.material.icons.filled.Laptop
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PhoneAndroid
-import androidx.compose.material.icons.filled.Tablet
-import androidx.compose.material.icons.filled.Laptop
-import androidx.compose.material.icons.filled.Watch
-import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Tablet
+import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -50,10 +51,11 @@ import uniffi.vauchi_mobile.MobileDeviceLinkData
 @Composable
 fun DevicesScreen(
     onBack: () -> Unit,
+    viewModel: MainViewModel,
     getDevices: () -> List<MobileDeviceInfo>,
     generateLinkQr: () -> MobileDeviceLinkData,
     unlinkDevice: (UInt) -> Boolean,
-    isPrimaryDevice: () -> Boolean
+    isPrimaryDevice: () -> Boolean,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -108,32 +110,35 @@ fun DevicesScreen(
                     IconButton(onClick = { showLinkDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Link Device")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         when {
             isLoading -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                    contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()
                 }
             }
+
             errorMessage != null -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "Error: $errorMessage",
-                            color = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { refreshDevices() }) {
@@ -142,41 +147,47 @@ fun DevicesScreen(
                     }
                 }
             }
+
             else -> {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item {
                         Text(
                             text = "${localizationManager.t("devices.title")} (${devices.size})",
                             style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.semantics { heading() }
+                            modifier = Modifier.semantics { heading() },
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (isPrimary) {
-                                "This is the primary device. You can link additional devices."
-                            } else {
-                                "This device is linked to your primary identity."
-                            },
+                            text =
+                                if (isPrimary) {
+                                    "This is the primary device. You can link additional devices."
+                                } else {
+                                    "This device is linked to your primary identity."
+                                },
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
 
                     items(devices) { device ->
                         DeviceCard(
                             device = device,
-                            onUnlink = if (!device.isCurrent) {
-                                {
-                                    deviceToUnlink = device
-                                    showUnlinkDialog = true
-                                }
-                            } else null
+                            onUnlink =
+                                if (!device.isCurrent) {
+                                    {
+                                        deviceToUnlink = device
+                                        showUnlinkDialog = true
+                                    }
+                                } else {
+                                    null
+                                },
                         )
                     }
 
@@ -184,21 +195,23 @@ fun DevicesScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                ),
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     text = "Multi-Device Sync",
-                                    style = MaterialTheme.typography.titleSmall
+                                    style = MaterialTheme.typography.titleSmall,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Link multiple devices to access your contacts from anywhere. " +
+                                    text =
+                                        "Link multiple devices to access your contacts from anywhere. " +
                                             "All devices share the same identity and stay in sync.",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -211,8 +224,11 @@ fun DevicesScreen(
     // Link new device dialog
     if (showLinkDialog) {
         DeviceLinkDialog(
-            onDismiss = { showLinkDialog = false },
-            generateLinkQr = generateLinkQr
+            viewModel = viewModel,
+            onDismiss = {
+                viewModel.cancelDeviceLink()
+                showLinkDialog = false
+            },
         )
     }
 
@@ -227,7 +243,7 @@ fun DevicesScreen(
             text = {
                 Text(
                     "This will remove \"${deviceToUnlink!!.deviceName}\" from your linked devices. " +
-                    "The device will no longer have access to your identity."
+                        "The device will no longer have access to your identity.",
                 )
             },
             confirmButton = {
@@ -248,9 +264,10 @@ fun DevicesScreen(
                             deviceToUnlink = null
                         }
                     },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                    colors =
+                        ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
                 ) {
                     Text("Unlink")
                 }
@@ -262,199 +279,354 @@ fun DevicesScreen(
                 }) {
                     Text(localizationManager.t("action.cancel"))
                 }
-            }
+            },
         )
     }
 }
 
+/**
+ * Full device linking dialog with state-driven flow.
+ *
+ * Phases: QR display -> waiting for request -> confirmation (name + code)
+ *         -> proximity verification -> completing -> success/failed
+ *
+ * Uses relay transport for the device link protocol. When bindings are not yet
+ * available, falls back to the QR-only flow with a "waiting" indicator.
+ */
 @Composable
 fun DeviceLinkDialog(
+    viewModel: MainViewModel,
     onDismiss: () -> Unit,
-    generateLinkQr: () -> MobileDeviceLinkData
 ) {
-    var linkData by remember { mutableStateOf<MobileDeviceLinkData?>(null) }
-    var isGenerating by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var timeRemaining by remember { mutableStateOf(0L) }
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
     val coroutineScope = rememberCoroutineScope()
+    val deviceLinkState by viewModel.deviceLinkState.collectAsState()
+    val proximitySupported by viewModel.proximitySupported.collectAsState()
+    val proximityCapability by viewModel.proximityCapability.collectAsState()
 
-    // Generate QR on first composition
+    // Start the protocol on first composition
     LaunchedEffect(Unit) {
-        try {
-            linkData = generateLinkQr()
-            val now = System.currentTimeMillis() / 1000
-            timeRemaining = maxOf(0L, linkData!!.expiresAt.toLong() - now)
-            isGenerating = false
-        } catch (e: Exception) {
-            errorMessage = e.message
-            isGenerating = false
-        }
+        viewModel.startDeviceLinkInitiator()
     }
 
-    // Countdown timer
-    LaunchedEffect(linkData) {
-        while (timeRemaining > 0) {
-            delay(1000)
-            timeRemaining--
+    // When we reach WaitingForRequest, start listening for relay request
+    LaunchedEffect(deviceLinkState) {
+        if (deviceLinkState is MainViewModel.DeviceLinkState.WaitingForRequest) {
+            viewModel.listenForDeviceLinkRequest()
         }
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Link New Device") },
+        title = {
+            Text(
+                when (deviceLinkState) {
+                    is MainViewModel.DeviceLinkState.Idle,
+                    is MainViewModel.DeviceLinkState.GeneratingQR,
+                    -> "Link New Device"
+
+                    is MainViewModel.DeviceLinkState.WaitingForRequest -> "Link New Device"
+
+                    is MainViewModel.DeviceLinkState.ConfirmingDevice -> "Confirm Device"
+
+                    is MainViewModel.DeviceLinkState.VerifyingProximity -> "Verify Proximity"
+
+                    is MainViewModel.DeviceLinkState.Completing -> "Completing Link"
+
+                    is MainViewModel.DeviceLinkState.Success -> "Device Linked"
+
+                    is MainViewModel.DeviceLinkState.Failed -> "Link Failed"
+                },
+            )
+        },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                when {
-                    isGenerating -> {
+                when (val state = deviceLinkState) {
+                    is MainViewModel.DeviceLinkState.Idle,
+                    is MainViewModel.DeviceLinkState.GeneratingQR,
+                    -> {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("Generating link...")
                     }
-                    errorMessage != null -> {
-                        Text(
-                            text = "Error: $errorMessage",
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                    linkData != null -> {
+
+                    is MainViewModel.DeviceLinkState.WaitingForRequest -> {
                         Text(
                             text = "Scan this QR code on your new device",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
 
                         // QR Code
-                        val qrBitmap = remember(linkData!!.qrData) {
-                            generateQRBitmap(linkData!!.qrData, 250)
-                        }
+                        val qrBitmap =
+                            remember(state.qrData) {
+                                generateQRBitmap(state.qrData, 250)
+                            }
                         if (qrBitmap != null) {
                             Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color.White
-                                )
+                                colors =
+                                    CardDefaults.cardColors(
+                                        containerColor = Color.White,
+                                    ),
                             ) {
                                 Image(
                                     bitmap = qrBitmap.asImageBitmap(),
                                     contentDescription = "Device Link QR Code",
-                                    modifier = Modifier
-                                        .size(250.dp)
-                                        .padding(8.dp)
+                                    modifier =
+                                        Modifier
+                                            .size(250.dp)
+                                            .padding(8.dp),
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Expiry timer
-                        if (timeRemaining > 0) {
-                            val minutes = timeRemaining / 60
-                            val seconds = timeRemaining % 60
-                            Text(
-                                text = "Expires in ${minutes}:${seconds.toString().padStart(2, '0')}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (timeRemaining < 60)
-                                    MaterialTheme.colorScheme.error
-                                else
-                                    MaterialTheme.colorScheme.onSurfaceVariant
+                        // Waiting indicator
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
                             )
-                        } else {
                             Text(
-                                text = "QR code expired",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.error
+                                text = "Waiting for new device to connect...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Button(onClick = {
-                                coroutineScope.launch {
-                                    isGenerating = true
-                                    try {
-                                        linkData = generateLinkQr()
-                                        val now = System.currentTimeMillis() / 1000
-                                        timeRemaining = maxOf(0L, linkData!!.expiresAt.toLong() - now)
-                                        errorMessage = null
-                                    } catch (e: Exception) {
-                                        errorMessage = e.message
-                                    }
-                                    isGenerating = false
-                                }
-                            }) {
-                                Text(localizationManager.t("devices.generate_link"))
-                            }
                         }
-
-                        Spacer(modifier = Modifier.height(8.dp))
 
                         // Copy button
                         TextButton(onClick = {
                             ClipboardUtils.copyWithAutoClear(
                                 context,
                                 coroutineScope,
-                                linkData!!.qrData,
-                                "Device Link"
+                                state.qrData,
+                                "Device Link",
                             )
                         }) {
                             Icon(
                                 Icons.Default.Share,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(16.dp),
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Copy Link")
                         }
 
                         Text(
-                            text = "Open Vauchi on your new device and select \"Join Existing Identity\" to scan this code.",
+                            text =
+                                "Open Vauchi on your new device and select " +
+                                    "\"Join Existing Identity\" to scan this code.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+
+                    is MainViewModel.DeviceLinkState.ConfirmingDevice -> {
+                        // Device name
+                        Text(
+                            text = "A device wants to link:",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Card(
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                ),
+                        ) {
+                            Column(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                            ) {
+                                Text(
+                                    text = state.deviceName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Confirmation code:",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    text = state.confirmationCode,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Verify this code matches what is shown on the other device.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+
+                        // Proximity verification
+                        ProximityVerificationSection(
+                            challenge = state.challenge,
+                            proximitySupported = proximitySupported,
+                            proximityCapability = proximityCapability,
+                            viewModel = viewModel,
+                            onVerified = {
+                                coroutineScope.launch {
+                                    viewModel.approveDeviceLink()
+                                }
+                            },
+                            onCancel = onDismiss,
+                        )
+                    }
+
+                    is MainViewModel.DeviceLinkState.VerifyingProximity -> {
+                        ProximityVerificationSection(
+                            challenge = state.challenge,
+                            proximitySupported = proximitySupported,
+                            proximityCapability = proximityCapability,
+                            viewModel = viewModel,
+                            onVerified = {
+                                coroutineScope.launch {
+                                    viewModel.approveDeviceLink()
+                                }
+                            },
+                            onCancel = onDismiss,
+                        )
+                    }
+
+                    is MainViewModel.DeviceLinkState.Completing -> {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Completing device link...",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+
+                    is MainViewModel.DeviceLinkState.Success -> {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Success",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = "Device linked successfully!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = "The new device now shares your identity and will sync automatically.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    is MainViewModel.DeviceLinkState.Failed -> {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Failed",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Text(
+                            text = state.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        Button(onClick = {
+                            coroutineScope.launch {
+                                viewModel.startDeviceLinkInitiator()
+                            }
+                        }) {
+                            Text(localizationManager.t("action.retry"))
+                        }
                     }
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(localizationManager.t("action.done"))
+                Text(
+                    when (deviceLinkState) {
+                        is MainViewModel.DeviceLinkState.Success -> localizationManager.t("action.done")
+                        is MainViewModel.DeviceLinkState.Failed -> localizationManager.t("action.cancel")
+                        else -> localizationManager.t("action.cancel")
+                    },
+                )
             }
-        }
+        },
+    )
+}
+
+/**
+ * Proximity verification section used within the device link dialog.
+ * Wraps the shared ProximityVerification composable with ViewModel callbacks.
+ */
+@Composable
+private fun ProximityVerificationSection(
+    challenge: ByteArray,
+    proximitySupported: Boolean,
+    proximityCapability: String,
+    viewModel: MainViewModel,
+    onVerified: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    com.vauchi.ui.components.ProximityVerification(
+        challenge = challenge,
+        proximitySupported = proximitySupported,
+        proximityCapability = proximityCapability,
+        onEmitChallenge = { ch -> viewModel.emitProximityChallenge(ch) },
+        onListenForResponse = { timeout -> viewModel.listenForProximityResponse(timeout) },
+        onStopVerification = { viewModel.stopProximityVerification() },
+        onVerified = onVerified,
+        onCancel = onCancel,
     )
 }
 
 @Composable
 fun DeviceCard(
     device: MobileDeviceInfo,
-    onUnlink: (() -> Unit)?
+    onUnlink: (() -> Unit)?,
 ) {
-    val deviceIcon = when {
-        device.deviceName.contains("iPhone", ignoreCase = true) -> Icons.Default.PhoneAndroid
-        device.deviceName.contains("iPad", ignoreCase = true) -> Icons.Default.Tablet
-        device.deviceName.contains("Mac", ignoreCase = true) -> Icons.Default.Laptop
-        device.deviceName.contains("Watch", ignoreCase = true) -> Icons.Default.Watch
-        device.deviceName.contains("Android", ignoreCase = true) -> Icons.Default.PhoneAndroid
-        else -> Icons.Default.DesktopWindows
-    }
+    val deviceIcon =
+        when {
+            device.deviceName.contains("iPhone", ignoreCase = true) -> Icons.Default.PhoneAndroid
+            device.deviceName.contains("iPad", ignoreCase = true) -> Icons.Default.Tablet
+            device.deviceName.contains("Mac", ignoreCase = true) -> Icons.Default.Laptop
+            device.deviceName.contains("Watch", ignoreCase = true) -> Icons.Default.Watch
+            device.deviceName.contains("Android", ignoreCase = true) -> Icons.Default.PhoneAndroid
+            else -> Icons.Default.DesktopWindows
+        }
 
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 deviceIcon,
                 contentDescription = null,
                 modifier = Modifier.size(40.dp),
-                tint = if (device.isCurrent)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                tint =
+                    if (device.isCurrent) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -462,7 +634,7 @@ fun DeviceCard(
                     Text(
                         text = device.deviceName,
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.semantics { heading() }
+                        modifier = Modifier.semantics { heading() },
                     )
                     if (device.isCurrent) {
                         Spacer(modifier = Modifier.width(8.dp))
@@ -473,9 +645,9 @@ fun DeviceCard(
                                 Icon(
                                     Icons.Default.Check,
                                     contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(16.dp),
                                 )
-                            }
+                            },
                         )
                     }
                 }
@@ -483,15 +655,17 @@ fun DeviceCard(
                 Text(
                     text = device.publicKeyPrefix,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = if (device.isActive) "Active" else "Inactive",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (device.isActive)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.error
+                    color =
+                        if (device.isActive) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
                 )
             }
 
@@ -501,14 +675,14 @@ fun DeviceCard(
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "Unlink device",
-                        tint = MaterialTheme.colorScheme.error
+                        tint = MaterialTheme.colorScheme.error,
                     )
                 }
             } else if (device.isCurrent) {
                 Icon(
                     Icons.Default.Check,
                     contentDescription = "Current device",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
                 )
             }
         }
@@ -518,8 +692,11 @@ fun DeviceCard(
 /**
  * Generate a QR code bitmap from string data
  */
-private fun generateQRBitmap(data: String, size: Int): Bitmap? {
-    return try {
+private fun generateQRBitmap(
+    data: String,
+    size: Int,
+): Bitmap? =
+    try {
         val writer = QRCodeWriter()
         val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, size, size)
         val width = bitMatrix.width
@@ -528,9 +705,13 @@ private fun generateQRBitmap(data: String, size: Int): Bitmap? {
         for (x in 0 until width) {
             for (y in 0 until height) {
                 bitmap.setPixel(
-                    x, y,
-                    if (bitMatrix.get(x, y)) android.graphics.Color.BLACK
-                    else android.graphics.Color.WHITE
+                    x,
+                    y,
+                    if (bitMatrix.get(x, y)) {
+                        android.graphics.Color.BLACK
+                    } else {
+                        android.graphics.Color.WHITE
+                    },
                 )
             }
         }
@@ -538,4 +719,3 @@ private fun generateQRBitmap(data: String, size: Int): Bitmap? {
     } catch (e: Exception) {
         null
     }
-}

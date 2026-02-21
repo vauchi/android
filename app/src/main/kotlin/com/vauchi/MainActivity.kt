@@ -4,66 +4,66 @@
 
 package com.vauchi
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.background
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import com.vauchi.ui.ExchangeScreen
-import com.vauchi.ui.ContactsScreen
-import com.vauchi.ui.ContactDetailScreen
-import com.vauchi.ui.QrScannerScreen
-import com.vauchi.ui.SettingsScreen
-import com.vauchi.ui.DevicesScreen
-import com.vauchi.ui.RecoveryScreen
-import com.vauchi.ui.LabelsScreen
-import com.vauchi.ui.LabelDetailScreen
-import com.vauchi.ui.ThemeSettingsScreen
-import com.vauchi.ui.LanguageSettingsScreen
-import com.vauchi.ui.HelpScreen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vauchi.ui.ContactDetailScreen
+import com.vauchi.ui.ContactsScreen
+import com.vauchi.ui.DevicesScreen
+import com.vauchi.ui.ExchangeScreen
+import com.vauchi.ui.HelpScreen
+import com.vauchi.ui.LabelDetailScreen
+import com.vauchi.ui.LabelsScreen
+import com.vauchi.ui.LanguageSettingsScreen
 import com.vauchi.ui.MainViewModel
+import com.vauchi.ui.QrScannerScreen
+import com.vauchi.ui.RecoveryScreen
+import com.vauchi.ui.SettingsScreen
 import com.vauchi.ui.SyncState
+import com.vauchi.ui.ThemeSettingsScreen
 import com.vauchi.ui.UiState
 import com.vauchi.ui.model.ContentApplyResult
 import com.vauchi.ui.model.ContentUpdateStatus
 import com.vauchi.ui.model.ContentUpdateType
 import com.vauchi.ui.model.PasswordStrengthResult
-import uniffi.vauchi_mobile.MobileUpdateStatus
-import uniffi.vauchi_mobile.MobileApplyResult
-import uniffi.vauchi_mobile.MobileContentType
 import com.vauchi.ui.onboarding.OnboardingScreen
 import com.vauchi.ui.theme.VauchiTheme
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.launch
+import uniffi.vauchi_mobile.MobileApplyResult
 import uniffi.vauchi_mobile.MobileContactCard
+import uniffi.vauchi_mobile.MobileContentType
 import uniffi.vauchi_mobile.MobileFieldType
+import uniffi.vauchi_mobile.MobileUpdateStatus
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
             VauchiTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = MaterialTheme.colorScheme.background,
                 ) {
                     MainScreen()
                 }
@@ -83,8 +83,19 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class Screen {
-    Home, Exchange, Contacts, ContactDetail, QrScanner, Settings, Devices, Recovery, Labels, LabelDetail,
-    ThemeSettings, LanguageSettings, Help
+    Home,
+    Exchange,
+    Contacts,
+    ContactDetail,
+    QrScanner,
+    Settings,
+    Devices,
+    Recovery,
+    Labels,
+    LabelDetail,
+    ThemeSettings,
+    LanguageSettings,
+    Help,
 }
 
 @Composable
@@ -105,11 +116,12 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
 
     // Auto-sync when app comes to foreground
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME && uiState is UiState.Ready) {
-                viewModel.sync()
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME && uiState is UiState.Ready) {
+                    viewModel.sync()
+                }
             }
-        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
@@ -126,300 +138,333 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (currentScreen) {
-        Screen.Home -> {
-            when (val state = uiState) {
-                is UiState.Loading -> LoadingScreen()
-                is UiState.Setup -> SetupScreen(onCreateIdentity = viewModel::createIdentity)
-                is UiState.Onboarding -> {
-                    OnboardingScreen(
-                        onComplete = { displayName, phone, email ->
-                            viewModel.completeOnboarding(displayName, phone, email)
-                        },
-                        onRestore = { showRestoreDialog = true }
-                    )
+            Screen.Home -> {
+                when (val state = uiState) {
+                    is UiState.Loading -> {
+                        LoadingScreen()
+                    }
 
-                    if (showRestoreDialog) {
-                        RestoreIdentityDialog(
-                            onDismiss = { showRestoreDialog = false },
-                            onRestore = { backupData, password ->
-                                coroutineScope.launch {
-                                    val success = viewModel.importBackup(backupData, password)
-                                    if (success) {
-                                        showRestoreDialog = false
+                    is UiState.Setup -> {
+                        SetupScreen(onCreateIdentity = viewModel::createIdentity)
+                    }
+
+                    is UiState.Onboarding -> {
+                        OnboardingScreen(
+                            onComplete = { displayName, phone, email ->
+                                viewModel.completeOnboarding(displayName, phone, email)
+                            },
+                            onRestore = { showRestoreDialog = true },
+                        )
+
+                        if (showRestoreDialog) {
+                            RestoreIdentityDialog(
+                                onDismiss = { showRestoreDialog = false },
+                                onRestore = { backupData, password ->
+                                    coroutineScope.launch {
+                                        val success = viewModel.importBackup(backupData, password)
+                                        if (success) {
+                                            showRestoreDialog = false
+                                        }
                                     }
-                                }
-                            }
+                                },
+                            )
+                        }
+                    }
+
+                    is UiState.Ready -> {
+                        ReadyScreen(
+                            displayName = state.displayName,
+                            publicId = state.publicId,
+                            card = state.card,
+                            contactCount = state.contactCount,
+                            onAddField = viewModel::addField,
+                            onRemoveField = viewModel::removeField,
+                            onExchange = { currentScreen = Screen.Exchange },
+                            onContacts = { currentScreen = Screen.Contacts },
+                            onSettings = { currentScreen = Screen.Settings },
+                            socialNetworks = viewModel.listSocialNetworks(),
+                            onGetProfileUrl = viewModel::getProfileUrl,
+                            syncState = syncState,
+                            isOnline = isOnline,
+                            lastSyncTime = lastSyncTime,
+                            onSync = { viewModel.sync() },
+                        )
+                    }
+
+                    is UiState.Error -> {
+                        ErrorScreen(
+                            message = state.message,
+                            onRetry = { viewModel.refresh() },
                         )
                     }
                 }
-                is UiState.Ready -> ReadyScreen(
-                    displayName = state.displayName,
-                    publicId = state.publicId,
-                    card = state.card,
-                    contactCount = state.contactCount,
-                    onAddField = viewModel::addField,
-                    onRemoveField = viewModel::removeField,
-                    onExchange = { currentScreen = Screen.Exchange },
-                    onContacts = { currentScreen = Screen.Contacts },
-                    onSettings = { currentScreen = Screen.Settings },
-                    socialNetworks = viewModel.listSocialNetworks(),
-                    onGetProfileUrl = viewModel::getProfileUrl,
-                    syncState = syncState,
-                    isOnline = isOnline,
-                    lastSyncTime = lastSyncTime,
-                    onSync = { viewModel.sync() }
-                )
-                is UiState.Error -> ErrorScreen(
-                    message = state.message,
-                    onRetry = { viewModel.refresh() }
-                )
             }
-        }
-        Screen.Exchange -> {
-            ExchangeScreen(
-                onBack = { currentScreen = Screen.Home },
-                onGenerateQr = { viewModel.generateExchangeQr() },
-                onScanQr = { currentScreen = Screen.QrScanner }
-            )
-        }
-        Screen.QrScanner -> {
-            QrScannerScreen(
-                onBack = { currentScreen = Screen.Exchange },
-                onQrScanned = { qrData ->
-                    coroutineScope.launch {
-                        viewModel.completeExchange(qrData)
-                        currentScreen = Screen.Home
-                    }
-                }
-            )
-        }
-        Screen.Contacts -> {
-            val demoContact by viewModel.demoContact.collectAsState()
-            ContactsScreen(
-                onBack = { currentScreen = Screen.Home },
-                onListContacts = { viewModel.listContacts() },
-                onSearchContacts = { query -> viewModel.searchContacts(query) },
-                onListContactsPaginated = { offset, limit -> viewModel.listContactsPaginated(offset, limit) },
-                onRemoveContact = { id -> viewModel.removeContact(id) },
-                onContactClick = { id ->
-                    selectedContactId = id
-                    currentScreen = Screen.ContactDetail
-                },
-                syncState = syncState,
-                onSync = { viewModel.sync() },
-                demoContact = demoContact,
-                onDismissDemo = { viewModel.dismissDemoContact() }
-            )
-        }
-        Screen.ContactDetail -> {
-            selectedContactId?.let { contactId ->
-                ContactDetailScreen(
-                    contactId = contactId,
-                    onBack = { currentScreen = Screen.Contacts },
-                    onGetContact = { viewModel.getContact(it) },
-                    onGetOwnCard = { viewModel.getOwnCard() },
-                    onSetFieldVisibility = { cId, label, visible ->
-                        viewModel.setFieldVisibility(cId, label, visible)
-                    },
-                    onIsFieldVisible = { cId, label ->
-                        viewModel.isFieldVisibleToContact(cId, label)
-                    },
-                    onVerifyContact = { viewModel.verifyContact(it) },
-                    onGetOwnPublicKey = { viewModel.getOwnPublicKey() },
-                    onTrustForRecovery = { viewModel.trustContactForRecovery(it) },
-                    onUntrustForRecovery = { viewModel.untrustContactForRecovery(it) },
-                    onGetValidationStatus = { cId, fId, fVal ->
-                        viewModel.getFieldValidationStatus(cId, fId, fVal)
-                    },
-                    onValidateField = { cId, fId, fVal ->
-                        viewModel.validateField(cId, fId, fVal)
-                    },
-                    onRevokeValidation = { cId, fId ->
-                        viewModel.revokeFieldValidation(cId, fId)
-                    }
-                )
-            }
-        }
-        Screen.Settings -> {
-            val state = uiState
-            val reduceMotion by viewModel.reduceMotion.collectAsState()
-            val highContrast by viewModel.highContrast.collectAsState()
-            val largeTouchTargets by viewModel.largeTouchTargets.collectAsState()
-            val demoContactState by viewModel.demoContactState.collectAsState()
-            val deletionState by viewModel.deletionState.collectAsState()
-            val consentRecords by viewModel.consentRecords.collectAsState()
-            val isDuressEnabled by viewModel.isDuressEnabled.collectAsState()
-            val isEmergencyConfigured by viewModel.emergencyConfigured.collectAsState()
-            val isTorEnabled by viewModel.isTorEnabled.collectAsState()
-            val torPreferOnion by viewModel.torPreferOnion.collectAsState()
-            val torBridges by viewModel.torBridges.collectAsState()
-            if (state is UiState.Ready) {
-                LaunchedEffect(Unit) {
-                    viewModel.loadDeletionState()
-                    viewModel.loadConsentRecords()
-                    viewModel.loadDuressStatus()
-                    viewModel.loadEmergencyConfig()
-                    viewModel.loadTorConfig()
-                }
-                SettingsScreen(
-                    displayName = state.displayName,
+
+            Screen.Exchange -> {
+                ExchangeScreen(
                     onBack = { currentScreen = Screen.Home },
-                    onExportBackup = { password -> viewModel.exportBackup(password) },
-                    onImportBackup = { data, password -> viewModel.importBackup(data, password) },
-                    relayUrl = viewModel.getRelayUrl(),
-                    onRelayUrlChange = { viewModel.setRelayUrl(it) },
+                    onGenerateQr = { viewModel.generateExchangeQr() },
+                    onScanQr = { currentScreen = Screen.QrScanner },
+                )
+            }
+
+            Screen.QrScanner -> {
+                QrScannerScreen(
+                    onBack = { currentScreen = Screen.Exchange },
+                    onQrScanned = { qrData ->
+                        coroutineScope.launch {
+                            viewModel.completeExchange(qrData)
+                            currentScreen = Screen.Home
+                        }
+                    },
+                )
+            }
+
+            Screen.Contacts -> {
+                val demoContact by viewModel.demoContact.collectAsState()
+                ContactsScreen(
+                    onBack = { currentScreen = Screen.Home },
+                    onListContacts = { viewModel.listContacts() },
+                    onSearchContacts = { query -> viewModel.searchContacts(query) },
+                    onListContactsPaginated = { offset, limit -> viewModel.listContactsPaginated(offset, limit) },
+                    onRemoveContact = { id -> viewModel.removeContact(id) },
+                    onContactClick = { id ->
+                        selectedContactId = id
+                        currentScreen = Screen.ContactDetail
+                    },
                     syncState = syncState,
                     onSync = { viewModel.sync() },
-                    onDevices = { currentScreen = Screen.Devices },
-                    onRecovery = { currentScreen = Screen.Recovery },
-                    onLabels = { currentScreen = Screen.Labels },
-                    onCheckPasswordStrength = { viewModel.checkPasswordStrength(it) },
-                    showRestoreDemoOption = demoContactState?.let { !it.isActive } ?: false,
-                    onRestoreDemo = { viewModel.restoreDemoContact() },
-                    // Aha moments (tips)
-                    ahaMomentsProgress = viewModel.ahaMomentsProgress(),
-                    onResetAhaMoments = { viewModel.resetAhaMoments() },
-                    reduceMotion = reduceMotion,
-                    onReduceMotionChange = { viewModel.setReduceMotion(it) },
-                    highContrast = highContrast,
-                    onHighContrastChange = { viewModel.setHighContrast(it) },
-                    largeTouchTargets = largeTouchTargets,
-                    onLargeTouchTargetsChange = { viewModel.setLargeTouchTargets(it) },
-                    // Content Updates
-                    isContentUpdatesSupported = viewModel.isContentUpdatesSupported(),
-                    onCheckContentUpdates = {
-                        viewModel.checkContentUpdates()?.let { status ->
-                            mapMobileUpdateStatus(status)
-                        }
-                    },
-                    onApplyContentUpdates = {
-                        viewModel.applyContentUpdates()?.let { result ->
-                            mapMobileApplyResult(result)
-                        }
-                    },
-                    // Certificate Pinning
-                    isCertificatePinningEnabled = viewModel.isCertificatePinningEnabled(),
-                    onSetPinnedCertificate = { certPem -> viewModel.setPinnedCertificate(certPem) },
-                    // Duress PIN
-                    isDuressEnabled = isDuressEnabled,
-                    onSetupDuressPin = { pin -> viewModel.setupDuressPassword(pin) },
-                    onDisableDuress = { viewModel.disableDuress() },
-                    // Emergency Broadcast
-                    isEmergencyConfigured = isEmergencyConfigured,
-                    onConfigureEmergency = { ids, msg, loc -> viewModel.configureEmergencyBroadcast(ids, msg, loc) },
-                    onSendEmergency = { viewModel.sendEmergencyBroadcast() },
-                    onDisableEmergency = { viewModel.disableEmergencyBroadcast() },
-                    // Tor Mode
-                    isTorEnabled = isTorEnabled,
-                    torPreferOnion = torPreferOnion,
-                    torBridges = torBridges,
-                    onSaveTorConfig = { enabled, bridges, preferOnion ->
-                        viewModel.saveTorConfig(enabled, bridges, preferOnion)
-                    },
-                    // Appearance
-                    onThemeSettings = { currentScreen = Screen.ThemeSettings },
-                    onLanguageSettings = { currentScreen = Screen.LanguageSettings },
-                    currentThemeName = com.vauchi.util.ThemeManager.getInstance(context).currentTheme?.name ?: "System",
-                    currentLanguageName = com.vauchi.util.LocalizationManager.getInstance(context).currentLocaleInfo.name,
-                    // Help
-                    onHelp = { currentScreen = Screen.Help },
-                    // GDPR
-                    onExportGdprData = {
-                        val export = viewModel.exportGdprData()
-                        if (export != null) {
-                            // Share JSON data
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "application/json"
-                                putExtra(Intent.EXTRA_TEXT, export.jsonData)
-                                putExtra(Intent.EXTRA_SUBJECT, "Vauchi GDPR Export")
-                            }
-                            context.startActivity(Intent.createChooser(intent, "Export Data"))
-                        }
-                    },
-                    onScheduleDeletion = { viewModel.scheduleAccountDeletion() },
-                    onCancelDeletion = { viewModel.cancelAccountDeletion() },
-                    deletionState = deletionState,
-                    consentRecords = consentRecords,
-                    onGrantConsent = { viewModel.grantConsent(it) },
-                    onRevokeConsent = { viewModel.revokeConsent(it) },
-                    onPanicShred = { viewModel.panicShred() }
+                    demoContact = demoContact,
+                    onDismissDemo = { viewModel.dismissDemoContact() },
                 )
             }
-        }
-        Screen.Devices -> {
-            DevicesScreen(
-                onBack = { currentScreen = Screen.Settings },
-                getDevices = { viewModel.getDevices() },
-                generateLinkQr = { viewModel.generateDeviceLinkQr() },
-                unlinkDevice = { index -> viewModel.unlinkDevice(index) },
-                isPrimaryDevice = { viewModel.isPrimaryDevice() }
-            )
-        }
-        Screen.Recovery -> {
-            RecoveryScreen(
-                viewModel = viewModel,
-                onBack = { currentScreen = Screen.Settings }
-            )
-        }
-        Screen.Labels -> {
-            val labels by viewModel.visibilityLabels.collectAsState()
-            val suggestedLabels by viewModel.suggestedLabels.collectAsState()
-            LabelsScreen(
-                labels = labels,
-                suggestedLabels = suggestedLabels,
-                onBack = { currentScreen = Screen.Settings },
-                onLabelClick = { labelId ->
-                    selectedLabelId = labelId
-                    currentScreen = Screen.LabelDetail
-                },
-                onCreateLabel = { name -> viewModel.createLabel(name) },
-                onDeleteLabel = { labelId -> viewModel.deleteLabel(labelId) },
-                onRefresh = { viewModel.loadLabels() }
-            )
-        }
-        Screen.LabelDetail -> {
-            val state = uiState
-            selectedLabelId?.let { labelId ->
-                if (state is UiState.Ready) {
-                    LabelDetailScreen(
-                        labelId = labelId,
-                        onBack = { currentScreen = Screen.Labels },
-                        onGetLabel = { viewModel.getLabel(it) },
-                        onRenameLabel = { id, newName -> viewModel.renameLabel(id, newName) },
-                        onDeleteLabel = { id ->
-                            viewModel.deleteLabel(id)
-                            currentScreen = Screen.Labels
+
+            Screen.ContactDetail -> {
+                selectedContactId?.let { contactId ->
+                    ContactDetailScreen(
+                        contactId = contactId,
+                        onBack = { currentScreen = Screen.Contacts },
+                        onGetContact = { viewModel.getContact(it) },
+                        onGetOwnCard = { viewModel.getOwnCard() },
+                        onSetFieldVisibility = { cId, label, visible ->
+                            viewModel.setFieldVisibility(cId, label, visible)
                         },
-                        onSetFieldVisibility = { lid, fid, visible ->
-                            viewModel.setLabelFieldVisibility(lid, fid, visible)
+                        onIsFieldVisible = { cId, label ->
+                            viewModel.isFieldVisibleToContact(cId, label)
                         },
-                        ownCardFields = state.card.fields,
-                        contacts = emptyList() // Would need to pass contacts from ViewModel
+                        onVerifyContact = { viewModel.verifyContact(it) },
+                        onGetOwnPublicKey = { viewModel.getOwnPublicKey() },
+                        onTrustForRecovery = { viewModel.trustContactForRecovery(it) },
+                        onUntrustForRecovery = { viewModel.untrustContactForRecovery(it) },
+                        onGetValidationStatus = { cId, fId, fVal ->
+                            viewModel.getFieldValidationStatus(cId, fId, fVal)
+                        },
+                        onValidateField = { cId, fId, fVal ->
+                            viewModel.validateField(cId, fId, fVal)
+                        },
+                        onRevokeValidation = { cId, fId ->
+                            viewModel.revokeFieldValidation(cId, fId)
+                        },
                     )
                 }
             }
-        }
-        Screen.ThemeSettings -> {
-            ThemeSettingsScreen(
-                onBack = { currentScreen = Screen.Settings }
-            )
-        }
-        Screen.LanguageSettings -> {
-            LanguageSettingsScreen(
-                onBack = { currentScreen = Screen.Settings }
-            )
-        }
-        Screen.Help -> {
-            HelpScreen(
-                onBack = { currentScreen = Screen.Settings }
-            )
-        }
+
+            Screen.Settings -> {
+                val state = uiState
+                val reduceMotion by viewModel.reduceMotion.collectAsState()
+                val highContrast by viewModel.highContrast.collectAsState()
+                val largeTouchTargets by viewModel.largeTouchTargets.collectAsState()
+                val demoContactState by viewModel.demoContactState.collectAsState()
+                val deletionState by viewModel.deletionState.collectAsState()
+                val consentRecords by viewModel.consentRecords.collectAsState()
+                val isDuressEnabled by viewModel.isDuressEnabled.collectAsState()
+                val isEmergencyConfigured by viewModel.emergencyConfigured.collectAsState()
+                val isTorEnabled by viewModel.isTorEnabled.collectAsState()
+                val torPreferOnion by viewModel.torPreferOnion.collectAsState()
+                val torBridges by viewModel.torBridges.collectAsState()
+                if (state is UiState.Ready) {
+                    LaunchedEffect(Unit) {
+                        viewModel.loadDeletionState()
+                        viewModel.loadConsentRecords()
+                        viewModel.loadDuressStatus()
+                        viewModel.loadEmergencyConfig()
+                        viewModel.loadTorConfig()
+                    }
+                    SettingsScreen(
+                        displayName = state.displayName,
+                        onBack = { currentScreen = Screen.Home },
+                        onExportBackup = { password -> viewModel.exportBackup(password) },
+                        onImportBackup = { data, password -> viewModel.importBackup(data, password) },
+                        relayUrl = viewModel.getRelayUrl(),
+                        onRelayUrlChange = { viewModel.setRelayUrl(it) },
+                        syncState = syncState,
+                        onSync = { viewModel.sync() },
+                        onDevices = { currentScreen = Screen.Devices },
+                        onRecovery = { currentScreen = Screen.Recovery },
+                        onLabels = { currentScreen = Screen.Labels },
+                        onCheckPasswordStrength = { viewModel.checkPasswordStrength(it) },
+                        showRestoreDemoOption = demoContactState?.let { !it.isActive } ?: false,
+                        onRestoreDemo = { viewModel.restoreDemoContact() },
+                        // Aha moments (tips)
+                        ahaMomentsProgress = viewModel.ahaMomentsProgress(),
+                        onResetAhaMoments = { viewModel.resetAhaMoments() },
+                        reduceMotion = reduceMotion,
+                        onReduceMotionChange = { viewModel.setReduceMotion(it) },
+                        highContrast = highContrast,
+                        onHighContrastChange = { viewModel.setHighContrast(it) },
+                        largeTouchTargets = largeTouchTargets,
+                        onLargeTouchTargetsChange = { viewModel.setLargeTouchTargets(it) },
+                        // Content Updates
+                        isContentUpdatesSupported = viewModel.isContentUpdatesSupported(),
+                        onCheckContentUpdates = {
+                            viewModel.checkContentUpdates()?.let { status ->
+                                mapMobileUpdateStatus(status)
+                            }
+                        },
+                        onApplyContentUpdates = {
+                            viewModel.applyContentUpdates()?.let { result ->
+                                mapMobileApplyResult(result)
+                            }
+                        },
+                        // Certificate Pinning
+                        isCertificatePinningEnabled = viewModel.isCertificatePinningEnabled(),
+                        onSetPinnedCertificate = { certPem -> viewModel.setPinnedCertificate(certPem) },
+                        // Duress PIN
+                        isDuressEnabled = isDuressEnabled,
+                        onSetupDuressPin = { pin -> viewModel.setupDuressPassword(pin) },
+                        onDisableDuress = { viewModel.disableDuress() },
+                        // Emergency Broadcast
+                        isEmergencyConfigured = isEmergencyConfigured,
+                        onConfigureEmergency = { ids, msg, loc -> viewModel.configureEmergencyBroadcast(ids, msg, loc) },
+                        onSendEmergency = { viewModel.sendEmergencyBroadcast() },
+                        onDisableEmergency = { viewModel.disableEmergencyBroadcast() },
+                        // Tor Mode
+                        isTorEnabled = isTorEnabled,
+                        torPreferOnion = torPreferOnion,
+                        torBridges = torBridges,
+                        onSaveTorConfig = { enabled, bridges, preferOnion ->
+                            viewModel.saveTorConfig(enabled, bridges, preferOnion)
+                        },
+                        // Appearance
+                        onThemeSettings = { currentScreen = Screen.ThemeSettings },
+                        onLanguageSettings = { currentScreen = Screen.LanguageSettings },
+                        currentThemeName =
+                            com.vauchi.util.ThemeManager
+                                .getInstance(context)
+                                .currentTheme
+                                ?.name ?: "System",
+                        currentLanguageName =
+                            com.vauchi.util.LocalizationManager
+                                .getInstance(context)
+                                .currentLocaleInfo.name,
+                        // Help
+                        onHelp = { currentScreen = Screen.Help },
+                        // GDPR
+                        onExportGdprData = {
+                            val export = viewModel.exportGdprData()
+                            if (export != null) {
+                                // Share JSON data
+                                val intent =
+                                    Intent(Intent.ACTION_SEND).apply {
+                                        type = "application/json"
+                                        putExtra(Intent.EXTRA_TEXT, export.jsonData)
+                                        putExtra(Intent.EXTRA_SUBJECT, "Vauchi GDPR Export")
+                                    }
+                                context.startActivity(Intent.createChooser(intent, "Export Data"))
+                            }
+                        },
+                        onScheduleDeletion = { viewModel.scheduleAccountDeletion() },
+                        onCancelDeletion = { viewModel.cancelAccountDeletion() },
+                        deletionState = deletionState,
+                        consentRecords = consentRecords,
+                        onGrantConsent = { viewModel.grantConsent(it) },
+                        onRevokeConsent = { viewModel.revokeConsent(it) },
+                        onPanicShred = { viewModel.panicShred() },
+                    )
+                }
+            }
+
+            Screen.Devices -> {
+                DevicesScreen(
+                    onBack = { currentScreen = Screen.Settings },
+                    viewModel = viewModel,
+                    getDevices = { viewModel.getDevices() },
+                    generateLinkQr = { viewModel.generateDeviceLinkQr() },
+                    unlinkDevice = { index -> viewModel.unlinkDevice(index) },
+                    isPrimaryDevice = { viewModel.isPrimaryDevice() },
+                )
+            }
+
+            Screen.Recovery -> {
+                RecoveryScreen(
+                    viewModel = viewModel,
+                    onBack = { currentScreen = Screen.Settings },
+                )
+            }
+
+            Screen.Labels -> {
+                val labels by viewModel.visibilityLabels.collectAsState()
+                val suggestedLabels by viewModel.suggestedLabels.collectAsState()
+                LabelsScreen(
+                    labels = labels,
+                    suggestedLabels = suggestedLabels,
+                    onBack = { currentScreen = Screen.Settings },
+                    onLabelClick = { labelId ->
+                        selectedLabelId = labelId
+                        currentScreen = Screen.LabelDetail
+                    },
+                    onCreateLabel = { name -> viewModel.createLabel(name) },
+                    onDeleteLabel = { labelId -> viewModel.deleteLabel(labelId) },
+                    onRefresh = { viewModel.loadLabels() },
+                )
+            }
+
+            Screen.LabelDetail -> {
+                val state = uiState
+                selectedLabelId?.let { labelId ->
+                    if (state is UiState.Ready) {
+                        LabelDetailScreen(
+                            labelId = labelId,
+                            onBack = { currentScreen = Screen.Labels },
+                            onGetLabel = { viewModel.getLabel(it) },
+                            onRenameLabel = { id, newName -> viewModel.renameLabel(id, newName) },
+                            onDeleteLabel = { id ->
+                                viewModel.deleteLabel(id)
+                                currentScreen = Screen.Labels
+                            },
+                            onSetFieldVisibility = { lid, fid, visible ->
+                                viewModel.setLabelFieldVisibility(lid, fid, visible)
+                            },
+                            ownCardFields = state.card.fields,
+                            contacts = emptyList(), // Would need to pass contacts from ViewModel
+                        )
+                    }
+                }
+            }
+
+            Screen.ThemeSettings -> {
+                ThemeSettingsScreen(
+                    onBack = { currentScreen = Screen.Settings },
+                )
+            }
+
+            Screen.LanguageSettings -> {
+                LanguageSettingsScreen(
+                    onBack = { currentScreen = Screen.Settings },
+                )
+            }
+
+            Screen.Help -> {
+                HelpScreen(
+                    onBack = { currentScreen = Screen.Settings },
+                )
+            }
         }
 
         // Snackbar for feedback messages
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 }
@@ -428,7 +473,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
 fun LoadingScreen() {
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator()
@@ -443,21 +488,22 @@ fun SetupScreen(onCreateIdentity: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = "Welcome to Vauchi",
-            style = MaterialTheme.typography.headlineLarge
+            style = MaterialTheme.typography.headlineLarge,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Privacy-focused contact exchange",
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(48.dp))
         OutlinedTextField(
@@ -465,13 +511,13 @@ fun SetupScreen(onCreateIdentity: (String) -> Unit) {
             onValueChange = { name = it },
             label = { Text("Your name") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = { onCreateIdentity(name) },
             enabled = name.isNotBlank(),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Create Identity")
         }
@@ -495,7 +541,7 @@ fun ReadyScreen(
     syncState: SyncState = SyncState.Idle,
     isOnline: Boolean = true,
     lastSyncTime: Instant? = null,
-    onSync: () -> Unit = {}
+    onSync: () -> Unit = {},
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
 
@@ -509,24 +555,25 @@ fun ReadyScreen(
                         syncState = syncState,
                         isOnline = isOnline,
                         lastSyncTime = lastSyncTime,
-                        onSync = onSync
+                        onSync = onSync,
                     )
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
-                }
+                },
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add field")
             }
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
             // Offline banner
             if (!isOnline) {
@@ -534,145 +581,161 @@ fun ReadyScreen(
             }
 
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(vertical = 24.dp)
+                contentPadding = PaddingValues(vertical = 24.dp),
             ) {
                 item {
                     Text(
                         text = "Hello, $displayName!",
-                        style = MaterialTheme.typography.headlineMedium
+                        style = MaterialTheme.typography.headlineMedium,
                     )
                 }
 
                 item {
                     Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Your Card",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Public ID: ${publicId.take(16)}...",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Your Card",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Public ID: ${publicId.take(16)}...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
-            }
 
-            item {
-                Text(
-                    text = "Fields",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-
-            if (card.fields.isEmpty()) {
                 item {
                     Text(
-                        text = "No fields yet. Tap + to add contact info!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Fields",
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 }
-            } else {
-                items(card.fields) { field ->
-                    val context = LocalContext.current
-                    val isSocialField = field.fieldType == MobileFieldType.SOCIAL
-                    val profileUrl = if (isSocialField) {
-                        onGetProfileUrl(field.label, field.value)
-                    } else null
 
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .then(
-                                if (profileUrl != null) {
-                                    Modifier.clickable {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(profileUrl))
-                                        context.startActivity(intent)
-                                    }
-                                } else Modifier
-                            ),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                if (card.fields.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No fields yet. Tap + to add contact info!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                    }
+                } else {
+                    items(card.fields) { field ->
+                        val context = LocalContext.current
+                        val isSocialField = field.fieldType == MobileFieldType.SOCIAL
+                        val profileUrl =
+                            if (isSocialField) {
+                                onGetProfileUrl(field.label, field.value)
+                            } else {
+                                null
+                            }
+
+                        Card(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .then(
+                                        if (profileUrl != null) {
+                                            Modifier.clickable {
+                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(profileUrl))
+                                                context.startActivity(intent)
+                                            }
+                                        } else {
+                                            Modifier
+                                        },
+                                    ),
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                ),
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = field.label,
-                                    style = MaterialTheme.typography.labelMedium
-                                )
-                                Text(
-                                    text = if (isSocialField) "@${field.value}" else field.value,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = if (profileUrl != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            if (profileUrl != null) {
-                                Icon(
-                                    Icons.Default.Share,
-                                    contentDescription = "Open profile",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            IconButton(onClick = { onRemoveField(field.label) }) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = field.label,
+                                        style = MaterialTheme.typography.labelMedium,
+                                    )
+                                    Text(
+                                        text = if (isSocialField) "@${field.value}" else field.value,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color =
+                                            if (profileUrl !=
+                                                null
+                                            ) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            },
+                                    )
+                                }
+                                if (profileUrl != null) {
+                                    Icon(
+                                        Icons.Default.Share,
+                                        contentDescription = "Open profile",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                                IconButton(onClick = { onRemoveField(field.label) }) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Contacts: $contactCount",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Contacts: $contactCount",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
 
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Button(
-                        onClick = onExchange,
-                        modifier = Modifier.weight(1f)
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Exchange")
-                    }
-                    OutlinedButton(
-                        onClick = onContacts,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Person, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Contacts")
+                        Button(
+                            onClick = onExchange,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Exchange")
+                        }
+                        OutlinedButton(
+                            onClick = onContacts,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Default.Person, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Contacts")
+                        }
                     }
                 }
-            }
             }
         }
     }
@@ -684,7 +747,7 @@ fun ReadyScreen(
                 onAddField(type, label, value)
                 showAddDialog = false
             },
-            socialNetworks = socialNetworks
+            socialNetworks = socialNetworks,
         )
     }
 }
@@ -694,7 +757,7 @@ fun ReadyScreen(
 fun AddFieldDialog(
     onDismiss: () -> Unit,
     onAdd: (MobileFieldType, String, String) -> Unit,
-    socialNetworks: List<uniffi.vauchi_mobile.MobileSocialNetwork> = emptyList()
+    socialNetworks: List<uniffi.vauchi_mobile.MobileSocialNetwork> = emptyList(),
 ) {
     var selectedType by remember { mutableStateOf(MobileFieldType.EMAIL) }
     var label by remember { mutableStateOf("") }
@@ -704,25 +767,28 @@ fun AddFieldDialog(
     var selectedNetwork by remember { mutableStateOf<uniffi.vauchi_mobile.MobileSocialNetwork?>(null) }
     var socialSearch by remember { mutableStateOf("") }
 
-    val fieldTypes = listOf(
-        MobileFieldType.EMAIL to "Email",
-        MobileFieldType.PHONE to "Phone",
-        MobileFieldType.WEBSITE to "Website",
-        MobileFieldType.ADDRESS to "Address",
-        MobileFieldType.SOCIAL to "Social",
-        MobileFieldType.CUSTOM to "Custom"
-    )
+    val fieldTypes =
+        listOf(
+            MobileFieldType.EMAIL to "Email",
+            MobileFieldType.PHONE to "Phone",
+            MobileFieldType.WEBSITE to "Website",
+            MobileFieldType.ADDRESS to "Address",
+            MobileFieldType.SOCIAL to "Social",
+            MobileFieldType.CUSTOM to "Custom",
+        )
 
     // Filter social networks by search
-    val filteredNetworks = remember(socialSearch, socialNetworks) {
-        if (socialSearch.isBlank()) {
-            socialNetworks.take(10)
-        } else {
-            socialNetworks.filter {
-                it.displayName.contains(socialSearch, ignoreCase = true)
-            }.take(10)
+    val filteredNetworks =
+        remember(socialSearch, socialNetworks) {
+            if (socialSearch.isBlank()) {
+                socialNetworks.take(10)
+            } else {
+                socialNetworks
+                    .filter {
+                        it.displayName.contains(socialSearch, ignoreCase = true)
+                    }.take(10)
+            }
         }
-    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -732,7 +798,7 @@ fun AddFieldDialog(
                 // Field type dropdown
                 ExposedDropdownMenuBox(
                     expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
+                    onExpandedChange = { expanded = !expanded },
                 ) {
                     OutlinedTextField(
                         value = fieldTypes.find { it.first == selectedType }?.second ?: "",
@@ -740,13 +806,14 @@ fun AddFieldDialog(
                         readOnly = true,
                         label = { Text("Type") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
-                            .fillMaxWidth()
+                        modifier =
+                            Modifier
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                                .fillMaxWidth(),
                     )
                     ExposedDropdownMenu(
                         expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                        onDismissRequest = { expanded = false },
                     ) {
                         fieldTypes.forEach { (type, name) ->
                             DropdownMenuItem(
@@ -761,7 +828,7 @@ fun AddFieldDialog(
                                         selectedNetwork = null
                                     }
                                     expanded = false
-                                }
+                                },
                             )
                         }
                     }
@@ -771,7 +838,7 @@ fun AddFieldDialog(
                 if (selectedType == MobileFieldType.SOCIAL) {
                     ExposedDropdownMenuBox(
                         expanded = socialExpanded,
-                        onExpandedChange = { socialExpanded = !socialExpanded }
+                        onExpandedChange = { socialExpanded = !socialExpanded },
                     ) {
                         OutlinedTextField(
                             value = selectedNetwork?.displayName ?: socialSearch,
@@ -782,13 +849,14 @@ fun AddFieldDialog(
                             },
                             label = { Text("Social Network") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = socialExpanded) },
-                            modifier = Modifier
-                                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
-                                .fillMaxWidth()
+                            modifier =
+                                Modifier
+                                    .menuAnchor(MenuAnchorType.PrimaryEditable, true)
+                                    .fillMaxWidth(),
                         )
                         ExposedDropdownMenu(
                             expanded = socialExpanded,
-                            onDismissRequest = { socialExpanded = false }
+                            onDismissRequest = { socialExpanded = false },
                         ) {
                             filteredNetworks.forEach { network ->
                                 DropdownMenuItem(
@@ -798,14 +866,14 @@ fun AddFieldDialog(
                                         label = network.displayName
                                         socialSearch = network.displayName
                                         socialExpanded = false
-                                    }
+                                    },
                                 )
                             }
                             if (filteredNetworks.isEmpty()) {
                                 DropdownMenuItem(
                                     text = { Text("No networks found") },
                                     onClick = { },
-                                    enabled = false
+                                    enabled = false,
                                 )
                             }
                         }
@@ -816,7 +884,7 @@ fun AddFieldDialog(
                         onValueChange = { value = it },
                         label = { Text("Username") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 } else {
                     // Regular label and value fields
@@ -825,7 +893,7 @@ fun AddFieldDialog(
                         onValueChange = { label = it },
                         label = { Text("Label") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
 
                     OutlinedTextField(
@@ -833,7 +901,7 @@ fun AddFieldDialog(
                         onValueChange = { value = it },
                         label = { Text("Value") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -841,7 +909,7 @@ fun AddFieldDialog(
         confirmButton = {
             TextButton(
                 onClick = { onAdd(selectedType, label, value) },
-                enabled = label.isNotBlank() && value.isNotBlank()
+                enabled = label.isNotBlank() && value.isNotBlank(),
             ) {
                 Text("Add")
             }
@@ -850,40 +918,41 @@ fun AddFieldDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
-        }
+        },
     )
 }
 
 @Composable
 fun ErrorScreen(
     message: String,
-    onRetry: () -> Unit = {}
+    onRetry: () -> Unit = {},
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
                 Icons.Default.Warning,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.error
+                tint = MaterialTheme.colorScheme.error,
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Something went wrong",
                 style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(24.dp))
             Button(onClick = onRetry) {
@@ -898,23 +967,24 @@ fun ErrorScreen(
 @Composable
 fun OfflineBanner() {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.errorContainer)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.errorContainer)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             Icons.Default.Warning,
             contentDescription = null,
             modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.onErrorContainer
+            tint = MaterialTheme.colorScheme.onErrorContainer,
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "You're offline",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer
+            color = MaterialTheme.colorScheme.onErrorContainer,
         )
     }
 }
@@ -924,80 +994,115 @@ fun SyncStatusChip(
     syncState: SyncState,
     isOnline: Boolean,
     lastSyncTime: Instant?,
-    onSync: () -> Unit
+    onSync: () -> Unit,
 ) {
-    val (text, color) = when {
-        !isOnline -> "Offline" to MaterialTheme.colorScheme.outline
-        syncState is SyncState.Syncing -> "Syncing..." to MaterialTheme.colorScheme.primary
-        syncState is SyncState.Error -> "Sync failed" to MaterialTheme.colorScheme.error
-        syncState is SyncState.Success || lastSyncTime != null -> {
-            val timeText = lastSyncTime?.let {
-                val formatter = DateTimeFormatter.ofPattern("HH:mm")
-                    .withZone(ZoneId.systemDefault())
-                formatter.format(it)
-            } ?: ""
-            "Synced $timeText" to MaterialTheme.colorScheme.primary
+    val (text, color) =
+        when {
+            !isOnline -> {
+                "Offline" to MaterialTheme.colorScheme.outline
+            }
+
+            syncState is SyncState.Syncing -> {
+                "Syncing..." to MaterialTheme.colorScheme.primary
+            }
+
+            syncState is SyncState.Error -> {
+                "Sync failed" to MaterialTheme.colorScheme.error
+            }
+
+            syncState is SyncState.Success || lastSyncTime != null -> {
+                val timeText =
+                    lastSyncTime?.let {
+                        val formatter =
+                            DateTimeFormatter
+                                .ofPattern("HH:mm")
+                                .withZone(ZoneId.systemDefault())
+                        formatter.format(it)
+                    } ?: ""
+                "Synced $timeText" to MaterialTheme.colorScheme.primary
+            }
+
+            else -> {
+                "Tap to sync" to MaterialTheme.colorScheme.outline
+            }
         }
-        else -> "Tap to sync" to MaterialTheme.colorScheme.outline
-    }
 
     TextButton(
         onClick = { if (isOnline && syncState !is SyncState.Syncing) onSync() },
-        enabled = isOnline && syncState !is SyncState.Syncing
+        enabled = isOnline && syncState !is SyncState.Syncing,
     ) {
         if (syncState is SyncState.Syncing) {
             CircularProgressIndicator(
                 modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp
+                strokeWidth = 2.dp,
             )
             Spacer(modifier = Modifier.width(4.dp))
         }
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,
-            color = color
+            color = color,
         )
     }
 }
 
 // Content Updates mapping functions
-private fun mapMobileUpdateStatus(status: MobileUpdateStatus): ContentUpdateStatus {
-    return when (status) {
-        is MobileUpdateStatus.UpToDate -> ContentUpdateStatus.UpToDate
-        is MobileUpdateStatus.UpdatesAvailable -> ContentUpdateStatus.UpdatesAvailable(
-            status.types.map { mapMobileContentType(it) }
-        )
-        is MobileUpdateStatus.CheckFailed -> ContentUpdateStatus.CheckFailed(status.error)
-        is MobileUpdateStatus.Disabled -> ContentUpdateStatus.Disabled
-    }
-}
+private fun mapMobileUpdateStatus(status: MobileUpdateStatus): ContentUpdateStatus =
+    when (status) {
+        is MobileUpdateStatus.UpToDate -> {
+            ContentUpdateStatus.UpToDate
+        }
 
-private fun mapMobileApplyResult(result: MobileApplyResult): ContentApplyResult {
-    return when (result) {
-        is MobileApplyResult.NoUpdates -> ContentApplyResult.NoUpdates
-        is MobileApplyResult.Applied -> ContentApplyResult.Applied(
-            applied = result.applied.map { mapMobileContentType(it) },
-            failed = result.failed.map { mapMobileContentType(it.contentType) }
-        )
-        is MobileApplyResult.Disabled -> ContentApplyResult.Disabled
-        is MobileApplyResult.Error -> ContentApplyResult.Error(result.error)
-    }
-}
+        is MobileUpdateStatus.UpdatesAvailable -> {
+            ContentUpdateStatus.UpdatesAvailable(
+                status.types.map { mapMobileContentType(it) },
+            )
+        }
 
-private fun mapMobileContentType(type: MobileContentType): ContentUpdateType {
-    return when (type) {
+        is MobileUpdateStatus.CheckFailed -> {
+            ContentUpdateStatus.CheckFailed(status.error)
+        }
+
+        is MobileUpdateStatus.Disabled -> {
+            ContentUpdateStatus.Disabled
+        }
+    }
+
+private fun mapMobileApplyResult(result: MobileApplyResult): ContentApplyResult =
+    when (result) {
+        is MobileApplyResult.NoUpdates -> {
+            ContentApplyResult.NoUpdates
+        }
+
+        is MobileApplyResult.Applied -> {
+            ContentApplyResult.Applied(
+                applied = result.applied.map { mapMobileContentType(it) },
+                failed = result.failed.map { mapMobileContentType(it.contentType) },
+            )
+        }
+
+        is MobileApplyResult.Disabled -> {
+            ContentApplyResult.Disabled
+        }
+
+        is MobileApplyResult.Error -> {
+            ContentApplyResult.Error(result.error)
+        }
+    }
+
+private fun mapMobileContentType(type: MobileContentType): ContentUpdateType =
+    when (type) {
         MobileContentType.NETWORKS -> ContentUpdateType.Networks
         MobileContentType.LOCALES -> ContentUpdateType.Locales
         MobileContentType.THEMES -> ContentUpdateType.Themes
         MobileContentType.HELP -> ContentUpdateType.Help
     }
-}
 
 // Restore Identity Dialog
 @Composable
 fun RestoreIdentityDialog(
     onDismiss: () -> Unit,
-    onRestore: (backupData: String, password: String) -> Unit
+    onRestore: (backupData: String, password: String) -> Unit,
 ) {
     var backupData by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -1013,17 +1118,18 @@ fun RestoreIdentityDialog(
                 Text(
                     "Enter your backup data and password to restore your identity. This will replace any existing identity on this device.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 OutlinedTextField(
                     value = backupData,
                     onValueChange = { backupData = it },
                     label = { Text("Backup Data") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    enabled = !isRestoring
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                    enabled = !isRestoring,
                 )
 
                 OutlinedTextField(
@@ -1032,7 +1138,7 @@ fun RestoreIdentityDialog(
                     label = { Text("Password") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    enabled = !isRestoring
+                    enabled = !isRestoring,
                 )
             }
         },
@@ -1042,13 +1148,13 @@ fun RestoreIdentityDialog(
                     isRestoring = true
                     onRestore(backupData.trim(), password)
                 },
-                enabled = canRestore && !isRestoring
+                enabled = canRestore && !isRestoring,
             ) {
                 if (isRestoring) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = MaterialTheme.colorScheme.onPrimary,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
@@ -1058,10 +1164,10 @@ fun RestoreIdentityDialog(
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
-                enabled = !isRestoring
+                enabled = !isRestoring,
             ) {
                 Text("Cancel")
             }
-        }
+        },
     )
 }
