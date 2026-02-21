@@ -32,25 +32,28 @@ import uniffi.vauchi_mobile.MobileAhaMomentType
 @Composable
 fun AhaMomentDialog(
     moment: MobileAhaMoment,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 // Icon with optional animation
                 if (moment.hasAnimation) {
@@ -63,7 +66,8 @@ fun AhaMomentDialog(
                 Text(
                     text = moment.title,
                     style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { heading() },
                 )
 
                 // Message
@@ -71,7 +75,7 @@ fun AhaMomentDialog(
                     text = moment.message,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -80,7 +84,7 @@ fun AhaMomentDialog(
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 ) {
                     Text("Got it!")
                 }
@@ -94,9 +98,9 @@ private fun MomentIcon(momentType: MobileAhaMomentType) {
     val icon = getMomentIcon(momentType)
     Icon(
         imageVector = icon,
-        contentDescription = null,
+        contentDescription = getMomentDescription(momentType),
         modifier = Modifier.size(64.dp),
-        tint = MaterialTheme.colorScheme.primary
+        tint = MaterialTheme.colorScheme.primary,
     )
 }
 
@@ -106,33 +110,43 @@ private fun AnimatedIcon(momentType: MobileAhaMomentType) {
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.2f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(600, easing = EaseInOut),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "scale_animation"
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(600, easing = EaseInOut),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "scale_animation",
     )
 
     val icon = getMomentIcon(momentType)
     Icon(
         imageVector = icon,
-        contentDescription = null,
-        modifier = Modifier
-            .size(64.dp)
-            .scale(scale),
-        tint = MaterialTheme.colorScheme.primary
+        contentDescription = getMomentDescription(momentType),
+        modifier =
+            Modifier
+                .size(64.dp)
+                .scale(scale),
+        tint = MaterialTheme.colorScheme.primary,
     )
 }
 
-private fun getMomentIcon(momentType: MobileAhaMomentType): ImageVector {
-    return when (momentType) {
+private fun getMomentIcon(momentType: MobileAhaMomentType): ImageVector =
+    when (momentType) {
         MobileAhaMomentType.CARD_CREATION_COMPLETE -> Icons.Default.CheckCircle
         MobileAhaMomentType.FIRST_EDIT -> Icons.Default.Edit
         MobileAhaMomentType.FIRST_CONTACT_ADDED -> Icons.Default.PersonAdd
         MobileAhaMomentType.FIRST_UPDATE_RECEIVED -> Icons.Default.Download
         MobileAhaMomentType.FIRST_OUTBOUND_DELIVERED -> Icons.AutoMirrored.Filled.Send
     }
-}
+
+private fun getMomentDescription(momentType: MobileAhaMomentType): String =
+    when (momentType) {
+        MobileAhaMomentType.CARD_CREATION_COMPLETE -> "Card creation complete"
+        MobileAhaMomentType.FIRST_EDIT -> "First edit"
+        MobileAhaMomentType.FIRST_CONTACT_ADDED -> "First contact added"
+        MobileAhaMomentType.FIRST_UPDATE_RECEIVED -> "First update received"
+        MobileAhaMomentType.FIRST_OUTBOUND_DELIVERED -> "First outbound delivered"
+    }
 
 /**
  * Composable that displays an aha moment dialog when the moment is non-null.
@@ -141,7 +155,7 @@ private fun getMomentIcon(momentType: MobileAhaMomentType): ImageVector {
 fun AhaMomentOverlay(
     moment: MobileAhaMoment?,
     onDismiss: () -> Unit,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     Box {
         content()
@@ -149,7 +163,7 @@ fun AhaMomentOverlay(
         if (moment != null) {
             AhaMomentDialog(
                 moment = moment,
-                onDismiss = onDismiss
+                onDismiss = onDismiss,
             )
         }
     }
