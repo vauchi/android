@@ -24,9 +24,7 @@ import uniffi.vauchi_mobile.MobileLocaleInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LanguageSettingsScreen(
-    onBack: () -> Unit
-) {
+fun LanguageSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
 
@@ -43,35 +41,37 @@ fun LanguageSettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             // Follow System Section
             Card(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column {
                         Text("Follow System", style = MaterialTheme.typography.bodyLarge)
                         Text(
                             "Use device language",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Switch(
@@ -80,20 +80,20 @@ fun LanguageSettingsScreen(
                             if (enabled) {
                                 localizationManager.resetToSystem()
                             }
-                        }
+                        },
                     )
                 }
             }
 
             // Language Selection (only shown when not following system)
             if (!followSystem) {
-                Text("Available Languages", style = MaterialTheme.typography.titleMedium)
+                Text("Available Languages", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     availableLocales.forEach { locale ->
                         LanguageCard(
                             locale = locale,
                             isSelected = currentLocaleInfo.code == locale.code,
-                            onClick = { localizationManager.selectLocale(locale.code) }
+                            onClick = { localizationManager.selectLocale(locale.code) },
                         )
                     }
                 }
@@ -102,33 +102,33 @@ fun LanguageSettingsScreen(
             HorizontalDivider()
 
             // Current Language Info
-            Text("Current Language", style = MaterialTheme.typography.titleMedium)
+            Text("Current Language", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text("Language", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(currentLocaleInfo.name)
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text("Code", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
                             currentLocaleInfo.code.uppercase(),
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                         )
                     }
                     if (localizationManager.isRightToLeft) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text("Direction", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text("Right to Left")
@@ -144,50 +144,54 @@ fun LanguageSettingsScreen(
 private fun LanguageCard(
     locale: MobileLocaleInfo,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surface
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    if (isSelected) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    },
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column {
                 Text(locale.name, style = MaterialTheme.typography.bodyLarge)
                 Text(
                     locale.englishName,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     locale.code.uppercase(),
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 if (isSelected) {
                     Icon(
                         Icons.Default.Check,
                         contentDescription = "Selected",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 }
             }

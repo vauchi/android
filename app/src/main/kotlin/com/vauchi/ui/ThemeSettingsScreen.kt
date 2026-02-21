@@ -33,9 +33,7 @@ import uniffi.vauchi_mobile.MobileThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ThemeSettingsScreen(
-    onBack: () -> Unit
-) {
+fun ThemeSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
     val themeManager = remember { ThemeManager.getInstance(context) }
@@ -55,35 +53,37 @@ fun ThemeSettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             // Follow System Section
             Card(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column {
                         Text("Follow System", style = MaterialTheme.typography.bodyLarge)
                         Text(
                             "Match device appearance",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Switch(
@@ -92,7 +92,7 @@ fun ThemeSettingsScreen(
                             if (enabled) {
                                 themeManager.resetToSystem(isDarkMode)
                             }
-                        }
+                        },
                     )
                 }
             }
@@ -100,13 +100,13 @@ fun ThemeSettingsScreen(
             // Theme Selection (only shown when not following system)
             if (!followSystem) {
                 // Dark Themes
-                Text("Dark Themes", style = MaterialTheme.typography.titleMedium)
+                Text("Dark Themes", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     darkThemes.forEach { theme ->
                         ThemeCard(
                             theme = theme,
                             isSelected = themeManager.selectedThemeId == theme.id,
-                            onClick = { themeManager.selectTheme(theme.id, isDarkMode) }
+                            onClick = { themeManager.selectTheme(theme.id, isDarkMode) },
                         )
                     }
                 }
@@ -114,13 +114,13 @@ fun ThemeSettingsScreen(
                 HorizontalDivider()
 
                 // Light Themes
-                Text("Light Themes", style = MaterialTheme.typography.titleMedium)
+                Text("Light Themes", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     lightThemes.forEach { theme ->
                         ThemeCard(
                             theme = theme,
                             isSelected = themeManager.selectedThemeId == theme.id,
-                            onClick = { themeManager.selectTheme(theme.id, isDarkMode) }
+                            onClick = { themeManager.selectTheme(theme.id, isDarkMode) },
                         )
                     }
                 }
@@ -129,7 +129,7 @@ fun ThemeSettingsScreen(
             // Preview
             currentTheme?.let { theme ->
                 HorizontalDivider()
-                Text("Preview", style = MaterialTheme.typography.titleMedium)
+                Text("Preview", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
                 ThemePreviewCard(theme = theme)
             }
         }
@@ -140,24 +140,28 @@ fun ThemeSettingsScreen(
 private fun ThemeCard(
     theme: MobileTheme,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surface
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    if (isSelected) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    },
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Color swatches
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -172,7 +176,7 @@ private fun ThemeCard(
                     Text(
                         "by $author",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -181,7 +185,7 @@ private fun ThemeCard(
                 Icon(
                     Icons.Default.Check,
                     contentDescription = "Selected",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
                 )
             }
         }
@@ -191,11 +195,12 @@ private fun ThemeCard(
 @Composable
 private fun ColorSwatch(hex: String) {
     Box(
-        modifier = Modifier
-            .size(24.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(hexToColor(hex))
-            .border(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+        modifier =
+            Modifier
+                .size(24.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(hexToColor(hex))
+                .border(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(4.dp)),
     )
 }
 
@@ -203,52 +208,53 @@ private fun ColorSwatch(hex: String) {
 private fun ThemePreviewCard(theme: MobileTheme) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = hexToColor(theme.colors.bgPrimary)
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = hexToColor(theme.colors.bgPrimary),
+            ),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     theme.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = hexToColor(theme.colors.textPrimary)
+                    color = hexToColor(theme.colors.textPrimary),
                 )
                 Text(
                     if (theme.mode == MobileThemeMode.DARK) "Dark" else "Light",
                     style = MaterialTheme.typography.labelSmall,
                     color = hexToColor(theme.colors.textSecondary),
-                    modifier = Modifier
-                        .background(
-                            hexToColor(theme.colors.bgSecondary),
-                            RoundedCornerShape(4.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                    modifier =
+                        Modifier
+                            .background(
+                                hexToColor(theme.colors.bgSecondary),
+                                RoundedCornerShape(4.dp),
+                            ).padding(horizontal = 8.dp, vertical = 4.dp),
                 )
             }
 
             Text(
                 "Sample text with primary color",
-                color = hexToColor(theme.colors.textPrimary)
+                color = hexToColor(theme.colors.textPrimary),
             )
             Text(
                 "Secondary text color",
                 style = MaterialTheme.typography.bodySmall,
-                color = hexToColor(theme.colors.textSecondary)
+                color = hexToColor(theme.colors.textSecondary),
             )
 
             // Color palette
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
                 ColorPill("Accent", theme.colors.accent)
                 ColorPill("Success", theme.colors.success)
@@ -260,21 +266,25 @@ private fun ThemePreviewCard(theme: MobileTheme) {
 }
 
 @Composable
-private fun ColorPill(label: String, hex: String) {
+private fun ColorPill(
+    label: String,
+    hex: String,
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(CircleShape)
-                .background(hexToColor(hex))
+            modifier =
+                Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(hexToColor(hex)),
         )
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
