@@ -37,7 +37,7 @@ fun DeliveryStatusScreen(
     isLoading: Boolean,
     onBack: () -> Unit,
     onRetry: (String) -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Recent", "Failed", "Pending")
@@ -55,14 +55,15 @@ fun DeliveryStatusScreen(
                     IconButton(onClick = onRefresh) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
             // Tab row
             TabRow(selectedTabIndex = selectedTab) {
@@ -73,7 +74,7 @@ fun DeliveryStatusScreen(
                         text = {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(title)
                                 if (index == 1 && failedCount > 0) {
@@ -82,7 +83,7 @@ fun DeliveryStatusScreen(
                                     }
                                 }
                             }
-                        }
+                        },
                     )
                 }
             }
@@ -92,17 +93,26 @@ fun DeliveryStatusScreen(
                 isLoading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator()
                     }
                 }
-                selectedTab == 0 -> RecentDeliveriesList(deliveryRecords)
-                selectedTab == 1 -> FailedDeliveriesList(
-                    records = deliveryRecords.filter { it.status == MobileDeliveryStatus.FAILED },
-                    onRetry = onRetry
-                )
-                selectedTab == 2 -> PendingRetriesList(retryEntries)
+
+                selectedTab == 0 -> {
+                    RecentDeliveriesList(deliveryRecords)
+                }
+
+                selectedTab == 1 -> {
+                    FailedDeliveriesList(
+                        records = deliveryRecords.filter { it.status == MobileDeliveryStatus.FAILED },
+                        onRetry = onRetry,
+                    )
+                }
+
+                selectedTab == 2 -> {
+                    PendingRetriesList(retryEntries)
+                }
             }
         }
     }
@@ -114,13 +124,13 @@ fun RecentDeliveriesList(records: List<MobileDeliveryRecord>) {
         EmptyDeliveryContent(
             icon = Icons.Default.CheckCircle,
             title = "No Recent Deliveries",
-            message = "Messages you send will appear here."
+            message = "Messages you send will appear here.",
         )
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(records) { record ->
                 DeliveryRecordCard(record)
@@ -132,19 +142,19 @@ fun RecentDeliveriesList(records: List<MobileDeliveryRecord>) {
 @Composable
 fun FailedDeliveriesList(
     records: List<MobileDeliveryRecord>,
-    onRetry: (String) -> Unit
+    onRetry: (String) -> Unit,
 ) {
     if (records.isEmpty()) {
         EmptyDeliveryContent(
             icon = Icons.Default.CheckCircle,
             title = "No Failed Deliveries",
-            message = "All messages have been delivered successfully."
+            message = "All messages have been delivered successfully.",
         )
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(records) { record ->
                 FailedDeliveryCard(record, onRetry)
@@ -159,13 +169,13 @@ fun PendingRetriesList(entries: List<MobileRetryEntry>) {
         EmptyDeliveryContent(
             icon = Icons.Default.Schedule,
             title = "No Pending Retries",
-            message = "No messages are waiting to be retried."
+            message = "No messages are waiting to be retried.",
         )
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(entries) { entry ->
                 RetryEntryCard(entry)
@@ -178,16 +188,18 @@ fun PendingRetriesList(entries: List<MobileRetryEntry>) {
 fun DeliveryRecordCard(record: MobileDeliveryRecord) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Status icon
             DeliveryStatusIcon(record.status)
@@ -197,24 +209,24 @@ fun DeliveryRecordCard(record: MobileDeliveryRecord) {
                 Text(
                     text = record.recipientId.take(16) + "...",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = statusDisplayName(record.status),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = statusColor(record.status)
+                    color = statusColor(record.status),
                 )
                 if (record.errorReason != null) {
                     Text(
                         text = record.errorReason!!,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
                 Text(
                     text = formatTimestamp(record.updatedAt),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -225,13 +237,13 @@ fun DeliveryRecordCard(record: MobileDeliveryRecord) {
                     Icon(
                         Icons.Default.Warning,
                         contentDescription = "Expired",
-                        tint = MaterialTheme.colorScheme.error
+                        tint = MaterialTheme.colorScheme.error,
                     )
                 } else if (expiresAt - now.toULong() < 86400u) {
                     Text(
                         text = "Expires soon",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.tertiary
+                        color = MaterialTheme.colorScheme.tertiary,
                     )
                 }
             }
@@ -242,26 +254,28 @@ fun DeliveryRecordCard(record: MobileDeliveryRecord) {
 @Composable
 fun FailedDeliveryCard(
     record: MobileDeliveryRecord,
-    onRetry: (String) -> Unit
+    onRetry: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+            ),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 DeliveryStatusIcon(record.status)
 
@@ -269,18 +283,18 @@ fun FailedDeliveryCard(
                     Text(
                         text = record.recipientId.take(16) + "...",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = "Failed",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                     if (record.errorReason != null) {
                         Text(
                             text = record.errorReason!!,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.error,
                         )
                     }
                 }
@@ -288,7 +302,7 @@ fun FailedDeliveryCard(
 
             Button(
                 onClick = { onRetry(record.messageId) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Default.Refresh, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
@@ -302,37 +316,39 @@ fun FailedDeliveryCard(
 fun RetryEntryCard(entry: MobileRetryEntry) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 Icons.Default.Refresh,
                 contentDescription = "Retry pending",
-                tint = MaterialTheme.colorScheme.tertiary
+                tint = MaterialTheme.colorScheme.tertiary,
             )
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = entry.recipientId.take(16) + "...",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = "Attempt ${entry.attempt} of ${entry.maxAttempts}",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
                     text = "Next retry: ${formatTimestamp(entry.nextRetry)}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -340,7 +356,7 @@ fun RetryEntryCard(entry: MobileRetryEntry) {
                 Text(
                     text = "Max attempts",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error
+                    color = MaterialTheme.colorScheme.error,
                 )
             }
         }
@@ -349,14 +365,15 @@ fun RetryEntryCard(entry: MobileRetryEntry) {
 
 @Composable
 fun DeliveryStatusIcon(status: MobileDeliveryStatus) {
-    val (icon, color) = when (status) {
-        MobileDeliveryStatus.QUEUED -> Icons.Default.Schedule to Color.Gray
-        MobileDeliveryStatus.SENT -> Icons.Default.ArrowUpward to Color.Blue
-        MobileDeliveryStatus.STORED -> Icons.Default.CheckCircleOutline to Color.Cyan
-        MobileDeliveryStatus.DELIVERED -> Icons.Default.CheckCircle to Color.Green
-        MobileDeliveryStatus.EXPIRED -> Icons.Default.Warning to Color(0xFFFFA000)
-        MobileDeliveryStatus.FAILED -> Icons.Default.Error to Color.Red
-    }
+    val (icon, color) =
+        when (status) {
+            MobileDeliveryStatus.QUEUED -> Icons.Default.Schedule to Color.Gray
+            MobileDeliveryStatus.SENT -> Icons.Default.ArrowUpward to Color.Blue
+            MobileDeliveryStatus.STORED -> Icons.Default.CheckCircleOutline to Color.Cyan
+            MobileDeliveryStatus.DELIVERED -> Icons.Default.CheckCircle to Color.Green
+            MobileDeliveryStatus.EXPIRED -> Icons.Default.Warning to Color(0xFFFFA000)
+            MobileDeliveryStatus.FAILED -> Icons.Default.Error to Color.Red
+        }
     Icon(icon, contentDescription = statusDisplayName(status), tint = color)
 }
 
@@ -364,30 +381,31 @@ fun DeliveryStatusIcon(status: MobileDeliveryStatus) {
 fun EmptyDeliveryContent(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
-    message: String
+    message: String,
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Icon(
                 icon,
-                contentDescription = null,
+                contentDescription = title,
                 modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { heading() },
             )
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -397,41 +415,44 @@ fun EmptyDeliveryContent(
 fun DeliverySummaryCard(summary: MobileDeliverySummary) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             // Progress bar
             LinearProgressIndicator(
                 progress = { summary.progressPercent.toFloat() / 100f },
                 modifier = Modifier.fillMaxWidth(),
-                color = when {
-                    summary.isFullyDelivered -> MaterialTheme.colorScheme.primary
-                    summary.failedDevices > 0u -> MaterialTheme.colorScheme.error
-                    else -> MaterialTheme.colorScheme.tertiary
-                }
+                color =
+                    when {
+                        summary.isFullyDelivered -> MaterialTheme.colorScheme.primary
+                        summary.failedDevices > 0u -> MaterialTheme.colorScheme.error
+                        else -> MaterialTheme.colorScheme.tertiary
+                    },
             )
 
             // Status text
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
                     text = "Delivered to ${summary.deliveredDevices} of ${summary.totalDevices} devices",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
                 if (summary.failedDevices > 0u) {
                     Text(
                         text = "${summary.failedDevices} failed",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             }
@@ -443,7 +464,7 @@ fun DeliverySummaryCard(summary: MobileDeliverySummary) {
 fun DeliveryStatusIndicator(status: MobileDeliveryStatus) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             when (status) {
@@ -454,36 +475,38 @@ fun DeliveryStatusIndicator(status: MobileDeliveryStatus) {
                 MobileDeliveryStatus.EXPIRED -> Icons.Default.Warning
                 MobileDeliveryStatus.FAILED -> Icons.Default.Error
             },
-            contentDescription = null,
-            modifier = Modifier.size(12.dp),
-            tint = statusColor(status)
+            contentDescription = statusDisplayName(status),
+            modifier = Modifier.size(16.dp),
+            tint = statusColor(status),
         )
         Text(
             text = statusDisplayName(status),
             style = MaterialTheme.typography.labelSmall,
-            color = statusColor(status)
+            color = statusColor(status),
         )
     }
 }
 
-private fun statusDisplayName(status: MobileDeliveryStatus): String = when (status) {
-    MobileDeliveryStatus.QUEUED -> "Queued"
-    MobileDeliveryStatus.SENT -> "Sent"
-    MobileDeliveryStatus.STORED -> "Stored"
-    MobileDeliveryStatus.DELIVERED -> "Delivered"
-    MobileDeliveryStatus.EXPIRED -> "Expired"
-    MobileDeliveryStatus.FAILED -> "Failed"
-}
+private fun statusDisplayName(status: MobileDeliveryStatus): String =
+    when (status) {
+        MobileDeliveryStatus.QUEUED -> "Queued"
+        MobileDeliveryStatus.SENT -> "Sent"
+        MobileDeliveryStatus.STORED -> "Stored"
+        MobileDeliveryStatus.DELIVERED -> "Delivered"
+        MobileDeliveryStatus.EXPIRED -> "Expired"
+        MobileDeliveryStatus.FAILED -> "Failed"
+    }
 
 @Composable
-private fun statusColor(status: MobileDeliveryStatus): Color = when (status) {
-    MobileDeliveryStatus.QUEUED -> Color.Gray
-    MobileDeliveryStatus.SENT -> Color.Blue
-    MobileDeliveryStatus.STORED -> Color.Cyan
-    MobileDeliveryStatus.DELIVERED -> Color.Green
-    MobileDeliveryStatus.EXPIRED -> Color(0xFFFFA000)
-    MobileDeliveryStatus.FAILED -> MaterialTheme.colorScheme.error
-}
+private fun statusColor(status: MobileDeliveryStatus): Color =
+    when (status) {
+        MobileDeliveryStatus.QUEUED -> Color.Gray
+        MobileDeliveryStatus.SENT -> Color.Blue
+        MobileDeliveryStatus.STORED -> Color.Cyan
+        MobileDeliveryStatus.DELIVERED -> Color.Green
+        MobileDeliveryStatus.EXPIRED -> Color(0xFFFFA000)
+        MobileDeliveryStatus.FAILED -> MaterialTheme.colorScheme.error
+    }
 
 private fun formatTimestamp(timestamp: ULong): String {
     val date = Date(timestamp.toLong() * 1000)
