@@ -60,6 +60,40 @@ sealed class SyncState {
     ) : SyncState()
 }
 
+/**
+ * State machine for the contact exchange flow with proximity verification.
+ *
+ * Flow: Idle -> PendingProximity (after QR scan) -> Completing (after proximity verified)
+ *       -> Success | Failed
+ *
+ * TODO: When core bindings support `createQrExchangeProximity()`, switch from
+ * `createQrExchangeManual()` to integrate proximity at the protocol level.
+ * Currently this is a UI gate only.
+ */
+sealed class ExchangeFlowState {
+    /** No exchange in progress. */
+    object Idle : ExchangeFlowState()
+
+    /** QR scanned, waiting for proximity verification before completing exchange. */
+    data class PendingProximity(
+        val qrData: String,
+        val challenge: ByteArray,
+    ) : ExchangeFlowState()
+
+    /** Proximity verified, exchange completing. */
+    object Completing : ExchangeFlowState()
+
+    /** Exchange completed successfully. */
+    data class Success(
+        val result: MobileExchangeResult,
+    ) : ExchangeFlowState()
+
+    /** Exchange failed. */
+    data class Failed(
+        val error: String,
+    ) : ExchangeFlowState()
+}
+
 sealed class UiState {
     object Loading : UiState()
 
@@ -99,6 +133,10 @@ class MainViewModel(
 
     private val _proximityCapability = MutableStateFlow("none")
     val proximityCapability: StateFlow<String> = _proximityCapability.asStateFlow()
+
+    // Exchange flow state (proximity verification gate)
+    private val _exchangeState = MutableStateFlow<ExchangeFlowState>(ExchangeFlowState.Idle)
+    val exchangeState: StateFlow<ExchangeFlowState> = _exchangeState.asStateFlow()
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -424,6 +462,53 @@ class MainViewModel(
         } catch (e: Exception) {
             null
         }
+
+    /**
+     * Begin the exchange flow with proximity verification.
+     * Called after QR code is scanned. Generates a proximity challenge
+     * and transitions to PendingProximity state.
+     *
+     * TODO: When `createQrExchangeProximity()` is available in bindings,
+     * use protocol-level challenge instead of locally generated one.
+     */
+    fun startExchangeWithProximity(qrData: String) {
+        val challenge = ByteArray(16).also { java.security.SecureRandom().nextBytes(it) }
+        _exchangeState.value = ExchangeFlowState.PendingProximity(qrData, challenge)
+    }
+
+    /**
+     * Complete the exchange after proximity has been verified.
+     * Must only be called when exchangeState is PendingProximity.
+     */
+    suspend fun completeExchangeAfterProximity() {
+        val state = _exchangeState.value
+        if (state !is ExchangeFlowState.PendingProximity) return
+        _exchangeState.value = ExchangeFlowState.Completing
+        val result = completeExchange(state.qrData)
+        if (result != null && result.success) {
+            _exchangeState.value = ExchangeFlowState.Success(result)
+        } else {
+            _exchangeState.value =
+                ExchangeFlowState.Failed(
+                    result?.errorMessage ?: "Exchange failed",
+                )
+        }
+    }
+
+    /**
+     * Cancel the proximity verification and reset exchange state.
+     */
+    fun cancelExchangeProximity() {
+        stopProximityVerification()
+        _exchangeState.value = ExchangeFlowState.Idle
+    }
+
+    /**
+     * Reset exchange state back to idle (e.g., after success/failure acknowledged).
+     */
+    fun resetExchangeState() {
+        _exchangeState.value = ExchangeFlowState.Idle
+    }
 
     suspend fun listContacts(): List<MobileContact> =
         try {

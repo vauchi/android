@@ -9,6 +9,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.vauchi.data.ExchangeData
+import com.vauchi.ui.components.ProximityVerification
 import com.vauchi.util.LocalizationManager
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,7 +35,15 @@ fun ExchangeScreen(
     onBack: () -> Unit,
     onGenerateQr: suspend () -> ExchangeData?,
     onScanQr: () -> Unit,
-    proximitySupported: Boolean = false
+    proximitySupported: Boolean = false,
+    proximityCapability: String = "none",
+    exchangeState: ExchangeFlowState = ExchangeFlowState.Idle,
+    onEmitChallenge: (ByteArray) -> Boolean = { false },
+    onListenForResponse: (ULong) -> ByteArray? = { null },
+    onStopVerification: () -> Unit = {},
+    onProximityVerified: () -> Unit = {},
+    onCancelProximity: () -> Unit = {},
+    onExchangeDone: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -65,157 +76,275 @@ fun ExchangeScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            if (isLoading) {
-                CircularProgressIndicator()
-                Text(localizationManager.t("sync.syncing"))
-            } else if (hasError) {
-                // Error state
-                Icon(
-                    Icons.Default.Warning,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.error
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = localizationManager.t("exchange.qr_error"),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.error
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Please check your internet connection and try again",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = { retryTrigger++ }) {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(localizationManager.t("action.retry"))
-                }
-            } else {
-                Text(
-                    text = localizationManager.t("exchange.your_qr"),
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.semantics { heading() }
-                )
+            // Proximity verification gate: show proximity UI when exchange is pending
+            when (exchangeState) {
+                is ExchangeFlowState.PendingProximity -> {
+                    // Show proximity verification between QR scan and exchange completion
+                    Text(
+                        text = "QR Code Scanned",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = "Verify that the other device is nearby before completing the exchange.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
 
-                qrBitmap?.let { bitmap ->
-                    Card(
-                        modifier = Modifier
-                            .size(280.dp)
-                            .semantics {
-                                contentDescription = "Your contact exchange QR code. Show this to someone to let them scan and add you as a contact."
-                            },
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // TODO: When createQrExchangeProximity() bindings are available,
+                    // use protocol-level challenge instead of the locally generated one.
+                    ProximityVerification(
+                        challenge = exchangeState.challenge,
+                        proximitySupported = proximitySupported,
+                        proximityCapability = proximityCapability,
+                        onEmitChallenge = onEmitChallenge,
+                        onListenForResponse = onListenForResponse,
+                        onStopVerification = onStopVerification,
+                        onVerified = onProximityVerified,
+                        onCancel = onCancelProximity,
+                    )
+                }
+
+                is ExchangeFlowState.Completing -> {
+                    // Exchange is being completed after proximity verification
+                    Spacer(modifier = Modifier.weight(1f))
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Completing exchange...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+
+                is ExchangeFlowState.Success -> {
+                    // Exchange completed successfully
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = "Success",
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Contact exchanged!",
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                    Text(
+                        text = "The new contact has been added to your contacts list.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = onExchangeDone,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                bitmap = bitmap.asImageBitmap(),
-                                contentDescription = null, // Handled by parent Card semantics
-                                modifier = Modifier.size(260.dp)
+                        Text(localizationManager.t("action.done"))
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+
+                is ExchangeFlowState.Failed -> {
+                    // Exchange failed
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Failed",
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Exchange failed",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    Text(
+                        text = exchangeState.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = onCancelProximity,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(localizationManager.t("action.retry"))
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+
+                is ExchangeFlowState.Idle -> {
+                    // Normal exchange screen: show QR and scan button
+                    if (isLoading) {
+                        CircularProgressIndicator()
+                        Text(localizationManager.t("sync.syncing"))
+                    } else if (hasError) {
+                        // Error state
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = localizationManager.t("exchange.qr_error"),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Please check your internet connection and try again",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(onClick = { retryTrigger++ }) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(localizationManager.t("action.retry"))
+                        }
+                    } else {
+                        Text(
+                            text = localizationManager.t("exchange.your_qr"),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.semantics { heading() },
+                        )
+
+                        qrBitmap?.let { bitmap ->
+                            Card(
+                                modifier =
+                                    Modifier
+                                        .size(280.dp)
+                                        .semantics {
+                                            contentDescription =
+                                                "Your contact exchange QR code. Show this to someone to let them scan and add you as a contact."
+                                        },
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Image(
+                                        bitmap = bitmap.asImageBitmap(),
+                                        contentDescription = null, // Handled by parent Card semantics
+                                        modifier = Modifier.size(260.dp),
+                                    )
+                                }
+                            }
+                        }
+
+                        exchangeData?.let { data ->
+                            Text(
+                                text = localizationManager.t("exchange.expires_in", mapOf("time" to formatExpiry(data.expiresAt))),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                    }
-                }
 
-                exchangeData?.let { data ->
-                    Text(
-                        text = localizationManager.t("exchange.expires_in", mapOf("time" to formatExpiry(data.expiresAt))),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                
-                // Proximity verification status
-                if (proximitySupported) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            painter = androidx.compose.ui.res.painterResource(
-                                android.R.drawable.ic_lock_silent_mode_off
-                            ),
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Ultrasonic verification ready",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                // BLE Exchange stub
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = "Bluetooth Exchange",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.semantics { heading() }
-                        )
-                        Icon(
-                            painter = androidx.compose.ui.res.painterResource(
-                                android.R.drawable.stat_sys_data_bluetooth
-                            ),
-                            contentDescription = null,
-                            modifier = Modifier.size(40.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Coming soon",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "Exchange contact cards via Bluetooth when both devices are nearby. Requires Bluetooth hardware.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
-                }
-
-                Button(
-                    onClick = onScanQr,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .semantics {
-                            contentDescription = "Scan QR code. Opens the camera to scan someone else's QR code and add them as a contact."
+                        // Proximity verification status
+                        if (proximitySupported) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Icon(
+                                    painter =
+                                        androidx.compose.ui.res.painterResource(
+                                            android.R.drawable.ic_lock_silent_mode_off,
+                                        ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Text(
+                                    text = "Ultrasonic verification ready",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
-                ) {
-                    Text(localizationManager.t("exchange.scan"))
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        // BLE Exchange stub
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                ),
+                        ) {
+                            Column(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Text(
+                                    text = "Bluetooth Exchange",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.semantics { heading() },
+                                )
+                                Icon(
+                                    painter =
+                                        androidx.compose.ui.res.painterResource(
+                                            android.R.drawable.stat_sys_data_bluetooth,
+                                        ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(40.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    text = "Coming soon",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                Text(
+                                    text = "Exchange contact cards via Bluetooth when both devices are nearby. Requires Bluetooth hardware.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = onScanQr,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .semantics {
+                                        contentDescription =
+                                            "Scan QR code. Opens the camera to scan someone else's QR code and add them as a contact."
+                                    },
+                        ) {
+                            Text(localizationManager.t("exchange.scan"))
+                        }
+                    }
                 }
             }
         }
@@ -225,7 +354,7 @@ fun ExchangeScreen(
 @Composable
 fun ScanQrDialog(
     onDismiss: () -> Unit,
-    onScan: (String) -> Unit
+    onScan: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -239,21 +368,21 @@ fun ScanQrDialog(
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
                     text = "Camera scanning coming soon. For now, paste the QR data:",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 OutlinedTextField(
                     value = manualInput,
                     onValueChange = { manualInput = it },
                     label = { Text("QR Data (wb://...)") },
                     modifier = Modifier.fillMaxWidth(),
-                    minLines = 3
+                    minLines = 3,
                 )
             }
         },
         confirmButton = {
             TextButton(
                 onClick = { onScan(manualInput) },
-                enabled = manualInput.isNotBlank()
+                enabled = manualInput.isNotBlank(),
             ) {
                 Text(localizationManager.t("contacts.add"))
             }
@@ -262,7 +391,7 @@ fun ScanQrDialog(
             TextButton(onClick = onDismiss) {
                 Text(localizationManager.t("action.cancel"))
             }
-        }
+        },
     )
 }
 

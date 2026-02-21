@@ -201,10 +201,32 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             }
 
             Screen.Exchange -> {
+                val exchangeState by viewModel.exchangeState.collectAsState()
+                val proximitySupported by viewModel.proximitySupported.collectAsState()
+                val proximityCapability by viewModel.proximityCapability.collectAsState()
                 ExchangeScreen(
-                    onBack = { currentScreen = Screen.Home },
+                    onBack = {
+                        viewModel.resetExchangeState()
+                        currentScreen = Screen.Home
+                    },
                     onGenerateQr = { viewModel.generateExchangeQr() },
                     onScanQr = { currentScreen = Screen.QrScanner },
+                    proximitySupported = proximitySupported,
+                    proximityCapability = proximityCapability,
+                    exchangeState = exchangeState,
+                    onEmitChallenge = { challenge -> viewModel.emitProximityChallenge(challenge) },
+                    onListenForResponse = { timeout -> viewModel.listenForProximityResponse(timeout) },
+                    onStopVerification = { viewModel.stopProximityVerification() },
+                    onProximityVerified = {
+                        coroutineScope.launch {
+                            viewModel.completeExchangeAfterProximity()
+                        }
+                    },
+                    onCancelProximity = { viewModel.cancelExchangeProximity() },
+                    onExchangeDone = {
+                        viewModel.resetExchangeState()
+                        currentScreen = Screen.Home
+                    },
                 )
             }
 
@@ -212,10 +234,9 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                 QrScannerScreen(
                     onBack = { currentScreen = Screen.Exchange },
                     onQrScanned = { qrData ->
-                        coroutineScope.launch {
-                            viewModel.completeExchange(qrData)
-                            currentScreen = Screen.Home
-                        }
+                        // Start exchange with proximity verification gate
+                        viewModel.startExchangeWithProximity(qrData)
+                        currentScreen = Screen.Exchange
                     },
                 )
             }
