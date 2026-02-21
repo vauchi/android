@@ -524,6 +524,15 @@ class MainViewModel(
             null
         }
 
+    suspend fun getOwnFingerprint(): String? =
+        try {
+            withContext(Dispatchers.IO) {
+                repository.getOwnFingerprint()
+            }
+        } catch (e: Exception) {
+            null
+        }
+
     suspend fun getOwnCard(): MobileContactCard? =
         try {
             withContext(Dispatchers.IO) {

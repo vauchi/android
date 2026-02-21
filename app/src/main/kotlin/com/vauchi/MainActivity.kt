@@ -254,6 +254,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                         },
                         onVerifyContact = { viewModel.verifyContact(it) },
                         onGetOwnPublicKey = { viewModel.getOwnPublicKey() },
+                        onGetOwnFingerprint = { viewModel.getOwnFingerprint() },
                         onTrustForRecovery = { viewModel.trustContactForRecovery(it) },
                         onUntrustForRecovery = { viewModel.untrustContactForRecovery(it) },
                         onGetValidationStatus = { cId, fId, fVal ->
