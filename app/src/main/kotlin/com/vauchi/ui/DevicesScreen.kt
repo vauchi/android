@@ -709,7 +709,13 @@ fun DeviceCard(
         }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription =
+                        "${device.deviceName}, ${if (device.isCurrent) "current device, " else ""}${if (device.isActive) "active" else "inactive"}"
+                },
     ) {
         Row(
             modifier =
@@ -720,7 +726,7 @@ fun DeviceCard(
         ) {
             Icon(
                 deviceIcon,
-                contentDescription = null,
+                contentDescription = null, // Described by parent card semantics
                 modifier = Modifier.size(40.dp),
                 tint =
                     if (device.isCurrent) {
@@ -775,7 +781,7 @@ fun DeviceCard(
                 IconButton(onClick = onUnlink) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Unlink device",
+                        contentDescription = "Unlink ${device.deviceName}",
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
