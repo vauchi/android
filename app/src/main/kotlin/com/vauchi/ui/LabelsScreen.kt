@@ -41,7 +41,7 @@ fun LabelsScreen(
     onLabelClick: (String) -> Unit,
     onCreateLabel: (String) -> Unit,
     onDeleteLabel: (String) -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -62,24 +62,25 @@ fun LabelsScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
             )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showCreateDialog = true },
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Create label")
             }
-        }
+        },
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             // Suggested labels section (if no labels exist)
             if (labels.isEmpty() && suggestedLabels.isNotEmpty()) {
@@ -88,14 +89,14 @@ fun LabelsScreen(
                         text = "Suggested Labels",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(vertical = 8.dp).semantics { heading() },
                     )
                 }
 
                 items(suggestedLabels) { suggestion ->
                     SuggestedLabelCard(
                         name = suggestion,
-                        onClick = { onCreateLabel(suggestion) }
+                        onClick = { onCreateLabel(suggestion) },
                     )
                 }
 
@@ -104,7 +105,7 @@ fun LabelsScreen(
                         text = "Tap a suggestion to create it, or tap + to create your own.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(vertical = 8.dp),
                     )
                 }
 
@@ -117,7 +118,7 @@ fun LabelsScreen(
                     text = "Your Labels",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier.padding(vertical = 8.dp).semantics { heading() },
                 )
             }
 
@@ -128,7 +129,7 @@ fun LabelsScreen(
                         text = "No labels yet. Create one to organize your contacts!",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        modifier = Modifier.padding(vertical = 16.dp),
                     )
                 }
             } else {
@@ -136,7 +137,7 @@ fun LabelsScreen(
                     LabelCard(
                         label = label,
                         onClick = { onLabelClick(label.id) },
-                        onDelete = { showDeleteDialog = label }
+                        onDelete = { showDeleteDialog = label },
                     )
                 }
             }
@@ -147,7 +148,7 @@ fun LabelsScreen(
                     text = "Labels help you organize contacts into groups and control what information each group can see.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 16.dp)
+                    modifier = Modifier.padding(vertical = 16.dp),
                 )
             }
         }
@@ -167,7 +168,7 @@ fun LabelsScreen(
                     onValueChange = { newLabelName = it },
                     label = { Text("Label name") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             },
             confirmButton = {
@@ -179,7 +180,7 @@ fun LabelsScreen(
                             showCreateDialog = false
                         }
                     },
-                    enabled = newLabelName.isNotBlank()
+                    enabled = newLabelName.isNotBlank(),
                 ) {
                     Text("Create")
                 }
@@ -191,7 +192,7 @@ fun LabelsScreen(
                 }) {
                     Text(localizationManager.t("action.cancel"))
                 }
-            }
+            },
         )
     }
 
@@ -201,14 +202,16 @@ fun LabelsScreen(
             onDismissRequest = { showDeleteDialog = null },
             title = { Text("Delete Label?") },
             text = {
-                Text("Are you sure you want to delete \"${label.name}\"? Contacts will remain in your contacts list but will lose this label's visibility settings.")
+                Text(
+                    "Are you sure you want to delete \"${label.name}\"? Contacts will remain in your contacts list but will lose this label's visibility settings.",
+                )
             },
             confirmButton = {
                 TextButton(
                     onClick = {
                         onDeleteLabel(label.id)
                         showDeleteDialog = null
-                    }
+                    },
                 ) {
                     Text(localizationManager.t("action.delete"), color = MaterialTheme.colorScheme.error)
                 }
@@ -217,7 +220,7 @@ fun LabelsScreen(
                 TextButton(onClick = { showDeleteDialog = null }) {
                     Text(localizationManager.t("action.cancel"))
                 }
-            }
+            },
         )
     }
 }
@@ -225,38 +228,42 @@ fun LabelsScreen(
 @Composable
 private fun SuggestedLabelCard(
     name: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        )
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = "Create $name label. Tap to create." }
+                .clickable(onClick = onClick),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Icon(
                 Icons.Default.Add,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                contentDescription = null, // Described by parent card semantics
+                tint = MaterialTheme.colorScheme.primary,
             )
             Text(
                 text = name,
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = "Tap to create",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -266,73 +273,79 @@ private fun SuggestedLabelCard(
 private fun LabelCard(
     label: MobileVisibilityLabel,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription = "${label.name} label, ${label.contactCount} contacts"
+                }.clickable(onClick = onClick),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 Icons.AutoMirrored.Filled.Label,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                contentDescription = null, // Described by parent card semantics
+                tint = MaterialTheme.colorScheme.primary,
             )
 
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp)
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(horizontal = 12.dp),
             ) {
                 Text(
                     text = label.name,
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier.padding(top = 4.dp),
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             Icons.Default.People,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            contentDescription = "Contacts",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             text = "${label.contactCount}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     if (label.visibleFieldCount > 0u) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
                                 Icons.Default.Visibility,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                contentDescription = "Visible fields",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
                                 text = "${label.visibleFieldCount} fields",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -342,8 +355,8 @@ private fun LabelCard(
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Delete label",
-                    tint = MaterialTheme.colorScheme.error
+                    contentDescription = "Delete ${label.name} label",
+                    tint = MaterialTheme.colorScheme.error,
                 )
             }
         }
