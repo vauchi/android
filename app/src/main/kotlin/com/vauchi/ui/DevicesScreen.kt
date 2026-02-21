@@ -19,10 +19,12 @@ import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.Laptop
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tablet
 import androidx.compose.material.icons.filled.Watch
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -305,9 +307,14 @@ fun DeviceLinkDialog(
     val proximitySupported by viewModel.proximitySupported.collectAsState()
     val proximityCapability by viewModel.proximityCapability.collectAsState()
 
-    // Start the protocol on first composition
-    LaunchedEffect(Unit) {
-        viewModel.startDeviceLinkInitiator()
+    // null = not selected, "internet" = relay flow, "offline" = QR-only stub
+    var selectedTransport by remember { mutableStateOf<String?>(null) }
+
+    // Start the protocol only after internet transport is selected
+    LaunchedEffect(selectedTransport) {
+        if (selectedTransport == "internet") {
+            viewModel.startDeviceLinkInitiator()
+        }
     }
 
     // When we reach WaitingForRequest, start listening for relay request
@@ -321,22 +328,34 @@ fun DeviceLinkDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                when (deviceLinkState) {
-                    is MainViewModel.DeviceLinkState.Idle,
-                    is MainViewModel.DeviceLinkState.GeneratingQR,
-                    -> "Link New Device"
+                when {
+                    selectedTransport == null -> {
+                        "Link New Device"
+                    }
 
-                    is MainViewModel.DeviceLinkState.WaitingForRequest -> "Link New Device"
+                    selectedTransport == "offline" -> {
+                        "Offline Device Linking"
+                    }
 
-                    is MainViewModel.DeviceLinkState.ConfirmingDevice -> "Confirm Device"
+                    else -> {
+                        when (deviceLinkState) {
+                            is MainViewModel.DeviceLinkState.Idle,
+                            is MainViewModel.DeviceLinkState.GeneratingQR,
+                            -> "Link New Device"
 
-                    is MainViewModel.DeviceLinkState.VerifyingProximity -> "Verify Proximity"
+                            is MainViewModel.DeviceLinkState.WaitingForRequest -> "Link New Device"
 
-                    is MainViewModel.DeviceLinkState.Completing -> "Completing Link"
+                            is MainViewModel.DeviceLinkState.ConfirmingDevice -> "Confirm Device"
 
-                    is MainViewModel.DeviceLinkState.Success -> "Device Linked"
+                            is MainViewModel.DeviceLinkState.VerifyingProximity -> "Verify Proximity"
 
-                    is MainViewModel.DeviceLinkState.Failed -> "Link Failed"
+                            is MainViewModel.DeviceLinkState.Completing -> "Completing Link"
+
+                            is MainViewModel.DeviceLinkState.Success -> "Device Linked"
+
+                            is MainViewModel.DeviceLinkState.Failed -> "Link Failed"
+                        }
+                    }
                 },
             )
         },
@@ -349,205 +368,275 @@ fun DeviceLinkDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                when (val state = deviceLinkState) {
-                    is MainViewModel.DeviceLinkState.Idle,
-                    is MainViewModel.DeviceLinkState.GeneratingQR,
-                    -> {
-                        CircularProgressIndicator()
+                when (selectedTransport) {
+                    null -> {
+                        // Transport selection
+                        Text(
+                            text = "How would you like to link?",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            text = "Choose how to connect with your new device.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Generating link...")
+                        Button(
+                            onClick = { selectedTransport = "internet" },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(
+                                Icons.Default.Wifi,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Link via Internet")
+                        }
+                        OutlinedButton(
+                            onClick = { selectedTransport = "offline" },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(
+                                Icons.Default.QrCode,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Link Offline (QR)")
+                        }
                     }
 
-                    is MainViewModel.DeviceLinkState.WaitingForRequest -> {
-                        Text(
-                            text = "Scan this QR code on your new device",
-                            style = MaterialTheme.typography.bodyMedium,
+                    "offline" -> {
+                        // Offline stub
+                        Icon(
+                            Icons.Default.QrCode,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-
-                        // QR Code
-                        val qrBitmap =
-                            remember(state.qrData) {
-                                generateQRBitmap(state.qrData, 250)
-                            }
-                        if (qrBitmap != null) {
-                            Card(
-                                colors =
-                                    CardDefaults.cardColors(
-                                        containerColor = Color.White,
-                                    ),
-                            ) {
-                                Image(
-                                    bitmap = qrBitmap.asImageBitmap(),
-                                    contentDescription = "Device Link QR Code",
-                                    modifier =
-                                        Modifier
-                                            .size(250.dp)
-                                            .padding(8.dp),
-                                )
-                            }
-                        }
-
-                        // Waiting indicator
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                            )
-                            Text(
-                                text = "Waiting for new device to connect...",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-
-                        // Copy button
-                        TextButton(onClick = {
-                            ClipboardUtils.copyWithAutoClear(
-                                context,
-                                coroutineScope,
-                                state.qrData,
-                                "Device Link",
-                            )
-                        }) {
-                            Icon(
-                                Icons.Default.Share,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Copy Link")
-                        }
-
                         Text(
-                            text =
-                                "Open Vauchi on your new device and select " +
-                                    "\"Join Existing Identity\" to scan this code.",
+                            text = "Coming soon \u2014 offline device linking requires protocol updates.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = "This mode will use animated QR codes to exchange device linking data without requiring an internet connection.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { selectedTransport = null },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Back")
+                        }
                     }
 
-                    is MainViewModel.DeviceLinkState.ConfirmingDevice -> {
-                        // Device name
-                        Text(
-                            text = "A device wants to link:",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Card(
-                            colors =
-                                CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                ),
-                        ) {
-                            Column(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                            ) {
-                                Text(
-                                    text = state.deviceName,
-                                    style = MaterialTheme.typography.titleMedium,
-                                )
+                    "internet" -> {
+                        // Existing relay flow
+                        when (val state = deviceLinkState) {
+                            is MainViewModel.DeviceLinkState.Idle,
+                            is MainViewModel.DeviceLinkState.GeneratingQR,
+                            -> {
+                                CircularProgressIndicator()
                                 Spacer(modifier = Modifier.height(8.dp))
+                                Text("Generating link...")
+                            }
+
+                            is MainViewModel.DeviceLinkState.WaitingForRequest -> {
                                 Text(
-                                    text = "Confirmation code:",
-                                    style = MaterialTheme.typography.labelMedium,
+                                    text = "Scan this QR code on your new device",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+
+                                // QR Code
+                                val qrBitmap =
+                                    remember(state.qrData) {
+                                        generateQRBitmap(state.qrData, 250)
+                                    }
+                                if (qrBitmap != null) {
+                                    Card(
+                                        colors =
+                                            CardDefaults.cardColors(
+                                                containerColor = Color.White,
+                                            ),
+                                    ) {
+                                        Image(
+                                            bitmap = qrBitmap.asImageBitmap(),
+                                            contentDescription = "Device Link QR Code",
+                                            modifier =
+                                                Modifier
+                                                    .size(250.dp)
+                                                    .padding(8.dp),
+                                        )
+                                    }
+                                }
+
+                                // Waiting indicator
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                    Text(
+                                        text = "Waiting for new device to connect...",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+
+                                // Copy button
+                                TextButton(onClick = {
+                                    ClipboardUtils.copyWithAutoClear(
+                                        context,
+                                        coroutineScope,
+                                        state.qrData,
+                                        "Device Link",
+                                    )
+                                }) {
+                                    Icon(
+                                        Icons.Default.Share,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Copy Link")
+                                }
+
+                                Text(
+                                    text =
+                                        "Open Vauchi on your new device and select " +
+                                            "\"Join Existing Identity\" to scan this code.",
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
+                            }
+
+                            is MainViewModel.DeviceLinkState.ConfirmingDevice -> {
+                                // Device name
                                 Text(
-                                    text = state.confirmationCode,
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    text = "A device wants to link:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                Card(
+                                    colors =
+                                        CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        ),
+                                ) {
+                                    Column(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                    ) {
+                                        Text(
+                                            text = state.deviceName,
+                                            style = MaterialTheme.typography.titleMedium,
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "Confirmation code:",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        Text(
+                                            text = state.confirmationCode,
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = "Verify this code matches what is shown on the other device.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+
+                                // Proximity verification
+                                ProximityVerificationSection(
+                                    challenge = state.challenge,
+                                    proximitySupported = proximitySupported,
+                                    proximityCapability = proximityCapability,
+                                    viewModel = viewModel,
+                                    onVerified = {
+                                        coroutineScope.launch {
+                                            viewModel.approveDeviceLink()
+                                        }
+                                    },
+                                    onCancel = onDismiss,
                                 )
                             }
-                        }
 
-                        Text(
-                            text = "Verify this code matches what is shown on the other device.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-
-                        // Proximity verification
-                        ProximityVerificationSection(
-                            challenge = state.challenge,
-                            proximitySupported = proximitySupported,
-                            proximityCapability = proximityCapability,
-                            viewModel = viewModel,
-                            onVerified = {
-                                coroutineScope.launch {
-                                    viewModel.approveDeviceLink()
-                                }
-                            },
-                            onCancel = onDismiss,
-                        )
-                    }
-
-                    is MainViewModel.DeviceLinkState.VerifyingProximity -> {
-                        ProximityVerificationSection(
-                            challenge = state.challenge,
-                            proximitySupported = proximitySupported,
-                            proximityCapability = proximityCapability,
-                            viewModel = viewModel,
-                            onVerified = {
-                                coroutineScope.launch {
-                                    viewModel.approveDeviceLink()
-                                }
-                            },
-                            onCancel = onDismiss,
-                        )
-                    }
-
-                    is MainViewModel.DeviceLinkState.Completing -> {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Completing device link...",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-
-                    is MainViewModel.DeviceLinkState.Success -> {
-                        Icon(
-                            Icons.Default.Check,
-                            contentDescription = "Success",
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            text = "Device linked successfully!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            text = "The new device now shares your identity and will sync automatically.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-
-                    is MainViewModel.DeviceLinkState.Failed -> {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Failed",
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                        Text(
-                            text = state.error,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        Button(onClick = {
-                            coroutineScope.launch {
-                                viewModel.startDeviceLinkInitiator()
+                            is MainViewModel.DeviceLinkState.VerifyingProximity -> {
+                                ProximityVerificationSection(
+                                    challenge = state.challenge,
+                                    proximitySupported = proximitySupported,
+                                    proximityCapability = proximityCapability,
+                                    viewModel = viewModel,
+                                    onVerified = {
+                                        coroutineScope.launch {
+                                            viewModel.approveDeviceLink()
+                                        }
+                                    },
+                                    onCancel = onDismiss,
+                                )
                             }
-                        }) {
-                            Text(localizationManager.t("action.retry"))
+
+                            is MainViewModel.DeviceLinkState.Completing -> {
+                                CircularProgressIndicator()
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Completing device link...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+
+                            is MainViewModel.DeviceLinkState.Success -> {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = "Success",
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Text(
+                                    text = "Device linked successfully!",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Text(
+                                    text = "The new device now shares your identity and will sync automatically.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+
+                            is MainViewModel.DeviceLinkState.Failed -> {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Failed",
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                                Text(
+                                    text = state.error,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                Button(onClick = {
+                                    coroutineScope.launch {
+                                        viewModel.startDeviceLinkInitiator()
+                                    }
+                                }) {
+                                    Text(localizationManager.t("action.retry"))
+                                }
+                            }
                         }
                     }
                 }
@@ -556,10 +645,22 @@ fun DeviceLinkDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(
-                    when (deviceLinkState) {
-                        is MainViewModel.DeviceLinkState.Success -> localizationManager.t("action.done")
-                        is MainViewModel.DeviceLinkState.Failed -> localizationManager.t("action.cancel")
-                        else -> localizationManager.t("action.cancel")
+                    when {
+                        selectedTransport == null -> {
+                            localizationManager.t("action.cancel")
+                        }
+
+                        selectedTransport == "offline" -> {
+                            localizationManager.t("action.cancel")
+                        }
+
+                        else -> {
+                            when (deviceLinkState) {
+                                is MainViewModel.DeviceLinkState.Success -> localizationManager.t("action.done")
+                                is MainViewModel.DeviceLinkState.Failed -> localizationManager.t("action.cancel")
+                                else -> localizationManager.t("action.cancel")
+                            }
+                        }
                     },
                 )
             }
