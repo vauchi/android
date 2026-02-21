@@ -46,7 +46,7 @@ enum class OnboardingStep {
     AddFields,
     Preview,
     Security,
-    Ready
+    Ready,
 }
 
 /**
@@ -55,7 +55,7 @@ enum class OnboardingStep {
 data class OnboardingData(
     val displayName: String = "",
     val phone: String = "",
-    val email: String = ""
+    val email: String = "",
 )
 
 /**
@@ -65,7 +65,7 @@ data class OnboardingData(
 @Composable
 fun OnboardingScreen(
     onComplete: (displayName: String, phone: String?, email: String?) -> Unit,
-    onRestore: () -> Unit = {}
+    onRestore: () -> Unit = {},
 ) {
     var currentStep by remember { mutableStateOf(OnboardingStep.Welcome) }
     var onboardingData by remember { mutableStateOf(OnboardingData()) }
@@ -74,69 +74,95 @@ fun OnboardingScreen(
         targetState = currentStep,
         transitionSpec = {
             slideInHorizontally { it } + fadeIn() togetherWith
-                    slideOutHorizontally { -it } + fadeOut()
+                slideOutHorizontally { -it } + fadeOut()
         },
-        label = "onboarding_step"
+        label = "onboarding_step",
     ) { step ->
         when (step) {
-            OnboardingStep.Welcome -> WelcomeStep(
-                onContinue = { currentStep = OnboardingStep.CreateIdentity },
-                onRestore = onRestore
-            )
-            OnboardingStep.CreateIdentity -> CreateIdentityStep(
-                displayName = onboardingData.displayName,
-                onDisplayNameChange = { onboardingData = onboardingData.copy(displayName = it) },
-                onContinue = { currentStep = OnboardingStep.AddFields },
-                onBack = { currentStep = OnboardingStep.Welcome }
-            )
-            OnboardingStep.AddFields -> AddFieldsStep(
-                phone = onboardingData.phone,
-                email = onboardingData.email,
-                onPhoneChange = { onboardingData = onboardingData.copy(phone = it) },
-                onEmailChange = { onboardingData = onboardingData.copy(email = it) },
-                onContinue = { currentStep = OnboardingStep.Preview },
-                onBack = { currentStep = OnboardingStep.CreateIdentity },
-                onSkip = { currentStep = OnboardingStep.Preview }
-            )
-            OnboardingStep.Preview -> PreviewStep(
-                data = onboardingData,
-                onContinue = { currentStep = OnboardingStep.Security },
-                onBack = { currentStep = OnboardingStep.AddFields }
-            )
-            OnboardingStep.Security -> SecurityStep(
-                onContinue = {
-                    onComplete(
-                        onboardingData.displayName,
-                        onboardingData.phone.takeIf { it.isNotBlank() },
-                        onboardingData.email.takeIf { it.isNotBlank() }
-                    )
-                    currentStep = OnboardingStep.Ready
-                },
-                onBack = { currentStep = OnboardingStep.Preview }
-            )
-            OnboardingStep.Ready -> ReadyStep()
+            OnboardingStep.Welcome -> {
+                WelcomeStep(
+                    onContinue = { currentStep = OnboardingStep.CreateIdentity },
+                    onRestore = onRestore,
+                )
+            }
+
+            OnboardingStep.CreateIdentity -> {
+                CreateIdentityStep(
+                    displayName = onboardingData.displayName,
+                    onDisplayNameChange = { onboardingData = onboardingData.copy(displayName = it) },
+                    onContinue = { currentStep = OnboardingStep.AddFields },
+                    onBack = { currentStep = OnboardingStep.Welcome },
+                )
+            }
+
+            OnboardingStep.AddFields -> {
+                AddFieldsStep(
+                    phone = onboardingData.phone,
+                    email = onboardingData.email,
+                    onPhoneChange = { onboardingData = onboardingData.copy(phone = it) },
+                    onEmailChange = { onboardingData = onboardingData.copy(email = it) },
+                    onContinue = { currentStep = OnboardingStep.Preview },
+                    onBack = { currentStep = OnboardingStep.CreateIdentity },
+                    onSkip = { currentStep = OnboardingStep.Preview },
+                )
+            }
+
+            OnboardingStep.Preview -> {
+                PreviewStep(
+                    data = onboardingData,
+                    onContinue = { currentStep = OnboardingStep.Security },
+                    onBack = { currentStep = OnboardingStep.AddFields },
+                )
+            }
+
+            OnboardingStep.Security -> {
+                SecurityStep(
+                    onContinue = {
+                        onComplete(
+                            onboardingData.displayName,
+                            onboardingData.phone.takeIf { it.isNotBlank() },
+                            onboardingData.email.takeIf { it.isNotBlank() },
+                        )
+                        currentStep = OnboardingStep.Ready
+                    },
+                    onBack = { currentStep = OnboardingStep.Preview },
+                )
+            }
+
+            OnboardingStep.Ready -> {
+                ReadyStep()
+            }
         }
     }
 }
 
 // Progress indicator
 @Composable
-fun OnboardingProgress(currentStep: Int, totalSteps: Int) {
+fun OnboardingProgress(
+    currentStep: Int,
+    totalSteps: Int,
+) {
     Row(
         horizontalArrangement = Arrangement.Center,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .semantics { contentDescription = "Step $currentStep of $totalSteps" },
     ) {
         repeat(totalSteps) { index ->
             Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (index < currentStep) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surfaceVariant
-                    )
+                modifier =
+                    Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (index < currentStep) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                        ),
             )
             if (index < totalSteps - 1) {
                 Spacer(modifier = Modifier.width(8.dp))
@@ -149,39 +175,42 @@ fun OnboardingProgress(currentStep: Int, totalSteps: Int) {
 @Composable
 fun WelcomeStep(
     onContinue: () -> Unit,
-    onRestore: () -> Unit
+    onRestore: () -> Unit,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.weight(1f))
 
         // Hero section
         Box(
-            modifier = Modifier
-                .size(100.dp)
-                .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.tertiary
-                        )
-                    )
-                ),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(100.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            colors =
+                                listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.tertiary,
+                                ),
+                        ),
+                    ),
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
                 Icons.Default.Contacts,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
-                tint = Color.White
+                tint = Color.White,
             )
         }
 
@@ -189,7 +218,7 @@ fun WelcomeStep(
 
         Text(
             localizationManager.t("app.name"),
-            style = MaterialTheme.typography.displaySmall
+            style = MaterialTheme.typography.displaySmall,
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -197,7 +226,7 @@ fun WelcomeStep(
         Text(
             localizationManager.t("welcome.subtitle"),
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -207,17 +236,17 @@ fun WelcomeStep(
             ValuePropRow(
                 icon = Icons.Default.QrCodeScanner,
                 title = "Exchange in person",
-                description = "Scan QR codes to connect"
+                description = "Scan QR codes to connect",
             )
             ValuePropRow(
                 icon = Icons.Default.Sync,
                 title = "Auto-updating",
-                description = "Your info stays current"
+                description = "Your info stays current",
             )
             ValuePropRow(
                 icon = Icons.Default.Lock,
                 title = "Private & secure",
-                description = "End-to-end encrypted"
+                description = "End-to-end encrypted",
             )
         }
 
@@ -226,7 +255,7 @@ fun WelcomeStep(
         // Actions
         Button(
             onClick = onContinue,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text(localizationManager.t("setup.create"))
         }
@@ -243,17 +272,17 @@ fun WelcomeStep(
 fun ValuePropRow(
     icon: ImageVector,
     title: String,
-    description: String
+    description: String,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Icon(
             icon,
             contentDescription = null,
             modifier = Modifier.size(32.dp),
-            tint = MaterialTheme.colorScheme.primary
+            tint = MaterialTheme.colorScheme.primary,
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column {
@@ -261,7 +290,7 @@ fun ValuePropRow(
             Text(
                 description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -273,7 +302,7 @@ fun CreateIdentityStep(
     displayName: String,
     onDisplayNameChange: (String) -> Unit,
     onContinue: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -286,9 +315,10 @@ fun CreateIdentityStep(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
     ) {
         // Back button
         IconButton(onClick = onBack) {
@@ -301,13 +331,13 @@ fun CreateIdentityStep(
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(
                 Icons.Default.Person,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -315,7 +345,8 @@ fun CreateIdentityStep(
             Text(
                 "What's your name?",
                 style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { heading() },
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -324,7 +355,7 @@ fun CreateIdentityStep(
                 "This is how you'll appear to your contacts",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -334,11 +365,12 @@ fun CreateIdentityStep(
                 onValueChange = onDisplayNameChange,
                 label = { Text(localizationManager.t("settings.display_name")) },
                 singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { if (isValid) onContinue() })
+                keyboardActions = KeyboardActions(onDone = { if (isValid) onContinue() }),
             )
         }
 
@@ -347,7 +379,7 @@ fun CreateIdentityStep(
         Button(
             onClick = onContinue,
             enabled = isValid,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text(localizationManager.t("action.next"))
         }
@@ -358,7 +390,7 @@ fun CreateIdentityStep(
             "You can change this later",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier = Modifier.align(Alignment.CenterHorizontally),
         )
     }
 }
@@ -372,16 +404,17 @@ fun AddFieldsStep(
     onEmailChange: (String) -> Unit,
     onContinue: () -> Unit,
     onBack: () -> Unit,
-    onSkip: () -> Unit
+    onSkip: () -> Unit,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-            .verticalScroll(rememberScrollState())
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
     ) {
         IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -393,13 +426,13 @@ fun AddFieldsStep(
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(
                 Icons.Default.AddCircle,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -407,7 +440,8 @@ fun AddFieldsStep(
             Text(
                 "Add your info",
                 style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { heading() },
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -415,7 +449,7 @@ fun AddFieldsStep(
             Text(
                 "Help contacts reach you",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
@@ -428,7 +462,7 @@ fun AddFieldsStep(
             leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -440,7 +474,7 @@ fun AddFieldsStep(
             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -450,14 +484,14 @@ fun AddFieldsStep(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.weight(1f))
 
         Button(
             onClick = onContinue,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text(localizationManager.t("action.next"))
         }
@@ -466,7 +500,7 @@ fun AddFieldsStep(
 
         TextButton(
             onClick = onSkip,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier = Modifier.align(Alignment.CenterHorizontally),
         ) {
             Text("Skip for now")
         }
@@ -478,12 +512,13 @@ fun AddFieldsStep(
 fun PreviewStep(
     data: OnboardingData,
     onContinue: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
     ) {
         IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -496,7 +531,10 @@ fun PreviewStep(
         Text(
             "Your card",
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier =
+                Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .semantics { heading() },
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -505,7 +543,7 @@ fun PreviewStep(
             "This is how you'll appear to contacts",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier = Modifier.align(Alignment.CenterHorizontally),
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -514,31 +552,33 @@ fun PreviewStep(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(24.dp)
+                modifier = Modifier.padding(24.dp),
             ) {
                 // Avatar
                 Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary,
-                                    MaterialTheme.colorScheme.tertiary
-                                )
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    colors =
+                                        listOf(
+                                            MaterialTheme.colorScheme.primary,
+                                            MaterialTheme.colorScheme.tertiary,
+                                        ),
+                                ),
+                            ),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         data.displayName.take(1).uppercase(),
                         style = MaterialTheme.typography.headlineLarge,
-                        color = Color.White
+                        color = Color.White,
                     )
                 }
 
@@ -547,7 +587,7 @@ fun PreviewStep(
                 Text(
                     data.displayName,
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.semantics { heading() }
+                    modifier = Modifier.semantics { heading() },
                 )
 
                 if (data.phone.isNotBlank() || data.email.isNotBlank()) {
@@ -560,7 +600,7 @@ fun PreviewStep(
                     PreviewFieldRow(
                         icon = Icons.Default.Phone,
                         label = "Phone",
-                        value = data.phone
+                        value = data.phone,
                     )
                 }
 
@@ -568,7 +608,7 @@ fun PreviewStep(
                     PreviewFieldRow(
                         icon = Icons.Default.Email,
                         label = "Email",
-                        value = data.email
+                        value = data.email,
                     )
                 }
 
@@ -576,7 +616,7 @@ fun PreviewStep(
                     Text(
                         "No additional info yet",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -586,7 +626,7 @@ fun PreviewStep(
 
         Button(
             onClick = onContinue,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(Icons.Default.Check, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
@@ -597,7 +637,7 @@ fun PreviewStep(
 
         TextButton(
             onClick = onBack,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier = Modifier.align(Alignment.CenterHorizontally),
         ) {
             Text("Edit card")
         }
@@ -608,26 +648,27 @@ fun PreviewStep(
 fun PreviewFieldRow(
     icon: ImageVector,
     label: String,
-    value: String
+    value: String,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
     ) {
         Icon(
             icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(24.dp),
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column {
             Text(
                 label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(value, style = MaterialTheme.typography.bodyMedium)
         }
@@ -638,12 +679,13 @@ fun PreviewFieldRow(
 @Composable
 fun SecurityStep(
     onContinue: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
     ) {
         IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -655,26 +697,30 @@ fun SecurityStep(
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             // Security diagram
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant,
-                        RoundedCornerShape(16.dp)
-                    )
-                    .padding(24.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            RoundedCornerShape(16.dp),
+                        ).padding(24.dp)
+                        .semantics {
+                            contentDescription =
+                                "Diagram showing encrypted communication between your device and your contact's device"
+                        },
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
                         Icons.Default.PhoneAndroid,
                         contentDescription = null,
                         modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                     Text("You", style = MaterialTheme.typography.labelSmall)
                 }
@@ -687,19 +733,19 @@ fun SecurityStep(
                             Icons.Default.SyncAlt,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            tint = Color(0xFF4CAF50)
+                            tint = Color(0xFF4CAF50),
                         )
                         Icon(
                             Icons.Default.Lock,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = Color(0xFF4CAF50)
+                            tint = Color(0xFF4CAF50),
                         )
                     }
                     Text(
                         "Encrypted",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF4CAF50)
+                        color = Color(0xFF4CAF50),
                     )
                 }
 
@@ -710,7 +756,7 @@ fun SecurityStep(
                         Icons.Default.PhoneAndroid,
                         contentDescription = null,
                         modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                     Text("Contact", style = MaterialTheme.typography.labelSmall)
                 }
@@ -721,7 +767,8 @@ fun SecurityStep(
             Text(
                 "Your info is private",
                 style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { heading() },
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -730,7 +777,7 @@ fun SecurityStep(
                 "Only you and your contacts can see your information. Not even us.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -740,17 +787,17 @@ fun SecurityStep(
                 SecurityPoint(
                     icon = Icons.Default.Shield,
                     title = "End-to-end encrypted",
-                    description = "Your data is encrypted on your device"
+                    description = "Your data is encrypted on your device",
                 )
                 SecurityPoint(
                     icon = Icons.Default.People,
                     title = "Direct to contacts",
-                    description = "Updates go straight to your contacts"
+                    description = "Updates go straight to your contacts",
                 )
                 SecurityPoint(
                     icon = Icons.Default.VisibilityOff,
                     title = "No central database",
-                    description = "We can't see your information"
+                    description = "We can't see your information",
                 )
             }
         }
@@ -759,7 +806,7 @@ fun SecurityStep(
 
         Button(
             onClick = onContinue,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Finish setup")
         }
@@ -770,17 +817,17 @@ fun SecurityStep(
 fun SecurityPoint(
     icon: ImageVector,
     title: String,
-    description: String
+    description: String,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Icon(
             icon,
             contentDescription = null,
             modifier = Modifier.size(32.dp),
-            tint = Color(0xFF4CAF50)
+            tint = Color(0xFF4CAF50),
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column {
@@ -788,7 +835,7 @@ fun SecurityPoint(
             Text(
                 description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -805,30 +852,32 @@ fun ReadyStep() {
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.weight(1f))
 
         // Success animation
         AnimatedVisibility(
             visible = showCheck,
-            enter = scaleIn() + fadeIn()
+            enter = scaleIn() + fadeIn(),
         ) {
             Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF4CAF50).copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF4CAF50).copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     Icons.Default.CheckCircle,
-                    contentDescription = null,
+                    contentDescription = "Setup complete",
                     modifier = Modifier.size(80.dp),
-                    tint = Color(0xFF4CAF50)
+                    tint = Color(0xFF4CAF50),
                 )
             }
         }
@@ -837,7 +886,8 @@ fun ReadyStep() {
 
         Text(
             "You're all set!",
-            style = MaterialTheme.typography.headlineMedium
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.semantics { heading() },
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -845,7 +895,7 @@ fun ReadyStep() {
         Text(
             "Your card is ready to share",
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -855,7 +905,7 @@ fun ReadyStep() {
             "What's next?",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.semantics { heading() }
+            modifier = Modifier.semantics { heading() },
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -863,7 +913,7 @@ fun ReadyStep() {
         NextStepCard(
             icon = Icons.Default.QrCodeScanner,
             title = "Exchange with someone",
-            description = "Find a friend nearby and scan each other's QR codes"
+            description = "Find a friend nearby and scan each other's QR codes",
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -871,7 +921,7 @@ fun ReadyStep() {
         NextStepCard(
             icon = Icons.Default.AddCircle,
             title = "Add more info",
-            description = "Customize your card with more contact details"
+            description = "Customize your card with more contact details",
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -882,29 +932,31 @@ fun ReadyStep() {
 fun NextStepCard(
     icon: ImageVector,
     title: String,
-    description: String
+    description: String,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp),
         ) {
             Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
                 )
             }
             Spacer(modifier = Modifier.width(16.dp))
@@ -913,13 +965,13 @@ fun NextStepCard(
                 Text(
                     description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
