@@ -203,7 +203,7 @@ fun ExchangeScreen(
                         // Error state
                         Icon(
                             Icons.Default.Warning,
-                            contentDescription = null,
+                            contentDescription = "Error",
                             modifier = Modifier.size(64.dp),
                             tint = MaterialTheme.colorScheme.error,
                         )
@@ -275,7 +275,7 @@ fun ExchangeScreen(
                                         androidx.compose.ui.res.painterResource(
                                             android.R.drawable.ic_lock_silent_mode_off,
                                         ),
-                                    contentDescription = null,
+                                    contentDescription = "Ultrasonic verification",
                                     modifier = Modifier.size(16.dp),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
@@ -315,7 +315,7 @@ fun ExchangeScreen(
                                         androidx.compose.ui.res.painterResource(
                                             android.R.drawable.stat_sys_data_bluetooth,
                                         ),
-                                    contentDescription = null,
+                                    contentDescription = "Bluetooth",
                                     modifier = Modifier.size(40.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
