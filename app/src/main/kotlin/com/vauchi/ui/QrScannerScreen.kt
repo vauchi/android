@@ -11,6 +11,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
@@ -28,8 +30,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.camera.core.resolutionselector.ResolutionSelector
-import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -41,22 +41,23 @@ import java.util.concurrent.Executors
 @Composable
 fun QrScannerScreen(
     onBack: () -> Unit,
-    onQrScanned: (String) -> Unit
+    onQrScanned: (String) -> Unit,
 ) {
     val context = LocalContext.current
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-                PackageManager.PERMISSION_GRANTED
+                PackageManager.PERMISSION_GRANTED,
         )
     }
     var scannedCode by remember { mutableStateOf<String?>(null) }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        hasCameraPermission = granted
-    }
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            hasCameraPermission = granted
+        }
 
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
@@ -72,14 +73,15 @@ fun QrScannerScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
             if (hasCameraPermission) {
                 if (scannedCode == null) {
@@ -88,28 +90,30 @@ fun QrScannerScreen(
                             if (code.startsWith("wb://") && scannedCode == null) {
                                 scannedCode = code
                             }
-                        }
+                        },
                     )
 
                     // Overlay with scanning frame
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             // Scanning frame indicator
                             Box(
-                                modifier = Modifier
-                                    .size(250.dp)
-                                    .background(Color.Transparent)
+                                modifier =
+                                    Modifier
+                                        .size(250.dp)
+                                        .background(Color.Transparent),
                             ) {
                                 // Corner indicators
                                 Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(8.dp)
+                                    modifier =
+                                        Modifier
+                                            .fillMaxSize()
+                                            .padding(8.dp),
                                 ) {
                                     // Visual frame would go here
                                 }
@@ -118,28 +122,30 @@ fun QrScannerScreen(
                             Text(
                                 text = "Point camera at a Vauchi QR code",
                                 color = Color.White,
-                                style = MaterialTheme.typography.bodyLarge
+                                style = MaterialTheme.typography.bodyLarge,
                             )
                         }
                     }
                 } else {
                     // Show scanned result
                     Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                        verticalArrangement = Arrangement.Center,
                     ) {
                         Text(
                             text = "QR Code Detected!",
-                            style = MaterialTheme.typography.headlineMedium
+                            style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.semantics { heading() },
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Adding contact...",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         CircularProgressIndicator()
@@ -155,21 +161,23 @@ fun QrScannerScreen(
             } else {
                 // No camera permission
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                    verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
                         text = "Camera Permission Required",
-                        style = MaterialTheme.typography.headlineSmall
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.semantics { heading() },
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Please grant camera permission to scan QR codes",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
@@ -182,9 +190,7 @@ fun QrScannerScreen(
 }
 
 @Composable
-fun CameraPreview(
-    onQrCodeDetected: (String) -> Unit
-) {
+fun CameraPreview(onQrCodeDetected: (String) -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
@@ -203,28 +209,35 @@ fun CameraPreview(
             cameraProviderFuture.addListener({
                 val cameraProvider = cameraProviderFuture.get()
 
-                val preview = Preview.Builder().build().also {
-                    it.surfaceProvider = previewView.surfaceProvider
-                }
-
-                val resolutionSelector = ResolutionSelector.Builder()
-                    .setResolutionStrategy(
-                        ResolutionStrategy(
-                            android.util.Size(1280, 720),
-                            ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER
-                        )
-                    )
-                    .build()
-
-                val imageAnalyzer = ImageAnalysis.Builder()
-                    .setResolutionSelector(resolutionSelector)
-                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                    .build()
-                    .also { analysis ->
-                        analysis.setAnalyzer(cameraExecutor, QrCodeAnalyzer { code ->
-                            onQrCodeDetected(code)
-                        })
+                val preview =
+                    Preview.Builder().build().also {
+                        it.surfaceProvider = previewView.surfaceProvider
                     }
+
+                val resolutionSelector =
+                    ResolutionSelector
+                        .Builder()
+                        .setResolutionStrategy(
+                            ResolutionStrategy(
+                                android.util.Size(1280, 720),
+                                ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER,
+                            ),
+                        ).build()
+
+                val imageAnalyzer =
+                    ImageAnalysis
+                        .Builder()
+                        .setResolutionSelector(resolutionSelector)
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build()
+                        .also { analysis ->
+                            analysis.setAnalyzer(
+                                cameraExecutor,
+                                QrCodeAnalyzer { code ->
+                                    onQrCodeDetected(code)
+                                },
+                            )
+                        }
 
                 val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
@@ -234,7 +247,7 @@ fun CameraPreview(
                         lifecycleOwner,
                         cameraSelector,
                         preview,
-                        imageAnalyzer
+                        imageAnalyzer,
                     )
                 } catch (e: Exception) {
                     // Handle camera binding errors
@@ -243,26 +256,27 @@ fun CameraPreview(
 
             previewView
         },
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
     )
 }
 
 class QrCodeAnalyzer(
-    private val onQrCodeDetected: (String) -> Unit
+    private val onQrCodeDetected: (String) -> Unit,
 ) : ImageAnalysis.Analyzer {
-
     private val scanner = BarcodeScanning.getClient()
 
     @androidx.camera.core.ExperimentalGetImage
     override fun analyze(imageProxy: androidx.camera.core.ImageProxy) {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
-            val inputImage = InputImage.fromMediaImage(
-                mediaImage,
-                imageProxy.imageInfo.rotationDegrees
-            )
+            val inputImage =
+                InputImage.fromMediaImage(
+                    mediaImage,
+                    imageProxy.imageInfo.rotationDegrees,
+                )
 
-            scanner.process(inputImage)
+            scanner
+                .process(inputImage)
                 .addOnSuccessListener { barcodes ->
                     for (barcode in barcodes) {
                         if (barcode.valueType == Barcode.TYPE_TEXT) {
@@ -271,8 +285,7 @@ class QrCodeAnalyzer(
                             }
                         }
                     }
-                }
-                .addOnCompleteListener {
+                }.addOnCompleteListener {
                     imageProxy.close()
                 }
         } else {
