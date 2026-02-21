@@ -29,9 +29,7 @@ import uniffi.vauchi_mobile.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HelpScreen(
-    onBack: () -> Unit
-) {
+fun HelpScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
 
@@ -50,17 +48,18 @@ fun HelpScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Search
             OutlinedTextField(
@@ -77,7 +76,7 @@ fun HelpScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             )
 
             // Content based on state
@@ -90,9 +89,10 @@ fun HelpScreen(
                         expandedFaqId = expandedFaqId,
                         onToggleFaq = { id ->
                             expandedFaqId = if (expandedFaqId == id) null else id
-                        }
+                        },
                     )
                 }
+
                 selectedCategory != null -> {
                     CategoryFaqsSection(
                         category = selectedCategory!!,
@@ -101,14 +101,15 @@ fun HelpScreen(
                         onBack = { selectedCategory = null },
                         onToggleFaq = { id ->
                             expandedFaqId = if (expandedFaqId == id) null else id
-                        }
+                        },
                     )
                 }
+
                 else -> {
                     CategoriesSection(
                         categories = categories,
                         allFaqs = allFaqs,
-                        onSelectCategory = { selectedCategory = it }
+                        onSelectCategory = { selectedCategory = it },
                     )
                 }
             }
@@ -120,7 +121,7 @@ fun HelpScreen(
 private fun CategoriesSection(
     categories: List<MobileHelpCategoryInfo>,
     allFaqs: List<MobileFaqItem>,
-    onSelectCategory: (MobileHelpCategory) -> Unit
+    onSelectCategory: (MobileHelpCategory) -> Unit,
 ) {
     Text("Categories", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -130,7 +131,7 @@ private fun CategoriesSection(
                 category = categoryInfo.category,
                 displayName = categoryInfo.displayName,
                 faqCount = count,
-                onClick = { onSelectCategory(categoryInfo.category) }
+                onClick = { onSelectCategory(categoryInfo.category) },
             )
         }
     }
@@ -141,43 +142,44 @@ private fun CategoryCard(
     category: MobileHelpCategory,
     displayName: String,
     faqCount: Int,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     getCategoryIcon(category),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
                 )
                 Text(displayName, style = MaterialTheme.typography.bodyLarge)
             }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     "$faqCount",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Icon(
                     Icons.Default.ChevronRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -190,7 +192,7 @@ private fun CategoryFaqsSection(
     categories: List<MobileHelpCategoryInfo>,
     expandedFaqId: String?,
     onBack: () -> Unit,
-    onToggleFaq: (String) -> Unit
+    onToggleFaq: (String) -> Unit,
 ) {
     val faqs = remember(category) { getFaqsByCategory(category) }
     val displayName = categories.find { it.category == category }?.displayName ?: ""
@@ -202,14 +204,14 @@ private fun CategoryFaqsSection(
         Text("All Categories")
     }
 
-    Text(displayName, style = MaterialTheme.typography.titleMedium)
+    Text(displayName, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         faqs.forEach { faq ->
             FaqCard(
                 faq = faq,
                 isExpanded = expandedFaqId == faq.id,
-                onToggle = { onToggleFaq(faq.id) }
+                onToggle = { onToggleFaq(faq.id) },
             )
         }
     }
@@ -220,18 +222,19 @@ private fun SearchResultsSection(
     query: String,
     results: List<MobileFaqItem>,
     expandedFaqId: String?,
-    onToggleFaq: (String) -> Unit
+    onToggleFaq: (String) -> Unit,
 ) {
     Text(
         "Search Results (${results.size})",
-        style = MaterialTheme.typography.titleMedium
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.semantics { heading() },
     )
 
     if (results.isEmpty()) {
         Text(
             "No results found for \"$query\"",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -239,7 +242,7 @@ private fun SearchResultsSection(
                 FaqCard(
                     faq = faq,
                     isExpanded = expandedFaqId == faq.id,
-                    onToggle = { onToggleFaq(faq.id) }
+                    onToggle = { onToggleFaq(faq.id) },
                 )
             }
         }
@@ -250,52 +253,52 @@ private fun SearchResultsSection(
 private fun FaqCard(
     faq: MobileFaqItem,
     isExpanded: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
 ) {
     Card(
         onClick = onToggle,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.Top,
             ) {
                 Row(
                     modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.Help,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp),
                     )
                     Text(
                         faq.question,
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                 }
                 Icon(
                     if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             AnimatedVisibility(visible = isExpanded) {
                 Column(
                     modifier = Modifier.padding(start = 28.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
                         faq.answer,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
                     // Related FAQs
@@ -304,7 +307,7 @@ private fun FaqCard(
                             Text(
                                 "Related:",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             faq.related.forEach { relatedId ->
                                 val relatedFaq = getFaqById(relatedId)
@@ -312,7 +315,7 @@ private fun FaqCard(
                                     Text(
                                         "• ${it.question}",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                             }
@@ -324,8 +327,8 @@ private fun FaqCard(
     }
 }
 
-private fun getCategoryIcon(category: MobileHelpCategory): ImageVector {
-    return when (category) {
+private fun getCategoryIcon(category: MobileHelpCategory): ImageVector =
+    when (category) {
         MobileHelpCategory.GETTING_STARTED -> Icons.Default.Star
         MobileHelpCategory.PRIVACY -> Icons.Default.Lock
         MobileHelpCategory.RECOVERY -> Icons.Default.Refresh
@@ -333,4 +336,3 @@ private fun getCategoryIcon(category: MobileHelpCategory): ImageVector {
         MobileHelpCategory.UPDATES -> Icons.Default.Sync
         MobileHelpCategory.FEATURES -> Icons.Default.AutoAwesome
     }
-}
