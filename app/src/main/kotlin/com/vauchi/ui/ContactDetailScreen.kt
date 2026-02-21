@@ -125,6 +125,7 @@ fun ContactDetailScreen(
                         text = "Their Info",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.semantics { heading() },
                     )
                 }
 
@@ -311,6 +312,7 @@ fun ContactDetailScreen(
                         text = "What They Can See",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.semantics { heading() },
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -480,7 +482,10 @@ fun ContactFieldItem(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable { ContactActions.openField(context, field) },
+                .semantics {
+                    contentDescription =
+                        "${field.label}: ${field.value}. Tap to ${ContactActions.getActionDescription(field.fieldType).lowercase()}"
+                }.clickable { ContactActions.openField(context, field) },
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -670,8 +675,14 @@ fun VisibilityToggleItem(
     isVisible: Boolean,
     onToggle: (Boolean) -> Unit,
 ) {
+    val visibilityState = if (isVisible) "visible" else "hidden"
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription = "${field.label}: ${field.value}, currently $visibilityState"
+                },
         colors =
             CardDefaults.cardColors(
                 containerColor =
