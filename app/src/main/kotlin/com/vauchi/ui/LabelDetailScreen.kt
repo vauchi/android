@@ -42,7 +42,7 @@ fun LabelDetailScreen(
     onDeleteLabel: (String) -> Unit,
     onSetFieldVisibility: (String, String, Boolean) -> Unit,
     ownCardFields: List<MobileContactField>,
-    contacts: List<MobileContact>
+    contacts: List<MobileContact>,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -79,63 +79,70 @@ fun LabelDetailScreen(
                             Icon(Icons.Default.Edit, contentDescription = "Rename")
                         }
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         when {
             isLoading -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                    contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()
                 }
             }
+
             detail == null -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "Label not found",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             }
+
             else -> {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding),
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     // Label info section
                     item {
                         Text(
                             text = "Label Info",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.semantics { heading() },
                         )
                     }
 
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                ),
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                 ) {
                                     Text("Name")
                                     Text(detail.name, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -143,7 +150,7 @@ fun LabelDetailScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                 ) {
                                     Text("Contacts")
                                     Text("${detail.contactIds.size}", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -151,7 +158,7 @@ fun LabelDetailScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                 ) {
                                     Text("Visible Fields")
                                     Text("${detail.visibleFieldIds.size}", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -167,7 +174,7 @@ fun LabelDetailScreen(
                                 text = "Field Visibility",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 8.dp)
+                                modifier = Modifier.padding(top = 8.dp).semantics { heading() },
                             )
                         }
 
@@ -179,14 +186,16 @@ fun LabelDetailScreen(
                                 onToggle = { visible ->
                                     onSetFieldVisibility(labelId, field.id, visible)
                                     // Update local state
-                                    labelDetail = labelDetail?.copy(
-                                        visibleFieldIds = if (visible) {
-                                            detail.visibleFieldIds + field.id
-                                        } else {
-                                            detail.visibleFieldIds.filter { it != field.id }
-                                        }
-                                    )
-                                }
+                                    labelDetail =
+                                        labelDetail?.copy(
+                                            visibleFieldIds =
+                                                if (visible) {
+                                                    detail.visibleFieldIds + field.id
+                                                } else {
+                                                    detail.visibleFieldIds.filter { it != field.id }
+                                                },
+                                        )
+                                },
                             )
                         }
 
@@ -194,7 +203,7 @@ fun LabelDetailScreen(
                             Text(
                                 text = "Toggle which of your fields contacts in this label can see.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -205,7 +214,7 @@ fun LabelDetailScreen(
                             text = "Contacts (${detail.contactIds.size})",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 8.dp)
+                            modifier = Modifier.padding(top = 8.dp).semantics { heading() },
                         )
                     }
 
@@ -215,7 +224,7 @@ fun LabelDetailScreen(
                                 text = "No contacts in this label",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                             )
                         }
                     } else {
@@ -223,7 +232,7 @@ fun LabelDetailScreen(
                             val contact = contacts.find { it.id == contactId }
                             ContactChip(
                                 displayName = contact?.displayName ?: contactId,
-                                isVerified = contact?.isVerified ?: false
+                                isVerified = contact?.isVerified ?: false,
                             )
                         }
                     }
@@ -232,7 +241,7 @@ fun LabelDetailScreen(
                         Text(
                             text = "To add or remove contacts, go to the contact's detail page and manage their labels.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
 
@@ -241,10 +250,11 @@ fun LabelDetailScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         OutlinedButton(
                             onClick = { showDeleteDialog = true },
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            ),
-                            modifier = Modifier.fillMaxWidth()
+                            colors =
+                                ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error,
+                                ),
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Icon(Icons.Default.Delete, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
@@ -254,7 +264,7 @@ fun LabelDetailScreen(
                             text = "Deleting this label will not remove the contacts from your contacts list.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 8.dp)
+                            modifier = Modifier.padding(top = 8.dp),
                         )
                     }
                 }
@@ -276,7 +286,7 @@ fun LabelDetailScreen(
                     onValueChange = { newName = it },
                     label = { Text("Label name") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             },
             confirmButton = {
@@ -289,7 +299,7 @@ fun LabelDetailScreen(
                             showRenameDialog = false
                         }
                     },
-                    enabled = newName.isNotBlank() && newName.trim() != detail.name
+                    enabled = newName.isNotBlank() && newName.trim() != detail.name,
                 ) {
                     Text("Rename")
                 }
@@ -301,7 +311,7 @@ fun LabelDetailScreen(
                 }) {
                     Text(localizationManager.t("action.cancel"))
                 }
-            }
+            },
         )
     }
 
@@ -311,7 +321,9 @@ fun LabelDetailScreen(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete Label?") },
             text = {
-                Text("Are you sure you want to delete \"${detail.name}\"? Contacts will remain in your contacts list but will lose this label's visibility settings.")
+                Text(
+                    "Are you sure you want to delete \"${detail.name}\"? Contacts will remain in your contacts list but will lose this label's visibility settings.",
+                )
             },
             confirmButton = {
                 TextButton(
@@ -319,7 +331,7 @@ fun LabelDetailScreen(
                         onDeleteLabel(labelId)
                         showDeleteDialog = false
                         onBack()
-                    }
+                    },
                 ) {
                     Text(localizationManager.t("action.delete"), color = MaterialTheme.colorScheme.error)
                 }
@@ -328,7 +340,7 @@ fun LabelDetailScreen(
                 TextButton(onClick = { showDeleteDialog = false }) {
                     Text(localizationManager.t("action.cancel"))
                 }
-            }
+            },
         )
     }
 }
@@ -337,36 +349,42 @@ fun LabelDetailScreen(
 private fun FieldVisibilityToggle(
     field: MobileContactField,
     isVisible: Boolean,
-    onToggle: (Boolean) -> Unit
+    onToggle: (Boolean) -> Unit,
 ) {
+    val visibilityState = if (isVisible) "visible" else "hidden"
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        modifier =
+            Modifier.fillMaxWidth().semantics {
+                contentDescription = "${field.label}: ${field.value}, currently $visibilityState"
+            },
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = field.label,
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
                 Text(
                     text = field.value,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    maxLines = 1,
                 )
             }
             Switch(
                 checked = isVisible,
-                onCheckedChange = onToggle
+                onCheckedChange = onToggle,
             )
         }
     }
@@ -375,37 +393,42 @@ private fun FieldVisibilityToggle(
 @Composable
 private fun ContactChip(
     displayName: String,
-    isVerified: Boolean
+    isVerified: Boolean,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        modifier =
+            Modifier.fillMaxWidth().semantics {
+                contentDescription = "$displayName${if (isVerified) ", verified" else ""}"
+            },
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
                 Icons.Default.People,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                contentDescription = null, // Described by parent card semantics
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = displayName,
                 style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             if (isVerified) {
                 Icon(
                     Icons.Default.Verified,
                     contentDescription = "Verified",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(16.dp),
                 )
             }
         }
