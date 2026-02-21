@@ -7,10 +7,6 @@ package com.vauchi.ui
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.core.content.pm.PackageInfoCompat
-import com.vauchi.ui.model.*
-import com.vauchi.util.ClipboardUtils
-import com.vauchi.util.LocalizationManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -29,9 +25,13 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.content.pm.PackageInfoCompat
+import com.vauchi.ui.model.*
+import com.vauchi.util.ClipboardUtils
+import com.vauchi.util.LocalizationManager
 import kotlinx.coroutines.launch
-import uniffi.vauchi_mobile.MobileConsentType
 import uniffi.vauchi_mobile.MobileConsentRecord
+import uniffi.vauchi_mobile.MobileConsentType
 import uniffi.vauchi_mobile.MobileDeletionInfo
 import uniffi.vauchi_mobile.MobileDeletionState
 
@@ -102,7 +102,7 @@ fun SettingsScreen(
     consentRecords: List<MobileConsentRecord> = emptyList(),
     onGrantConsent: (MobileConsentType) -> Unit = {},
     onRevokeConsent: (MobileConsentType) -> Unit = {},
-    onPanicShred: () -> Unit = {}
+    onPanicShred: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -128,56 +128,59 @@ fun SettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             // Account Section
             Text(
                 text = localizationManager.t("settings.account"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.semantics { heading() }
+                modifier = Modifier.semantics { heading() },
             )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                onClick = { showEditNameDialog = true }
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
+                onClick = { showEditNameDialog = true },
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column {
                         Text(
                             text = localizationManager.t("settings.display_name"),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             text = displayName,
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
                         )
                     }
                     Text(
                         text = localizationManager.t("action.edit"),
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -189,31 +192,32 @@ fun SettingsScreen(
                 text = localizationManager.t("sync.title"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.semantics { heading() }
+                modifier = Modifier.semantics { heading() },
             )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     OutlinedTextField(
                         value = editableRelayUrl,
                         onValueChange = { editableRelayUrl = it },
                         label = { Text(localizationManager.t("settings.relay")) },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
 
                     if (editableRelayUrl != relayUrl) {
                         Button(
                             onClick = { onRelayUrlChange(editableRelayUrl) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text("Save Relay URL")
                         }
@@ -222,29 +226,31 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = when (syncState) {
-                                is SyncState.Idle -> localizationManager.t("sync.connected")
-                                is SyncState.Syncing -> localizationManager.t("sync.syncing")
-                                is SyncState.Success -> "Sync complete"
-                                is SyncState.Error -> "Sync failed"
-                            },
+                            text =
+                                when (syncState) {
+                                    is SyncState.Idle -> localizationManager.t("sync.connected")
+                                    is SyncState.Syncing -> localizationManager.t("sync.syncing")
+                                    is SyncState.Success -> "Sync complete"
+                                    is SyncState.Error -> "Sync failed"
+                                },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = when (syncState) {
-                                is SyncState.Error -> MaterialTheme.colorScheme.error
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            }
+                            color =
+                                when (syncState) {
+                                    is SyncState.Error -> MaterialTheme.colorScheme.error
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                },
                         )
                         Button(
                             onClick = onSync,
-                            enabled = syncState !is SyncState.Syncing
+                            enabled = syncState !is SyncState.Syncing,
                         ) {
                             if (syncState is SyncState.Syncing) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
+                                    strokeWidth = 2.dp,
                                 )
                             } else {
                                 Text(localizationManager.t("sync.title"))
@@ -261,51 +267,54 @@ fun SettingsScreen(
                 text = "Message Delivery",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.semantics { heading() }
+                modifier = Modifier.semantics { heading() },
             )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                onClick = onDeliveryStatus
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
+                onClick = onDeliveryStatus,
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column {
                         Text(
                             text = "Delivery Status",
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
                         )
                         Text(
                             text = "View message delivery history",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (failedDeliveryCount > 0) {
                             Badge(
-                                containerColor = MaterialTheme.colorScheme.error
+                                containerColor = MaterialTheme.colorScheme.error,
                             ) {
                                 Text("$failedDeliveryCount failed")
                             }
                         }
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Go",
-                            modifier = Modifier
-                                .size(20.dp)
-                                .graphicsLayer { rotationZ = 180f }
+                            contentDescription = null,
+                            modifier =
+                                Modifier
+                                    .size(20.dp)
+                                    .graphicsLayer { rotationZ = 180f },
                         )
                     }
                 }
@@ -318,28 +327,28 @@ fun SettingsScreen(
                 text = localizationManager.t("backup.title"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.semantics { heading() }
+                modifier = Modifier.semantics { heading() },
             )
 
             Text(
                 text = "Back up your identity to restore it on another device or after reinstalling.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Button(
                     onClick = { showExportDialog = true },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(localizationManager.t("backup.export"))
                 }
                 OutlinedButton(
                     onClick = { showImportDialog = true },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(localizationManager.t("backup.import"))
                 }
@@ -352,12 +361,12 @@ fun SettingsScreen(
                 text = localizationManager.t("privacy.title"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.semantics { heading() }
+                modifier = Modifier.semantics { heading() },
             )
 
             OutlinedButton(
                 onClick = onLabels,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(localizationManager.t("visibility.title"))
             }
@@ -365,7 +374,7 @@ fun SettingsScreen(
             Text(
                 text = "Organize contacts into groups and control what they can see",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -373,7 +382,7 @@ fun SettingsScreen(
             // GDPR Export
             OutlinedButton(
                 onClick = onExportGdprData,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(localizationManager.t("privacy.export_data"))
             }
@@ -381,7 +390,7 @@ fun SettingsScreen(
             Text(
                 text = localizationManager.t("privacy.export_description"),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -390,16 +399,19 @@ fun SettingsScreen(
             if (deletionState?.state == MobileDeletionState.SCHEDULED) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                        ),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = localizationManager.t("privacy.deletion_scheduled")
-                                .replace("{days}", deletionState.daysRemaining.toString()),
+                            text =
+                                localizationManager
+                                    .t("privacy.deletion_scheduled")
+                                    .replace("{days}", deletionState.daysRemaining.toString()),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
+                            color = MaterialTheme.colorScheme.onErrorContainer,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(onClick = onCancelDeletion) {
@@ -413,9 +425,10 @@ fun SettingsScreen(
                 OutlinedButton(
                     onClick = { showDeleteConfirm = true },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
                 ) {
                     Text(localizationManager.t("privacy.delete_account"))
                 }
@@ -423,20 +436,24 @@ fun SettingsScreen(
                 Text(
                     text = localizationManager.t("privacy.deletion_grace_period"),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 if (showDeleteConfirm) {
                     AlertDialog(
                         onDismissRequest = { showDeleteConfirm = false },
                         title = { Text("Confirm Account Deletion") },
-                        text = { Text("Are you sure? Your account will be permanently deleted after 7 days. You can cancel during the grace period.") },
+                        text = {
+                            Text(
+                                "Are you sure? Your account will be permanently deleted after 7 days. You can cancel during the grace period.",
+                            )
+                        },
                         confirmButton = {
                             TextButton(
                                 onClick = {
                                     showDeleteConfirm = false
                                     onScheduleDeletion()
-                                }
+                                },
                             ) {
                                 Text("Delete", color = MaterialTheme.colorScheme.error)
                             }
@@ -445,7 +462,7 @@ fun SettingsScreen(
                             TextButton(onClick = { showDeleteConfirm = false }) {
                                 Text("Cancel")
                             }
-                        }
+                        },
                     )
                 }
             }
@@ -456,37 +473,41 @@ fun SettingsScreen(
             Text(
                 text = localizationManager.t("privacy.consent"),
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
-            val consentTypes = listOf(
-                MobileConsentType.DATA_PROCESSING to localizationManager.t("privacy.consent_data_processing"),
-                MobileConsentType.CONTACT_SHARING to localizationManager.t("privacy.consent_contact_sharing"),
-                MobileConsentType.ANALYTICS to localizationManager.t("privacy.consent_analytics"),
-                MobileConsentType.RECOVERY_VOUCHING to localizationManager.t("privacy.consent_recovery_vouching")
-            )
+            val consentTypes =
+                listOf(
+                    MobileConsentType.DATA_PROCESSING to localizationManager.t("privacy.consent_data_processing"),
+                    MobileConsentType.CONTACT_SHARING to localizationManager.t("privacy.consent_contact_sharing"),
+                    MobileConsentType.ANALYTICS to localizationManager.t("privacy.consent_analytics"),
+                    MobileConsentType.RECOVERY_VOUCHING to localizationManager.t("privacy.consent_recovery_vouching"),
+                )
 
             consentTypes.forEach { (type, label) ->
-                val isGranted = consentRecords.lastOrNull {
-                    it.consentType == type
-                }?.granted ?: false
+                val isGranted =
+                    consentRecords
+                        .lastOrNull {
+                            it.consentType == type
+                        }?.granted ?: false
 
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = label,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                     Switch(
                         checked = isGranted,
                         onCheckedChange = { checked ->
                             if (checked) onGrantConsent(type) else onRevokeConsent(type)
-                        }
+                        },
                     )
                 }
             }
@@ -498,17 +519,18 @@ fun SettingsScreen(
             Button(
                 onClick = { showShredConfirm = true },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError
-                )
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
             ) {
                 Text("Emergency Shred")
             }
             Text(
                 text = "Immediately destroy all data. No grace period. Irreversible.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             if (showShredConfirm) {
@@ -516,7 +538,9 @@ fun SettingsScreen(
                     onDismissRequest = { showShredConfirm = false },
                     title = { Text("Emergency Shred") },
                     text = {
-                        Text("This will immediately and irreversibly destroy all data including contacts, identity, and encryption keys. This cannot be undone.")
+                        Text(
+                            "This will immediately and irreversibly destroy all data including contacts, identity, and encryption keys. This cannot be undone.",
+                        )
                     },
                     confirmButton = {
                         TextButton(onClick = {
@@ -530,7 +554,7 @@ fun SettingsScreen(
                         TextButton(onClick = { showShredConfirm = false }) {
                             Text("Cancel")
                         }
-                    }
+                    },
                 )
             }
 
@@ -541,22 +565,22 @@ fun SettingsScreen(
                 text = "Devices & Recovery",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.semantics { heading() }
+                modifier = Modifier.semantics { heading() },
             )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 OutlinedButton(
                     onClick = onDevices,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text("Devices")
                 }
                 OutlinedButton(
                     onClick = onRecovery,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(localizationManager.t("recovery.title"))
                 }
@@ -565,14 +589,14 @@ fun SettingsScreen(
             // Certificate Pinning Section
             CertificatePinningSection(
                 isEnabled = isCertificatePinningEnabled,
-                onSetCertificate = onSetPinnedCertificate
+                onSetCertificate = onSetPinnedCertificate,
             )
 
             // Duress PIN Section
             DuressPinSection(
                 isDuressEnabled = isDuressEnabled,
                 onSetupDuressPin = onSetupDuressPin,
-                onDisableDuress = onDisableDuress
+                onDisableDuress = onDisableDuress,
             )
 
             // Emergency Broadcast Section
@@ -580,7 +604,7 @@ fun SettingsScreen(
                 isConfigured = isEmergencyConfigured,
                 onConfigure = onConfigureEmergency,
                 onSend = onSendEmergency,
-                onDisable = onDisableEmergency
+                onDisable = onDisableEmergency,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -588,7 +612,7 @@ fun SettingsScreen(
                 isTorEnabled = isTorEnabled,
                 torPreferOnion = torPreferOnion,
                 torBridges = torBridges,
-                onSaveTorConfig = onSaveTorConfig
+                onSaveTorConfig = onSaveTorConfig,
             )
 
             // Content Updates Section (only if supported)
@@ -597,7 +621,7 @@ fun SettingsScreen(
 
                 ContentUpdatesSection(
                     onCheckUpdates = onCheckContentUpdates,
-                    onApplyUpdates = onApplyContentUpdates
+                    onApplyUpdates = onApplyContentUpdates,
                 )
             }
 
@@ -608,50 +632,55 @@ fun SettingsScreen(
                 text = localizationManager.t("settings.appearance"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.semantics { heading() }
+                modifier = Modifier.semantics { heading() },
             )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onThemeSettings() }
-                            .padding(vertical = 8.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .semantics { contentDescription = "Theme: $currentThemeName. Tap to change." }
+                                .clickable { onThemeSettings() }
+                                .padding(vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(localizationManager.t("settings.theme"), style = MaterialTheme.typography.bodyLarge)
                         Text(
                             currentThemeName,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
 
                     HorizontalDivider()
 
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onLanguageSettings() }
-                            .padding(vertical = 8.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .semantics { contentDescription = "Language: $currentLanguageName. Tap to change." }
+                                .clickable { onLanguageSettings() }
+                                .padding(vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(localizationManager.t("settings.language"), style = MaterialTheme.typography.bodyLarge)
                         Text(
                             currentLanguageName,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -664,30 +693,31 @@ fun SettingsScreen(
                 text = "Accessibility",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.semantics { heading() }
+                modifier = Modifier.semantics { heading() },
             )
 
             Text(
                 text = "These settings supplement system accessibility features.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     AccessibilityToggle(
                         title = "Reduce Motion",
                         description = "Minimize animations and transitions",
                         checked = reduceMotion,
-                        onCheckedChange = onReduceMotionChange
+                        onCheckedChange = onReduceMotionChange,
                     )
 
                     HorizontalDivider()
@@ -696,7 +726,7 @@ fun SettingsScreen(
                         title = "High Contrast",
                         description = "Increase color contrast for better visibility",
                         checked = highContrast,
-                        onCheckedChange = onHighContrastChange
+                        onCheckedChange = onHighContrastChange,
                     )
 
                     HorizontalDivider()
@@ -705,7 +735,7 @@ fun SettingsScreen(
                         title = "Large Touch Targets",
                         description = "Increase button and control sizes",
                         checked = largeTouchTargets,
-                        onCheckedChange = onLargeTouchTargetsChange
+                        onCheckedChange = onLargeTouchTargetsChange,
                     )
                 }
             }
@@ -717,7 +747,7 @@ fun SettingsScreen(
                 text = localizationManager.t("settings.help_support"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.semantics { heading() }
+                modifier = Modifier.semantics { heading() },
             )
 
             val openUrl = { url: String ->
@@ -730,7 +760,7 @@ fun SettingsScreen(
                 HelpLinkItem(
                     title = "Show Demo Contact",
                     subtitle = "Learn how updates work",
-                    onClick = onRestoreDemo
+                    onClick = onRestoreDemo,
                 )
             }
 
@@ -738,31 +768,31 @@ fun SettingsScreen(
             HelpLinkItem(
                 title = "Reset Tips",
                 subtitle = "${ahaMomentsProgress.first}/${ahaMomentsProgress.second} seen",
-                onClick = onResetAhaMoments
+                onClick = onResetAhaMoments,
             )
 
             HelpLinkItem(
                 title = "User Guide",
                 subtitle = "Learn how to use Vauchi",
-                onClick = { openUrl("https://vauchi.app/user-guide") }
+                onClick = { openUrl("https://vauchi.app/user-guide") },
             )
 
             HelpLinkItem(
                 title = "Help & FAQ",
                 subtitle = "Frequently asked questions",
-                onClick = onHelp
+                onClick = onHelp,
             )
 
             HelpLinkItem(
                 title = "Report Issue",
                 subtitle = "Report bugs or request features",
-                onClick = { openUrl("https://github.com/vauchi/issues") }
+                onClick = { openUrl("https://github.com/vauchi/issues") },
             )
 
             HelpLinkItem(
                 title = "Privacy Policy",
                 subtitle = "How we protect your data",
-                onClick = { openUrl("https://vauchi.app/privacy") }
+                onClick = { openUrl("https://vauchi.app/privacy") },
             )
 
             HorizontalDivider()
@@ -772,27 +802,28 @@ fun SettingsScreen(
                 text = localizationManager.t("settings.about"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.semantics { heading() }
+                modifier = Modifier.semantics { heading() },
             )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
                         text = "Vauchi",
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
                     )
                     Text(
                         text = "Privacy-focused contact exchange",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
                     val versionName = packageInfo.versionName ?: "1.0.0"
@@ -800,7 +831,7 @@ fun SettingsScreen(
                     Text(
                         text = "Version $versionName (build $versionCode)",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -815,7 +846,7 @@ fun SettingsScreen(
                 snackbarMessage = message
                 if (success) showExportDialog = false
             },
-            onCheckPasswordStrength = onCheckPasswordStrength
+            onCheckPasswordStrength = onCheckPasswordStrength,
         )
     }
 
@@ -826,7 +857,7 @@ fun SettingsScreen(
             onResult = { success, message ->
                 snackbarMessage = message
                 if (success) showImportDialog = false
-            }
+            },
         )
     }
 
@@ -838,7 +869,7 @@ fun SettingsScreen(
             onResult = { success, message ->
                 snackbarMessage = message
                 if (success) showEditNameDialog = false
-            }
+            },
         )
     }
 }
@@ -848,7 +879,7 @@ fun ExportBackupDialog(
     onDismiss: () -> Unit,
     onExport: suspend (String) -> String?,
     onResult: (Boolean, String) -> Unit,
-    onCheckPasswordStrength: (String) -> PasswordStrengthResult = { PasswordStrengthResult() }
+    onCheckPasswordStrength: (String) -> PasswordStrengthResult = { PasswordStrengthResult() },
 ) {
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -876,7 +907,7 @@ fun ExportBackupDialog(
                 if (backupCode == null) {
                     Text(
                         text = "Create a password to encrypt your backup. You'll need this password to restore.",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                     OutlinedTextField(
                         value = password,
@@ -885,7 +916,7 @@ fun ExportBackupDialog(
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !isLoading
+                        enabled = !isLoading,
                     )
 
                     // Password strength indicator
@@ -900,29 +931,30 @@ fun ExportBackupDialog(
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !isLoading
+                        enabled = !isLoading,
                     )
                     if (password.isNotEmpty() && confirmPassword.isNotEmpty() && password != confirmPassword) {
                         Text(
                             text = "Passwords don't match",
                             color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
                         )
                     }
                 } else {
                     Text(
                         text = "Your backup code has been copied to clipboard. Store it safely!",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                     Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
+                        colors =
+                            CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            ),
                     ) {
                         Text(
                             text = backupCode!!.take(50) + "...",
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(12.dp)
+                            modifier = Modifier.padding(12.dp),
                         )
                     }
                 }
@@ -948,7 +980,7 @@ fun ExportBackupDialog(
                             }
                         }
                     },
-                    enabled = passwordStrength.isAcceptable && password == confirmPassword && !isLoading
+                    enabled = passwordStrength.isAcceptable && password == confirmPassword && !isLoading,
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp))
@@ -968,7 +1000,7 @@ fun ExportBackupDialog(
                     Text(localizationManager.t("action.cancel"))
                 }
             }
-        }
+        },
     )
 }
 
@@ -976,7 +1008,7 @@ fun ExportBackupDialog(
 fun ImportBackupDialog(
     onDismiss: () -> Unit,
     onImport: suspend (String, String) -> Boolean,
-    onResult: (Boolean, String) -> Unit
+    onResult: (Boolean, String) -> Unit,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -992,7 +1024,7 @@ fun ImportBackupDialog(
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
                     text = "Paste your backup code and enter the password you used when creating the backup.",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 OutlinedTextField(
                     value = backupData,
@@ -1000,7 +1032,7 @@ fun ImportBackupDialog(
                     label = { Text("Backup Code") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
-                    enabled = !isLoading
+                    enabled = !isLoading,
                 )
                 OutlinedTextField(
                     value = password,
@@ -1009,7 +1041,7 @@ fun ImportBackupDialog(
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isLoading
+                    enabled = !isLoading,
                 )
             }
         },
@@ -1029,7 +1061,7 @@ fun ImportBackupDialog(
                         }
                     }
                 },
-                enabled = backupData.isNotBlank() && password.isNotBlank() && !isLoading
+                enabled = backupData.isNotBlank() && password.isNotBlank() && !isLoading,
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp))
@@ -1042,7 +1074,7 @@ fun ImportBackupDialog(
             TextButton(onClick = onDismiss, enabled = !isLoading) {
                 Text(localizationManager.t("action.cancel"))
             }
-        }
+        },
     )
 }
 
@@ -1051,7 +1083,7 @@ fun EditDisplayNameDialog(
     currentName: String,
     onDismiss: () -> Unit,
     onUpdateName: suspend (String) -> Boolean,
-    onResult: (Boolean, String) -> Unit
+    onResult: (Boolean, String) -> Unit,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -1066,7 +1098,7 @@ fun EditDisplayNameDialog(
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
                     text = "Enter your new display name. This is how contacts will see you.",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 OutlinedTextField(
                     value = newName,
@@ -1074,13 +1106,13 @@ fun EditDisplayNameDialog(
                     label = { Text(localizationManager.t("settings.display_name")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isLoading
+                    enabled = !isLoading,
                 )
                 if (newName.isBlank()) {
                     Text(
                         text = "Name cannot be empty",
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
             }
@@ -1103,7 +1135,7 @@ fun EditDisplayNameDialog(
                         onDismiss()
                     }
                 },
-                enabled = newName.isNotBlank() && !isLoading
+                enabled = newName.isNotBlank() && !isLoading,
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp))
@@ -1116,7 +1148,7 @@ fun EditDisplayNameDialog(
             TextButton(onClick = onDismiss, enabled = !isLoading) {
                 Text(localizationManager.t("action.cancel"))
             }
-        }
+        },
     )
 }
 
@@ -1126,38 +1158,41 @@ fun EditDisplayNameDialog(
 fun PasswordStrengthIndicator(strength: PasswordStrengthResult) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         // Strength bar
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             val segmentCount = 4
-            val filledSegments = when (strength.level) {
-                PasswordStrengthLevel.TooWeak -> 1
-                PasswordStrengthLevel.Fair -> 2
-                PasswordStrengthLevel.Strong -> 3
-                PasswordStrengthLevel.VeryStrong -> 4
-            }
-            val color = when (strength.level) {
-                PasswordStrengthLevel.TooWeak -> MaterialTheme.colorScheme.error
-                PasswordStrengthLevel.Fair -> MaterialTheme.colorScheme.tertiary
-                PasswordStrengthLevel.Strong -> MaterialTheme.colorScheme.primary
-                PasswordStrengthLevel.VeryStrong -> MaterialTheme.colorScheme.primary
-            }
+            val filledSegments =
+                when (strength.level) {
+                    PasswordStrengthLevel.TooWeak -> 1
+                    PasswordStrengthLevel.Fair -> 2
+                    PasswordStrengthLevel.Strong -> 3
+                    PasswordStrengthLevel.VeryStrong -> 4
+                }
+            val color =
+                when (strength.level) {
+                    PasswordStrengthLevel.TooWeak -> MaterialTheme.colorScheme.error
+                    PasswordStrengthLevel.Fair -> MaterialTheme.colorScheme.tertiary
+                    PasswordStrengthLevel.Strong -> MaterialTheme.colorScheme.primary
+                    PasswordStrengthLevel.VeryStrong -> MaterialTheme.colorScheme.primary
+                }
 
             repeat(segmentCount) { index ->
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(4.dp)
-                        .padding(horizontal = 1.dp)
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .height(4.dp)
+                            .padding(horizontal = 1.dp),
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = if (index < filledSegments) color else color.copy(alpha = 0.2f),
-                        shape = MaterialTheme.shapes.small
+                        shape = MaterialTheme.shapes.small,
                     ) {}
                 }
             }
@@ -1166,22 +1201,23 @@ fun PasswordStrengthIndicator(strength: PasswordStrengthResult) {
         // Strength description
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
                 text = strength.description,
                 style = MaterialTheme.typography.labelSmall,
-                color = when (strength.level) {
-                    PasswordStrengthLevel.TooWeak -> MaterialTheme.colorScheme.error
-                    PasswordStrengthLevel.Fair -> MaterialTheme.colorScheme.tertiary
-                    else -> MaterialTheme.colorScheme.primary
-                }
+                color =
+                    when (strength.level) {
+                        PasswordStrengthLevel.TooWeak -> MaterialTheme.colorScheme.error
+                        PasswordStrengthLevel.Fair -> MaterialTheme.colorScheme.tertiary
+                        else -> MaterialTheme.colorScheme.primary
+                    },
             )
             if (strength.isAcceptable) {
                 Text(
                     text = "OK",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
         }
@@ -1191,7 +1227,7 @@ fun PasswordStrengthIndicator(strength: PasswordStrengthResult) {
             Text(
                 text = strength.feedback,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -1201,37 +1237,39 @@ fun PasswordStrengthIndicator(strength: PasswordStrengthResult) {
 fun HelpLinkItem(
     title: String,
     subtitle: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        onClick = onClick
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        onClick = onClick,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                 contentDescription = "Open link",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -1242,27 +1280,27 @@ fun AccessibilityToggle(
     title: String,
     description: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
             )
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
         )
     }
 }
@@ -1272,7 +1310,7 @@ fun AccessibilityToggle(
 @Composable
 fun ContentUpdatesSection(
     onCheckUpdates: suspend () -> ContentUpdateStatus?,
-    onApplyUpdates: suspend () -> ContentApplyResult?
+    onApplyUpdates: suspend () -> ContentApplyResult?,
 ) {
     var updateStatus by remember { mutableStateOf<ContentUpdateStatus?>(null) }
     var isChecking by remember { mutableStateOf(false) }
@@ -1283,45 +1321,46 @@ fun ContentUpdatesSection(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
             text = "Content Updates",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.semantics { heading() }
+            modifier = Modifier.semantics { heading() },
         )
 
         Text(
             text = "Updates include new social networks, localization improvements, and themes.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 // Status row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "Status",
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                     if (isChecking || isApplying) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
+                            strokeWidth = 2.dp,
                         )
                     } else {
                         updateStatus?.let { status ->
@@ -1329,7 +1368,7 @@ fun ContentUpdatesSection(
                         } ?: Text(
                             text = "Not checked",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -1347,16 +1386,20 @@ fun ContentUpdatesSection(
                                 is ContentUpdateStatus.UpToDate -> {
                                     successMessage = "Everything is up to date"
                                 }
+
                                 is ContentUpdateStatus.UpdatesAvailable -> {
                                     val typeNames = result.types.map { it.toDisplayName() }
                                     successMessage = "Updates available: ${typeNames.joinToString(", ")}"
                                 }
+
                                 is ContentUpdateStatus.CheckFailed -> {
                                     errorMessage = "Check failed: ${result.error}"
                                 }
+
                                 is ContentUpdateStatus.Disabled -> {
                                     errorMessage = "Content updates are disabled"
                                 }
+
                                 null -> {
                                     errorMessage = "Failed to check for updates"
                                 }
@@ -1365,12 +1408,12 @@ fun ContentUpdatesSection(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isChecking && !isApplying
+                    enabled = !isChecking && !isApplying,
                 ) {
                     if (isChecking) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
+                            strokeWidth = 2.dp,
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
@@ -1391,6 +1434,7 @@ fun ContentUpdatesSection(
                                     is ContentApplyResult.NoUpdates -> {
                                         successMessage = "No updates to apply"
                                     }
+
                                     is ContentApplyResult.Applied -> {
                                         if (result.failed.isEmpty()) {
                                             successMessage = "Applied ${result.applied.size} update(s)"
@@ -1398,12 +1442,15 @@ fun ContentUpdatesSection(
                                             successMessage = "Applied ${result.applied.size}, failed ${result.failed.size}"
                                         }
                                     }
+
                                     is ContentApplyResult.Disabled -> {
                                         errorMessage = "Content updates are disabled"
                                     }
+
                                     is ContentApplyResult.Error -> {
                                         errorMessage = "Apply failed: ${result.error}"
                                     }
+
                                     null -> {
                                         errorMessage = "Failed to apply updates"
                                     }
@@ -1414,13 +1461,13 @@ fun ContentUpdatesSection(
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !isChecking && !isApplying
+                        enabled = !isChecking && !isApplying,
                     ) {
                         if (isApplying) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary
+                                color = MaterialTheme.colorScheme.onPrimary,
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
@@ -1433,7 +1480,7 @@ fun ContentUpdatesSection(
                     Text(
                         text = error,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
 
@@ -1442,7 +1489,7 @@ fun ContentUpdatesSection(
                     Text(
                         text = success,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -1457,46 +1504,50 @@ fun ContentUpdateStatusBadge(status: ContentUpdateStatus) {
             Text(
                 text = "Up to date",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
             )
         }
+
         is ContentUpdateStatus.UpdatesAvailable -> {
             Text(
                 text = "${status.types.size} available",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.tertiary
+                color = MaterialTheme.colorScheme.tertiary,
             )
         }
+
         is ContentUpdateStatus.CheckFailed -> {
             Text(
                 text = "Error",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
             )
         }
+
         is ContentUpdateStatus.Disabled -> {
             Text(
                 text = "Disabled",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
 }
 
-private fun ContentUpdateType.toDisplayName(): String = when (this) {
-    ContentUpdateType.Networks -> "Social Networks"
-    ContentUpdateType.Locales -> "Languages"
-    ContentUpdateType.Themes -> "Themes"
-    ContentUpdateType.Help -> "Help Content"
-}
+private fun ContentUpdateType.toDisplayName(): String =
+    when (this) {
+        ContentUpdateType.Networks -> "Social Networks"
+        ContentUpdateType.Locales -> "Languages"
+        ContentUpdateType.Themes -> "Themes"
+        ContentUpdateType.Help -> "Help Content"
+    }
 
 // Certificate Pinning Section
 
 @Composable
 fun CertificatePinningSection(
     isEnabled: Boolean,
-    onSetCertificate: (String) -> Unit
+    onSetCertificate: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -1505,7 +1556,7 @@ fun CertificatePinningSection(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         HorizontalDivider()
 
@@ -1513,46 +1564,47 @@ fun CertificatePinningSection(
             text = "Security",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.semantics { heading() }
+            modifier = Modifier.semantics { heading() },
         )
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 // Status row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "Certificate Pinning",
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
                         text = if (isEnabled) "Enabled" else "Disabled",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
                 Text(
                     text = "Certificate pinning ensures the app only connects to relay servers presenting a specific certificate.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 // Set Certificate button
                 OutlinedButton(
                     onClick = { showSetCertificateDialog = true },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Set Certificate")
                 }
@@ -1562,9 +1614,10 @@ fun CertificatePinningSection(
                     TextButton(
                         onClick = { showClearConfirmation = true },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
+                        colors =
+                            ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
                     ) {
                         Text("Clear Certificate")
                     }
@@ -1579,7 +1632,7 @@ fun CertificatePinningSection(
             onSetCertificate = { certPem ->
                 onSetCertificate(certPem)
                 showSetCertificateDialog = false
-            }
+            },
         )
     }
 
@@ -1593,7 +1646,7 @@ fun CertificatePinningSection(
                     onClick = {
                         onSetCertificate("")
                         showClearConfirmation = false
-                    }
+                    },
                 ) {
                     Text("Clear", color = MaterialTheme.colorScheme.error)
                 }
@@ -1602,7 +1655,7 @@ fun CertificatePinningSection(
                 TextButton(onClick = { showClearConfirmation = false }) {
                     Text(localizationManager.t("action.cancel"))
                 }
-            }
+            },
         )
     }
 }
@@ -1613,43 +1666,48 @@ fun CertificatePinningSection(
 fun DuressPinSection(
     isDuressEnabled: Boolean,
     onSetupDuressPin: (String) -> Unit,
-    onDisableDuress: () -> Unit
+    onDisableDuress: () -> Unit,
 ) {
     var showSetupDialog by remember { mutableStateOf(false) }
     var showDisableConfirmation by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Duress PIN",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.semantics { heading() }
+                modifier = Modifier.semantics { heading() },
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "When entered, contacts are replaced with decoy data for plausible deniability.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("Duress PIN")
                 Text(
                     text = if (isDuressEnabled) "Enabled" else "Not set",
-                    color = if (isDuressEnabled) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium
+                    color =
+                        if (isDuressEnabled) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
 
@@ -1658,7 +1716,7 @@ fun DuressPinSection(
             if (!isDuressEnabled) {
                 Button(
                     onClick = { showSetupDialog = true },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Set Duress PIN")
                 }
@@ -1666,9 +1724,10 @@ fun DuressPinSection(
                 OutlinedButton(
                     onClick = { showDisableConfirmation = true },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
                 ) {
                     Text("Disable Duress PIN")
                 }
@@ -1682,7 +1741,7 @@ fun DuressPinSection(
             onConfirm = { pin ->
                 onSetupDuressPin(pin)
                 showSetupDialog = false
-            }
+            },
         )
     }
 
@@ -1703,7 +1762,7 @@ fun DuressPinSection(
                 TextButton(onClick = { showDisableConfirmation = false }) {
                     Text("Cancel")
                 }
-            }
+            },
         )
     }
 }
@@ -1711,7 +1770,7 @@ fun DuressPinSection(
 @Composable
 fun DuressPinSetupDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String) -> Unit,
 ) {
     var pin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
@@ -1724,30 +1783,36 @@ fun DuressPinSetupDialog(
             Column {
                 Text(
                     "Enter a PIN that, when used instead of the app password, shows decoy contacts.",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = pin,
-                    onValueChange = { pin = it; error = "" },
+                    onValueChange = {
+                        pin = it
+                        error = ""
+                    },
                     label = { Text("Duress PIN") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = confirmPin,
-                    onValueChange = { confirmPin = it; error = "" },
+                    onValueChange = {
+                        confirmPin = it
+                        error = ""
+                    },
                     label = { Text("Confirm PIN") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 if (error.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = error,
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
             }
@@ -1767,7 +1832,7 @@ fun DuressPinSetupDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
-        }
+        },
     )
 }
 
@@ -1776,39 +1841,43 @@ fun EmergencyBroadcastSection(
     isConfigured: Boolean,
     onConfigure: (List<String>, String, Boolean) -> Unit,
     onSend: () -> Unit,
-    onDisable: () -> Unit
+    onDisable: () -> Unit,
 ) {
     var showConfigDialog by remember { mutableStateOf(false) }
     var showSendConfirm by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Emergency Broadcast",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.semantics { heading() }
+                modifier = Modifier.semantics { heading() },
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Send encrypted emergency alerts to trusted contacts.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text("Status")
                 Text(
                     text = if (isConfigured) "Configured" else "Not configured",
-                    color = if (isConfigured) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant
+                    color =
+                        if (isConfigured) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                 )
             }
 
@@ -1823,7 +1892,7 @@ fun EmergencyBroadcastSection(
                     Button(
                         onClick = { showSendConfirm = true },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     ) {
                         Text("Send Alert")
                     }
@@ -1841,7 +1910,7 @@ fun EmergencyBroadcastSection(
             onConfirm = { ids, msg, loc ->
                 onConfigure(ids, msg, loc)
                 showConfigDialog = false
-            }
+            },
         )
     }
 
@@ -1851,13 +1920,16 @@ fun EmergencyBroadcastSection(
             title = { Text("Send Emergency Broadcast") },
             text = { Text("Send an encrypted emergency alert to all trusted contacts?") },
             confirmButton = {
-                TextButton(onClick = { onSend(); showSendConfirm = false }) {
+                TextButton(onClick = {
+                    onSend()
+                    showSendConfirm = false
+                }) {
                     Text("Send", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showSendConfirm = false }) { Text("Cancel") }
-            }
+            },
         )
     }
 }
@@ -1865,7 +1937,7 @@ fun EmergencyBroadcastSection(
 @Composable
 fun EmergencyConfigDialog(
     onDismiss: () -> Unit,
-    onConfirm: (List<String>, String, Boolean) -> Unit
+    onConfirm: (List<String>, String, Boolean) -> Unit,
 ) {
     var contactIds by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("I may be in danger. Please check on me.") }
@@ -1880,20 +1952,20 @@ fun EmergencyConfigDialog(
                     value = contactIds,
                     onValueChange = { contactIds = it },
                     label = { Text("Contact IDs (comma-separated)") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = message,
                     onValueChange = { message = it },
                     label = { Text("Alert message") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("Include location")
                     Switch(checked = includeLocation, onCheckedChange = { includeLocation = it })
@@ -1908,23 +1980,24 @@ fun EmergencyConfigDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
+        },
     )
 }
 
 @Composable
 fun SetCertificateDialog(
     onDismiss: () -> Unit,
-    onSetCertificate: (String) -> Unit
+    onSetCertificate: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
     var certificateText by remember { mutableStateOf("") }
 
-    val isValidPem = certificateText.trim().let { text ->
-        text.startsWith("-----BEGIN CERTIFICATE-----") &&
-        text.endsWith("-----END CERTIFICATE-----")
-    }
+    val isValidPem =
+        certificateText.trim().let { text ->
+            text.startsWith("-----BEGIN CERTIFICATE-----") &&
+                text.endsWith("-----END CERTIFICATE-----")
+        }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1933,24 +2006,25 @@ fun SetCertificateDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     text = "Paste the certificate in PEM format. This is typically provided by your organization's IT department.",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
 
                 OutlinedTextField(
                     value = certificateText,
                     onValueChange = { certificateText = it },
                     label = { Text("Certificate (PEM)") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    textStyle = MaterialTheme.typography.bodySmall
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                    textStyle = MaterialTheme.typography.bodySmall,
                 )
 
                 if (certificateText.isNotEmpty() && !isValidPem) {
                     Text(
                         text = "Invalid PEM format. Must begin with '-----BEGIN CERTIFICATE-----'",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             }
@@ -1958,7 +2032,7 @@ fun SetCertificateDialog(
         confirmButton = {
             TextButton(
                 onClick = { onSetCertificate(certificateText.trim()) },
-                enabled = isValidPem
+                enabled = isValidPem,
             ) {
                 Text("Set")
             }
@@ -1967,7 +2041,7 @@ fun SetCertificateDialog(
             TextButton(onClick = onDismiss) {
                 Text(localizationManager.t("action.cancel"))
             }
-        }
+        },
     )
 }
 
@@ -1976,7 +2050,7 @@ fun TorSettingsSection(
     isTorEnabled: Boolean,
     torPreferOnion: Boolean,
     torBridges: List<String>,
-    onSaveTorConfig: (Boolean, List<String>, Boolean) -> Unit
+    onSaveTorConfig: (Boolean, List<String>, Boolean) -> Unit,
 ) {
     var showBridgeDialog by remember { mutableStateOf(false) }
     var bridgeText by remember { mutableStateOf(torBridges.joinToString("\n")) }
@@ -1985,12 +2059,15 @@ fun TorSettingsSection(
     Text(
         text = "Tor Mode",
         style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(vertical = 8.dp)
+        modifier =
+            Modifier
+                .padding(vertical = 8.dp)
+                .semantics { heading() },
     )
     Text(
         text = "Route all relay traffic through Tor for enhanced anonymity.",
         style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -1998,7 +2075,7 @@ fun TorSettingsSection(
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("Enable Tor")
         Switch(
@@ -2006,14 +2083,14 @@ fun TorSettingsSection(
             onCheckedChange = { newValue ->
                 val bridges = bridgeText.split("\n").filter { it.isNotBlank() }
                 onSaveTorConfig(newValue, bridges, torPreferOnion)
-            }
+            },
         )
     }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("Prefer .onion Addresses")
         Switch(
@@ -2021,7 +2098,7 @@ fun TorSettingsSection(
             onCheckedChange = { newValue ->
                 val bridges = bridgeText.split("\n").filter { it.isNotBlank() }
                 onSaveTorConfig(isTorEnabled, bridges, newValue)
-            }
+            },
         )
     }
 
@@ -2030,7 +2107,7 @@ fun TorSettingsSection(
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("Bridges: ${torBridges.size} configured")
         TextButton(onClick = {
@@ -2047,7 +2124,7 @@ fun TorSettingsSection(
             text = message,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(vertical = 4.dp)
+            modifier = Modifier.padding(vertical = 4.dp),
         )
     }
 
@@ -2059,7 +2136,7 @@ fun TorSettingsSection(
                 Column {
                     Text(
                         "Add obfs4 bridge addresses for censored networks. One per line.",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
@@ -2067,7 +2144,7 @@ fun TorSettingsSection(
                         onValueChange = { bridgeText = it },
                         label = { Text("Bridge Addresses") },
                         modifier = Modifier.fillMaxWidth().height(150.dp),
-                        maxLines = 10
+                        maxLines = 10,
                     )
                 }
             },
@@ -2085,7 +2162,7 @@ fun TorSettingsSection(
                 TextButton(onClick = { showBridgeDialog = false }) {
                     Text("Cancel")
                 }
-            }
+            },
         )
     }
 }
