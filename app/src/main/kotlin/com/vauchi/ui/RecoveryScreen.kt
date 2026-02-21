@@ -24,15 +24,15 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import com.vauchi.util.ClipboardUtils
 import com.vauchi.util.LocalizationManager
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecoveryScreen(
     viewModel: MainViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -47,29 +47,30 @@ fun RecoveryScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Tab selection
             TabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Recover") }
+                    text = { Text("Recover") },
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Help Others") }
+                    text = { Text("Help Others") },
                 )
             }
 
@@ -85,7 +86,7 @@ fun RecoveryScreen(
 fun RecoverIdentityContent(
     viewModel: MainViewModel,
     context: Context,
-    scope: kotlinx.coroutines.CoroutineScope
+    scope: kotlinx.coroutines.CoroutineScope,
 ) {
     val localizationManager = remember { LocalizationManager.getInstance(context) }
     var oldPublicKey by remember { mutableStateOf("") }
@@ -98,44 +99,48 @@ fun RecoverIdentityContent(
         trustedCount = viewModel.trustedContactCount()
     }
 
-    fun copyToClipboard(text: String, label: String) {
+    fun copyToClipboard(
+        text: String,
+        label: String,
+    ) {
         // Auto-clear after 30 seconds for sensitive recovery data
         ClipboardUtils.copyWithAutoClear(context, scope, text, label)
     }
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Info card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                ),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(
                     Icons.Default.Lock,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Lost Your Device?",
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.semantics { heading() }
+                    modifier = Modifier.semantics { heading() },
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "You can recover your contact relationships through social vouching.",
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }
@@ -143,63 +148,67 @@ fun RecoverIdentityContent(
         // Recovery Settings
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer
-            )
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                ),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Recovery Settings",
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.semantics { heading() },
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
                         text = "Required vouchers:",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
                     )
                     Text(
                         text = "3",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
                     )
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
                         text = "Claim expiry:",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
                     )
                     Text(
                         text = "7 days",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
                     )
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
                         text = "Trusted contacts:",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
                     )
                     Text(
-                        text = "${trustedCount}/3",
+                        text = "$trustedCount/3",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (trustedCount >= 3u)
-                            MaterialTheme.colorScheme.onTertiaryContainer
-                        else
-                            MaterialTheme.colorScheme.error
+                        color =
+                            if (trustedCount >= 3u) {
+                                MaterialTheme.colorScheme.onTertiaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
                     )
                 }
                 if (trustedCount < 3u) {
@@ -207,7 +216,7 @@ fun RecoverIdentityContent(
                     Text(
                         text = "Mark ${3u - trustedCount} more contact(s) as trusted for recovery",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
                     )
                 }
             }
@@ -217,31 +226,31 @@ fun RecoverIdentityContent(
         Text(
             text = localizationManager.t("recovery.how_it_works"),
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.semantics { heading() }
+            modifier = Modifier.semantics { heading() },
         )
 
         RecoveryStep(
             number = 1,
             title = "Create New Identity",
-            description = "First, create a new identity on your new device."
+            description = "First, create a new identity on your new device.",
         )
 
         RecoveryStep(
             number = 2,
             title = "Generate Recovery Claim",
-            description = "Create a claim using your OLD public key from your lost identity."
+            description = "Create a claim using your OLD public key from your lost identity.",
         )
 
         RecoveryStep(
             number = 3,
             title = "Collect Vouchers",
-            description = "Meet with 3+ trusted contacts in person. Have them vouch for your recovery."
+            description = "Meet with 3+ trusted contacts in person. Have them vouch for your recovery.",
         )
 
         RecoveryStep(
             number = 4,
             title = "Share Recovery Proof",
-            description = "Once you have enough vouchers, share your recovery proof with all contacts."
+            description = "Once you have enough vouchers, share your recovery proof with all contacts.",
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -249,7 +258,7 @@ fun RecoverIdentityContent(
         // Create Claim Button
         Button(
             onClick = { showClaimDialog = true },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Start Recovery Process")
         }
@@ -269,20 +278,21 @@ fun RecoverIdentityContent(
                     if (generatedClaimData != null) {
                         Text(
                             text = "Share this claim with your trusted contacts:",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                ),
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(
                                     text = generatedClaimData!!.take(60) + "...",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -291,7 +301,7 @@ fun RecoverIdentityContent(
                             onClick = {
                                 copyToClipboard(generatedClaimData!!, "Recovery Claim")
                             },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Icon(Icons.Default.ContentCopy, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
@@ -300,7 +310,7 @@ fun RecoverIdentityContent(
                     } else {
                         Text(
                             text = "Enter your OLD public key (from backup or previous device):",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
@@ -310,7 +320,7 @@ fun RecoverIdentityContent(
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = false,
                             minLines = 2,
-                            enabled = !isCreatingClaim
+                            enabled = !isCreatingClaim,
                         )
                     }
                 }
@@ -322,7 +332,7 @@ fun RecoverIdentityContent(
                             showClaimDialog = false
                             generatedClaimData = null
                             oldPublicKey = ""
-                        }
+                        },
                     ) {
                         Text("Done")
                     }
@@ -338,12 +348,12 @@ fun RecoverIdentityContent(
                                 isCreatingClaim = false
                             }
                         },
-                        enabled = oldPublicKey.length >= 64 && !isCreatingClaim
+                        enabled = oldPublicKey.length >= 64 && !isCreatingClaim,
                     ) {
                         if (isCreatingClaim) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
+                                strokeWidth = 2.dp,
                             )
                         } else {
                             Text("Create Claim")
@@ -355,12 +365,12 @@ fun RecoverIdentityContent(
                 if (generatedClaimData == null) {
                     TextButton(
                         onClick = { showClaimDialog = false },
-                        enabled = !isCreatingClaim
+                        enabled = !isCreatingClaim,
                     ) {
                         Text(localizationManager.t("action.cancel"))
                     }
                 }
-            }
+            },
         )
     }
 }
@@ -369,7 +379,7 @@ fun RecoverIdentityContent(
 fun HelpOthersContent(
     viewModel: MainViewModel,
     context: Context,
-    scope: kotlinx.coroutines.CoroutineScope
+    scope: kotlinx.coroutines.CoroutineScope,
 ) {
     val localizationManager = remember { LocalizationManager.getInstance(context) }
     var claimData by remember { mutableStateOf("") }
@@ -379,44 +389,48 @@ fun HelpOthersContent(
     var parsedClaimInfo by remember { mutableStateOf<uniffi.vauchi_mobile.MobileRecoveryClaim?>(null) }
     var generatedVoucherData by remember { mutableStateOf<String?>(null) }
 
-    fun copyToClipboard(text: String, label: String) {
+    fun copyToClipboard(
+        text: String,
+        label: String,
+    ) {
         // Auto-clear after 30 seconds for sensitive recovery data
         ClipboardUtils.copyWithAutoClear(context, scope, text, label)
     }
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Info card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
-            )
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                ),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(
                     Icons.Default.CheckCircle,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Help a Contact Recover",
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.semantics { heading() }
+                    modifier = Modifier.semantics { heading() },
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "If a contact lost their device, you can vouch for their identity.",
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
         }
@@ -424,24 +438,25 @@ fun HelpOthersContent(
         // Warning
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer
-            )
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                ),
         ) {
             Row(
                 modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onErrorContainer
+                    contentDescription = "Warning",
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = "Only vouch for someone you can verify IN PERSON. This prevents identity theft.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer
+                    color = MaterialTheme.colorScheme.onErrorContainer,
                 )
             }
         }
@@ -450,31 +465,31 @@ fun HelpOthersContent(
         Text(
             text = "How to Vouch",
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.semantics { heading() }
+            modifier = Modifier.semantics { heading() },
         )
 
         RecoveryStep(
             number = 1,
             title = "Verify Identity",
-            description = "Meet your contact in person. Verify they are who they claim to be."
+            description = "Meet your contact in person. Verify they are who they claim to be.",
         )
 
         RecoveryStep(
             number = 2,
             title = "Get Their Claim",
-            description = "They will share their claim data with you."
+            description = "They will share their claim data with you.",
         )
 
         RecoveryStep(
             number = 3,
             title = "Create Voucher",
-            description = "Sign a voucher confirming their identity."
+            description = "Sign a voucher confirming their identity.",
         )
 
         RecoveryStep(
             number = 4,
             title = "Share Voucher",
-            description = "Give them the voucher data to add to their recovery proof."
+            description = "Give them the voucher data to add to their recovery proof.",
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -483,9 +498,10 @@ fun HelpOthersContent(
         Button(
             onClick = { showVouchDialog = true },
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary
-            )
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                ),
         ) {
             Text("Vouch for Someone")
         }
@@ -507,7 +523,7 @@ fun HelpOthersContent(
                         generatedVoucherData != null -> "Voucher Created"
                         parsedClaimInfo != null -> "Confirm Voucher"
                         else -> "Vouch for Recovery"
-                    }
+                    },
                 )
             },
             text = {
@@ -516,20 +532,21 @@ fun HelpOthersContent(
                         generatedVoucherData != null -> {
                             Text(
                                 text = "Give this voucher to your contact:",
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                )
+                                colors =
+                                    CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    ),
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
                                     Text(
                                         text = generatedVoucherData!!.take(60) + "...",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
@@ -538,47 +555,49 @@ fun HelpOthersContent(
                                 onClick = {
                                     copyToClipboard(generatedVoucherData!!, "Recovery Voucher")
                                 },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Icon(Icons.Default.ContentCopy, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Copy Voucher Data")
                             }
                         }
+
                         parsedClaimInfo != null -> {
                             Text(
                                 text = "Claim Details:",
-                                style = MaterialTheme.typography.titleSmall
+                                style = MaterialTheme.typography.titleSmall,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Old ID: ${parsedClaimInfo!!.oldPublicKey.take(16)}...",
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.bodySmall,
                             )
                             Text(
                                 text = "New ID: ${parsedClaimInfo!!.newPublicKey.take(16)}...",
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.bodySmall,
                             )
                             if (parsedClaimInfo!!.isExpired) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "This claim has EXPIRED!",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.error
+                                    color = MaterialTheme.colorScheme.error,
                                 )
                             } else {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "Verify this person's identity IN PERSON before vouching!",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
+                                    color = MaterialTheme.colorScheme.error,
                                 )
                             }
                         }
+
                         else -> {
                             Text(
                                 text = "Paste the recovery claim data from your contact:",
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
@@ -588,13 +607,13 @@ fun HelpOthersContent(
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = false,
                                 minLines = 3,
-                                enabled = !isParsing
+                                enabled = !isParsing,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Verify this person's identity IN PERSON before vouching!",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.error,
                             )
                         }
                     }
@@ -609,11 +628,12 @@ fun HelpOthersContent(
                                 claimData = ""
                                 parsedClaimInfo = null
                                 generatedVoucherData = null
-                            }
+                            },
                         ) {
                             Text("Done")
                         }
                     }
+
                     parsedClaimInfo != null -> {
                         TextButton(
                             onClick = {
@@ -626,18 +646,19 @@ fun HelpOthersContent(
                                     isCreatingVoucher = false
                                 }
                             },
-                            enabled = !parsedClaimInfo!!.isExpired && !isCreatingVoucher
+                            enabled = !parsedClaimInfo!!.isExpired && !isCreatingVoucher,
                         ) {
                             if (isCreatingVoucher) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
+                                    strokeWidth = 2.dp,
                                 )
                             } else {
                                 Text("Create Voucher")
                             }
                         }
                     }
+
                     else -> {
                         TextButton(
                             onClick = {
@@ -650,12 +671,12 @@ fun HelpOthersContent(
                                     isParsing = false
                                 }
                             },
-                            enabled = claimData.length >= 20 && !isParsing
+                            enabled = claimData.length >= 20 && !isParsing,
                         ) {
                             if (isParsing) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
+                                    strokeWidth = 2.dp,
                                 )
                             } else {
                                 Text("Verify Claim")
@@ -675,12 +696,12 @@ fun HelpOthersContent(
                                 claimData = ""
                             }
                         },
-                        enabled = !isCreatingVoucher && !isParsing
+                        enabled = !isCreatingVoucher && !isParsing,
                     ) {
                         Text(if (parsedClaimInfo != null) "Back" else localizationManager.t("action.cancel"))
                     }
                 }
-            }
+            },
         )
     }
 }
@@ -689,22 +710,25 @@ fun HelpOthersContent(
 fun RecoveryStep(
     number: Int,
     title: String,
-    description: String
+    description: String,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = "Step $number: $title. $description" },
+        verticalAlignment = Alignment.Top,
     ) {
         Surface(
             shape = MaterialTheme.shapes.small,
             color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(32.dp)
+            modifier = Modifier.size(32.dp),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     text = number.toString(),
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }
@@ -712,12 +736,12 @@ fun RecoveryStep(
         Column {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.titleSmall,
             )
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
