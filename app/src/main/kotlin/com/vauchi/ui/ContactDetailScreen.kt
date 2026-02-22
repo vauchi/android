@@ -375,14 +375,8 @@ fun ContactDetailScreen(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            // TODO: Replace with contact?.fingerprint once bindings are updated
                             Text(
-                                text =
-                                    contact
-                                        ?.id
-                                        ?.chunked(4)
-                                        ?.joinToString(" ")
-                                        ?.uppercase() ?: "",
+                                text = contact?.fingerprint ?: "",
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 3,
                             )
