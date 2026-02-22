@@ -66,18 +66,41 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
+    /** Mutable state for deep link URI, observed by Compose. */
+    private val _deepLinkUri = mutableStateOf<Uri?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Handle deep link from cold start
+        handleIncomingIntent(intent)
+
         setContent {
+            val deepLinkUri by _deepLinkUri
             VauchiTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    MainScreen()
+                    MainScreen(
+                        deepLinkUri = deepLinkUri,
+                        onDeepLinkConsumed = { _deepLinkUri.value = null },
+                    )
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Handle deep link when app is already running (singleTask)
+        handleIncomingIntent(intent)
+    }
+
+    private fun handleIncomingIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW) {
+            _deepLinkUri.value = intent.data
         }
     }
 }
@@ -99,7 +122,11 @@ enum class Screen {
 }
 
 @Composable
-fun MainScreen(viewModel: MainViewModel = viewModel()) {
+fun MainScreen(
+    viewModel: MainViewModel = viewModel(),
+    deepLinkUri: Uri? = null,
+    onDeepLinkConsumed: () -> Unit = {},
+) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
     val syncState by viewModel.syncState.collectAsState()
@@ -113,6 +140,29 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
     val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
+
+    // Deep link consent gate (SP-9)
+    val deepLinkHandler = remember { com.vauchi.deeplink.DeepLinkHandler() }
+    var showDeepLinkConsent by remember { mutableStateOf(false) }
+    var deepLinkPayload by remember { mutableStateOf<String?>(null) }
+
+    // Handle incoming deep link URI with consent gate
+    LaunchedEffect(deepLinkUri) {
+        deepLinkUri?.let { uri ->
+            val result = deepLinkHandler.handleDeepLink(uri)
+            when (result) {
+                is com.vauchi.deeplink.DeepLinkResult.ExchangePending -> {
+                    deepLinkPayload = result.exchangePayload
+                    showDeepLinkConsent = true
+                }
+
+                is com.vauchi.deeplink.DeepLinkResult.Invalid -> {
+                    snackbarHostState.showSnackbar("Invalid link: ${result.reason}")
+                }
+            }
+            onDeepLinkConsumed()
+        }
+    }
 
     // Auto-sync when app comes to foreground
     DisposableEffect(lifecycleOwner) {
@@ -489,6 +539,71 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
+
+    // Deep link consent dialog (SP-9)
+    // NEVER auto-process — always ask the user first
+    if (showDeepLinkConsent && deepLinkPayload != null) {
+        DeepLinkConsentDialog(
+            onConfirm = {
+                showDeepLinkConsent = false
+                deepLinkHandler.grantConsent()
+                // Start the exchange flow with the payload
+                deepLinkPayload?.let { payload ->
+                    viewModel.startExchangeWithProximity(payload)
+                    currentScreen = Screen.Exchange
+                }
+                deepLinkPayload = null
+            },
+            onDeny = {
+                showDeepLinkConsent = false
+                deepLinkHandler.denyConsent()
+                deepLinkPayload = null
+            },
+        )
+    }
+}
+
+/**
+ * Consent dialog shown before processing a deep link exchange.
+ *
+ * This is the security gate: the user must explicitly confirm
+ * before any exchange data from a deep link is processed.
+ */
+@Composable
+fun DeepLinkConsentDialog(
+    onConfirm: () -> Unit,
+    onDeny: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDeny,
+        icon = {
+            Icon(
+                Icons.Default.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
+        title = {
+            Text("Exchange Request")
+        },
+        text = {
+            Text(
+                "Someone shared an exchange link with you. " +
+                    "Do you want to proceed with the contact exchange?\n\n" +
+                    "Only accept if you trust the source of this link.",
+            )
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Accept Exchange")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDeny) {
+                Text("Decline")
+            }
+        },
+    )
 }
 
 @Composable
