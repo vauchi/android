@@ -26,7 +26,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.PackageInfoCompat
+import androidx.fragment.app.FragmentActivity
 import com.vauchi.ui.model.*
+import com.vauchi.util.BiometricHelper
 import com.vauchi.util.ClipboardUtils
 import com.vauchi.util.LocalizationManager
 import kotlinx.coroutines.launch
@@ -105,6 +107,7 @@ fun SettingsScreen(
     onPanicShred: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val activity = context as? FragmentActivity
     val localizationManager = remember { LocalizationManager.getInstance(context) }
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
@@ -341,7 +344,21 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Button(
-                    onClick = { showExportDialog = true },
+                    onClick = {
+                        if (activity != null && BiometricHelper.canAuthenticate(context)) {
+                            BiometricHelper.authenticate(
+                                activity = activity,
+                                title = "Authenticate to Export",
+                                subtitle = "Verify your identity to export your backup",
+                                onSuccess = { showExportDialog = true },
+                                onError = { msg ->
+                                    if (msg != null) snackbarMessage = msg
+                                },
+                            )
+                        } else {
+                            showExportDialog = true
+                        }
+                    },
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(localizationManager.t("backup.export"))
@@ -452,7 +469,19 @@ fun SettingsScreen(
                             TextButton(
                                 onClick = {
                                     showDeleteConfirm = false
-                                    onScheduleDeletion()
+                                    if (activity != null && BiometricHelper.canAuthenticate(context)) {
+                                        BiometricHelper.authenticate(
+                                            activity = activity,
+                                            title = "Authenticate to Delete Account",
+                                            subtitle = "Verify your identity to schedule account deletion",
+                                            onSuccess = { onScheduleDeletion() },
+                                            onError = { msg ->
+                                                if (msg != null) snackbarMessage = msg
+                                            },
+                                        )
+                                    } else {
+                                        onScheduleDeletion()
+                                    }
                                 },
                             ) {
                                 Text("Delete", color = MaterialTheme.colorScheme.error)
@@ -1746,14 +1775,26 @@ fun DuressPinSection(
     }
 
     if (showDisableConfirmation) {
+        val duressContext = LocalContext.current
+        val duressActivity = duressContext as? FragmentActivity
+
         AlertDialog(
             onDismissRequest = { showDisableConfirmation = false },
             title = { Text("Disable Duress PIN") },
             text = { Text("Are you sure you want to disable the duress PIN?") },
             confirmButton = {
                 TextButton(onClick = {
-                    onDisableDuress()
                     showDisableConfirmation = false
+                    if (duressActivity != null && BiometricHelper.canAuthenticate(duressContext)) {
+                        BiometricHelper.authenticate(
+                            activity = duressActivity,
+                            title = "Authenticate to Disable Duress",
+                            subtitle = "Verify your identity to disable the duress PIN",
+                            onSuccess = { onDisableDuress() },
+                        )
+                    } else {
+                        onDisableDuress()
+                    }
                 }) {
                     Text("Disable", color = MaterialTheme.colorScheme.error)
                 }
