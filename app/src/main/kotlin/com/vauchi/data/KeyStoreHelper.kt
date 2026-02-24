@@ -8,7 +8,10 @@ import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.security.keystore.UserNotAuthenticatedException
+import java.security.InvalidAlgorithmParameterException
 import java.security.KeyStore
+import java.security.KeyStoreException
+import java.security.UnrecoverableKeyException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -51,9 +54,23 @@ class KeyStoreHelper {
      * This key is used to encrypt/decrypt the storage key.
      */
     private fun getOrCreateMasterKey(): SecretKey {
-        val existingKey = keyStore.getEntry(KEYSTORE_ALIAS, null) as? KeyStore.SecretKeyEntry
-        if (existingKey != null) {
-            return existingKey.secretKey
+        try {
+            val existingKey = keyStore.getEntry(KEYSTORE_ALIAS, null) as? KeyStore.SecretKeyEntry
+            if (existingKey != null) {
+                return existingKey.secretKey
+            }
+        } catch (e: UnrecoverableKeyException) {
+            throw DeviceNotSecureException(
+                "A secure lock screen (PIN, pattern, or biometric) is required to protect your data. " +
+                    "Please set one up in your device Settings.",
+                e,
+            )
+        } catch (e: KeyStoreException) {
+            throw DeviceNotSecureException(
+                "A secure lock screen (PIN, pattern, or biometric) is required to protect your data. " +
+                    "Please set one up in your device Settings.",
+                e,
+            )
         }
 
         // Generate new key in KeyStore
@@ -84,8 +101,16 @@ class KeyStoreHelper {
                     }
                 }.build()
 
-        keyGenerator.init(keySpec)
-        return keyGenerator.generateKey()
+        try {
+            keyGenerator.init(keySpec)
+            return keyGenerator.generateKey()
+        } catch (e: InvalidAlgorithmParameterException) {
+            throw DeviceNotSecureException(
+                "A secure lock screen (PIN, pattern, or biometric) is required to protect your data. " +
+                    "Please set one up in your device Settings.",
+                e,
+            )
+        }
     }
 
     /**
