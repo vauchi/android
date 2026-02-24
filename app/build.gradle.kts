@@ -34,9 +34,12 @@ android {
             val ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
             if (ksPath != null) {
                 storeFile = file(ksPath)
-                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: ""
-                keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: ""
-                keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: ""
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                    ?: error("ANDROID_KEYSTORE_PASSWORD must be set when ANDROID_KEYSTORE_PATH is provided")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                    ?: error("ANDROID_KEY_ALIAS must be set when ANDROID_KEYSTORE_PATH is provided")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+                    ?: error("ANDROID_KEY_PASSWORD must be set when ANDROID_KEYSTORE_PATH is provided")
             }
         }
     }

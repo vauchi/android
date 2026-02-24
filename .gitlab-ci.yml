@@ -280,9 +280,15 @@ build:debug:
 build:release:
   extends: [.android-job, .timeout-long]
   stage: build
+  # Required CI/CD variables (Settings > CI/CD > Variables, protected + masked):
+  #   ANDROID_KEYSTORE          - Base64-encoded upload keystore (.jks)
+  #   ANDROID_KEYSTORE_PASSWORD - Keystore password
+  #   ANDROID_KEY_ALIAS         - Key alias within keystore
+  #   ANDROID_KEY_PASSWORD      - Key password
   script:
-    # Decode signing credentials from CI variables
+    # Decode and validate signing keystore
     - echo "$ANDROID_KEYSTORE" | base64 -d > /tmp/vauchi-upload.jks
+    - '[ -s /tmp/vauchi-upload.jks ] || { echo "ERROR: ANDROID_KEYSTORE is empty or invalid"; exit 1; }'
     - export ANDROID_KEYSTORE_PATH=/tmp/vauchi-upload.jks
     - ./gradlew bundleRelease
   after_script:
@@ -388,14 +394,19 @@ secret_detection:
 deploy:internal:
   extends: [.android-job, .timeout-long]
   stage: deploy
+  interruptible: false
+  # Required CI/CD variables (in addition to build:release variables):
+  #   GOOGLE_PLAY_SA_JSON - Base64-encoded Play Console service account JSON
   needs:
     - job: build:release
       artifacts: true
   script:
-    # Decode credentials from CI variables
+    # Decode keystore — not used for upload, but Gradle evaluates signingConfigs
+    # during configuration phase and will fail if storeFile path doesn't exist
     - echo "$ANDROID_KEYSTORE" | base64 -d > /tmp/vauchi-upload.jks
-    - echo "$GOOGLE_PLAY_SA_JSON" | base64 -d > /tmp/play-sa.json
     - export ANDROID_KEYSTORE_PATH=/tmp/vauchi-upload.jks
+    # Decode service account credentials for Play Store upload
+    - echo "$GOOGLE_PLAY_SA_JSON" | base64 -d > /tmp/play-sa.json
     - export GOOGLE_PLAY_SERVICE_ACCOUNT=/tmp/play-sa.json
     # Upload AAB to internal testing track
     - ./gradlew publishReleaseBundle
