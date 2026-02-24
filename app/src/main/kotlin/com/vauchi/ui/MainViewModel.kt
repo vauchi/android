@@ -7,6 +7,8 @@ package com.vauchi.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.vauchi.data.AuthenticationRequiredException
+import com.vauchi.data.DeviceNotSecureException
 import com.vauchi.data.ExchangeData
 import com.vauchi.data.VauchiRepository
 import com.vauchi.proximity.AudioProximityService
@@ -276,6 +278,17 @@ class MainViewModel(
                     // New user - show onboarding flow
                     _uiState.value = UiState.Onboarding
                 }
+            } catch (e: DeviceNotSecureException) {
+                _uiState.value =
+                    UiState.Error(
+                        e.message ?: "A secure lock screen is required to use Vauchi.",
+                    )
+            } catch (e: AuthenticationRequiredException) {
+                _uiState.value =
+                    UiState.Error(
+                        "Your device needs to be unlocked to access your data. " +
+                            "Please unlock your device and tap Retry.",
+                    )
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Unknown error")
             }
@@ -344,6 +357,17 @@ class MainViewModel(
             _uiState.value = UiState.Ready(displayName, publicId, card, contactCount)
             // Load demo contact state
             loadDemoContact()
+        } catch (e: DeviceNotSecureException) {
+            _uiState.value =
+                UiState.Error(
+                    e.message ?: "A secure lock screen is required to use Vauchi.",
+                )
+        } catch (e: AuthenticationRequiredException) {
+            _uiState.value =
+                UiState.Error(
+                    "Your device needs to be unlocked to access your data. " +
+                        "Please unlock your device and tap Retry.",
+                )
         } catch (e: Exception) {
             _uiState.value = UiState.Error(e.message ?: "Failed to load user data")
         }
