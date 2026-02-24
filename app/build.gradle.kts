@@ -4,6 +4,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.android.compose.screenshot")
+    id("com.github.triplet.play")
 }
 
 android {
@@ -77,6 +78,14 @@ android {
             useLegacyPackaging = false
             // Don't keep debug symbols in release for smaller APK
         }
+    }
+}
+
+play {
+    track.set("internal")
+    val saPath = System.getenv("GOOGLE_PLAY_SERVICE_ACCOUNT")
+    if (saPath != null) {
+        serviceAccountCredentials.set(file(saPath))
     }
 }
 
