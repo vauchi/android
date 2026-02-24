@@ -29,6 +29,7 @@ package com.vauchi.data
 // DONE: Device linking - getDevices(), generateDeviceLinkQr(), parseDeviceLinkQr(),
 // deviceCount(), unlinkDevice(), isPrimaryDevice() methods implemented.
 
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
@@ -69,6 +70,15 @@ class VauchiRepository(
         prefs = context.getSharedPreferences(VauchiPreferences.PREFS_NAME, Context.MODE_PRIVATE)
         preferences = VauchiPreferences(prefs)
         val relayUrl = preferences.getRelayUrl()
+
+        // Pre-check: device must have a secure lock screen for KeyStore operations
+        val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        if (!keyguardManager.isDeviceSecure) {
+            throw DeviceNotSecureException(
+                "A secure lock screen (PIN, pattern, or biometric) is required to protect your data. " +
+                    "Please set one up in your device Settings.",
+            )
+        }
 
         // Get or create storage key using Android KeyStore
         val storageKeyBytes = getOrCreateStorageKey(dataDir)
