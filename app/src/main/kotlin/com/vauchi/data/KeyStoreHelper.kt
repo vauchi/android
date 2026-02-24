@@ -18,6 +18,22 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
+ * Abstraction for storage key encryption operations.
+ * Production uses Android KeyStore; tests can use a simpler implementation.
+ */
+interface StorageKeyProvider {
+    fun generateEncryptedStorageKey(): ByteArray
+
+    fun encryptStorageKey(storageKey: ByteArray): ByteArray
+
+    fun decryptStorageKey(encryptedData: ByteArray): ByteArray
+
+    fun hasMasterKey(): Boolean
+
+    fun deleteMasterKey()
+}
+
+/**
  * Helper class for secure key management using Android KeyStore.
  *
  * The storage encryption key is generated and stored in the Android KeyStore,
@@ -27,7 +43,7 @@ import javax.crypto.spec.GCMParameterSpec
  * within the last [AUTH_VALIDITY_SECONDS] seconds. This satisfies
  * OWASP MASVS-STORAGE-2.
  */
-class KeyStoreHelper {
+class KeyStoreHelper : StorageKeyProvider {
     companion object {
         private const val KEYSTORE_ALIAS = "vauchi_storage_key"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
@@ -117,7 +133,7 @@ class KeyStoreHelper {
      * Generate a new random storage key and encrypt it with the master key.
      * Returns the encrypted storage key bytes (IV + ciphertext + tag).
      */
-    fun generateEncryptedStorageKey(): ByteArray {
+    override fun generateEncryptedStorageKey(): ByteArray {
         val storageKey = uniffi.vauchi_mobile.generateStorageKey()
         return encryptStorageKey(storageKey)
     }
@@ -127,7 +143,7 @@ class KeyStoreHelper {
      *
      * @throws AuthenticationRequiredException if the device has not been unlocked recently.
      */
-    fun encryptStorageKey(storageKey: ByteArray): ByteArray {
+    override fun encryptStorageKey(storageKey: ByteArray): ByteArray {
         try {
             val masterKey = getOrCreateMasterKey()
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -151,7 +167,7 @@ class KeyStoreHelper {
      *
      * @throws AuthenticationRequiredException if the device has not been unlocked recently.
      */
-    fun decryptStorageKey(encryptedData: ByteArray): ByteArray {
+    override fun decryptStorageKey(encryptedData: ByteArray): ByteArray {
         if (encryptedData.size < GCM_IV_LENGTH + STORAGE_KEY_LENGTH) {
             throw IllegalArgumentException("Invalid encrypted data length")
         }
@@ -178,12 +194,12 @@ class KeyStoreHelper {
     /**
      * Check if a master key exists in the KeyStore.
      */
-    fun hasMasterKey(): Boolean = keyStore.containsAlias(KEYSTORE_ALIAS)
+    override fun hasMasterKey(): Boolean = keyStore.containsAlias(KEYSTORE_ALIAS)
 
     /**
      * Delete the master key from KeyStore (for testing/reset).
      */
-    fun deleteMasterKey() {
+    override fun deleteMasterKey() {
         if (keyStore.containsAlias(KEYSTORE_ALIAS)) {
             keyStore.deleteEntry(KEYSTORE_ALIAS)
         }

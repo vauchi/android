@@ -56,11 +56,11 @@ data class ExchangeData(
  */
 class VauchiRepository(
     context: Context,
+    private val keyStoreHelper: StorageKeyProvider = KeyStoreHelper(),
 ) {
     private val vauchi: VauchiMobile
     private val prefs: SharedPreferences
     private val preferences: VauchiPreferences
-    private val keyStoreHelper = KeyStoreHelper()
 
     companion object {
         private const val KEY_ENCRYPTED_STORAGE_KEY = "encrypted_storage_key"

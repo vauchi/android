@@ -8,11 +8,14 @@ import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
+import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import uniffi.vauchi_mobile.MobileFieldType
 import java.io.File
+import java.net.InetSocketAddress
+import java.net.Socket
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -31,6 +34,13 @@ class VauchiRepositoryFfiTest {
     private lateinit var context: Context
     private lateinit var tempDir: File
     private lateinit var repository: VauchiRepository
+    private lateinit var storageKeyProvider: TestStorageKeyProvider
+
+    companion object {
+        /** Local dev relay URL (started via `just dev-relay`) */
+        private const val LOCAL_RELAY_URL = "ws://127.0.0.1:8080"
+        private const val LOCAL_RELAY_PORT = 8080
+    }
 
     @Before
     fun setUp() {
@@ -38,6 +48,9 @@ class VauchiRepositoryFfiTest {
         // Create a unique temp directory for each test
         tempDir = File(context.cacheDir, "test_${System.currentTimeMillis()}")
         tempDir.mkdirs()
+
+        // Shared provider so repos using the same data dir can decrypt each other's data
+        storageKeyProvider = TestStorageKeyProvider()
 
         // Create a test context that uses our temp directory
         repository = createTestRepository(tempDir)
@@ -52,10 +65,34 @@ class VauchiRepositoryFfiTest {
     /**
      * Creates a VauchiRepository for testing with a custom data directory.
      * Uses a wrapper context that redirects filesDir to our temp directory.
+     * Accepts an optional StorageKeyProvider; defaults to the shared instance.
      */
-    private fun createTestRepository(dataDir: File): VauchiRepository {
+    private fun createTestRepository(
+        dataDir: File,
+        provider: StorageKeyProvider = storageKeyProvider,
+    ): VauchiRepository {
         val testContext = TestContextWrapper(context, dataDir)
-        return VauchiRepository(testContext)
+        return VauchiRepository(testContext, provider)
+    }
+
+    /**
+     * Skip test if local dev relay is not running at 127.0.0.1:8080.
+     * Start with: just dev-relay
+     */
+    private fun assumeLocalRelay() {
+        val reachable =
+            try {
+                Socket().use { sock ->
+                    sock.connect(InetSocketAddress("127.0.0.1", LOCAL_RELAY_PORT), 500)
+                    true
+                }
+            } catch (_: Exception) {
+                false
+            }
+        Assume.assumeTrue(
+            "Local relay not running at $LOCAL_RELAY_URL — start with: just dev-relay",
+            reachable,
+        )
     }
 
     // MARK: - Identity Management Tests
@@ -206,9 +243,12 @@ class VauchiRepositoryFfiTest {
 
     /**
      * Scenario: Complete contact exchange between two users
+     * Integration test: requires local relay (just dev-relay)
      */
     @Test
     fun testCompleteContactExchange() {
+        assumeLocalRelay()
+
         // Create Alice's temp dir and repository
         val aliceDir = File(context.cacheDir, "alice_${System.currentTimeMillis()}")
         aliceDir.mkdirs()
@@ -296,14 +336,15 @@ class VauchiRepositoryFfiTest {
         // Create identity and export backup
         repository.createIdentity("Alice")
         repository.addField(MobileFieldType.EMAIL, "Work", "alice@company.com")
-        val backupData = repository.exportBackup("password123")
+        val backupPassword = "correct-horse-battery-staple"
+        val backupData = repository.exportBackup(backupPassword)
 
         // Create new repository and import backup
         val newDir = File(context.cacheDir, "new_${System.currentTimeMillis()}")
         newDir.mkdirs()
         try {
-            val repo2 = createTestRepository(newDir)
-            repo2.importBackup(backupData, "password123")
+            val repo2 = createTestRepository(newDir, TestStorageKeyProvider())
+            repo2.importBackup(backupData, backupPassword)
 
             assertTrue(repo2.hasIdentity())
             assertEquals("Alice", repo2.getDisplayName())
@@ -355,9 +396,11 @@ class VauchiRepositoryFfiTest {
     /**
      * Scenario: Add voucher to recovery claim and check progress
      * Tests: features/account_recovery.feature - "collect vouchers"
+     * Integration test: requires local relay (just dev-relay) for trusted contact exchange
      */
     @Test
     fun testAddRecoveryVoucher() {
+        assumeLocalRelay()
         // Alice creates a claim
         val aliceDir = File(context.cacheDir, "alice_recovery_${System.currentTimeMillis()}")
         aliceDir.mkdirs()

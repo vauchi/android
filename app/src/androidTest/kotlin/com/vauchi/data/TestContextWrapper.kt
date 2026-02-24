@@ -14,8 +14,7 @@ import java.io.File
  */
 class TestContextWrapper(
     base: Context,
-    private val testFilesDir: File
+    private val testFilesDir: File,
 ) : ContextWrapper(base) {
-
     override fun getFilesDir(): File = testFilesDir
 }
