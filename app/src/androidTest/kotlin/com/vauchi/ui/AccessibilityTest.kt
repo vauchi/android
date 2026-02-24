@@ -32,7 +32,6 @@ import uniffi.vauchi_mobile.MobileVisibilityLabel
  * Based on: features/accessibility.feature (WCAG 2.1 AA)
  */
 class AccessibilityTest {
-
     @get:Rule
     val composeTestRule = createComposeRule()
 
@@ -57,13 +56,14 @@ class AccessibilityTest {
         composeTestRule.setContent {
             VauchiTheme {
                 PreviewStep(
-                    data = OnboardingData(
-                        displayName = "Alice",
-                        phone = "+41 79 123 45 67",
-                        email = "alice@example.com"
-                    ),
+                    data =
+                        OnboardingData(
+                            displayName = "Alice",
+                            phone = "+41 79 123 45 67",
+                            email = "alice@example.com",
+                        ),
                     onContinue = {},
-                    onBack = {}
+                    onBack = {},
                 )
             }
         }
@@ -84,7 +84,7 @@ class AccessibilityTest {
                     displayName = "Alice",
                     onBack = {},
                     onExportBackup = { "" },
-                    onImportBackup = { _, _ -> false }
+                    onImportBackup = { _, _ -> false },
                 )
             }
         }
@@ -108,13 +108,13 @@ class AccessibilityTest {
                     onListContacts = { emptyList() },
                     onRemoveContact = {},
                     onContactClick = {},
-                    syncState = SyncState.Idle
+                    syncState = SyncState.Idle,
                 )
             }
         }
 
         // Empty state message must be visible
-        composeTestRule.onAllNodes(hasText(substring = true)).fetchSemanticsNodes().also { nodes ->
+        composeTestRule.onAllNodes(hasText("", substring = true)).fetchSemanticsNodes().also { nodes ->
             assert(nodes.isNotEmpty()) { "ContactsScreen empty state should have text content" }
         }
     }
@@ -128,7 +128,7 @@ class AccessibilityTest {
                 ExchangeScreen(
                     onBack = {},
                     onGenerateQr = { null },
-                    onScanQr = {}
+                    onScanQr = {},
                 )
             }
         }
@@ -146,30 +146,31 @@ class AccessibilityTest {
         composeTestRule.setContent {
             VauchiTheme {
                 LabelsScreen(
-                    labels = listOf(
-                        MobileVisibilityLabel(
-                            id = "label-1",
-                            name = "Work",
-                            contactCount = 5U,
-                            visibleFieldCount = 3U,
-                            createdAt = 1706745600UL,
-                            modifiedAt = 1706745600UL
+                    labels =
+                        listOf(
+                            MobileVisibilityLabel(
+                                id = "label-1",
+                                name = "Work",
+                                contactCount = 5U,
+                                visibleFieldCount = 3U,
+                                createdAt = 1706745600UL,
+                                modifiedAt = 1706745600UL,
+                            ),
+                            MobileVisibilityLabel(
+                                id = "label-2",
+                                name = "Family",
+                                contactCount = 12U,
+                                visibleFieldCount = 5U,
+                                createdAt = 1706745500UL,
+                                modifiedAt = 1706745700UL,
+                            ),
                         ),
-                        MobileVisibilityLabel(
-                            id = "label-2",
-                            name = "Family",
-                            contactCount = 12U,
-                            visibleFieldCount = 5U,
-                            createdAt = 1706745500UL,
-                            modifiedAt = 1706745700UL
-                        )
-                    ),
                     suggestedLabels = emptyList(),
                     onBack = {},
                     onLabelClick = {},
                     onCreateLabel = {},
                     onDeleteLabel = {},
-                    onRefresh = {}
+                    onRefresh = {},
                 )
             }
         }
@@ -192,7 +193,7 @@ class AccessibilityTest {
                     isLoading = false,
                     onBack = {},
                     onRetry = {},
-                    onRefresh = {}
+                    onRefresh = {},
                 )
             }
         }

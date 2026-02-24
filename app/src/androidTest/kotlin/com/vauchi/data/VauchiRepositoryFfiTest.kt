@@ -28,7 +28,6 @@ import kotlin.test.assertTrue
  */
 @RunWith(AndroidJUnit4::class)
 class VauchiRepositoryFfiTest {
-
     private lateinit var context: Context
     private lateinit var tempDir: File
     private lateinit var repository: VauchiRepository
@@ -202,7 +201,7 @@ class VauchiRepositoryFfiTest {
 
         assertTrue(exchangeData.qrData.startsWith("wb://"), "QR data should start with wb://")
         assertFalse(exchangeData.publicId.isEmpty())
-        assertTrue(exchangeData.expiresAt > System.currentTimeMillis() / 1000)
+        assertTrue(exchangeData.expiresAt > (System.currentTimeMillis() / 1000).toUInt())
     }
 
     /**
