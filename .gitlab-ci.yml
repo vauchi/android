@@ -18,7 +18,7 @@
 #
 # Pipeline strategy:
 #   - MR: Full validation (lint, build, test, security)
-#   - Tag: Release build
+#   - Tag: Release build + Play Store internal testing upload
 #   - Scheduled: Security scans
 #   Main branch is protected and merge-only. All validation happens
 #   during the MR pipeline; post-merge pipelines are unnecessary.
@@ -46,6 +46,7 @@ stages:
   - build
   - test
   - security
+  - deploy
 
 variables:
   ANDROID_COMPILE_SDK: "35"
@@ -280,10 +281,15 @@ build:release:
   extends: [.android-job, .timeout-long]
   stage: build
   script:
-    - ./gradlew assembleRelease
+    # Decode signing credentials from CI variables
+    - echo "$ANDROID_KEYSTORE" | base64 -d > /tmp/vauchi-upload.jks
+    - export ANDROID_KEYSTORE_PATH=/tmp/vauchi-upload.jks
+    - ./gradlew bundleRelease
+  after_script:
+    - rm -f /tmp/vauchi-upload.jks
   artifacts:
     paths:
-      - app/build/outputs/apk/release/
+      - app/build/outputs/bundle/release/
     expire_in: 1 week
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
@@ -374,3 +380,26 @@ secret_detection:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_PIPELINE_SOURCE == "schedule"
+
+# ============================================================
+# Deploy Stage (Tag only — upload to Google Play Internal Testing)
+# ============================================================
+
+deploy:internal:
+  extends: [.android-job, .timeout-long]
+  stage: deploy
+  needs:
+    - job: build:release
+      artifacts: true
+  script:
+    # Decode credentials from CI variables
+    - echo "$ANDROID_KEYSTORE" | base64 -d > /tmp/vauchi-upload.jks
+    - echo "$GOOGLE_PLAY_SA_JSON" | base64 -d > /tmp/play-sa.json
+    - export ANDROID_KEYSTORE_PATH=/tmp/vauchi-upload.jks
+    - export GOOGLE_PLAY_SERVICE_ACCOUNT=/tmp/play-sa.json
+    # Upload AAB to internal testing track
+    - ./gradlew publishReleaseBundle
+  after_script:
+    - rm -f /tmp/vauchi-upload.jks /tmp/play-sa.json
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
