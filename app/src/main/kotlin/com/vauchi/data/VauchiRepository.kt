@@ -548,13 +548,7 @@ class VauchiRepository(
 
     fun getPublicKey(): String = vauchi.getPublicId()
 
-    // TODO: Replace with vauchi.getOwnFingerprint() once bindings are updated
-    fun getOwnFingerprint(): String =
-        vauchi
-            .getPublicId()
-            .chunked(4)
-            .joinToString(" ")
-            .uppercase()
+    fun getOwnFingerprint(): String = vauchi.getOwnFingerprint()
 
     // Recovery trust operations
     fun trustContactForRecovery(id: String) = vauchi.trustContactForRecovery(id)
