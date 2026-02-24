@@ -41,9 +41,10 @@ class KeyStoreHelper {
         private const val AUTH_VALIDITY_SECONDS = 300
     }
 
-    private val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
-        load(null)
-    }
+    private val keyStore: KeyStore =
+        KeyStore.getInstance(ANDROID_KEYSTORE).apply {
+            load(null)
+        }
 
     /**
      * Get or generate the master key from Android KeyStore.
@@ -56,31 +57,32 @@ class KeyStoreHelper {
         }
 
         // Generate new key in KeyStore
-        val keyGenerator = KeyGenerator.getInstance(
-            KeyProperties.KEY_ALGORITHM_AES,
-            ANDROID_KEYSTORE
-        )
+        val keyGenerator =
+            KeyGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_AES,
+                ANDROID_KEYSTORE,
+            )
 
-        val keySpec = KeyGenParameterSpec.Builder(
-            KEYSTORE_ALIAS,
-            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-        )
-            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-            .setKeySize(KEY_SIZE_BITS)
-            .setUserAuthenticationRequired(true)
-            .apply {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    setUserAuthenticationParameters(
-                        AUTH_VALIDITY_SECONDS,
-                        KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG
-                    )
-                } else {
-                    @Suppress("DEPRECATION")
-                    setUserAuthenticationValidityDurationSeconds(AUTH_VALIDITY_SECONDS)
-                }
-            }
-            .build()
+        val keySpec =
+            KeyGenParameterSpec
+                .Builder(
+                    KEYSTORE_ALIAS,
+                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
+                ).setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(KEY_SIZE_BITS)
+                .setUserAuthenticationRequired(true)
+                .apply {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        setUserAuthenticationParameters(
+                            AUTH_VALIDITY_SECONDS,
+                            KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG,
+                        )
+                    } else {
+                        @Suppress("DEPRECATION")
+                        setUserAuthenticationValidityDurationSeconds(AUTH_VALIDITY_SECONDS)
+                    }
+                }.build()
 
         keyGenerator.init(keySpec)
         return keyGenerator.generateKey()
@@ -113,7 +115,8 @@ class KeyStoreHelper {
             return iv + encrypted
         } catch (e: UserNotAuthenticatedException) {
             throw AuthenticationRequiredException(
-                "Device must be unlocked to access encryption keys", e
+                "Device must be unlocked to access encryption keys",
+                e,
             )
         }
     }
@@ -141,7 +144,8 @@ class KeyStoreHelper {
             return cipher.doFinal(encrypted)
         } catch (e: UserNotAuthenticatedException) {
             throw AuthenticationRequiredException(
-                "Device must be unlocked to access encryption keys", e
+                "Device must be unlocked to access encryption keys",
+                e,
             )
         }
     }
@@ -149,9 +153,7 @@ class KeyStoreHelper {
     /**
      * Check if a master key exists in the KeyStore.
      */
-    fun hasMasterKey(): Boolean {
-        return keyStore.containsAlias(KEYSTORE_ALIAS)
-    }
+    fun hasMasterKey(): Boolean = keyStore.containsAlias(KEYSTORE_ALIAS)
 
     /**
      * Delete the master key from KeyStore (for testing/reset).
@@ -172,5 +174,17 @@ class KeyStoreHelper {
  */
 class AuthenticationRequiredException(
     message: String,
-    cause: Throwable? = null
+    cause: Throwable? = null,
+) : Exception(message, cause)
+
+/**
+ * Thrown when the device does not have a secure lock screen (PIN, pattern, or biometric)
+ * configured, which is required for Android KeyStore user-authentication-bound keys.
+ *
+ * The caller should display an error message instructing the user to set up a
+ * secure lock screen in device Settings, then retry.
+ */
+class DeviceNotSecureException(
+    message: String,
+    cause: Throwable? = null,
 ) : Exception(message, cause)
