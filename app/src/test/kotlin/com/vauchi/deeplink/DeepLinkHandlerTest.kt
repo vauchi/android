@@ -89,12 +89,12 @@ class DeepLinkHandlerTest {
 
     @Test
     fun `valid exchange deep link is parsed correctly`() {
-        val uri = Uri.parse("vauchi://exchange/wb%3A%2F%2FsomeBase64Data")
+        val uri = Uri.parse("vauchi://exchange/wb%3AsomeBase64Data%3D%3D")
         val result = handler.handleDeepLink(uri)
 
         assertTrue(result is DeepLinkResult.ExchangePending)
         val pending = result as DeepLinkResult.ExchangePending
-        assertEquals("wb:%2F%2FsomeBase64Data", pending.exchangePayload)
+        assertEquals("wb:someBase64Data==", pending.exchangePayload)
     }
 
     @Test
