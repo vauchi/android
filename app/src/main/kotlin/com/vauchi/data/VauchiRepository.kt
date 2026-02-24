@@ -37,6 +37,7 @@ import uniffi.vauchi_mobile.MobileContactCard
 import uniffi.vauchi_mobile.MobileExchangeResult
 import uniffi.vauchi_mobile.MobileExchangeSession
 import uniffi.vauchi_mobile.MobileFieldType
+import uniffi.vauchi_mobile.MobileProximityHandler
 import uniffi.vauchi_mobile.MobileSyncResult
 import uniffi.vauchi_mobile.VauchiMobile
 
@@ -201,6 +202,29 @@ class VauchiRepository(
      */
     fun completeExchange(qrData: String): MobileExchangeResult {
         val session = vauchi.createQrExchangeManual()
+        session.generateQr()
+        session.processQr(qrData)
+        session.theyScannedOurQr()
+        session.performKeyAgreement()
+        session.completeCardExchange("New Contact")
+        return vauchi.finalizeExchange(session)
+    }
+
+    /**
+     * Create a proximity exchange session using core's protocol-level challenge.
+     * Returns the session (which generates the challenge internally).
+     */
+    fun createProximityExchangeSession(handler: MobileProximityHandler): MobileExchangeSession = vauchi.createQrExchange(handler)
+
+    /**
+     * Complete exchange with proximity verification by driving the state machine.
+     * The proximity handler is called by core during key agreement.
+     */
+    fun completeExchangeWithProximity(
+        qrData: String,
+        handler: MobileProximityHandler,
+    ): MobileExchangeResult {
+        val session = vauchi.createQrExchange(handler)
         session.generateQr()
         session.processQr(qrData)
         session.theyScannedOurQr()

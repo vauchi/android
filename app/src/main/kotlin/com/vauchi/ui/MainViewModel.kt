@@ -11,6 +11,7 @@ import com.vauchi.data.AuthenticationRequiredException
 import com.vauchi.data.DeviceNotSecureException
 import com.vauchi.data.ExchangeData
 import com.vauchi.data.VauchiRepository
+import com.vauchi.proximity.AudioMobileProximityHandler
 import com.vauchi.proximity.AudioProximityService
 import com.vauchi.ui.model.PasswordStrengthLevel
 import com.vauchi.ui.model.PasswordStrengthResult
@@ -68,9 +69,8 @@ sealed class SyncState {
  * Flow: Idle -> PendingProximity (after QR scan) -> Completing (after proximity verified)
  *       -> Success | Failed
  *
- * TODO: When core bindings support `createQrExchangeProximity()`, switch from
- * `createQrExchangeManual()` to integrate proximity at the protocol level.
- * Currently this is a UI gate only.
+ * Proximity verification is integrated at the protocol level via core's
+ * `createQrExchange(handler)` which generates the challenge internally.
  */
 sealed class ExchangeFlowState {
     /** No exchange in progress. */
@@ -493,26 +493,44 @@ class MainViewModel(
 
     /**
      * Begin the exchange flow with proximity verification.
-     * Called after QR code is scanned. Generates a proximity challenge
-     * and transitions to PendingProximity state.
+     * Called after QR code is scanned. Transitions to PendingProximity state
+     * where the UI shows a proximity confirmation gate.
      *
-     * TODO: When `createQrExchangeProximity()` is available in bindings,
-     * use protocol-level challenge instead of locally generated one.
+     * The actual proximity verification happens at the protocol level when
+     * [completeExchangeAfterProximity] creates a proximity exchange session.
      */
     fun startExchangeWithProximity(qrData: String) {
-        val challenge = ByteArray(16).also { java.security.SecureRandom().nextBytes(it) }
-        _exchangeState.value = ExchangeFlowState.PendingProximity(qrData, challenge)
+        _exchangeState.value = ExchangeFlowState.PendingProximity(qrData, ByteArray(0))
     }
 
     /**
      * Complete the exchange after proximity has been verified.
      * Must only be called when exchangeState is PendingProximity.
+     *
+     * Uses core's proximity exchange session which handles proximity
+     * verification at the protocol level via [AudioMobileProximityHandler].
      */
     suspend fun completeExchangeAfterProximity() {
         val state = _exchangeState.value
         if (state !is ExchangeFlowState.PendingProximity) return
         _exchangeState.value = ExchangeFlowState.Completing
-        val result = completeExchange(state.qrData)
+        val result =
+            try {
+                val audioService = AudioProximityService.getInstance(getApplication())
+                val verifier = MobileProximityVerifier(audioService)
+                val handler = AudioMobileProximityHandler(verifier)
+                val exchangeResult =
+                    withContext(Dispatchers.IO) {
+                        repository.completeExchangeWithProximity(state.qrData, handler)
+                    }
+                loadUserData()
+                if (exchangeResult.success) {
+                    autoRemoveDemoContact()
+                }
+                exchangeResult
+            } catch (e: Exception) {
+                null
+            }
         if (result != null && result.success) {
             _exchangeState.value = ExchangeFlowState.Success(result)
         } else {

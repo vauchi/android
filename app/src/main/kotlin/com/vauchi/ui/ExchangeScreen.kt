@@ -106,8 +106,6 @@ fun ExchangeScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // TODO: When createQrExchangeProximity() bindings are available,
-                    // use protocol-level challenge instead of the locally generated one.
                     ProximityVerification(
                         challenge = exchangeState.challenge,
                         proximitySupported = proximitySupported,
