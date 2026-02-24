@@ -209,13 +209,17 @@ class MainViewModel(
     init {
         checkIdentity()
         initProximityVerification()
-        loadAccessibilitySettings()
+        loadAccessibilitySettingsSafely()
     }
 
-    private fun loadAccessibilitySettings() {
-        _reduceMotion.value = repository.getReduceMotion()
-        _highContrast.value = repository.getHighContrast()
-        _largeTouchTargets.value = repository.getLargeTouchTargets()
+    private fun loadAccessibilitySettingsSafely() {
+        try {
+            _reduceMotion.value = repository.getReduceMotion()
+            _highContrast.value = repository.getHighContrast()
+            _largeTouchTargets.value = repository.getLargeTouchTargets()
+        } catch (_: Exception) {
+            // Defaults already set; checkIdentity() will handle the error
+        }
     }
 
     fun setReduceMotion(enabled: Boolean) {
