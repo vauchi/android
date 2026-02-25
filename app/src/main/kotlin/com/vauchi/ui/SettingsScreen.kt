@@ -824,6 +824,30 @@ fun SettingsScreen(
                 onClick = { openUrl("https://vauchi.app/privacy") },
             )
 
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = localizationManager.t("support.title"),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { heading() },
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = localizationManager.t("support.description"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            HelpLinkItem(
+                title = localizationManager.t("support.github_sponsors"),
+                subtitle = "github.com/sponsors/vauchi",
+                onClick = { openUrl("https://github.com/sponsors/vauchi") },
+            )
+            HelpLinkItem(
+                title = localizationManager.t("support.liberapay"),
+                subtitle = "liberapay.com/Vauchi/donate",
+                onClick = { openUrl("https://liberapay.com/Vauchi/donate") },
+            )
+
             HorizontalDivider()
 
             // About Section
