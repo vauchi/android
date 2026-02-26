@@ -141,7 +141,7 @@ dependencies {
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
     // VauchiMobile native bindings (includes JNA + JNI libs)
-    implementation("com.vauchi:vauchi-mobile:0.1.21")
+    implementation("com.vauchi:vauchi-mobile:0.2.0")
 
     // Testing
     testImplementation(kotlin("test"))
