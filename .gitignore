@@ -16,3 +16,6 @@ app/src/main/jniLibs/
 
 # UniFFI bindings (now provided by vauchi-mobile Maven package)
 app/src/main/kotlin/uniffi/
+
+# CI local testing
+.gitlab-ci-local/
