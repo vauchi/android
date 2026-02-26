@@ -27,6 +27,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.vauchi.data.ExchangeData
 import com.vauchi.ui.components.ProximityVerification
+import com.vauchi.ui.components.ProximityVerificationResult
 import com.vauchi.util.LocalizationManager
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,7 +42,7 @@ fun ExchangeScreen(
     onEmitChallenge: (ByteArray) -> Boolean = { false },
     onListenForResponse: (ULong) -> ByteArray? = { null },
     onStopVerification: () -> Unit = {},
-    onProximityVerified: () -> Unit = {},
+    onProximityVerified: (ProximityVerificationResult) -> Unit = {},
     onCancelProximity: () -> Unit = {},
     onExchangeDone: () -> Unit = {},
 ) {
@@ -108,6 +109,7 @@ fun ExchangeScreen(
 
                     ProximityVerification(
                         challenge = exchangeState.challenge,
+                        confirmationCode = "",
                         proximitySupported = proximitySupported,
                         proximityCapability = proximityCapability,
                         onEmitChallenge = onEmitChallenge,

@@ -562,12 +562,13 @@ fun DeviceLinkDialog(
                                 // Proximity verification
                                 ProximityVerificationSection(
                                     challenge = state.challenge,
+                                    confirmationCode = state.confirmationCode,
                                     proximitySupported = proximitySupported,
                                     proximityCapability = proximityCapability,
                                     viewModel = viewModel,
-                                    onVerified = {
+                                    onVerified = { result ->
                                         coroutineScope.launch {
-                                            viewModel.approveDeviceLink()
+                                            viewModel.approveDeviceLink(result)
                                         }
                                     },
                                     onCancel = onDismiss,
@@ -577,12 +578,13 @@ fun DeviceLinkDialog(
                             is MainViewModel.DeviceLinkState.VerifyingProximity -> {
                                 ProximityVerificationSection(
                                     challenge = state.challenge,
+                                    confirmationCode = state.confirmationCode,
                                     proximitySupported = proximitySupported,
                                     proximityCapability = proximityCapability,
                                     viewModel = viewModel,
-                                    onVerified = {
+                                    onVerified = { result ->
                                         coroutineScope.launch {
-                                            viewModel.approveDeviceLink()
+                                            viewModel.approveDeviceLink(result)
                                         }
                                     },
                                     onCancel = onDismiss,
@@ -675,14 +677,16 @@ fun DeviceLinkDialog(
 @Composable
 private fun ProximityVerificationSection(
     challenge: ByteArray,
+    confirmationCode: String,
     proximitySupported: Boolean,
     proximityCapability: String,
     viewModel: MainViewModel,
-    onVerified: () -> Unit,
+    onVerified: (com.vauchi.ui.components.ProximityVerificationResult) -> Unit,
     onCancel: () -> Unit,
 ) {
     com.vauchi.ui.components.ProximityVerification(
         challenge = challenge,
+        confirmationCode = confirmationCode,
         proximitySupported = proximitySupported,
         proximityCapability = proximityCapability,
         onEmitChallenge = { ch -> viewModel.emitProximityChallenge(ch) },

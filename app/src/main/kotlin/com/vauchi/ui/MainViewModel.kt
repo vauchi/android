@@ -13,6 +13,7 @@ import com.vauchi.data.ExchangeData
 import com.vauchi.data.VauchiRepository
 import com.vauchi.proximity.AudioMobileProximityHandler
 import com.vauchi.proximity.AudioProximityService
+import com.vauchi.ui.components.ProximityVerificationResult
 import com.vauchi.ui.model.PasswordStrengthLevel
 import com.vauchi.ui.model.PasswordStrengthResult
 import com.vauchi.util.NetworkMonitor
@@ -1502,6 +1503,7 @@ class MainViewModel(
 
         data class VerifyingProximity(
             val challenge: ByteArray,
+            val confirmationCode: String,
         ) : DeviceLinkState()
 
         object Completing : DeviceLinkState()
@@ -1570,15 +1572,26 @@ class MainViewModel(
 
     /**
      * Approve the device link after proximity verification.
+     *
+     * @param verificationResult The proximity proof from the verification step.
      */
-    suspend fun approveDeviceLink() {
+    suspend fun approveDeviceLink(verificationResult: ProximityVerificationResult) {
         _deviceLinkState.value = DeviceLinkState.Completing
         try {
-            // NOTE: When real bindings are available:
+            // NOTE: When real bindings are available, construct proof and call:
             // val initiator = currentInitiator as MobileDeviceLinkInitiator
             // val senderToken = currentSenderToken ?: throw IllegalStateException("No sender token")
-            // initiator.setProximityVerified()
-            // val result = initiator.confirmLink()
+            // val proof = when (verificationResult) {
+            //     is ProximityVerificationResult.Ultrasonic -> MobileProximityProof.Ultrasonic(
+            //         challengeResponse = verificationResult.challengeResponse.toList(),
+            //         verifiedAt = verificationResult.verifiedAt,
+            //     )
+            //     is ProximityVerificationResult.Manual -> MobileProximityProof.ManualConfirmation(
+            //         confirmationCode = verificationResult.confirmationCode,
+            //         confirmedAt = verificationResult.confirmedAt,
+            //     )
+            // }
+            // val result = initiator.confirmLink(proof)
             // result.encryptedResponse?.let { responseBytes ->
             //     withContext(Dispatchers.IO) {
             //         repository.sendDeviceLinkResponse(senderToken, responseBytes.toByteArray())

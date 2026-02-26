@@ -25,6 +25,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
+ * Result of proximity verification, indicating how proximity was proven.
+ */
+sealed class ProximityVerificationResult {
+    /** Ultrasonic challenge-response succeeded. */
+    data class Ultrasonic(
+        val challengeResponse: ByteArray,
+        val verifiedAt: ULong,
+    ) : ProximityVerificationResult()
+
+    /** Manual confirmation — user verified codes match on both devices. */
+    data class Manual(
+        val confirmationCode: String,
+        val confirmedAt: ULong,
+    ) : ProximityVerificationResult()
+}
+
+/**
  * Status of the proximity verification flow.
  */
 enum class ProximityStatus {
@@ -51,23 +68,25 @@ enum class ProximityStatus {
  * Used by both device linking (P0-1) and contact exchange (P0-3).
  *
  * @param challenge The proximity challenge bytes to emit/verify.
+ * @param confirmationCode The confirmation code displayed to the user for manual verification.
  * @param proximitySupported Whether the device supports proximity verification.
  * @param proximityCapability Device capability: "full", "emit_only", "receive_only", or "none".
  * @param onEmitChallenge Callback to emit the ultrasonic challenge. Returns true on success.
  * @param onListenForResponse Callback to listen for ultrasonic response. Returns response bytes or null on timeout.
  * @param onStopVerification Callback to stop any ongoing verification and clean up resources.
- * @param onVerified Callback invoked when proximity has been verified (ultrasonic or manual).
+ * @param onVerified Callback invoked when proximity has been verified (ultrasonic or manual), with proof.
  * @param onCancel Callback invoked when the user cancels verification.
  */
 @Composable
 fun ProximityVerification(
     challenge: ByteArray,
+    confirmationCode: String,
     proximitySupported: Boolean,
     proximityCapability: String,
     onEmitChallenge: (ByteArray) -> Boolean,
     onListenForResponse: (ULong) -> ByteArray?,
     onStopVerification: () -> Unit,
-    onVerified: () -> Unit,
+    onVerified: (ProximityVerificationResult) -> Unit,
     onCancel: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -96,7 +115,12 @@ fun ProximityVerification(
 
                 if (success) {
                     status = ProximityStatus.VERIFIED
-                    onVerified()
+                    onVerified(
+                        ProximityVerificationResult.Ultrasonic(
+                            challengeResponse = challenge,
+                            verifiedAt = (System.currentTimeMillis() / 1000).toULong(),
+                        ),
+                    )
                 } else {
                     errorMessage = "Ultrasonic signal could not be sent"
                     status = ProximityStatus.MANUAL_REQUIRED
@@ -210,7 +234,12 @@ fun ProximityVerification(
                     Button(
                         onClick = {
                             status = ProximityStatus.VERIFIED
-                            onVerified()
+                            onVerified(
+                                ProximityVerificationResult.Manual(
+                                    confirmationCode = confirmationCode,
+                                    confirmedAt = (System.currentTimeMillis() / 1000).toULong(),
+                                ),
+                            )
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {

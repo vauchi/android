@@ -267,7 +267,7 @@ fun MainScreen(
                     onEmitChallenge = { challenge -> viewModel.emitProximityChallenge(challenge) },
                     onListenForResponse = { timeout -> viewModel.listenForProximityResponse(timeout) },
                     onStopVerification = { viewModel.stopProximityVerification() },
-                    onProximityVerified = {
+                    onProximityVerified = { _ ->
                         coroutineScope.launch {
                             viewModel.completeExchangeAfterProximity()
                         }
