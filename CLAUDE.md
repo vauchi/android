@@ -3,45 +3,9 @@
 
 # CLAUDE.md - Android App
 
-Native Android app using Kotlin and Jetpack Compose.
-
-## Stack
-
-- **Language**: Kotlin
-- **UI**: Jetpack Compose
-- **Build**: Gradle (Kotlin DSL)
-- **Native**: UniFFI bindings via `vauchi-mobile-android` Maven package
-
-## Commands
-
-```bash
-./gradlew build                  # Build
-./gradlew test                   # Run tests
-./gradlew assembleDebug          # Debug APK
-./gradlew assembleRelease        # Release APK
-```
-
-## Pre-MR Checklist
-
-Run before submitting a merge request:
-
-```bash
-# From workspace root:
-just check-android
-
-# Or manually from android/:
-./gradlew lint assembleDebug test
-```
-
-CI runs the same checks (lint, build, test) on MR pipelines. No `allow_failure` — all jobs must pass.
+Native Android app: Kotlin, Jetpack Compose, Gradle (Kotlin DSL), UniFFI bindings via `vauchi-mobile-android`.
 
 ## Rules
 
-- Follow Android/Kotlin conventions
 - Use Compose for all new UI
-- Native bindings via `vauchi-mobile-android` Maven package (no local build needed)
-
-## Structure
-
-- `app/` - Main application module
-- `gradle/` - Gradle wrapper
+- Pre-MR: `just check-android` (or `./gradlew lint assembleDebug test`)
