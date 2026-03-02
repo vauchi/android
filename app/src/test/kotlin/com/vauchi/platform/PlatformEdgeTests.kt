@@ -8,7 +8,6 @@ import android.app.Application
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.os.Bundle
-import android.os.PowerManager
 import androidx.lifecycle.SavedStateHandle
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -22,16 +21,8 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.Mockito.*
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
-import org.robolectric.Shadows
-import org.robolectric.shadows.ShadowPowerManager
 import java.util.concurrent.TimeUnit
 
 /**
@@ -49,7 +40,6 @@ import java.util.concurrent.TimeUnit
  */
 @RunWith(RobolectricTestRunner::class)
 class PlatformEdgeTests {
-
     private lateinit var context: Context
     private lateinit var application: Application
 
@@ -78,23 +68,27 @@ class PlatformEdgeTests {
         val testDriver = WorkManagerTestInitHelper.getTestDriver(context)!!
 
         // Create work request with battery-conscious constraints (as app should do)
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .setRequiresBatteryNotLow(false) // App should still sync on low battery
-            .build()
+        val constraints =
+            Constraints
+                .Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .setRequiresBatteryNotLow(false) // App should still sync on low battery
+                .build()
 
-        val syncRequest = PeriodicWorkRequest.Builder(
-            TestSyncWorker::class.java,
-            15, TimeUnit.MINUTES
-        )
-            .setConstraints(constraints)
-            .build()
+        val syncRequest =
+            PeriodicWorkRequest
+                .Builder(
+                    TestSyncWorker::class.java,
+                    15,
+                    TimeUnit.MINUTES,
+                ).setConstraints(constraints)
+                .build()
 
         // Enqueue the work
         workManager.enqueueUniquePeriodicWork(
             "vauchi_periodic_sync",
             ExistingPeriodicWorkPolicy.REPLACE,
-            syncRequest
+            syncRequest,
         )
 
         // Verify work is enqueued
@@ -106,7 +100,7 @@ class PlatformEdgeTests {
         // The work should have network constraint set
         assertTrue(
             "Work should require network connectivity for sync",
-            constraints.requiredNetworkType == NetworkType.CONNECTED
+            constraints.requiredNetworkType == NetworkType.CONNECTED,
         )
 
         // In doze mode, WorkManager defers work automatically
@@ -123,8 +117,8 @@ class PlatformEdgeTests {
         assertTrue(
             "Work should complete or be running when constraints met",
             updatedWorkInfo.state == WorkInfo.State.RUNNING ||
-                    updatedWorkInfo.state == WorkInfo.State.SUCCEEDED ||
-                    updatedWorkInfo.state == WorkInfo.State.ENQUEUED
+                updatedWorkInfo.state == WorkInfo.State.SUCCEEDED ||
+                updatedWorkInfo.state == WorkInfo.State.ENQUEUED,
         )
     }
 
@@ -143,14 +137,14 @@ class PlatformEdgeTests {
         assertEquals(
             "Minimum periodic work interval should be 15 minutes",
             15,
-            expectedMinutes
+            expectedMinutes,
         )
 
         // Verify app's sync interval meets minimum requirement
         val appSyncIntervalMinutes = 15L // From VauchiApp.kt
         assertTrue(
             "App sync interval should be at least 15 minutes for battery efficiency",
-            appSyncIntervalMinutes >= expectedMinutes
+            appSyncIntervalMinutes >= expectedMinutes,
         )
     }
 
@@ -174,23 +168,21 @@ class PlatformEdgeTests {
         // - RARE: Significant restrictions
         // - RESTRICTED: Severe restrictions (Android 11+)
 
-        // Simulate checking standby bucket (API level dependent)
-        val usageStatsManager = mock(UsageStatsManager::class.java)
-
         // Test bucket-based interval adaptation
-        val bucketIntervals = mapOf(
-            UsageStatsManager.STANDBY_BUCKET_ACTIVE to 15L,      // Normal interval
-            UsageStatsManager.STANDBY_BUCKET_WORKING_SET to 30L, // Slightly reduced
-            UsageStatsManager.STANDBY_BUCKET_FREQUENT to 60L,    // Reduced
-            UsageStatsManager.STANDBY_BUCKET_RARE to 240L        // Significantly reduced (4 hours)
-        )
+        val bucketIntervals =
+            mapOf(
+                UsageStatsManager.STANDBY_BUCKET_ACTIVE to 15L, // Normal interval
+                UsageStatsManager.STANDBY_BUCKET_WORKING_SET to 30L, // Slightly reduced
+                UsageStatsManager.STANDBY_BUCKET_FREQUENT to 60L, // Reduced
+                UsageStatsManager.STANDBY_BUCKET_RARE to 240L, // Significantly reduced (4 hours)
+            )
 
         // Verify intervals increase as bucket becomes more restricted
         var previousInterval = 0L
         for ((bucket, interval) in bucketIntervals.toList().sortedBy { it.first }) {
             assertTrue(
                 "Sync interval should increase for more restricted buckets",
-                interval >= previousInterval
+                interval >= previousInterval,
             )
             previousInterval = interval
         }
@@ -199,7 +191,7 @@ class PlatformEdgeTests {
         val restrictedInterval = bucketIntervals[UsageStatsManager.STANDBY_BUCKET_RARE]!!
         assertTrue(
             "Restricted bucket should have sync interval of at least 4 hours",
-            restrictedInterval >= 240L
+            restrictedInterval >= 240L,
         )
     }
 
@@ -212,21 +204,25 @@ class PlatformEdgeTests {
         val testDriver = WorkManagerTestInitHelper.getTestDriver(context)!!
 
         // Create expedited-style request for important sync (when network available)
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        val constraints =
+            Constraints
+                .Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
 
-        val syncRequest = PeriodicWorkRequest.Builder(
-            TestSyncWorker::class.java,
-            15, TimeUnit.MINUTES
-        )
-            .setConstraints(constraints)
-            .build()
+        val syncRequest =
+            PeriodicWorkRequest
+                .Builder(
+                    TestSyncWorker::class.java,
+                    15,
+                    TimeUnit.MINUTES,
+                ).setConstraints(constraints)
+                .build()
 
         workManager.enqueueUniquePeriodicWork(
             "maintenance_sync_test",
             ExistingPeriodicWorkPolicy.REPLACE,
-            syncRequest
+            syncRequest,
         )
 
         // Simulate maintenance window by meeting all constraints
@@ -252,42 +248,44 @@ class PlatformEdgeTests {
     @Test
     fun test_process_death_recovery() {
         // Simulate state that needs to be preserved
-        val savedState = Bundle().apply {
-            putString("current_screen", "ContactDetail")
-            putString("selected_contact_id", "contact-123")
-            putBoolean("has_unsaved_changes", true)
-            putString("draft_display_name", "Alice Smith")
-        }
+        val savedState =
+            Bundle().apply {
+                putString("current_screen", "ContactDetail")
+                putString("selected_contact_id", "contact-123")
+                putBoolean("has_unsaved_changes", true)
+                putString("draft_display_name", "Alice Smith")
+            }
 
         // Create SavedStateHandle (used by ViewModels for process death survival)
-        val savedStateHandle = SavedStateHandle(
-            mapOf(
-                "current_screen" to "ContactDetail",
-                "selected_contact_id" to "contact-123",
-                "has_unsaved_changes" to true,
-                "draft_display_name" to "Alice Smith"
+        val savedStateHandle =
+            SavedStateHandle(
+                mapOf(
+                    "current_screen" to "ContactDetail",
+                    "selected_contact_id" to "contact-123",
+                    "has_unsaved_changes" to true,
+                    "draft_display_name" to "Alice Smith",
+                ),
             )
-        )
 
         // Verify state can be retrieved after simulated process death
         assertEquals(
             "Screen state should be preserved",
             "ContactDetail",
-            savedStateHandle.get<String>("current_screen")
+            savedStateHandle.get<String>("current_screen"),
         )
         assertEquals(
             "Selected contact should be preserved",
             "contact-123",
-            savedStateHandle.get<String>("selected_contact_id")
+            savedStateHandle.get<String>("selected_contact_id"),
         )
         assertTrue(
             "Unsaved changes flag should be preserved",
-            savedStateHandle.get<Boolean>("has_unsaved_changes") == true
+            savedStateHandle.get<Boolean>("has_unsaved_changes") == true,
         )
         assertEquals(
             "Draft data should be preserved",
             "Alice Smith",
-            savedStateHandle.get<String>("draft_display_name")
+            savedStateHandle.get<String>("draft_display_name"),
         )
     }
 
@@ -297,11 +295,12 @@ class PlatformEdgeTests {
     @Test
     fun test_navigation_state_survives_process_death() {
         // Navigation state that should survive
-        val navigationBundle = Bundle().apply {
-            putString("route", "contacts/{contactId}")
-            putString("contactId", "abc-123")
-            putStringArrayList("back_stack", arrayListOf("home", "contacts"))
-        }
+        val navigationBundle =
+            Bundle().apply {
+                putString("route", "contacts/{contactId}")
+                putString("contactId", "abc-123")
+                putStringArrayList("back_stack", arrayListOf("home", "contacts"))
+            }
 
         // Simulate saving to bundle (as would happen on process death)
         val restoredRoute = navigationBundle.getString("route")
@@ -322,15 +321,18 @@ class PlatformEdgeTests {
         val workManager = WorkManager.getInstance(context)
 
         // Create a sync request
-        val syncRequest = PeriodicWorkRequest.Builder(
-            TestSyncWorker::class.java,
-            15, TimeUnit.MINUTES
-        ).build()
+        val syncRequest =
+            PeriodicWorkRequest
+                .Builder(
+                    TestSyncWorker::class.java,
+                    15,
+                    TimeUnit.MINUTES,
+                ).build()
 
         workManager.enqueueUniquePeriodicWork(
             "sync_preservation_test",
             ExistingPeriodicWorkPolicy.REPLACE,
-            syncRequest
+            syncRequest,
         )
 
         // WorkManager persists work to database, surviving process death
@@ -351,16 +353,18 @@ class PlatformEdgeTests {
     @Test
     fun test_sync_checkpoint_recovery() {
         // Simulate sync checkpoint state
-        val syncCheckpoint = SyncCheckpoint(
-            lastProcessedIndex = 25,
-            totalItems = 50,
-            batchId = "batch-abc-123",
-            lastCheckpointTime = System.currentTimeMillis()
-        )
+        val syncCheckpoint =
+            SyncCheckpoint(
+                lastProcessedIndex = 25,
+                totalItems = 50,
+                batchId = "batch-abc-123",
+                lastCheckpointTime = System.currentTimeMillis(),
+            )
 
         // Save checkpoint to SharedPreferences (simulating persistence)
         val prefs = context.getSharedPreferences("vauchi_sync", Context.MODE_PRIVATE)
-        prefs.edit()
+        prefs
+            .edit()
             .putInt("checkpoint_index", syncCheckpoint.lastProcessedIndex)
             .putInt("checkpoint_total", syncCheckpoint.totalItems)
             .putString("checkpoint_batch_id", syncCheckpoint.batchId)
@@ -391,7 +395,8 @@ class PlatformEdgeTests {
         val prefs = context.getSharedPreferences("vauchi_prefs", Context.MODE_PRIVATE)
 
         // Simulate having an identity
-        prefs.edit()
+        prefs
+            .edit()
             .putBoolean("has_identity", true)
             .putString("public_id", "pub-key-abc123")
             .commit()
@@ -413,7 +418,7 @@ data class SyncCheckpoint(
     val lastProcessedIndex: Int,
     val totalItems: Int,
     val batchId: String,
-    val lastCheckpointTime: Long
+    val lastCheckpointTime: Long,
 )
 
 /**
@@ -421,7 +426,7 @@ data class SyncCheckpoint(
  */
 class TestSyncWorker(
     context: Context,
-    params: androidx.work.WorkerParameters
+    params: androidx.work.WorkerParameters,
 ) : androidx.work.Worker(context, params) {
     override fun doWork(): Result {
         // Minimal test implementation
