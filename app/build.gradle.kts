@@ -165,3 +165,5 @@ dependencies {
     screenshotTestImplementation("com.android.tools.screenshot:screenshot-validation-api:0.0.1-alpha13")
     screenshotTestImplementation("androidx.compose.ui:ui-tooling")
 }
+
+apply(from = rootProject.file("test-coverage.gradle"))
