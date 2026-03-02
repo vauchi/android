@@ -1,6 +1,6 @@
-# Test Coverage Configuration for Android
+// Test Coverage Configuration for Android
 
-# Unit test configuration
+// Unit test configuration
 android {
     testOptions {
         unitTests {
@@ -10,7 +10,7 @@ android {
     }
 }
 
-# Jacoco for coverage reporting (optional)
+// Jacoco for coverage reporting
 apply plugin: 'jacoco'
 
 jacoco {
