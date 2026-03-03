@@ -137,6 +137,9 @@ private fun getMomentIcon(momentType: MobileAhaMomentType): ImageVector =
         MobileAhaMomentType.FIRST_CONTACT_ADDED -> Icons.Default.PersonAdd
         MobileAhaMomentType.FIRST_UPDATE_RECEIVED -> Icons.Default.Download
         MobileAhaMomentType.FIRST_OUTBOUND_DELIVERED -> Icons.AutoMirrored.Filled.Send
+        MobileAhaMomentType.FIRST_FIELD_EDIT -> Icons.Default.EditNote
+        MobileAhaMomentType.THREE_CONTACTS_REACHED -> Icons.Default.Groups
+        MobileAhaMomentType.DEVICE_LINKED -> Icons.Default.Link
     }
 
 private fun getMomentDescription(momentType: MobileAhaMomentType): String =
@@ -146,6 +149,9 @@ private fun getMomentDescription(momentType: MobileAhaMomentType): String =
         MobileAhaMomentType.FIRST_CONTACT_ADDED -> "First contact added"
         MobileAhaMomentType.FIRST_UPDATE_RECEIVED -> "First update received"
         MobileAhaMomentType.FIRST_OUTBOUND_DELIVERED -> "First outbound delivered"
+        MobileAhaMomentType.FIRST_FIELD_EDIT -> "First field edit"
+        MobileAhaMomentType.THREE_CONTACTS_REACHED -> "Three contacts reached"
+        MobileAhaMomentType.DEVICE_LINKED -> "Device linked"
     }
 
 /**
