@@ -13,13 +13,12 @@ import uniffi.vauchi_mobile.MobileFieldType
 
 /**
  * Utility object for opening contact fields in external applications.
- * 
+ *
  * URL safety validation and social network URLs are now handled by vauchi-core.
  * Use the UniFFI functions: isSafeUrl(), isAllowedScheme(), isBlockedScheme()
  * and VauchiMobile.getProfileUrl() for social networks (40+ networks supported).
  */
 object ContactActions {
-
     /**
      * Opens a contact field in the appropriate external application.
      *
@@ -27,7 +26,10 @@ object ContactActions {
      * @param field The contact field to open
      * @return true if the field was opened, false if it was copied to clipboard
      */
-    fun openField(context: Context, field: MobileContactField): Boolean {
+    fun openField(
+        context: Context,
+        field: MobileContactField,
+    ): Boolean {
         val uri = fieldToUri(field)
 
         if (uri == null) {
@@ -69,10 +71,18 @@ object ContactActions {
 
         return when (field.fieldType) {
             MobileFieldType.PHONE -> Uri.parse("tel:$value")
+
             MobileFieldType.EMAIL -> Uri.parse("mailto:$value")
+
             MobileFieldType.WEBSITE -> websiteToUri(value)
+
             MobileFieldType.ADDRESS -> Uri.parse("geo:0,0?q=${Uri.encode(value)}")
+
             MobileFieldType.SOCIAL -> socialToUri(field.label, value)
+
+            // Date field — no URI, copy to clipboard
+            MobileFieldType.BIRTHDAY -> null
+
             MobileFieldType.CUSTOM -> detectAndConvert(value)
         }
     }
@@ -97,31 +107,36 @@ object ContactActions {
      *
      * Note: For full social network support, use VauchiMobile.getProfileUrl() directly.
      */
-    private fun socialToUri(label: String, value: String): Uri? {
-        return try {
+    private fun socialToUri(
+        label: String,
+        value: String,
+    ): Uri? =
+        try {
             ContactPatterns.buildSocialProfileUrl(label, value)?.let { Uri.parse(it) }
         } catch (e: Exception) {
             null
         }
-    }
 
     /**
      * Detects the type of value and converts to appropriate URI.
      * Used for Custom fields. Detection logic delegated to [ContactPatterns].
      */
-    private fun detectAndConvert(value: String): Uri? {
-        return when (ContactPatterns.detectValueType(value)) {
+    private fun detectAndConvert(value: String): Uri? =
+        when (ContactPatterns.detectValueType(value)) {
             ContactPatterns.DetectedType.URL -> Uri.parse(value)
             ContactPatterns.DetectedType.EMAIL -> Uri.parse("mailto:$value")
             ContactPatterns.DetectedType.PHONE -> Uri.parse("tel:$value")
             ContactPatterns.DetectedType.UNKNOWN -> null
         }
-    }
 
     /**
      * Copies a value to the clipboard.
      */
-    private fun copyToClipboard(context: Context, value: String, label: String) {
+    private fun copyToClipboard(
+        context: Context,
+        value: String,
+        label: String,
+    ) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
         val clip = android.content.ClipData.newPlainText(label, value)
         clipboard.setPrimaryClip(clip)
@@ -131,28 +146,41 @@ object ContactActions {
     /**
      * Returns an icon for a field type.
      */
-    fun getFieldIcon(fieldType: MobileFieldType): String {
-        return when (fieldType) {
-            MobileFieldType.PHONE -> "\uD83D\uDCDE"  // Phone
-            MobileFieldType.EMAIL -> "\u2709\uFE0F"  // Envelope
-            MobileFieldType.WEBSITE -> "\uD83C\uDF10" // Globe
-            MobileFieldType.ADDRESS -> "\uD83D\uDCCD" // Pin
-            MobileFieldType.SOCIAL -> "\uD83D\uDC64"  // Person
-            MobileFieldType.CUSTOM -> "\uD83D\uDCCB"  // Clipboard
+    fun getFieldIcon(fieldType: MobileFieldType): String =
+        when (fieldType) {
+            MobileFieldType.PHONE -> "\uD83D\uDCDE"
+
+            // Phone
+            MobileFieldType.EMAIL -> "\u2709\uFE0F"
+
+            // Envelope
+            MobileFieldType.WEBSITE -> "\uD83C\uDF10"
+
+            // Globe
+            MobileFieldType.ADDRESS -> "\uD83D\uDCCD"
+
+            // Pin
+            MobileFieldType.SOCIAL -> "\uD83D\uDC64"
+
+            // Person
+            MobileFieldType.BIRTHDAY -> "\uD83C\uDF82"
+
+            // Birthday cake
+
+            MobileFieldType.CUSTOM -> "\uD83D\uDCCB" // Clipboard
         }
-    }
 
     /**
      * Returns a description of the action for a field type.
      */
-    fun getActionDescription(fieldType: MobileFieldType): String {
-        return when (fieldType) {
+    fun getActionDescription(fieldType: MobileFieldType): String =
+        when (fieldType) {
             MobileFieldType.PHONE -> "Tap to call"
             MobileFieldType.EMAIL -> "Tap to email"
             MobileFieldType.WEBSITE -> "Tap to open"
             MobileFieldType.ADDRESS -> "Tap for directions"
             MobileFieldType.SOCIAL -> "Tap to view profile"
+            MobileFieldType.BIRTHDAY -> "Tap to copy"
             MobileFieldType.CUSTOM -> "Tap to copy"
         }
-    }
 }
