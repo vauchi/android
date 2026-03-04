@@ -7,6 +7,7 @@ package com.vauchi
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -1064,6 +1065,11 @@ fun ErrorScreen(
     message: String,
     onRetry: () -> Unit = {},
 ) {
+    val context = LocalContext.current
+    val isLockScreenError =
+        message.contains("lock screen", ignoreCase = true) ||
+            message.contains("device authentication", ignoreCase = true)
+
     Box(
         modifier =
             Modifier
@@ -1080,22 +1086,57 @@ fun ErrorScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Something went wrong",
+                text = if (isLockScreenError) "Device Lock Required" else "Something went wrong",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = message,
+                text =
+                    if (isLockScreenError) {
+                        "A device lock screen is required to use Vauchi. " +
+                            "PIN, pattern, fingerprint, or face unlock all qualify."
+                    } else {
+                        message
+                    },
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(onClick = onRetry) {
-                Icon(Icons.Default.Refresh, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Retry")
+            if (isLockScreenError) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Vauchi encrypts your contacts — device authentication is required to access them.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = {
+                        context.startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Open Settings")
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onRetry,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Retry")
+                }
+            } else {
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(onClick = onRetry) {
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Retry")
+                }
             }
         }
     }

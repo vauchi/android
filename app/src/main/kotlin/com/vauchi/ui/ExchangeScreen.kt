@@ -7,6 +7,8 @@ package com.vauchi.ui
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -84,7 +86,8 @@ fun ExchangeScreen(
         Column(
             modifier =
                 Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(padding)
                     .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -122,7 +125,7 @@ fun ExchangeScreen(
 
                 is ExchangeFlowState.Completing -> {
                     // Exchange is being completed after proximity verification
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(32.dp))
                     CircularProgressIndicator(
                         modifier = Modifier.size(48.dp),
                     )
@@ -132,12 +135,12 @@ fun ExchangeScreen(
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
 
                 is ExchangeFlowState.Success -> {
                     // Exchange completed successfully
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(32.dp))
                     Icon(
                         Icons.Default.CheckCircle,
                         contentDescription = "Success",
@@ -161,12 +164,12 @@ fun ExchangeScreen(
                     ) {
                         Text(localizationManager.t("action.done"))
                     }
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
 
                 is ExchangeFlowState.Failed -> {
                     // Exchange failed
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(32.dp))
                     Icon(
                         Icons.Default.Close,
                         contentDescription = "Failed",
@@ -191,7 +194,7 @@ fun ExchangeScreen(
                     ) {
                         Text(localizationManager.t("action.retry"))
                     }
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
 
                 is ExchangeFlowState.Idle -> {
@@ -287,7 +290,7 @@ fun ExchangeScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.weight(1f))
+                        Spacer(modifier = Modifier.height(32.dp))
 
                         // BLE Exchange stub
                         Card(
