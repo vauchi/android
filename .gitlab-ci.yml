@@ -329,9 +329,12 @@ coverage:unit:
   stage: test
   script:
     - ./gradlew jacocoDebugTestReport
-    - mkdir -p /tmp/ci-${CI_PIPELINE_ID} && curl -sL -H "JOB-TOKEN:$CI_JOB_TOKEN" "$CI_API_V4_URL/projects/vauchi%2Fscripts/repository/files/scripts%2Fci%2Fpush-coverage.sh/raw?ref=main" -o /tmp/ci-${CI_PIPELINE_ID}/push-coverage.sh
-    - "bash /tmp/ci-${CI_PIPELINE_ID}/push-coverage.sh app/build/reports/jacoco/jacocoDebugTestReport/jacocoDebugTestReport.xml android || echo WARNING: coverage push failed"
-    - rm -rf /tmp/ci-${CI_PIPELINE_ID}
+    - |
+      curl --silent --fail \
+        "${CI_API_V4_URL}/projects/vauchi%2Fscripts/repository/files/scripts%2Fci%2Fpush-coverage.sh/raw?ref=main" \
+        -o push-coverage.sh
+      chmod +x push-coverage.sh
+    - ./push-coverage.sh app/build/reports/jacoco/jacocoDebugTestReport/jacocoDebugTestReport.xml android || true
   coverage: '/Line Coverage:\s+(\d+(?:\.\d+)?%)/'
   artifacts:
     reports:
