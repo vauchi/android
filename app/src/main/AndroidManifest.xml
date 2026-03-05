@@ -47,6 +47,16 @@
                 <data android:scheme="vauchi" android:host="exchange" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".diagnostic.DiagnosticActivity"
+            android:exported="true"
+            android:label="Ultrasonic Diagnostic">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>
