@@ -133,6 +133,41 @@ class DiagnosticActivity : ComponentActivity() {
                 ) { Text("C: Emit") }
             }
 
+            Text(
+                text = "Existing Code Track:",
+                style = MaterialTheme.typography.labelMedium,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+            )
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+            ) {
+                Button(
+                    onClick = {
+                        runTest { log ->
+                            ExistingCodeDiagnostic(this@DiagnosticActivity).runLoopbackTest(log)
+                        }
+                    },
+                    enabled = !running && micPermissionGranted,
+                ) { Text("A: Loopback (existing)") }
+
+                Button(
+                    onClick = {
+                        runTest { log ->
+                            ExistingCodeDiagnostic(this@DiagnosticActivity).runNoiseFloorTest(log)
+                        }
+                    },
+                    enabled = !running && micPermissionGranted,
+                ) { Text("B: Noise (existing)") }
+            }
+
             if (running) {
                 CircularProgressIndicator(
                     modifier = Modifier.padding(16.dp),
