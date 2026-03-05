@@ -34,6 +34,26 @@ import com.vauchi.ui.components.ProximityVerificationResult
 import com.vauchi.util.LocalizationManager
 import kotlinx.coroutines.delay
 
+// / Legacy exchange flow state — kept for screenshot/accessibility tests.
+// / The main app flow now uses MultiStageExchangeScreen.
+sealed class ExchangeFlowState {
+    data object Idle : ExchangeFlowState()
+
+    data class Scanned(
+        val peerName: String,
+    ) : ExchangeFlowState()
+
+    data object Completing : ExchangeFlowState()
+
+    data class Success(
+        val contactName: String,
+    ) : ExchangeFlowState()
+
+    data class Failed(
+        val error: String,
+    ) : ExchangeFlowState()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExchangeScreen(
