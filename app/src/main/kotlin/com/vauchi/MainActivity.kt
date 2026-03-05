@@ -48,6 +48,7 @@ import com.vauchi.ui.LabelDetailScreen
 import com.vauchi.ui.LabelsScreen
 import com.vauchi.ui.LanguageSettingsScreen
 import com.vauchi.ui.MainViewModel
+import com.vauchi.ui.MultiStageExchangeScreen
 import com.vauchi.ui.QrScannerScreen
 import com.vauchi.ui.RecoveryScreen
 import com.vauchi.ui.SettingsScreen
@@ -119,6 +120,7 @@ class MainActivity : FragmentActivity() {
 enum class Screen {
     Home,
     Exchange,
+    MultiStageExchange,
     Contacts,
     ContactDetail,
     QrScanner,
@@ -240,7 +242,7 @@ fun MainScreen(
                             contactCount = state.contactCount,
                             onAddField = viewModel::addField,
                             onRemoveField = viewModel::removeField,
-                            onExchange = { currentScreen = Screen.Exchange },
+                            onExchange = { currentScreen = Screen.MultiStageExchange },
                             onContacts = { currentScreen = Screen.Contacts },
                             onSettings = { currentScreen = Screen.Settings },
                             socialNetworks = viewModel.listSocialNetworks(),
@@ -284,6 +286,20 @@ fun MainScreen(
                     exchangeState = exchangeState,
                     onExchangeDone = {
                         viewModel.resetExchangeState()
+                        currentScreen = Screen.Home
+                    },
+                )
+            }
+
+            Screen.MultiStageExchange -> {
+                MultiStageExchangeScreen(
+                    viewModel = viewModel,
+                    onBack = {
+                        viewModel.cancelMultiStageExchange()
+                        currentScreen = Screen.Home
+                    },
+                    onDone = {
+                        viewModel.cancelMultiStageExchange()
                         currentScreen = Screen.Home
                     },
                 )

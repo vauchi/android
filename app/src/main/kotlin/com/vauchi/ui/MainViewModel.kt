@@ -39,6 +39,9 @@ import uniffi.vauchi_mobile.MobileExchangeSession
 import uniffi.vauchi_mobile.MobileFieldType
 import uniffi.vauchi_mobile.MobileFieldValidation
 import uniffi.vauchi_mobile.MobileGdprExport
+import uniffi.vauchi_mobile.MobileMultiStageSession
+import uniffi.vauchi_mobile.MobileProtocolState
+import uniffi.vauchi_mobile.MobileQrPayload
 import uniffi.vauchi_mobile.MobileRecoveryClaim
 import uniffi.vauchi_mobile.MobileRecoveryProgress
 import uniffi.vauchi_mobile.MobileRecoveryVoucher
@@ -130,6 +133,11 @@ class MainViewModel(
     // Active exchange session — MUST be reused for the entire exchange lifecycle
     private var activeExchangeSession: MobileExchangeSession? = null
     private var activeExchangeData: ExchangeData? = null
+
+    // Multi-stage exchange session (new chunked protocol)
+    private var multiStageSession: MobileMultiStageSession? = null
+    private val _multiStageState = MutableStateFlow<MobileProtocolState>(MobileProtocolState.Idle)
+    val multiStageState: StateFlow<MobileProtocolState> = _multiStageState.asStateFlow()
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -574,6 +582,59 @@ class MainViewModel(
         Log.d("Exchange", "Clearing active session")
         activeExchangeSession = null
         activeExchangeData = null
+    }
+
+    // --- Multi-stage exchange (chunked QR protocol) ---
+
+    /**
+     * Start a new multi-stage exchange session.
+     * The core drives the entire protocol — Android is a pure display shell.
+     */
+    fun startMultiStageExchange(localCard: ByteArray) {
+        multiStageSession = MobileMultiStageSession(localCard)
+        _multiStageState.value = MobileProtocolState.Advertising
+        Log.d("Exchange", "Multi-stage session started")
+    }
+
+    /**
+     * Get the next QR payload to display. Returns null when the core has
+     * nothing to show (e.g., waiting for peer data).
+     */
+    fun getMultiStageDisplayQr(): MobileQrPayload? = multiStageSession?.getDisplayQr()
+
+    /**
+     * Pass a scanned QR string to the core for processing.
+     * The core handles all protocol logic — never parse QR content in Kotlin.
+     */
+    fun processMultiStageQr(raw: String): MobileProtocolState {
+        val session = multiStageSession ?: return MobileProtocolState.Failed("No session")
+        val state = session.processScannedQr(raw)
+        _multiStageState.value = state
+        return state
+    }
+
+    /**
+     * Poll the current protocol state from the core session.
+     */
+    fun getMultiStageState(): MobileProtocolState {
+        val state = multiStageSession?.getState() ?: MobileProtocolState.Idle
+        _multiStageState.value = state
+        return state
+    }
+
+    /**
+     * Retrieve received card data after exchange completes.
+     */
+    fun getMultiStageReceivedData(): ByteArray? = multiStageSession?.getReceivedData()
+
+    /**
+     * Cancel the multi-stage exchange and reset state.
+     */
+    fun cancelMultiStageExchange() {
+        multiStageSession?.cancel()
+        multiStageSession = null
+        _multiStageState.value = MobileProtocolState.Idle
+        Log.d("Exchange", "Multi-stage session cancelled")
     }
 
     suspend fun listContacts(): List<MobileContact> =
