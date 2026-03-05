@@ -250,6 +250,12 @@ class VauchiRepository(
      */
     fun finalizeExchange(session: MobileExchangeSession): MobileExchangeResult = vauchi.finalizeExchange(session)
 
+    /** Create an NFC initiator (reader) handshake session. */
+    fun createNfcInitiator() = vauchi.createNfcInitiator()
+
+    /** Create an NFC responder (HCE) handshake session. */
+    fun createNfcResponder() = vauchi.createNfcResponder()
+
     fun contactCount(): UInt = vauchi.contactCount()
 
     fun listContacts() = vauchi.listContacts()

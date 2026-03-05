@@ -63,6 +63,19 @@
             </intent-filter>
         </activity>
 
+        <!-- NFC test activity (launch via adb) -->
+        <activity
+            android:name=".nfc.NfcTestActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_filter" />
+        </activity>
+
         <!-- NFC Host Card Emulation service for contact exchange -->
         <service
             android:name=".nfc.VauchiHceService"
