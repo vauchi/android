@@ -97,7 +97,13 @@ class AudioProximityService(
             return "No samples to emit"
         }
 
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val originalVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+
         return try {
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxVolume, 0)
+
             val sampleRateInt = sampleRate.toInt()
             val bufferSize =
                 AudioTrack.getMinBufferSize(
@@ -148,6 +154,8 @@ class AudioProximityService(
             audioTrack?.release()
             audioTrack = null
             "Emit failed: ${e.message}"
+        } finally {
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, originalVolume, 0)
         }
     }
 
