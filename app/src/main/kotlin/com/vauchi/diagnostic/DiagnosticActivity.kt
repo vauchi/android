@@ -5,6 +5,7 @@
 package com.vauchi.diagnostic
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioFormat
@@ -292,6 +293,7 @@ class DiagnosticActivity : ComponentActivity() {
         return emitAndRecordRaw(samples, durationMs, audioSource)
     }
 
+    @SuppressLint("MissingPermission")
     private fun emitAndRecordRaw(
         samples: FloatArray,
         durationMs: Int,
@@ -355,6 +357,7 @@ class DiagnosticActivity : ComponentActivity() {
         track.release()
     }
 
+    @SuppressLint("MissingPermission")
     private fun recordOnly(
         durationMs: Int,
         audioSource: Int = MediaRecorder.AudioSource.UNPROCESSED,
