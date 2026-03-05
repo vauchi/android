@@ -11,7 +11,6 @@ import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -19,7 +18,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import com.vauchi.data.VauchiRepository
+import com.vauchi.util.BiometricHelper
 import uniffi.vauchi_mobile.MobileNfcHandshake
 import uniffi.vauchi_mobile.MobileNfcState
 
@@ -32,20 +33,22 @@ import uniffi.vauchi_mobile.MobileNfcState
  *
  * Launch via: adb shell am start -n com.vauchi/.nfc.NfcTestActivity
  */
-class NfcTestActivity : ComponentActivity() {
+class NfcTestActivity : FragmentActivity() {
     companion object {
         private const val TAG = "NfcTest"
     }
 
     private var nfcAdapter: NfcAdapter? = null
+    private var repo: VauchiRepository? = null
     private var readerSession: MobileNfcHandshake? = null
     private val readerService = NfcReaderService()
 
     // Compose state
     private val _mode = mutableStateOf("idle") // idle, reader, hce
-    private val _status = mutableStateOf("Tap a mode to begin")
+    private val _status = mutableStateOf("Authenticating...")
     private val _result = mutableStateOf<String?>(null)
     private val _nfcState = mutableStateOf("—")
+    private val _authenticated = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,6 +68,25 @@ class NfcTestActivity : ComponentActivity() {
                 )
             }
         }
+
+        // Authenticate before allowing NFC operations
+        BiometricHelper.authenticate(
+            activity = this,
+            title = "Unlock Vauchi",
+            subtitle = "Authenticate to use NFC exchange",
+            onSuccess = {
+                try {
+                    repo = VauchiRepository(this)
+                    _authenticated.value = true
+                    _status.value = "Tap a mode to begin"
+                } catch (e: Exception) {
+                    _status.value = "Init failed: ${e.message}"
+                }
+            },
+            onError = { msg ->
+                _status.value = if (msg != null) "Auth failed: $msg" else "Auth cancelled"
+            },
+        )
     }
 
     override fun onResume() {
@@ -115,9 +137,13 @@ class NfcTestActivity : ComponentActivity() {
     }
 
     private fun startReaderMode() {
-        val repo = VauchiRepository(this)
+        val r =
+            repo ?: run {
+                _status.value = "Not authenticated"
+                return
+            }
         try {
-            val session = repo.createNfcInitiator()
+            val session = r.createNfcInitiator()
             readerSession = session
             _mode.value = "reader"
             _status.value = "Hold phone near other device..."
@@ -129,9 +155,13 @@ class NfcTestActivity : ComponentActivity() {
     }
 
     private fun startHceMode() {
-        val repo = VauchiRepository(this)
+        val r =
+            repo ?: run {
+                _status.value = "Not authenticated"
+                return
+            }
         try {
-            val session = repo.createNfcResponder()
+            val session = r.createNfcResponder()
             VauchiHceService.activeSession = session
             _mode.value = "hce"
             _status.value = "HCE ready — hold other device's reader near this phone"
