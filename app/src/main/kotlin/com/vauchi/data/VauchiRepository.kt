@@ -242,6 +242,7 @@ class VauchiRepository(
         session.generateQr()
         session.processQr(qrData)
         val contactName = session.peerDisplayName() ?: error("QR code missing display name")
+        session.confirmProximity()
         session.theyScannedOurQr()
         session.performKeyAgreement()
         session.completeCardExchange(contactName)

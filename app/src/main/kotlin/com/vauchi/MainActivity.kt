@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -63,6 +64,7 @@ import uniffi.vauchi_mobile.MobileContactCard
 import uniffi.vauchi_mobile.MobileContentType
 import uniffi.vauchi_mobile.MobileFieldType
 import uniffi.vauchi_mobile.MobileUpdateStatus
+import uniffi.vauchi_mobile.coreVersion
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -74,6 +76,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        Log.i("Vauchi", "Build: v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) core=${coreVersion()}")
 
         // Handle deep link from cold start
         handleIncomingIntent(intent)
