@@ -47,12 +47,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.vauchi.data.ExchangeData
-import com.vauchi.data.VauchiRepository
 import com.vauchi.util.LocalizationManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 
 /**
@@ -70,16 +68,17 @@ import java.util.concurrent.Executors
 fun FaceToFaceExchangeScreen(
     onBack: () -> Unit,
     onGenerateQr: suspend () -> ExchangeData?,
-    onQrScanned: (String) -> Unit,
+    onQrScanned: suspend (String) -> Unit,
+    onManualConfirm: suspend () -> Unit = {},
     proximitySupported: Boolean = false,
     onEmitChallenge: (ByteArray) -> Boolean = { false },
-    onListenForResponse: (ULong) -> ByteArray? = { null },
     onStopVerification: () -> Unit = {},
     exchangeState: ExchangeFlowState = ExchangeFlowState.Idle,
     onExchangeDone: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
+    val coroutineScope = rememberCoroutineScope()
 
     var exchangeData by remember { mutableStateOf<ExchangeData?>(null) }
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -248,18 +247,7 @@ fun FaceToFaceExchangeScreen(
                                             onQrCodeDetected = { code ->
                                                 if (code.startsWith("wb://")) {
                                                     scannerActive = false
-
-                                                    // Ultrasonic listen + verify (non-blocking)
-                                                    val scannedChallenge = VauchiRepository.extractAudioChallenge(code)
-                                                    if (proximitySupported && scannedChallenge != null) {
-                                                        val response = onListenForResponse(3000u)
-                                                        if (response != null && response.contentEquals(scannedChallenge)) {
-                                                            proximityConfirmed = true
-                                                            Log.d("FaceToFace", "Ultrasonic proximity confirmed")
-                                                        }
-                                                    }
-
-                                                    onQrScanned(code)
+                                                    coroutineScope.launch { onQrScanned(code) }
                                                 }
                                             },
                                         )
@@ -488,8 +476,7 @@ fun FaceToFaceExchangeScreen(
                 }
             }
 
-            is ExchangeFlowState.PendingProximity -> {
-                // Fallback: shouldn't reach here in face-to-face mode
+            is ExchangeFlowState.Scanned -> {
                 Box(
                     modifier =
                         Modifier
@@ -497,7 +484,90 @@ fun FaceToFaceExchangeScreen(
                             .padding(padding),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Found ${exchangeState.peerName}!",
+                            style = MaterialTheme.typography.headlineSmall,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Verifying proximity...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            is ExchangeFlowState.Coordinating -> {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Verifying...",
+                            style = MaterialTheme.typography.headlineSmall,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Confirming the other device scanned your QR",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            is ExchangeFlowState.ManualFallback -> {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(32.dp),
+                    ) {
+                        Text(
+                            "Confirm face-to-face",
+                            style = MaterialTheme.typography.headlineSmall,
+                        )
+                        Text(
+                            "Ultrasonic verification timed out. Confirm you are physically next to the other person.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { coroutineScope.launch { onManualConfirm() } },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp),
+                        ) {
+                            Text("Confirm & Exchange")
+                        }
+                        OutlinedButton(
+                            onClick = onBack,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp),
+                        ) {
+                            Text(localizationManager.t("action.cancel"))
+                        }
+                    }
                 }
             }
         }

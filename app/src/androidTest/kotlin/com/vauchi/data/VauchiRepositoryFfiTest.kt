@@ -234,11 +234,11 @@ class VauchiRepositoryFfiTest {
     fun testGenerateExchangeQr() {
         repository.createIdentity("Alice")
 
-        val exchangeData = repository.generateExchangeQr()
+        val sessionData = repository.generateExchangeQrWithSession()
 
-        assertTrue(exchangeData.qrData.startsWith("wb://"), "QR data should start with wb://")
-        assertFalse(exchangeData.publicId.isEmpty())
-        assertTrue(exchangeData.expiresAt > (System.currentTimeMillis() / 1000).toUInt())
+        assertTrue(sessionData.exchangeData.qrData.startsWith("wb://"), "QR data should start with wb://")
+        assertFalse(sessionData.exchangeData.publicId.isEmpty())
+        assertTrue(sessionData.exchangeData.expiresAt > (System.currentTimeMillis() / 1000).toUInt())
     }
 
     /**
@@ -264,12 +264,21 @@ class VauchiRepositoryFfiTest {
         bobRepo.addField(MobileFieldType.PHONE, "Mobile", "+1234567890")
 
         try {
-            // Alice generates QR code
-            val aliceExchange = aliceRepo.generateExchangeQr()
-            assertFalse(aliceExchange.qrData.isEmpty())
+            // Alice and Bob generate QR codes (with sessions)
+            val aliceSession = aliceRepo.generateExchangeQrWithSession()
+            assertFalse(aliceSession.exchangeData.qrData.isEmpty())
 
-            // Bob scans Alice's QR and completes exchange
-            val bobResult = bobRepo.completeExchange(aliceExchange.qrData)
+            val bobSession = bobRepo.generateExchangeQrWithSession()
+
+            // Bob scans Alice's QR using held session
+            bobSession.session.processQr(aliceSession.exchangeData.qrData)
+            val bobPeerName = bobSession.session.peerDisplayName() ?: "Unknown"
+            assertEquals("Alice", bobPeerName)
+            bobSession.session.confirmProximity()
+            bobSession.session.theyScannedOurQr()
+            bobSession.session.performKeyAgreement()
+            bobSession.session.completeCardExchange(bobPeerName)
+            val bobResult = bobRepo.finalizeExchange(bobSession.session)
             assertTrue(bobResult.success, "Bob's exchange should succeed: ${bobResult.errorMessage}")
             assertEquals("Alice", bobResult.contactName)
 
@@ -278,11 +287,15 @@ class VauchiRepositoryFfiTest {
             assertEquals(1, bobContacts.size)
             assertEquals("Alice", bobContacts[0].displayName)
 
-            // Bob generates QR for Alice
-            val bobExchange = bobRepo.generateExchangeQr()
-
-            // Alice scans Bob's QR and completes exchange
-            val aliceResult = aliceRepo.completeExchange(bobExchange.qrData)
+            // Alice scans Bob's QR using her held session
+            aliceSession.session.processQr(bobSession.exchangeData.qrData)
+            val alicePeerName = aliceSession.session.peerDisplayName() ?: "Unknown"
+            assertEquals("Bob", alicePeerName)
+            aliceSession.session.confirmProximity()
+            aliceSession.session.theyScannedOurQr()
+            aliceSession.session.performKeyAgreement()
+            aliceSession.session.completeCardExchange(alicePeerName)
+            val aliceResult = aliceRepo.finalizeExchange(aliceSession.session)
             assertTrue(aliceResult.success, "Alice's exchange should succeed: ${aliceResult.errorMessage}")
             assertEquals("Bob", aliceResult.contactName)
 

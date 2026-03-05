@@ -97,32 +97,51 @@ fun ExchangeScreen(
         ) {
             // Proximity verification gate: show proximity UI when exchange is pending
             when (exchangeState) {
-                is ExchangeFlowState.PendingProximity -> {
-                    // Show proximity verification between QR scan and exchange completion
+                is ExchangeFlowState.Scanned -> {
                     Text(
-                        text = "QR Code Scanned",
+                        text = "Found ${exchangeState.peerName}!",
                         style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.semantics { heading() },
                     )
                     Text(
-                        text = "Verify that the other device is nearby before completing the exchange.",
+                        text = "Verifying proximity...",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    ProximityVerification(
-                        challenge = exchangeState.challenge,
-                        confirmationCode = "",
-                        proximitySupported = proximitySupported,
-                        proximityCapability = proximityCapability,
-                        onEmitChallenge = onEmitChallenge,
-                        onListenForResponse = onListenForResponse,
-                        onStopVerification = onStopVerification,
-                        onVerified = onProximityVerified,
-                        onCancel = onCancelProximity,
+                is ExchangeFlowState.Coordinating -> {
+                    Text(
+                        text = "Verifying...",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.semantics { heading() },
                     )
+                    Text(
+                        text = "Confirming the other device scanned your QR",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                }
+
+                is ExchangeFlowState.ManualFallback -> {
+                    Text(
+                        text = "Confirm face-to-face",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = "Ultrasonic verification timed out. Confirm you are physically next to the other person.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(
+                        onClick = onCancelProximity,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Confirm & Exchange")
+                    }
                 }
 
                 is ExchangeFlowState.Completing -> {

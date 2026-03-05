@@ -280,11 +280,11 @@ fun MainScreen(
                     },
                     onGenerateQr = suspend { viewModel.generateExchangeQr() },
                     onQrScanned = { qrData: String ->
-                        coroutineScope.launch { viewModel.completeExchangeDirectly(qrData) }
+                        viewModel.coordinateAndCompleteExchange(qrData)
                     },
+                    onManualConfirm = { viewModel.confirmManualAndComplete() },
                     proximitySupported = proximitySupported,
                     onEmitChallenge = { challenge: ByteArray -> viewModel.emitProximityChallenge(challenge) },
-                    onListenForResponse = { timeout: ULong -> viewModel.listenForProximityResponse(timeout) },
                     onStopVerification = { viewModel.stopProximityVerification() },
                     exchangeState = exchangeState,
                     onExchangeDone = {
@@ -299,7 +299,7 @@ fun MainScreen(
                 QrScannerScreen(
                     onBack = { currentScreen = Screen.Exchange },
                     onQrScanned = { qrData ->
-                        coroutineScope.launch { viewModel.completeExchangeDirectly(qrData) }
+                        coroutineScope.launch { viewModel.coordinateAndCompleteExchange(qrData) }
                         currentScreen = Screen.Exchange
                     },
                 )
@@ -563,7 +563,7 @@ fun MainScreen(
                 deepLinkHandler.grantConsent()
                 // Start the exchange flow with the payload
                 deepLinkPayload?.let { payload ->
-                    coroutineScope.launch { viewModel.completeExchangeDirectly(payload) }
+                    coroutineScope.launch { viewModel.coordinateAndCompleteExchange(payload) }
                     currentScreen = Screen.Exchange
                 }
                 deepLinkPayload = null

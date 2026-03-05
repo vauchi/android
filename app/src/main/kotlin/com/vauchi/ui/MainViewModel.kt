@@ -10,8 +10,8 @@ import androidx.lifecycle.viewModelScope
 import com.vauchi.data.AuthenticationRequiredException
 import com.vauchi.data.DeviceNotSecureException
 import com.vauchi.data.ExchangeData
+import com.vauchi.data.ExchangeSessionData
 import com.vauchi.data.VauchiRepository
-import com.vauchi.proximity.AudioMobileProximityHandler
 import com.vauchi.proximity.AudioProximityService
 import com.vauchi.ui.components.ProximityVerificationResult
 import com.vauchi.ui.model.PasswordStrengthLevel
@@ -35,6 +35,7 @@ import uniffi.vauchi_mobile.MobileDeletionState
 import uniffi.vauchi_mobile.MobileDemoContact
 import uniffi.vauchi_mobile.MobileDemoContactState
 import uniffi.vauchi_mobile.MobileExchangeResult
+import uniffi.vauchi_mobile.MobileExchangeSession
 import uniffi.vauchi_mobile.MobileFieldType
 import uniffi.vauchi_mobile.MobileFieldValidation
 import uniffi.vauchi_mobile.MobileGdprExport
@@ -65,25 +66,28 @@ sealed class SyncState {
 }
 
 /**
- * State machine for the contact exchange flow with proximity verification.
+ * State machine for the bidirectional contact exchange flow.
  *
- * Flow: Idle -> PendingProximity (after QR scan) -> Completing (after proximity verified)
- *       -> Success | Failed
- *
- * Proximity verification is integrated at the protocol level via core's
- * `createQrExchange(handler)` which generates the challenge internally.
+ * Flow: Idle -> Scanned (peer QR processed) -> Coordinating (ultrasonic loop)
+ *       -> Completing -> Success | Failed
+ *       Coordinating may timeout -> ManualFallback -> Completing -> Success | Failed
  */
 sealed class ExchangeFlowState {
     /** No exchange in progress. */
     object Idle : ExchangeFlowState()
 
-    /** QR scanned, waiting for proximity verification before completing exchange. */
-    data class PendingProximity(
-        val qrData: String,
-        val challenge: ByteArray,
+    /** Peer QR scanned and processed, showing peer name before coordination. */
+    data class Scanned(
+        val peerName: String,
     ) : ExchangeFlowState()
 
-    /** Proximity verified, exchange completing. */
+    /** Ultrasonic coordination in progress — emitting/listening for challenges. */
+    object Coordinating : ExchangeFlowState()
+
+    /** Ultrasonic timed out — user can confirm manually. */
+    object ManualFallback : ExchangeFlowState()
+
+    /** Exchange completing (key agreement + card exchange). */
     object Completing : ExchangeFlowState()
 
     /** Exchange completed successfully. */
@@ -140,9 +144,13 @@ class MainViewModel(
     private val _proximityCapability = MutableStateFlow("none")
     val proximityCapability: StateFlow<String> = _proximityCapability.asStateFlow()
 
-    // Exchange flow state (proximity verification gate)
+    // Exchange flow state (bidirectional coordination)
     private val _exchangeState = MutableStateFlow<ExchangeFlowState>(ExchangeFlowState.Idle)
     val exchangeState: StateFlow<ExchangeFlowState> = _exchangeState.asStateFlow()
+
+    // Active exchange session — MUST be reused for the entire exchange lifecycle
+    private var activeExchangeSession: MobileExchangeSession? = null
+    private var activeExchangeData: ExchangeData? = null
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -483,49 +491,118 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Generate exchange QR and store the session for later reuse.
+     * The SAME session must be used for processQr/finalize.
+     */
     suspend fun generateExchangeQr(): ExchangeData? =
         try {
-            withContext(Dispatchers.IO) {
-                repository.generateExchangeQr()
-            }
-        } catch (e: Exception) {
-            null
-        }
-
-    suspend fun completeExchange(qrData: String): MobileExchangeResult? =
-        try {
-            val result =
+            val sessionData =
                 withContext(Dispatchers.IO) {
-                    repository.completeExchange(qrData)
+                    repository.generateExchangeQrWithSession()
                 }
-            loadUserData()
-            // Auto-remove demo contact after first real exchange
-            if (result.success) {
-                autoRemoveDemoContact()
-            }
-            result
+            activeExchangeSession = sessionData.session
+            activeExchangeData = sessionData.exchangeData
+            sessionData.exchangeData
         } catch (e: Exception) {
             null
         }
 
     /**
-     * Complete exchange directly after QR scan, skipping the proximity verification UI.
-     * QR scanning at close range already proves physical proximity.
+     * Process a scanned QR on the held session, then coordinate via ultrasonic.
+     * Flow: Scanned → Coordinating → (timeout → ManualFallback) → Completing → Success | Failed
      */
-    suspend fun completeExchangeDirectly(qrData: String) {
+    suspend fun coordinateAndCompleteExchange(qrData: String) {
+        val session = activeExchangeSession
+        val ourData = activeExchangeData
+        if (session == null || ourData == null) {
+            _exchangeState.value = ExchangeFlowState.Failed("No active exchange session")
+            return
+        }
+
+        // Step 1: Process the scanned QR on the held session
+        val peerName =
+            try {
+                withContext(Dispatchers.IO) {
+                    session.processQr(qrData)
+                    session.peerDisplayName() ?: "Unknown"
+                }
+            } catch (e: Exception) {
+                _exchangeState.value = ExchangeFlowState.Failed("Invalid QR: ${e.message}")
+                return
+            }
+        _exchangeState.value = ExchangeFlowState.Scanned(peerName)
+
+        // Step 2: Extract challenges for ultrasonic coordination
+        val ourChallenge = ourData.audioChallenge
+        val theirChallenge = VauchiRepository.extractAudioChallenge(qrData)
+
+        // Step 3: Ultrasonic coordination (or skip if unsupported)
+        if (!_proximitySupported.value || ourChallenge == null || theirChallenge == null) {
+            _exchangeState.value = ExchangeFlowState.ManualFallback
+            return
+        }
+
+        _exchangeState.value = ExchangeFlowState.Coordinating
+        val confirmed =
+            withContext(Dispatchers.IO) {
+                ultrasonicCoordinationLoop(
+                    emitChallenge = theirChallenge,
+                    listenForChallenge = ourChallenge,
+                    timeoutMs = 12_000L,
+                )
+            }
+
+        if (confirmed) {
+            completeExchangeOnSession(session, peerName)
+        } else {
+            _exchangeState.value = ExchangeFlowState.ManualFallback
+        }
+    }
+
+    /**
+     * User tapped "Confirm" on the manual fallback screen.
+     * Completes the exchange using the held session.
+     */
+    suspend fun confirmManualAndComplete() {
+        val session =
+            activeExchangeSession ?: run {
+                _exchangeState.value = ExchangeFlowState.Failed("No active exchange session")
+                return
+            }
+        val peerName =
+            try {
+                session.peerDisplayName() ?: "Unknown"
+            } catch (_: Exception) {
+                "Unknown"
+            }
+        completeExchangeOnSession(session, peerName)
+    }
+
+    /**
+     * Drive the session through the remaining state machine steps and finalize.
+     */
+    private suspend fun completeExchangeOnSession(
+        session: MobileExchangeSession,
+        peerName: String,
+    ) {
         _exchangeState.value = ExchangeFlowState.Completing
         val result =
             try {
                 val exchangeResult =
                     withContext(Dispatchers.IO) {
-                        repository.completeExchange(qrData)
+                        session.confirmProximity()
+                        session.theyScannedOurQr()
+                        session.performKeyAgreement()
+                        session.completeCardExchange(peerName)
+                        repository.finalizeExchange(session)
                     }
                 loadUserData()
                 if (exchangeResult.success) {
                     autoRemoveDemoContact()
                 }
                 exchangeResult
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 null
             }
         if (result != null && result.success) {
@@ -536,51 +613,42 @@ class MainViewModel(
                     result?.errorMessage ?: "Exchange failed",
                 )
         }
+        clearActiveSession()
     }
 
     /**
-     * Complete the exchange after proximity has been verified.
-     * Must only be called when exchangeState is PendingProximity.
-     *
-     * Uses core's proximity exchange session which handles proximity
-     * verification at the protocol level via [AudioMobileProximityHandler].
+     * Ultrasonic coordination loop: emit their challenge, listen for ours.
+     * Returns true if we heard our challenge (meaning the peer scanned our QR).
      */
-    suspend fun completeExchangeAfterProximity() {
-        val state = _exchangeState.value
-        if (state !is ExchangeFlowState.PendingProximity) return
-        _exchangeState.value = ExchangeFlowState.Completing
-        val result =
-            try {
-                val audioService = AudioProximityService.getInstance(getApplication())
-                val verifier = MobileProximityVerifier(audioService)
-                val handler = AudioMobileProximityHandler(verifier)
-                val exchangeResult =
-                    withContext(Dispatchers.IO) {
-                        repository.completeExchangeWithProximity(state.qrData, handler)
-                    }
-                loadUserData()
-                if (exchangeResult.success) {
-                    autoRemoveDemoContact()
-                }
-                exchangeResult
-            } catch (_: Exception) {
-                null
+    private fun ultrasonicCoordinationLoop(
+        emitChallenge: ByteArray,
+        listenForChallenge: ByteArray,
+        timeoutMs: Long,
+    ): Boolean {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            // Emit their challenge so they can confirm we scanned theirs
+            emitProximityChallenge(emitChallenge)
+            Thread.sleep(250)
+            stopProximityVerification()
+
+            // Listen for our challenge — means they scanned our QR
+            val response = listenForProximityResponse(2000u)
+            if (response != null && response.contentEquals(listenForChallenge)) {
+                stopProximityVerification()
+                return true
             }
-        if (result != null && result.success) {
-            _exchangeState.value = ExchangeFlowState.Success(result)
-        } else {
-            _exchangeState.value =
-                ExchangeFlowState.Failed(
-                    result?.errorMessage ?: "Exchange failed",
-                )
+            stopProximityVerification()
         }
+        return false
     }
 
     /**
-     * Cancel the proximity verification and reset exchange state.
+     * Cancel exchange and reset state.
      */
     fun cancelExchangeProximity() {
         stopProximityVerification()
+        clearActiveSession()
         _exchangeState.value = ExchangeFlowState.Idle
     }
 
@@ -588,7 +656,13 @@ class MainViewModel(
      * Reset exchange state back to idle (e.g., after success/failure acknowledged).
      */
     fun resetExchangeState() {
+        clearActiveSession()
         _exchangeState.value = ExchangeFlowState.Idle
+    }
+
+    private fun clearActiveSession() {
+        activeExchangeSession = null
+        activeExchangeData = null
     }
 
     suspend fun listContacts(): List<MobileContact> =
@@ -1243,7 +1317,7 @@ class MainViewModel(
 
     /**
      * Auto-remove demo contact after first real exchange.
-     * Called automatically by completeExchange().
+     * Called automatically by completeExchangeOnSession().
      */
     private fun autoRemoveDemoContact() {
         viewModelScope.launch {

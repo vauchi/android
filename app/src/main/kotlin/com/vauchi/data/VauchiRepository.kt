@@ -37,7 +37,6 @@ import uniffi.vauchi_mobile.MobileContactCard
 import uniffi.vauchi_mobile.MobileExchangeResult
 import uniffi.vauchi_mobile.MobileExchangeSession
 import uniffi.vauchi_mobile.MobileFieldType
-import uniffi.vauchi_mobile.MobileProximityHandler
 import uniffi.vauchi_mobile.MobileSyncResult
 import uniffi.vauchi_mobile.VauchiMobile
 
@@ -65,6 +64,16 @@ data class ExchangeData(
         return result
     }
 }
+
+/**
+ * Holds both the display data and the live session for a single exchange.
+ * The session MUST be reused for processQr/finalize — creating a new session
+ * generates different ephemeral keys and breaks key agreement.
+ */
+data class ExchangeSessionData(
+    val exchangeData: ExchangeData,
+    val session: MobileExchangeSession,
+)
 
 /**
  * Repository class wrapping VauchiMobile UniFFI bindings.
@@ -216,61 +225,30 @@ class VauchiRepository(
     fun removeField(label: String): Boolean = vauchi.removeField(label)
 
     /**
-     * Generate exchange QR data using ExchangeSession state machine.
-     * Returns the QR data string (with wb:// prefix).
+     * Generate exchange QR data AND return the live session.
+     * The caller MUST hold onto the session and pass it to [finalizeExchange]
+     * — creating a new session generates different ephemeral keys.
      */
-    fun generateExchangeQr(): ExchangeData {
+    fun generateExchangeQrWithSession(): ExchangeSessionData {
         val session = vauchi.createQrExchangeManual()
         val qrData = session.generateQr()
         val expiresAt = System.currentTimeMillis() / 1000 + 300 // 5 minutes
-        return ExchangeData(
-            qrData = qrData,
-            publicId = vauchi.getPublicId(),
-            expiresAt = expiresAt.toULong(),
-            audioChallenge = extractAudioChallenge(qrData),
-        )
+        val data =
+            ExchangeData(
+                qrData = qrData,
+                publicId = vauchi.getPublicId(),
+                expiresAt = expiresAt.toULong(),
+                audioChallenge = extractAudioChallenge(qrData),
+            )
+        return ExchangeSessionData(exchangeData = data, session = session)
     }
 
     /**
-     * Complete exchange by driving the ExchangeSession state machine (mutual QR flow).
-     *
-     * Face-to-face exchanges are inherently bilateral — both devices scan each other's
-     * QR and independently derive the shared secret. No relay notification needed.
+     * Finalize an exchange using the SAME session that generated the QR.
+     * The session must have already been driven through processQr → confirmProximity →
+     * theyScannedOurQr → performKeyAgreement → completeCardExchange.
      */
-    fun completeExchange(qrData: String): MobileExchangeResult {
-        val session = vauchi.createQrExchangeManual()
-        session.generateQr()
-        session.processQr(qrData)
-        val contactName = session.peerDisplayName() ?: error("QR code missing display name")
-        session.confirmProximity()
-        session.theyScannedOurQr()
-        session.performKeyAgreement()
-        session.completeCardExchange(contactName)
-        return vauchi.finalizeExchange(session)
-    }
-
-    /**
-     * Create a proximity exchange session using core's protocol-level challenge.
-     * Returns the session (which generates the challenge internally).
-     */
-    fun createProximityExchangeSession(handler: MobileProximityHandler): MobileExchangeSession = vauchi.createQrExchange(handler)
-
-    /**
-     * Complete exchange with proximity verification by driving the state machine.
-     * The proximity handler is called by core during key agreement.
-     */
-    fun completeExchangeWithProximity(
-        qrData: String,
-        handler: MobileProximityHandler,
-    ): MobileExchangeResult {
-        val session = vauchi.createQrExchange(handler)
-        session.generateQr()
-        session.processQr(qrData)
-        session.theyScannedOurQr()
-        session.performKeyAgreement()
-        session.completeCardExchange("New Contact")
-        return vauchi.finalizeExchange(session)
-    }
+    fun finalizeExchange(session: MobileExchangeSession): MobileExchangeResult = vauchi.finalizeExchange(session)
 
     fun contactCount(): UInt = vauchi.contactCount()
 
