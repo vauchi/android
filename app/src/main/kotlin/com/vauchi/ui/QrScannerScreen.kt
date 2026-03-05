@@ -32,9 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
+import com.google.zxing.BinaryBitmap
+import com.google.zxing.NotFoundException
+import com.google.zxing.PlanarYUVLuminanceSource
+import com.google.zxing.common.HybridBinarizer
+import com.google.zxing.qrcode.QRCodeReader
 import java.util.concurrent.Executors
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -233,9 +235,9 @@ fun CameraPreview(onQrCodeDetected: (String) -> Unit) {
                         .also { analysis ->
                             analysis.setAnalyzer(
                                 cameraExecutor,
-                                QrCodeAnalyzer { code ->
+                                QrCodeAnalyzer(onQrCodeDetected = { code ->
                                     onQrCodeDetected(code)
-                                },
+                                }),
                             )
                         }
 
@@ -262,33 +264,109 @@ fun CameraPreview(onQrCodeDetected: (String) -> Unit) {
 
 class QrCodeAnalyzer(
     private val onQrCodeDetected: (String) -> Unit,
+    private val saveDir: java.io.File? = null,
+    private val maxSaveFrames: Int = 10,
 ) : ImageAnalysis.Analyzer {
-    private val scanner = BarcodeScanning.getClient()
+    private val hints =
+        mapOf(
+            com.google.zxing.DecodeHintType.TRY_HARDER to true,
+            com.google.zxing.DecodeHintType.POSSIBLE_FORMATS to listOf(com.google.zxing.BarcodeFormat.QR_CODE),
+        )
+    private val multiReader =
+        com.google.zxing
+            .MultiFormatReader()
+            .apply { setHints(hints) }
+    private var frameCount = 0
+    private var savedFrameCount = 0
 
     @androidx.camera.core.ExperimentalGetImage
     override fun analyze(imageProxy: androidx.camera.core.ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            val inputImage =
-                InputImage.fromMediaImage(
-                    mediaImage,
-                    imageProxy.imageInfo.rotationDegrees,
-                )
+        try {
+            val plane = imageProxy.planes[0]
+            val buffer = plane.buffer
+            val rowStride = plane.rowStride
+            val bytes = ByteArray(buffer.remaining())
+            buffer.get(bytes)
 
-            scanner
-                .process(inputImage)
-                .addOnSuccessListener { barcodes ->
-                    for (barcode in barcodes) {
-                        if (barcode.valueType == Barcode.TYPE_TEXT) {
-                            barcode.rawValue?.let { value ->
-                                onQrCodeDetected(value)
-                            }
-                        }
+            frameCount++
+            if (frameCount % 60 == 1) {
+                android.util.Log.d("QrAnalyzer", "Frame #$frameCount: ${imageProxy.width}x${imageProxy.height} stride=$rowStride")
+            }
+
+            // Save camera frames as JPEG for diagnosis
+            if (saveDir != null && savedFrameCount < maxSaveFrames && frameCount % 3 == 1) {
+                try {
+                    val yuvImage =
+                        android.graphics.YuvImage(
+                            bytes,
+                            android.graphics.ImageFormat.NV21,
+                            imageProxy.width,
+                            imageProxy.height,
+                            intArrayOf(rowStride),
+                        )
+                    val outFile = java.io.File(saveDir, "frame_$savedFrameCount.jpg")
+                    java.io.FileOutputStream(outFile).use { fos ->
+                        yuvImage.compressToJpeg(
+                            android.graphics.Rect(0, 0, imageProxy.width, imageProxy.height),
+                            90,
+                            fos,
+                        )
                     }
-                }.addOnCompleteListener {
-                    imageProxy.close()
+                    savedFrameCount++
+                    android.util.Log.d("QrAnalyzer", "Saved frame $savedFrameCount to ${outFile.absolutePath}")
+                } catch (e: Exception) {
+                    android.util.Log.w("QrAnalyzer", "Failed to save frame: ${e.message}")
                 }
-        } else {
+            }
+
+            // Try normal orientation
+            val source =
+                PlanarYUVLuminanceSource(
+                    bytes,
+                    rowStride,
+                    imageProxy.height,
+                    0,
+                    0,
+                    imageProxy.width,
+                    imageProxy.height,
+                    false,
+                )
+            val bitmap = BinaryBitmap(HybridBinarizer(source))
+
+            val result =
+                try {
+                    multiReader.decodeWithState(bitmap)
+                } catch (_: NotFoundException) {
+                    // Try mirrored (front camera flips horizontally)
+                    multiReader.reset()
+                    val mirroredSource =
+                        PlanarYUVLuminanceSource(
+                            bytes,
+                            rowStride,
+                            imageProxy.height,
+                            0,
+                            0,
+                            imageProxy.width,
+                            imageProxy.height,
+                            true,
+                        )
+                    val mirroredBitmap = BinaryBitmap(HybridBinarizer(mirroredSource))
+                    multiReader.decodeWithState(mirroredBitmap)
+                } finally {
+                    multiReader.reset()
+                }
+
+            result.text?.let { value ->
+                android.util.Log.d("QrAnalyzer", "QR detected: ${value.take(30)}...")
+                onQrCodeDetected(value)
+            }
+        } catch (_: NotFoundException) {
+            // No QR code found in this frame — normal during scanning
+        } catch (e: Exception) {
+            if (frameCount % 60 == 2) {
+                android.util.Log.d("QrAnalyzer", "Decode error: ${e.javaClass.simpleName}: ${e.message}")
+            }
+        } finally {
             imageProxy.close()
         }
     }

@@ -308,14 +308,22 @@ class MainViewModel(
                     // Create identity
                     repository.createIdentity(displayName)
 
-                    // Add phone if provided
+                    // Add phone if provided (non-fatal — validation errors skip the field)
                     phone?.let {
-                        repository.addField(MobileFieldType.PHONE, "Phone", it)
+                        try {
+                            repository.addField(MobileFieldType.PHONE, "Phone", it)
+                        } catch (e: Exception) {
+                            android.util.Log.w("MainViewModel", "Skipping phone field: ${e.message}")
+                        }
                     }
 
-                    // Add email if provided
+                    // Add email if provided (non-fatal — validation errors skip the field)
                     email?.let {
-                        repository.addField(MobileFieldType.EMAIL, "Email", it)
+                        try {
+                            repository.addField(MobileFieldType.EMAIL, "Email", it)
+                        } catch (e: Exception) {
+                            android.util.Log.w("MainViewModel", "Skipping email field: ${e.message}")
+                        }
                     }
 
                     // Mark onboarding complete
@@ -493,15 +501,33 @@ class MainViewModel(
         }
 
     /**
-     * Begin the exchange flow with proximity verification.
-     * Called after QR code is scanned. Transitions to PendingProximity state
-     * where the UI shows a proximity confirmation gate.
-     *
-     * The actual proximity verification happens at the protocol level when
-     * [completeExchangeAfterProximity] creates a proximity exchange session.
+     * Complete exchange directly after QR scan, skipping the proximity verification UI.
+     * QR scanning at close range already proves physical proximity.
      */
-    fun startExchangeWithProximity(qrData: String) {
-        _exchangeState.value = ExchangeFlowState.PendingProximity(qrData, ByteArray(0))
+    suspend fun completeExchangeDirectly(qrData: String) {
+        _exchangeState.value = ExchangeFlowState.Completing
+        val result =
+            try {
+                val exchangeResult =
+                    withContext(Dispatchers.IO) {
+                        repository.completeExchange(qrData)
+                    }
+                loadUserData()
+                if (exchangeResult.success) {
+                    autoRemoveDemoContact()
+                }
+                exchangeResult
+            } catch (_: Exception) {
+                null
+            }
+        if (result != null && result.success) {
+            _exchangeState.value = ExchangeFlowState.Success(result)
+        } else {
+            _exchangeState.value =
+                ExchangeFlowState.Failed(
+                    result?.errorMessage ?: "Exchange failed",
+                )
+        }
     }
 
     /**
@@ -529,7 +555,7 @@ class MainViewModel(
                     autoRemoveDemoContact()
                 }
                 exchangeResult
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 null
             }
         if (result != null && result.success) {

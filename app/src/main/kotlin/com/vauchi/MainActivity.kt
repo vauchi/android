@@ -39,6 +39,7 @@ import com.vauchi.ui.ContactDetailScreen
 import com.vauchi.ui.ContactsScreen
 import com.vauchi.ui.DevicesScreen
 import com.vauchi.ui.ExchangeScreen
+import com.vauchi.ui.FaceToFaceExchangeScreen
 import com.vauchi.ui.HelpScreen
 import com.vauchi.ui.LabelDetailScreen
 import com.vauchi.ui.LabelsScreen
@@ -81,7 +82,10 @@ class MainActivity : ComponentActivity() {
             val deepLinkUri by _deepLinkUri
             VauchiTheme {
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .navigationBarsPadding(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     MainScreen(
@@ -254,26 +258,20 @@ fun MainScreen(
             Screen.Exchange -> {
                 val exchangeState by viewModel.exchangeState.collectAsState()
                 val proximitySupported by viewModel.proximitySupported.collectAsState()
-                val proximityCapability by viewModel.proximityCapability.collectAsState()
-                ExchangeScreen(
+                FaceToFaceExchangeScreen(
                     onBack = {
                         viewModel.resetExchangeState()
                         currentScreen = Screen.Home
                     },
-                    onGenerateQr = { viewModel.generateExchangeQr() },
-                    onScanQr = { currentScreen = Screen.QrScanner },
-                    proximitySupported = proximitySupported,
-                    proximityCapability = proximityCapability,
-                    exchangeState = exchangeState,
-                    onEmitChallenge = { challenge -> viewModel.emitProximityChallenge(challenge) },
-                    onListenForResponse = { timeout -> viewModel.listenForProximityResponse(timeout) },
-                    onStopVerification = { viewModel.stopProximityVerification() },
-                    onProximityVerified = { _ ->
-                        coroutineScope.launch {
-                            viewModel.completeExchangeAfterProximity()
-                        }
+                    onGenerateQr = suspend { viewModel.generateExchangeQr() },
+                    onQrScanned = { qrData: String ->
+                        coroutineScope.launch { viewModel.completeExchangeDirectly(qrData) }
                     },
-                    onCancelProximity = { viewModel.cancelExchangeProximity() },
+                    proximitySupported = proximitySupported,
+                    onEmitChallenge = { challenge: ByteArray -> viewModel.emitProximityChallenge(challenge) },
+                    onListenForResponse = { timeout: ULong -> viewModel.listenForProximityResponse(timeout) },
+                    onStopVerification = { viewModel.stopProximityVerification() },
+                    exchangeState = exchangeState,
                     onExchangeDone = {
                         viewModel.resetExchangeState()
                         currentScreen = Screen.Home
@@ -282,11 +280,11 @@ fun MainScreen(
             }
 
             Screen.QrScanner -> {
+                // Rear camera fallback (accessible from old ExchangeScreen or deep links)
                 QrScannerScreen(
                     onBack = { currentScreen = Screen.Exchange },
                     onQrScanned = { qrData ->
-                        // Start exchange with proximity verification gate
-                        viewModel.startExchangeWithProximity(qrData)
+                        coroutineScope.launch { viewModel.completeExchangeDirectly(qrData) }
                         currentScreen = Screen.Exchange
                     },
                 )
@@ -550,7 +548,7 @@ fun MainScreen(
                 deepLinkHandler.grantConsent()
                 // Start the exchange flow with the payload
                 deepLinkPayload?.let { payload ->
-                    viewModel.startExchangeWithProximity(payload)
+                    coroutineScope.launch { viewModel.completeExchangeDirectly(payload) }
                     currentScreen = Screen.Exchange
                 }
                 deepLinkPayload = null

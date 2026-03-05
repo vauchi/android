@@ -23,9 +23,9 @@ android {
         // Load native libraries for these ABIs
         // arm64-v8a: Modern 64-bit ARM devices
         // armeabi-v7a: Older 32-bit ARM devices (still ~10% of market)
-        // Exclude x86/x86_64 (emulator only) for smaller APK
+        // x86_64: Emulator (included for local dev with local bindings)
         ndk {
-            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
+            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86_64"))
         }
     }
 
@@ -66,6 +66,10 @@ android {
     }
 
     experimentalProperties["android.experimental.enableScreenshotTest"] = true
+
+    lint {
+        lintConfig = file("lint.xml")
+    }
 
     packaging {
         resources {
@@ -129,7 +133,7 @@ dependencies {
     // WorkManager for background sync
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
-    // QR Code generation (ZXing)
+    // QR Code generation and scanning (ZXing)
     implementation("com.google.zxing:core:3.5.3")
 
     // CameraX for QR scanning

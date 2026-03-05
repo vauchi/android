@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
@@ -31,6 +32,7 @@ import com.vauchi.data.ExchangeData
 import com.vauchi.ui.components.ProximityVerification
 import com.vauchi.ui.components.ProximityVerificationResult
 import com.vauchi.util.LocalizationManager
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -259,12 +261,77 @@ fun ExchangeScreen(
                             }
                         }
 
+                        // Countdown timer + refresh button directly under QR
                         exchangeData?.let { data ->
-                            Text(
-                                text = localizationManager.t("exchange.expires_in", mapOf("time" to formatExpiry(data.expiresAt))),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            // Live countdown that ticks every second
+                            var remainingSeconds by remember(data.expiresAt) {
+                                mutableLongStateOf(
+                                    (data.expiresAt.toLong() - System.currentTimeMillis() / 1000).coerceAtLeast(0),
+                                )
+                            }
+
+                            LaunchedEffect(data.expiresAt) {
+                                while (remainingSeconds > 0) {
+                                    delay(1000)
+                                    remainingSeconds =
+                                        (data.expiresAt.toLong() - System.currentTimeMillis() / 1000).coerceAtLeast(0)
+                                }
+                                // Auto-refresh when expired
+                                retryTrigger++
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text =
+                                        if (remainingSeconds > 0) {
+                                            val minutes = remainingSeconds / 60
+                                            val seconds = remainingSeconds % 60
+                                            localizationManager.t(
+                                                "exchange.expires_in",
+                                                mapOf("time" to String.format("%d:%02d", minutes, seconds)),
+                                            )
+                                        } else {
+                                            "Expired"
+                                        },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color =
+                                        if (remainingSeconds <= 30) {
+                                            MaterialTheme.colorScheme.error
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                )
+
+                                TextButton(onClick = { retryTrigger++ }) {
+                                    Icon(
+                                        Icons.Default.Refresh,
+                                        contentDescription = "Refresh QR code",
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Refresh")
+                                }
+                            }
+                        }
+
+                        // Scan button
+                        Button(
+                            onClick = onScanQr,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .semantics {
+                                        contentDescription =
+                                            "Scan QR code. Opens the camera to scan someone else's QR code and add them as a contact."
+                                    },
+                        ) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(localizationManager.t("exchange.scan"))
                         }
 
                         // Proximity verification status
@@ -290,7 +357,7 @@ fun ExchangeScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         // BLE Exchange stub
                         Card(
@@ -333,19 +400,6 @@ fun ExchangeScreen(
                                     modifier = Modifier.padding(horizontal = 8.dp),
                                 )
                             }
-                        }
-
-                        Button(
-                            onClick = onScanQr,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .semantics {
-                                        contentDescription =
-                                            "Scan QR code. Opens the camera to scan someone else's QR code and add them as a contact."
-                                    },
-                        ) {
-                            Text(localizationManager.t("exchange.scan"))
                         }
                     }
                 }
@@ -410,15 +464,4 @@ private fun generateQrBitmap(data: String): Bitmap {
         }
     }
     return bitmap
-}
-
-private fun formatExpiry(timestamp: ULong): String {
-    val seconds = timestamp.toLong()
-    val now = System.currentTimeMillis() / 1000
-    val diff = seconds - now
-    return when {
-        diff < 60 -> "Less than a minute"
-        diff < 3600 -> "${diff / 60} minutes"
-        else -> "${diff / 3600} hours"
-    }
 }

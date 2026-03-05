@@ -48,7 +48,23 @@ data class ExchangeData(
     val qrData: String,
     val publicId: String,
     val expiresAt: ULong,
-)
+    val audioChallenge: ByteArray? = null,
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ExchangeData) return false
+        return qrData == other.qrData && publicId == other.publicId &&
+            expiresAt == other.expiresAt && audioChallenge.contentEquals(other.audioChallenge)
+    }
+
+    override fun hashCode(): Int {
+        var result = qrData.hashCode()
+        result = 31 * result + publicId.hashCode()
+        result = 31 * result + expiresAt.hashCode()
+        result = 31 * result + (audioChallenge?.contentHashCode() ?: 0)
+        return result
+    }
+}
 
 /**
  * Repository class wrapping VauchiMobile UniFFI bindings.
@@ -64,6 +80,23 @@ class VauchiRepository(
 
     companion object {
         private const val KEY_ENCRYPTED_STORAGE_KEY = "encrypted_storage_key"
+
+        /**
+         * Extract the 16-byte audio challenge from a wb:// QR data string.
+         * QR binary layout: [MAGIC(4)][version(1)][pubkey(32)][exchkey(32)][token(32)][audio_challenge(16)][...]
+         * Audio challenge = bytes 101..117 after base64 decode.
+         */
+        fun extractAudioChallenge(qrData: String): ByteArray? {
+            val b64 = qrData.removePrefix("wb://")
+            val bytes =
+                try {
+                    Base64.decode(b64, Base64.NO_WRAP)
+                } catch (_: Exception) {
+                    return null
+                }
+            if (bytes.size < 117) return null
+            return bytes.sliceArray(101 until 117)
+        }
     }
 
     init {
@@ -194,19 +227,24 @@ class VauchiRepository(
             qrData = qrData,
             publicId = vauchi.getPublicId(),
             expiresAt = expiresAt.toULong(),
+            audioChallenge = extractAudioChallenge(qrData),
         )
     }
 
     /**
      * Complete exchange by driving the ExchangeSession state machine (mutual QR flow).
+     *
+     * Face-to-face exchanges are inherently bilateral — both devices scan each other's
+     * QR and independently derive the shared secret. No relay notification needed.
      */
     fun completeExchange(qrData: String): MobileExchangeResult {
         val session = vauchi.createQrExchangeManual()
         session.generateQr()
         session.processQr(qrData)
+        val contactName = session.peerDisplayName() ?: error("QR code missing display name")
         session.theyScannedOurQr()
         session.performKeyAgreement()
-        session.completeCardExchange("New Contact")
+        session.completeCardExchange(contactName)
         return vauchi.finalizeExchange(session)
     }
 
