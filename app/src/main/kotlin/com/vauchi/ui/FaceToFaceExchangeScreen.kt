@@ -13,7 +13,9 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -546,6 +548,7 @@ fun FaceToFaceCameraPreview(
                     cameraProviderFuture.addListener({
                         val cameraProvider = cameraProviderFuture.get()
 
+                        // 720p works better than 1080p on front cameras (less noise for ML Kit)
                         val resolutionSelector =
                             ResolutionSelector
                                 .Builder()
@@ -556,7 +559,6 @@ fun FaceToFaceCameraPreview(
                                     ),
                                 ).build()
 
-                        val debugDir = ctx.getExternalFilesDir("qr_debug")
                         val imageAnalyzer =
                             ImageAnalysis
                                 .Builder()
@@ -568,8 +570,6 @@ fun FaceToFaceCameraPreview(
                                         cameraExecutor,
                                         QrCodeAnalyzer(
                                             onQrCodeDetected = { code -> onQrCodeDetected(code) },
-                                            saveDir = debugDir,
-                                            maxSaveFrames = 5,
                                             isFrontCamera = useFrontCamera,
                                         ),
                                     )
@@ -584,11 +584,24 @@ fun FaceToFaceCameraPreview(
 
                         try {
                             cameraProvider.unbindAll()
-                            cameraProvider.bindToLifecycle(
-                                lifecycleOwner,
-                                cameraSelector,
-                                imageAnalyzer,
-                            )
+                            val camera =
+                                cameraProvider.bindToLifecycle(
+                                    lifecycleOwner,
+                                    cameraSelector,
+                                    imageAnalyzer,
+                                )
+                            // Apply 1.5x zoom on front camera for better QR detection at distance
+                            if (useFrontCamera) {
+                                camera.cameraControl.setZoomRatio(1.5f)
+                            }
+                            // Trigger center auto-focus
+                            val factory = SurfaceOrientedMeteringPointFactory(1f, 1f)
+                            val action =
+                                FocusMeteringAction
+                                    .Builder(factory.createPoint(0.5f, 0.5f))
+                                    .setAutoCancelDuration(3, java.util.concurrent.TimeUnit.SECONDS)
+                                    .build()
+                            camera.cameraControl.startFocusAndMetering(action)
                         } catch (e: Exception) {
                             Log.e("FaceToFace", "Camera binding failed", e)
                         }

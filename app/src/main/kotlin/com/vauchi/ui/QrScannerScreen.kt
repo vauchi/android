@@ -32,11 +32,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.zxing.BinaryBitmap
-import com.google.zxing.NotFoundException
-import com.google.zxing.PlanarYUVLuminanceSource
-import com.google.zxing.common.HybridBinarizer
-import com.google.zxing.qrcode.QRCodeReader
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -216,6 +214,7 @@ fun CameraPreview(onQrCodeDetected: (String) -> Unit) {
                         it.surfaceProvider = previewView.surfaceProvider
                     }
 
+                // 720p works better than 1080p for ML Kit barcode scanning
                 val resolutionSelector =
                     ResolutionSelector
                         .Builder()
@@ -264,170 +263,39 @@ fun CameraPreview(onQrCodeDetected: (String) -> Unit) {
 
 class QrCodeAnalyzer(
     private val onQrCodeDetected: (String) -> Unit,
-    private val saveDir: java.io.File? = null,
-    private val maxSaveFrames: Int = 10,
-    private val isFrontCamera: Boolean = false,
+    @Suppress("unused") private val saveDir: java.io.File? = null,
+    @Suppress("unused") private val maxSaveFrames: Int = 10,
+    @Suppress("unused") private val isFrontCamera: Boolean = false,
 ) : ImageAnalysis.Analyzer {
-    private val hints =
-        mapOf(
-            com.google.zxing.DecodeHintType.TRY_HARDER to true,
-            com.google.zxing.DecodeHintType.POSSIBLE_FORMATS to listOf(com.google.zxing.BarcodeFormat.QR_CODE),
+    private val scanner =
+        BarcodeScanning.getClient(
+            com.google.mlkit.vision.barcode.BarcodeScannerOptions
+                .Builder()
+                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                .build(),
         )
-    private val multiReader =
-        com.google.zxing
-            .MultiFormatReader()
-            .apply { setHints(hints) }
-    private var frameCount = 0
-    private var savedFrameCount = 0
 
     @androidx.camera.core.ExperimentalGetImage
     override fun analyze(imageProxy: androidx.camera.core.ImageProxy) {
-        try {
-            val plane = imageProxy.planes[0]
-            val buffer = plane.buffer
-            val rowStride = plane.rowStride
-            val bytes = ByteArray(buffer.remaining())
-            buffer.get(bytes)
-            val rotation = imageProxy.imageInfo.rotationDegrees
-
-            frameCount++
-            if (frameCount % 60 == 1) {
-                android.util.Log.d(
-                    "QrAnalyzer",
-                    "Frame #$frameCount: ${imageProxy.width}x${imageProxy.height} stride=$rowStride rot=$rotation",
-                )
-            }
-
-            // Rotate Y-plane data to upright orientation if needed
-            val sensorW = imageProxy.width
-            val sensorH = imageProxy.height
-            val (rotatedBytes, rotatedW, rotatedH) =
-                when (rotation) {
-                    90 -> {
-                        val out = ByteArray(sensorW * sensorH)
-                        for (y in 0 until sensorH) {
-                            for (x in 0 until sensorW) {
-                                out[x * sensorH + (sensorH - 1 - y)] = bytes[y * rowStride + x]
-                            }
-                        }
-                        Triple(out, sensorH, sensorW)
-                    }
-
-                    270 -> {
-                        val out = ByteArray(sensorW * sensorH)
-                        for (y in 0 until sensorH) {
-                            for (x in 0 until sensorW) {
-                                out[(sensorW - 1 - x) * sensorH + y] = bytes[y * rowStride + x]
-                            }
-                        }
-                        Triple(out, sensorH, sensorW)
-                    }
-
-                    180 -> {
-                        val out = ByteArray(sensorW * sensorH)
-                        for (y in 0 until sensorH) {
-                            for (x in 0 until sensorW) {
-                                out[(sensorH - 1 - y) * sensorW + (sensorW - 1 - x)] = bytes[y * rowStride + x]
-                            }
-                        }
-                        Triple(out, sensorW, sensorH)
-                    }
-
-                    else -> {
-                        // 0° — copy without stride padding
-                        if (rowStride == sensorW) {
-                            Triple(bytes, sensorW, sensorH)
-                        } else {
-                            val out = ByteArray(sensorW * sensorH)
-                            for (y in 0 until sensorH) {
-                                System.arraycopy(bytes, y * rowStride, out, y * sensorW, sensorW)
-                            }
-                            Triple(out, sensorW, sensorH)
-                        }
-                    }
-                }
-
-            // Save rotated camera frames for diagnosis
-            if (saveDir != null && savedFrameCount < maxSaveFrames && frameCount % 30 == 1) {
-                try {
-                    saveDir.mkdirs()
-                    val bmp = android.graphics.Bitmap.createBitmap(rotatedW, rotatedH, android.graphics.Bitmap.Config.ARGB_8888)
-                    for (y in 0 until rotatedH) {
-                        for (x in 0 until rotatedW) {
-                            val lum = rotatedBytes[y * rotatedW + x].toInt() and 0xFF
-                            bmp.setPixel(x, y, (0xFF shl 24) or (lum shl 16) or (lum shl 8) or lum)
-                        }
-                    }
-                    val outFile = java.io.File(saveDir, "frame_$savedFrameCount.png")
-                    java.io.FileOutputStream(outFile).use { fos ->
-                        bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, fos)
-                    }
-                    bmp.recycle()
-                    savedFrameCount++
-                    android.util.Log.d("QrAnalyzer", "Saved frame $savedFrameCount to ${outFile.absolutePath}")
-                } catch (e: Exception) {
-                    android.util.Log.w("QrAnalyzer", "Failed to save frame: ${e.message}")
-                }
-            }
-
-            // Front camera produces mirrored frames — try mirrored first for speed.
-            val primaryMirrored = isFrontCamera
-
-            // Try full frame first, then center crop (2x zoom) for small/distant QR codes
-            val detected =
-                tryDecodeQr(rotatedBytes, rotatedW, rotatedH, primaryMirrored)
-                    ?: run {
-                        // Center crop: middle 50% of frame = effectively 2x digital zoom
-                        val cropW = rotatedW / 2
-                        val cropH = rotatedH / 2
-                        val cropX = (rotatedW - cropW) / 2
-                        val cropY = (rotatedH - cropH) / 2
-                        tryDecodeQr(rotatedBytes, rotatedW, rotatedH, primaryMirrored, cropX, cropY, cropW, cropH)
-                    }
-
-            detected?.let { value ->
-                android.util.Log.d("QrAnalyzer", "QR detected: ${value.take(30)}...")
-                onQrCodeDetected(value)
-            }
-        } catch (_: NotFoundException) {
-            // No QR code found in this frame — normal during scanning
-        } catch (e: Exception) {
-            if (frameCount % 60 == 2) {
-                android.util.Log.d("QrAnalyzer", "Decode error: ${e.javaClass.simpleName}: ${e.message}")
-            }
-        } finally {
+        val mediaImage = imageProxy.image
+        if (mediaImage == null) {
             imageProxy.close()
+            return
         }
-    }
 
-    private fun tryDecodeQr(
-        data: ByteArray,
-        dataWidth: Int,
-        dataHeight: Int,
-        mirrored: Boolean,
-        cropX: Int = 0,
-        cropY: Int = 0,
-        cropW: Int = dataWidth,
-        cropH: Int = dataHeight,
-    ): String? =
-        try {
-            val source = PlanarYUVLuminanceSource(data, dataWidth, dataHeight, cropX, cropY, cropW, cropH, mirrored)
-            val bitmap = BinaryBitmap(HybridBinarizer(source))
-            val result = multiReader.decodeWithState(bitmap)
-            multiReader.reset()
-            result.text
-        } catch (_: NotFoundException) {
-            multiReader.reset()
-            // Try opposite mirror
-            try {
-                val source = PlanarYUVLuminanceSource(data, dataWidth, dataHeight, cropX, cropY, cropW, cropH, !mirrored)
-                val bitmap = BinaryBitmap(HybridBinarizer(source))
-                val result = multiReader.decodeWithState(bitmap)
-                multiReader.reset()
-                result.text
-            } catch (_: NotFoundException) {
-                multiReader.reset()
-                null
+        val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+
+        scanner
+            .process(inputImage)
+            .addOnSuccessListener { barcodes ->
+                for (barcode in barcodes) {
+                    barcode.rawValue?.let { value ->
+                        android.util.Log.d("QrAnalyzer", "QR detected: ${value.take(30)}...")
+                        onQrCodeDetected(value)
+                    }
+                }
+            }.addOnCompleteListener {
+                imageProxy.close()
             }
-        }
+    }
 }

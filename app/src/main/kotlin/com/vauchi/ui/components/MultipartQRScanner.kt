@@ -27,11 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.zxing.BinaryBitmap
-import com.google.zxing.NotFoundException
-import com.google.zxing.PlanarYUVLuminanceSource
-import com.google.zxing.common.HybridBinarizer
-import com.google.zxing.qrcode.QRCodeReader
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 
 /**
@@ -318,57 +316,49 @@ private fun MultipartCameraPreview(onChunkScanned: (String) -> Unit) {
 /**
  * Image analyzer for continuous multipart QR code scanning.
  *
- * Uses ZXing QRCodeReader with a short debounce (100ms) to allow rapid
+ * Uses ML Kit barcode scanner with a short debounce (100ms) to allow rapid
  * scanning of different QR codes as they cycle on the other device's display.
  */
 private class MultipartQRAnalyzer(
     private val onChunkScanned: (String) -> Unit,
 ) : ImageAnalysis.Analyzer {
-    private val reader = QRCodeReader()
+    private val scanner =
+        BarcodeScanning.getClient(
+            com.google.mlkit.vision.barcode.BarcodeScannerOptions
+                .Builder()
+                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                .build(),
+        )
     private var lastScanTimeMs = 0L
 
     @androidx.camera.core.ExperimentalGetImage
     override fun analyze(imageProxy: ImageProxy) {
-        // Short debounce to avoid processing the same frame repeatedly
-        // while still allowing rapid capture of different chunks
         val now = System.currentTimeMillis()
         if (now - lastScanTimeMs < SCAN_DEBOUNCE_MS) {
             imageProxy.close()
             return
         }
 
-        try {
-            val plane = imageProxy.planes[0]
-            val buffer = plane.buffer
-            val rowStride = plane.rowStride
-            val bytes = ByteArray(buffer.remaining())
-            buffer.get(bytes)
-
-            val source =
-                PlanarYUVLuminanceSource(
-                    bytes,
-                    rowStride, // Use row stride, not image width (may include padding)
-                    imageProxy.height,
-                    0,
-                    0,
-                    imageProxy.width,
-                    imageProxy.height,
-                    false,
-                )
-            val bitmap = BinaryBitmap(HybridBinarizer(source))
-            val result = reader.decode(bitmap)
-
-            lastScanTimeMs = System.currentTimeMillis()
-            result.text?.let { value ->
-                onChunkScanned(value)
-            }
-        } catch (_: NotFoundException) {
-            // No QR code found in this frame — normal during scanning
-        } catch (_: Exception) {
-            // Other decode errors — skip frame
-        } finally {
+        val mediaImage = imageProxy.image
+        if (mediaImage == null) {
             imageProxy.close()
+            return
         }
+
+        val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+
+        scanner
+            .process(inputImage)
+            .addOnSuccessListener { barcodes ->
+                for (barcode in barcodes) {
+                    barcode.rawValue?.let { value ->
+                        lastScanTimeMs = System.currentTimeMillis()
+                        onChunkScanned(value)
+                    }
+                }
+            }.addOnCompleteListener {
+                imageProxy.close()
+            }
     }
 
     companion object {
