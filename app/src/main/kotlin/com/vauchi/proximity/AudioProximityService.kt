@@ -5,6 +5,7 @@
 package com.vauchi.proximity
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioFormat
@@ -43,6 +44,8 @@ class AudioProximityService(
     private val isPlaying = AtomicBoolean(false)
     private var audioRecord: AudioRecord? = null
     private var audioTrack: AudioTrack? = null
+    private var cachedRecord: AudioRecord? = null
+    private var cachedSampleRate: Int = 0
 
     // MARK: - PlatformAudioHandler Implementation
 
@@ -159,6 +162,45 @@ class AudioProximityService(
         }
     }
 
+    @SuppressLint("MissingPermission")
+    private fun getOrCreateAudioRecord(sampleRateInt: Int): AudioRecord? {
+        cachedRecord?.let { record ->
+            if (cachedSampleRate == sampleRateInt && record.state == AudioRecord.STATE_INITIALIZED) {
+                return record
+            }
+            record.release()
+        }
+
+        val bufferSize =
+            AudioRecord.getMinBufferSize(
+                sampleRateInt,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_FLOAT,
+            )
+
+        if (bufferSize == AudioRecord.ERROR || bufferSize == AudioRecord.ERROR_BAD_VALUE) {
+            return null
+        }
+
+        val record =
+            AudioRecord(
+                MediaRecorder.AudioSource.UNPROCESSED,
+                sampleRateInt,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_FLOAT,
+                bufferSize * 2,
+            )
+
+        if (record.state != AudioRecord.STATE_INITIALIZED) {
+            record.release()
+            return null
+        }
+
+        cachedRecord = record
+        cachedSampleRate = sampleRateInt
+        return record
+    }
+
     /**
      * Record audio and return samples.
      * Returns recorded samples, or empty list on timeout/error.
@@ -179,36 +221,14 @@ class AudioProximityService(
 
         return try {
             val sampleRateInt = sampleRate.toInt()
-            val bufferSize =
-                AudioRecord.getMinBufferSize(
-                    sampleRateInt,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_FLOAT,
-                )
-
-            if (bufferSize == AudioRecord.ERROR || bufferSize == AudioRecord.ERROR_BAD_VALUE) {
-                return emptyList()
-            }
-
-            val record =
-                AudioRecord(
-                    MediaRecorder.AudioSource.UNPROCESSED,
-                    sampleRateInt,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_FLOAT,
-                    bufferSize * 2,
-                )
-
-            if (record.state != AudioRecord.STATE_INITIALIZED) {
-                record.release()
-                return emptyList()
-            }
+            val record = getOrCreateAudioRecord(sampleRateInt) ?: return emptyList()
 
             audioRecord = record
             isRecording.set(true)
 
+            val bufferSize = record.bufferSizeInFrames
             val samples = mutableListOf<Float>()
-            val buffer = FloatArray(bufferSize / 4)
+            val buffer = FloatArray(bufferSize)
 
             record.startRecording()
 
@@ -225,15 +245,12 @@ class AudioProximityService(
             }
 
             record.stop()
-            record.release()
-            audioRecord = null
+            // Do NOT release — keep cached for reuse
             isRecording.set(false)
 
             samples
         } catch (e: Exception) {
             isRecording.set(false)
-            audioRecord?.release()
-            audioRecord = null
             emptyList()
         }
     }
@@ -250,13 +267,14 @@ class AudioProximityService(
         isRecording.set(false)
         isPlaying.set(false)
 
-        audioRecord?.let {
+        cachedRecord?.let {
             try {
                 it.stop()
                 it.release()
             } catch (_: Exception) {
             }
         }
+        cachedRecord = null
         audioRecord = null
 
         audioTrack?.let {
