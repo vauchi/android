@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Vauchi</string>
+    <string name="nfc_exchange_service_desc">Vauchi NFC Contact Exchange</string>
+    <string name="nfc_exchange_aid_desc">Vauchi NFC Exchange</string>
 </resources>
