@@ -107,10 +107,10 @@ class VauchiHceService : HostApduService() {
         session: MobileNfcHandshake,
         data: ByteArray,
     ): ByteArray {
-        val ackResult = session.processKeyOffer(data.toList())
+        val ackResult = session.processKeyOffer(data)
 
-        val ackBytes = ackResult.keyAckBytes.toByteArray()
-        val cardBytes = ackResult.encryptedCardBytes.toByteArray()
+        val ackBytes = ackResult.keyAckBytes
+        val cardBytes = ackResult.encryptedCardBytes
 
         // Format: [ack_len_hi, ack_len_lo, ack_bytes..., card_bytes..., SW_OK]
         val response = ByteArray(2 + ackBytes.size + cardBytes.size + 2)
@@ -131,7 +131,7 @@ class VauchiHceService : HostApduService() {
         session: MobileNfcHandshake,
         data: ByteArray,
     ): ByteArray {
-        val result = session.processEncryptedCard(data.toList())
+        val result = session.processEncryptedCard(data)
         Log.d(TAG, "Exchange complete: ${result.remoteDisplayName}")
         return SW_OK
     }

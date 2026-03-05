@@ -4,8 +4,8 @@
 
 package com.vauchi.nfc
 
-import android.nfc.IsoDep
 import android.nfc.Tag
+import android.nfc.tech.IsoDep
 import android.util.Log
 import uniffi.vauchi_mobile.MobileNfcExchangeResult
 import uniffi.vauchi_mobile.MobileNfcHandshake
@@ -50,7 +50,7 @@ class NfcReaderService {
 
             // Step 2: Send key offer (Phase 1)
             val keyOffer = session.createKeyOffer()
-            val offerApdu = buildApdu(VauchiHceService.INS_KEY_OFFER, keyOffer.toByteArray())
+            val offerApdu = buildApdu(VauchiHceService.INS_KEY_OFFER, keyOffer)
             val phase2Response = isoDep.transceive(offerApdu)
             if (!isSuccess(phase2Response)) {
                 return NfcExchangeOutcome.Error("Key offer rejected")
@@ -71,12 +71,12 @@ class NfcReaderService {
             // Step 3: Process key ack + encrypted card (Phase 2 initiator side)
             val ourEncryptedCard =
                 session.processKeyAck(
-                    ackBytes.toList(),
-                    encryptedCard.toList(),
+                    ackBytes,
+                    encryptedCard,
                 )
 
             // Step 4: Send our encrypted card (Phase 3)
-            val cardApdu = buildApdu(VauchiHceService.INS_ENCRYPTED_CARD, ourEncryptedCard.toByteArray())
+            val cardApdu = buildApdu(VauchiHceService.INS_ENCRYPTED_CARD, ourEncryptedCard)
             val phase3Response = isoDep.transceive(cardApdu)
             if (!isSuccess(phase3Response)) {
                 return NfcExchangeOutcome.Error("Encrypted card rejected")
@@ -91,7 +91,7 @@ class NfcReaderService {
             // Try relay fallback if we have a shared key
             return try {
                 val exchangeId = session.enterRelayFallback()
-                NfcExchangeOutcome.RelayFallback(exchangeId.toByteArray())
+                NfcExchangeOutcome.RelayFallback(exchangeId)
             } catch (_: Exception) {
                 NfcExchangeOutcome.Error(e.message ?: "Unknown error")
             }
