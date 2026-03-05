@@ -147,13 +147,13 @@ fun MultiStageExchangeScreen(
         }
     }
 
-    // QR display cycling loop — gets next QR from core on a timer
+    // QR display cycling loop — gets next QR from core on a timer.
+    // Core manages the grace period after Complete (cycling VRFY+CONF so slower
+    // peers can catch up). We keep calling getDisplayQr() until core returns null.
     LaunchedEffect(cameraPermissionGranted, multiStageState) {
         if (!cameraPermissionGranted) return@LaunchedEffect
-        // Keep cycling while session is active (not Complete or Failed)
-        while (multiStageState !is MobileProtocolState.Complete &&
-            multiStageState !is MobileProtocolState.Failed
-        ) {
+        if (multiStageState is MobileProtocolState.Failed) return@LaunchedEffect
+        while (true) {
             val payload = viewModel.getMultiStageDisplayQr()
             if (payload != null) {
                 qrBitmap =
@@ -164,8 +164,8 @@ fun MultiStageExchangeScreen(
                 // Floor at 100ms to prevent tight CPU spin
                 delay(maxOf(payload.displayDurationMs.toLong(), 100L))
             } else {
-                // No QR to display yet, poll at default rate
-                delay(300L)
+                // Core returned null — either not started or grace period expired
+                break
             }
             // Refresh protocol state from core
             viewModel.getMultiStageState()
