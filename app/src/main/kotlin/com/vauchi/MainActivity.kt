@@ -41,15 +41,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vauchi.ui.ContactDetailScreen
 import com.vauchi.ui.ContactsScreen
 import com.vauchi.ui.DevicesScreen
-import com.vauchi.ui.ExchangeScreen
-import com.vauchi.ui.FaceToFaceExchangeScreen
 import com.vauchi.ui.HelpScreen
 import com.vauchi.ui.LabelDetailScreen
 import com.vauchi.ui.LabelsScreen
 import com.vauchi.ui.LanguageSettingsScreen
 import com.vauchi.ui.MainViewModel
 import com.vauchi.ui.MultiStageExchangeScreen
-import com.vauchi.ui.QrScannerScreen
 import com.vauchi.ui.RecoveryScreen
 import com.vauchi.ui.SettingsScreen
 import com.vauchi.ui.SyncState
@@ -119,11 +116,9 @@ class MainActivity : FragmentActivity() {
 
 enum class Screen {
     Home,
-    Exchange,
     MultiStageExchange,
     Contacts,
     ContactDetail,
-    QrScanner,
     Settings,
     Devices,
     Recovery,
@@ -272,25 +267,6 @@ fun MainScreen(
                 }
             }
 
-            Screen.Exchange -> {
-                val exchangeState by viewModel.exchangeState.collectAsState()
-                FaceToFaceExchangeScreen(
-                    onBack = {
-                        viewModel.resetExchangeState()
-                        currentScreen = Screen.Home
-                    },
-                    onGenerateQr = suspend { viewModel.generateExchangeQr() },
-                    onQrScanned = { qrData: String ->
-                        viewModel.coordinateAndCompleteExchange(qrData)
-                    },
-                    exchangeState = exchangeState,
-                    onExchangeDone = {
-                        viewModel.resetExchangeState()
-                        currentScreen = Screen.Home
-                    },
-                )
-            }
-
             Screen.MultiStageExchange -> {
                 MultiStageExchangeScreen(
                     viewModel = viewModel,
@@ -301,17 +277,6 @@ fun MainScreen(
                     onDone = {
                         viewModel.cancelMultiStageExchange()
                         currentScreen = Screen.Home
-                    },
-                )
-            }
-
-            Screen.QrScanner -> {
-                // Rear camera fallback (accessible from old ExchangeScreen or deep links)
-                QrScannerScreen(
-                    onBack = { currentScreen = Screen.Exchange },
-                    onQrScanned = { qrData ->
-                        coroutineScope.launch { viewModel.coordinateAndCompleteExchange(qrData) }
-                        currentScreen = Screen.Exchange
                     },
                 )
             }
@@ -572,11 +537,10 @@ fun MainScreen(
             onConfirm = {
                 showDeepLinkConsent = false
                 deepLinkHandler.grantConsent()
-                // Start the exchange flow with the payload
-                deepLinkPayload?.let { payload ->
-                    coroutineScope.launch { viewModel.coordinateAndCompleteExchange(payload) }
-                    currentScreen = Screen.Exchange
-                }
+                // TODO: Deep links use the old wb:// single-QR format.
+                // Navigate to multi-stage exchange for now; deep link exchange
+                // will be re-implemented when the protocol supports it.
+                currentScreen = Screen.MultiStageExchange
                 deepLinkPayload = null
             },
             onDeny = {

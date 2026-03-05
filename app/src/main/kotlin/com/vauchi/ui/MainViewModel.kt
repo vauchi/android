@@ -10,8 +10,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vauchi.data.AuthenticationRequiredException
 import com.vauchi.data.DeviceNotSecureException
-import com.vauchi.data.ExchangeData
-import com.vauchi.data.ExchangeSessionData
 import com.vauchi.data.VauchiRepository
 import com.vauchi.ui.components.ProximityVerificationResult
 import com.vauchi.ui.model.PasswordStrengthLevel
@@ -34,8 +32,6 @@ import uniffi.vauchi_mobile.MobileDeletionInfo
 import uniffi.vauchi_mobile.MobileDeletionState
 import uniffi.vauchi_mobile.MobileDemoContact
 import uniffi.vauchi_mobile.MobileDemoContactState
-import uniffi.vauchi_mobile.MobileExchangeResult
-import uniffi.vauchi_mobile.MobileExchangeSession
 import uniffi.vauchi_mobile.MobileFieldType
 import uniffi.vauchi_mobile.MobileFieldValidation
 import uniffi.vauchi_mobile.MobileGdprExport
@@ -65,34 +61,6 @@ sealed class SyncState {
     data class Error(
         val message: String,
     ) : SyncState()
-}
-
-/**
- * State machine for the bidirectional contact exchange flow.
- *
- * Flow: Idle -> Scanned (peer QR processed) -> Completing -> Success | Failed
- */
-sealed class ExchangeFlowState {
-    /** No exchange in progress. */
-    object Idle : ExchangeFlowState()
-
-    /** Peer QR scanned and processed — completing automatically. */
-    data class Scanned(
-        val peerName: String,
-    ) : ExchangeFlowState()
-
-    /** Exchange completing (key agreement + card exchange). */
-    object Completing : ExchangeFlowState()
-
-    /** Exchange completed successfully. */
-    data class Success(
-        val result: MobileExchangeResult,
-    ) : ExchangeFlowState()
-
-    /** Exchange failed. */
-    data class Failed(
-        val error: String,
-    ) : ExchangeFlowState()
 }
 
 sealed class UiState {
@@ -126,15 +94,7 @@ class MainViewModel(
 
     private val networkMonitor = NetworkMonitor(application)
 
-    // Exchange flow state (bidirectional coordination)
-    private val _exchangeState = MutableStateFlow<ExchangeFlowState>(ExchangeFlowState.Idle)
-    val exchangeState: StateFlow<ExchangeFlowState> = _exchangeState.asStateFlow()
-
-    // Active exchange session — MUST be reused for the entire exchange lifecycle
-    private var activeExchangeSession: MobileExchangeSession? = null
-    private var activeExchangeData: ExchangeData? = null
-
-    // Multi-stage exchange session (new chunked protocol)
+    // Multi-stage exchange session (chunked QR protocol)
     private var multiStageSession: MobileMultiStageSession? = null
     private val _multiStageState = MutableStateFlow<MobileProtocolState>(MobileProtocolState.Idle)
     val multiStageState: StateFlow<MobileProtocolState> = _multiStageState.asStateFlow()
@@ -455,111 +415,6 @@ class MainViewModel(
         }
     }
 
-    /**
-     * Generate exchange QR and store the session for later reuse.
-     * The SAME session must be used for processQr/finalize.
-     */
-    suspend fun generateExchangeQr(): ExchangeData? =
-        try {
-            val sessionData =
-                withContext(Dispatchers.IO) {
-                    repository.generateExchangeQrWithSession()
-                }
-            activeExchangeSession = sessionData.session
-            activeExchangeData = sessionData.exchangeData
-            Log.d("Exchange", "Session created, QR generated (challenge=${sessionData.exchangeData.audioChallenge?.size ?: 0} bytes)")
-            sessionData.exchangeData
-        } catch (e: Exception) {
-            Log.d("Exchange", "generateExchangeQr failed: ${e.message}")
-            null
-        }
-
-    /**
-     * Process a scanned QR on the held session and complete the exchange.
-     * QR stays visible during Scanned state so the peer can still scan ours.
-     * Flow: Scanned (QR visible) → Completing → Success | Failed
-     */
-    suspend fun coordinateAndCompleteExchange(qrData: String) {
-        val session = activeExchangeSession
-        if (session == null) {
-            Log.d("Exchange", "coordinateAndComplete: no active session")
-            _exchangeState.value = ExchangeFlowState.Failed("No active exchange session")
-            return
-        }
-
-        // Step 1: Process the scanned QR on the held session
-        Log.d("Exchange", "Processing scanned QR on held session...")
-        val peerName =
-            try {
-                withContext(Dispatchers.IO) {
-                    session.processQr(qrData)
-                    session.peerDisplayName() ?: "Unknown"
-                }
-            } catch (e: Exception) {
-                Log.d("Exchange", "processQr failed: ${e.message}")
-                _exchangeState.value = ExchangeFlowState.Failed("Invalid QR: ${e.message}")
-                return
-            }
-        Log.d("Exchange", "Peer recognized: $peerName")
-        _exchangeState.value = ExchangeFlowState.Scanned(peerName)
-
-        // Step 2: Complete exchange immediately — mutual QR scan proves proximity.
-        completeExchangeOnSession(session, peerName)
-    }
-
-    /**
-     * Drive the session through the remaining state machine steps and finalize.
-     */
-    private suspend fun completeExchangeOnSession(
-        session: MobileExchangeSession,
-        peerName: String,
-    ) {
-        _exchangeState.value = ExchangeFlowState.Completing
-        Log.d("Exchange", "completeExchangeOnSession: starting state machine steps...")
-        val result =
-            try {
-                val exchangeResult =
-                    withContext(Dispatchers.IO) {
-                        Log.d("Exchange", "  confirmProximity...")
-                        session.confirmProximity()
-                        Log.d("Exchange", "  theyScannedOurQr...")
-                        session.theyScannedOurQr()
-                        Log.d("Exchange", "  performKeyAgreement...")
-                        session.performKeyAgreement()
-                        Log.d("Exchange", "  completeCardExchange...")
-                        session.completeCardExchange(peerName)
-                        Log.d("Exchange", "  finalizeExchange...")
-                        repository.finalizeExchange(session)
-                    }
-                loadUserData()
-                if (exchangeResult.success) {
-                    autoRemoveDemoContact()
-                }
-                Log.d("Exchange", "Exchange completed: success=${exchangeResult.success}")
-                exchangeResult
-            } catch (e: Exception) {
-                Log.d("Exchange", "Exchange FAILED with exception: ${e.message}")
-                null
-            }
-        if (result != null && result.success) {
-            _exchangeState.value = ExchangeFlowState.Success(result)
-        } else {
-            _exchangeState.value =
-                ExchangeFlowState.Failed(
-                    result?.errorMessage ?: "Exchange failed",
-                )
-        }
-        clearActiveSession()
-    }
-
-    /**
-     * Cancel exchange and reset state.
-     */
-    fun cancelExchangeProximity() {
-        clearActiveSession()
-        _exchangeState.value = ExchangeFlowState.Idle
-    }
-
     // Proximity stubs — ultrasonic removed from exchange. Kept for DevicesScreen device linking.
     val proximitySupported: StateFlow<Boolean> = MutableStateFlow(false)
     val proximityCapability: StateFlow<String> = MutableStateFlow("none")
@@ -569,20 +424,6 @@ class MainViewModel(
     fun listenForProximityResponse(timeoutMs: ULong = 5000u): ByteArray? = null
 
     fun stopProximityVerification() {}
-
-    /**
-     * Reset exchange state back to idle (e.g., after success/failure acknowledged).
-     */
-    fun resetExchangeState() {
-        clearActiveSession()
-        _exchangeState.value = ExchangeFlowState.Idle
-    }
-
-    private fun clearActiveSession() {
-        Log.d("Exchange", "Clearing active session")
-        activeExchangeSession = null
-        activeExchangeData = null
-    }
 
     // --- Multi-stage exchange (chunked QR protocol) ---
 
@@ -1289,7 +1130,7 @@ class MainViewModel(
 
     /**
      * Auto-remove demo contact after first real exchange.
-     * Called automatically by completeExchangeOnSession().
+     * Called automatically after a successful exchange.
      */
     private fun autoRemoveDemoContact() {
         viewModelScope.launch {
