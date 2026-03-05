@@ -111,39 +111,6 @@ fun ExchangeScreen(
                     CircularProgressIndicator(modifier = Modifier.size(48.dp))
                 }
 
-                is ExchangeFlowState.Coordinating -> {
-                    Text(
-                        text = "Verifying...",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.semantics { heading() },
-                    )
-                    Text(
-                        text = "Confirming the other device scanned your QR",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    CircularProgressIndicator(modifier = Modifier.size(48.dp))
-                }
-
-                is ExchangeFlowState.ManualFallback -> {
-                    Text(
-                        text = "Confirm face-to-face",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.semantics { heading() },
-                    )
-                    Text(
-                        text = "Ultrasonic verification timed out. Confirm you are physically next to the other person.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Button(
-                        onClick = onCancelProximity,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Confirm & Exchange")
-                    }
-                }
-
                 is ExchangeFlowState.Completing -> {
                     // Exchange is being completed after proximity verification
                     Spacer(modifier = Modifier.height(32.dp))
@@ -473,7 +440,12 @@ fun ScanQrDialog(
 
 private fun generateQrBitmap(data: String): Bitmap {
     val writer = QRCodeWriter()
-    val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, 512, 512)
+    val hints =
+        mapOf(
+            com.google.zxing.EncodeHintType.ERROR_CORRECTION to com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M,
+            com.google.zxing.EncodeHintType.MARGIN to 2,
+        )
+    val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, 1024, 1024, hints)
     val width = bitMatrix.width
     val height = bitMatrix.height
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)

@@ -282,7 +282,6 @@ fun MainScreen(
                     onQrScanned = { qrData: String ->
                         viewModel.coordinateAndCompleteExchange(qrData)
                     },
-                    onManualConfirm = { viewModel.confirmManualAndComplete() },
                     proximitySupported = proximitySupported,
                     onEmitChallenge = { challenge: ByteArray -> viewModel.emitProximityChallenge(challenge) },
                     onStopVerification = { viewModel.stopProximityVerification() },

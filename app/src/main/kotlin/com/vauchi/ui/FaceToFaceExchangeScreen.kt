@@ -5,6 +5,8 @@
 package com.vauchi.ui
 
 import android.Manifest
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.util.Log
@@ -12,11 +14,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.Preview
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -52,6 +52,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Face-to-face exchange screen: shows QR code in the top half and front camera
@@ -69,7 +70,6 @@ fun FaceToFaceExchangeScreen(
     onBack: () -> Unit,
     onGenerateQr: suspend () -> ExchangeData?,
     onQrScanned: suspend (String) -> Unit,
-    onManualConfirm: suspend () -> Unit = {},
     proximitySupported: Boolean = false,
     onEmitChallenge: (ByteArray) -> Boolean = { false },
     onStopVerification: () -> Unit = {},
@@ -80,12 +80,26 @@ fun FaceToFaceExchangeScreen(
     val localizationManager = remember { LocalizationManager.getInstance(context) }
     val coroutineScope = rememberCoroutineScope()
 
+    // Lock orientation to portrait during exchange to prevent display disruption
+    DisposableEffect(Unit) {
+        val activity = context as? Activity
+        val previousOrientation = activity?.requestedOrientation
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        onDispose {
+            activity?.requestedOrientation = previousOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
     var exchangeData by remember { mutableStateOf<ExchangeData?>(null) }
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var retryTrigger by remember { mutableIntStateOf(0) }
     var useFrontCamera by remember { mutableStateOf(true) }
     var proximityConfirmed by remember { mutableStateOf(false) }
+    // AtomicBoolean guard prevents duplicate QR callbacks from the camera analyzer
+    // thread — Compose state (`mutableStateOf`) doesn't propagate fast enough to
+    // prevent the analyzer firing twice before recomposition.
+    val scannerGuard = remember { AtomicBoolean(true) }
     var scannerActive by remember { mutableStateOf(true) }
     var cameraPermissionGranted by remember {
         mutableStateOf(
@@ -234,8 +248,7 @@ fun FaceToFaceExchangeScreen(
                                             Modifier
                                                 .fillMaxWidth()
                                                 .aspectRatio(1f)
-                                                .background(Color.White)
-                                                .padding(2.dp),
+                                                .background(Color.White),
                                     )
                                 }
 
@@ -245,7 +258,7 @@ fun FaceToFaceExchangeScreen(
                                         FaceToFaceCameraPreview(
                                             useFrontCamera = useFrontCamera,
                                             onQrCodeDetected = { code ->
-                                                if (code.startsWith("wb://")) {
+                                                if (code.startsWith("wb://") && scannerGuard.compareAndSet(true, false)) {
                                                     scannerActive = false
                                                     coroutineScope.launch { onQrScanned(code) }
                                                 }
@@ -350,31 +363,55 @@ fun FaceToFaceExchangeScreen(
                 }
             }
 
-            is ExchangeFlowState.Completing -> {
-                Box(
+            // Intermediate states: keep QR visible so peer can still scan ours.
+            // Both devices complete independently after scanning each other's QR.
+            is ExchangeFlowState.Scanned,
+            is ExchangeFlowState.Completing,
+            -> {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier =
                         Modifier
                             .fillMaxSize()
                             .padding(padding),
-                    contentAlignment = Alignment.Center,
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(modifier = Modifier.size(48.dp))
-                        Spacer(modifier = Modifier.height(16.dp))
+                    // Status text at top, QR stays large for peer to scan
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Completing exchange...",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            when (exchangeState) {
+                                is ExchangeFlowState.Scanned -> "Found ${exchangeState.peerName}! Keep phones together."
+                                else -> "Exchanging contacts..."
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
                         )
-                        if (proximityConfirmed) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "Proximity verified",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // QR code stays FULL WIDTH so peer can still scan
+                    qrBitmap?.let { bitmap ->
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Your QR code — keep visible for peer",
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .background(Color.White),
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        "Keep phones face-to-face",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
 
@@ -415,6 +452,7 @@ fun FaceToFaceExchangeScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
                             onClick = {
+                                scannerGuard.set(true)
                                 scannerActive = true
                                 proximityConfirmed = false
                                 onExchangeDone()
@@ -461,6 +499,7 @@ fun FaceToFaceExchangeScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
                             onClick = {
+                                scannerGuard.set(true)
                                 scannerActive = true
                                 proximityConfirmed = false
                                 onExchangeDone()
@@ -471,101 +510,6 @@ fun FaceToFaceExchangeScreen(
                                     .padding(horizontal = 24.dp),
                         ) {
                             Text(localizationManager.t("action.retry"))
-                        }
-                    }
-                }
-            }
-
-            is ExchangeFlowState.Scanned -> {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(padding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(modifier = Modifier.size(48.dp))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "Found ${exchangeState.peerName}!",
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Verifying proximity...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-
-            is ExchangeFlowState.Coordinating -> {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(padding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(modifier = Modifier.size(48.dp))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "Verifying...",
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Confirming the other device scanned your QR",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-
-            is ExchangeFlowState.ManualFallback -> {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(padding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.padding(32.dp),
-                    ) {
-                        Text(
-                            "Confirm face-to-face",
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                        Text(
-                            "Ultrasonic verification timed out. Confirm you are physically next to the other person.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = { coroutineScope.launch { onManualConfirm() } },
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 24.dp),
-                        ) {
-                            Text("Confirm & Exchange")
-                        }
-                        OutlinedButton(
-                            onClick = onBack,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 24.dp),
-                        ) {
-                            Text(localizationManager.t("action.cancel"))
                         }
                     }
                 }
@@ -591,70 +535,79 @@ fun FaceToFaceCameraPreview(
         onDispose { cameraExecutor.shutdown() }
     }
 
+    // Use an invisible AndroidView just to anchor the lifecycle-aware camera.
+    // We only bind ImageAnalysis (no Preview use case) so no surface is needed,
+    // which avoids buffer dequeue failures on devices like Pixel 3a.
     AndroidView(
         factory = { ctx ->
-            PreviewView(ctx)
-        },
-        update = { previewView ->
-            val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-            cameraProviderFuture.addListener({
-                val cameraProvider = cameraProviderFuture.get()
+            android.view.View(ctx).apply {
+                // Trigger camera setup once the view is attached
+                post {
+                    val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                    cameraProviderFuture.addListener({
+                        val cameraProvider = cameraProviderFuture.get()
 
-                val preview =
-                    Preview.Builder().build().also {
-                        it.surfaceProvider = previewView.surfaceProvider
-                    }
+                        val resolutionSelector =
+                            ResolutionSelector
+                                .Builder()
+                                .setResolutionStrategy(
+                                    ResolutionStrategy(
+                                        android.util.Size(1280, 720),
+                                        ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER,
+                                    ),
+                                ).build()
 
-                val resolutionSelector =
-                    ResolutionSelector
-                        .Builder()
-                        .setResolutionStrategy(
-                            ResolutionStrategy(
-                                android.util.Size(1920, 1080),
-                                ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER,
-                            ),
-                        ).build()
+                        val debugDir = ctx.getExternalFilesDir("qr_debug")
+                        val imageAnalyzer =
+                            ImageAnalysis
+                                .Builder()
+                                .setResolutionSelector(resolutionSelector)
+                                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                .build()
+                                .also { analysis ->
+                                    analysis.setAnalyzer(
+                                        cameraExecutor,
+                                        QrCodeAnalyzer(
+                                            onQrCodeDetected = { code -> onQrCodeDetected(code) },
+                                            saveDir = debugDir,
+                                            maxSaveFrames = 5,
+                                            isFrontCamera = useFrontCamera,
+                                        ),
+                                    )
+                                }
 
-                val imageAnalyzer =
-                    ImageAnalysis
-                        .Builder()
-                        .setResolutionSelector(resolutionSelector)
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .build()
-                        .also { analysis ->
-                            analysis.setAnalyzer(
-                                cameraExecutor,
-                                QrCodeAnalyzer(onQrCodeDetected = { code -> onQrCodeDetected(code) }),
+                        val cameraSelector =
+                            if (useFrontCamera) {
+                                CameraSelector.DEFAULT_FRONT_CAMERA
+                            } else {
+                                CameraSelector.DEFAULT_BACK_CAMERA
+                            }
+
+                        try {
+                            cameraProvider.unbindAll()
+                            cameraProvider.bindToLifecycle(
+                                lifecycleOwner,
+                                cameraSelector,
+                                imageAnalyzer,
                             )
+                        } catch (e: Exception) {
+                            Log.e("FaceToFace", "Camera binding failed", e)
                         }
-
-                val cameraSelector =
-                    if (useFrontCamera) {
-                        CameraSelector.DEFAULT_FRONT_CAMERA
-                    } else {
-                        CameraSelector.DEFAULT_BACK_CAMERA
-                    }
-
-                try {
-                    cameraProvider.unbindAll()
-                    cameraProvider.bindToLifecycle(
-                        lifecycleOwner,
-                        cameraSelector,
-                        preview,
-                        imageAnalyzer,
-                    )
-                } catch (e: Exception) {
-                    Log.e("FaceToFace", "Camera binding failed", e)
+                    }, ContextCompat.getMainExecutor(ctx))
                 }
-            }, ContextCompat.getMainExecutor(context))
+            }
         },
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.size(0.dp),
     )
 }
 
 private fun generateQrBitmapForFace(data: String): Bitmap {
     val writer = QRCodeWriter()
-    val hints = mapOf(com.google.zxing.EncodeHintType.ERROR_CORRECTION to com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M)
+    val hints =
+        mapOf(
+            com.google.zxing.EncodeHintType.ERROR_CORRECTION to com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.L,
+            com.google.zxing.EncodeHintType.MARGIN to 1,
+        )
     val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, 1024, 1024, hints)
     val width = bitMatrix.width
     val height = bitMatrix.height

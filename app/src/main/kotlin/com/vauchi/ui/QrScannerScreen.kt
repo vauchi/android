@@ -266,6 +266,7 @@ class QrCodeAnalyzer(
     private val onQrCodeDetected: (String) -> Unit,
     private val saveDir: java.io.File? = null,
     private val maxSaveFrames: Int = 10,
+    private val isFrontCamera: Boolean = false,
 ) : ImageAnalysis.Analyzer {
     private val hints =
         mapOf(
@@ -287,31 +288,81 @@ class QrCodeAnalyzer(
             val rowStride = plane.rowStride
             val bytes = ByteArray(buffer.remaining())
             buffer.get(bytes)
+            val rotation = imageProxy.imageInfo.rotationDegrees
 
             frameCount++
             if (frameCount % 60 == 1) {
-                android.util.Log.d("QrAnalyzer", "Frame #$frameCount: ${imageProxy.width}x${imageProxy.height} stride=$rowStride")
+                android.util.Log.d(
+                    "QrAnalyzer",
+                    "Frame #$frameCount: ${imageProxy.width}x${imageProxy.height} stride=$rowStride rot=$rotation",
+                )
             }
 
-            // Save camera frames as JPEG for diagnosis
-            if (saveDir != null && savedFrameCount < maxSaveFrames && frameCount % 3 == 1) {
-                try {
-                    val yuvImage =
-                        android.graphics.YuvImage(
-                            bytes,
-                            android.graphics.ImageFormat.NV21,
-                            imageProxy.width,
-                            imageProxy.height,
-                            intArrayOf(rowStride),
-                        )
-                    val outFile = java.io.File(saveDir, "frame_$savedFrameCount.jpg")
-                    java.io.FileOutputStream(outFile).use { fos ->
-                        yuvImage.compressToJpeg(
-                            android.graphics.Rect(0, 0, imageProxy.width, imageProxy.height),
-                            90,
-                            fos,
-                        )
+            // Rotate Y-plane data to upright orientation if needed
+            val sensorW = imageProxy.width
+            val sensorH = imageProxy.height
+            val (rotatedBytes, rotatedW, rotatedH) =
+                when (rotation) {
+                    90 -> {
+                        val out = ByteArray(sensorW * sensorH)
+                        for (y in 0 until sensorH) {
+                            for (x in 0 until sensorW) {
+                                out[x * sensorH + (sensorH - 1 - y)] = bytes[y * rowStride + x]
+                            }
+                        }
+                        Triple(out, sensorH, sensorW)
                     }
+
+                    270 -> {
+                        val out = ByteArray(sensorW * sensorH)
+                        for (y in 0 until sensorH) {
+                            for (x in 0 until sensorW) {
+                                out[(sensorW - 1 - x) * sensorH + y] = bytes[y * rowStride + x]
+                            }
+                        }
+                        Triple(out, sensorH, sensorW)
+                    }
+
+                    180 -> {
+                        val out = ByteArray(sensorW * sensorH)
+                        for (y in 0 until sensorH) {
+                            for (x in 0 until sensorW) {
+                                out[(sensorH - 1 - y) * sensorW + (sensorW - 1 - x)] = bytes[y * rowStride + x]
+                            }
+                        }
+                        Triple(out, sensorW, sensorH)
+                    }
+
+                    else -> {
+                        // 0° — copy without stride padding
+                        if (rowStride == sensorW) {
+                            Triple(bytes, sensorW, sensorH)
+                        } else {
+                            val out = ByteArray(sensorW * sensorH)
+                            for (y in 0 until sensorH) {
+                                System.arraycopy(bytes, y * rowStride, out, y * sensorW, sensorW)
+                            }
+                            Triple(out, sensorW, sensorH)
+                        }
+                    }
+                }
+
+            // Save rotated camera frames for diagnosis
+            if (saveDir != null && savedFrameCount < maxSaveFrames && frameCount % 30 == 1) {
+                try {
+                    saveDir.mkdirs()
+                    val bmp = android.graphics.Bitmap.createBitmap(rotatedW, rotatedH, android.graphics.Bitmap.Config.ARGB_8888)
+                    for (y in 0 until rotatedH) {
+                        for (x in 0 until rotatedW) {
+                            val lum = rotatedBytes[y * rotatedW + x].toInt() and 0xFF
+                            bmp.setPixel(x, y, (0xFF shl 24) or (lum shl 16) or (lum shl 8) or lum)
+                        }
+                    }
+                    val outFile = java.io.File(saveDir, "frame_$savedFrameCount.png")
+                    java.io.FileOutputStream(outFile).use { fos ->
+                        bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, fos)
+                    }
+                    bmp.recycle()
                     savedFrameCount++
                     android.util.Log.d("QrAnalyzer", "Saved frame $savedFrameCount to ${outFile.absolutePath}")
                 } catch (e: Exception) {
@@ -319,44 +370,22 @@ class QrCodeAnalyzer(
                 }
             }
 
-            // Try normal orientation
-            val source =
-                PlanarYUVLuminanceSource(
-                    bytes,
-                    rowStride,
-                    imageProxy.height,
-                    0,
-                    0,
-                    imageProxy.width,
-                    imageProxy.height,
-                    false,
-                )
-            val bitmap = BinaryBitmap(HybridBinarizer(source))
+            // Front camera produces mirrored frames — try mirrored first for speed.
+            val primaryMirrored = isFrontCamera
 
-            val result =
-                try {
-                    multiReader.decodeWithState(bitmap)
-                } catch (_: NotFoundException) {
-                    // Try mirrored (front camera flips horizontally)
-                    multiReader.reset()
-                    val mirroredSource =
-                        PlanarYUVLuminanceSource(
-                            bytes,
-                            rowStride,
-                            imageProxy.height,
-                            0,
-                            0,
-                            imageProxy.width,
-                            imageProxy.height,
-                            true,
-                        )
-                    val mirroredBitmap = BinaryBitmap(HybridBinarizer(mirroredSource))
-                    multiReader.decodeWithState(mirroredBitmap)
-                } finally {
-                    multiReader.reset()
-                }
+            // Try full frame first, then center crop (2x zoom) for small/distant QR codes
+            val detected =
+                tryDecodeQr(rotatedBytes, rotatedW, rotatedH, primaryMirrored)
+                    ?: run {
+                        // Center crop: middle 50% of frame = effectively 2x digital zoom
+                        val cropW = rotatedW / 2
+                        val cropH = rotatedH / 2
+                        val cropX = (rotatedW - cropW) / 2
+                        val cropY = (rotatedH - cropH) / 2
+                        tryDecodeQr(rotatedBytes, rotatedW, rotatedH, primaryMirrored, cropX, cropY, cropW, cropH)
+                    }
 
-            result.text?.let { value ->
+            detected?.let { value ->
                 android.util.Log.d("QrAnalyzer", "QR detected: ${value.take(30)}...")
                 onQrCodeDetected(value)
             }
@@ -370,4 +399,35 @@ class QrCodeAnalyzer(
             imageProxy.close()
         }
     }
+
+    private fun tryDecodeQr(
+        data: ByteArray,
+        dataWidth: Int,
+        dataHeight: Int,
+        mirrored: Boolean,
+        cropX: Int = 0,
+        cropY: Int = 0,
+        cropW: Int = dataWidth,
+        cropH: Int = dataHeight,
+    ): String? =
+        try {
+            val source = PlanarYUVLuminanceSource(data, dataWidth, dataHeight, cropX, cropY, cropW, cropH, mirrored)
+            val bitmap = BinaryBitmap(HybridBinarizer(source))
+            val result = multiReader.decodeWithState(bitmap)
+            multiReader.reset()
+            result.text
+        } catch (_: NotFoundException) {
+            multiReader.reset()
+            // Try opposite mirror
+            try {
+                val source = PlanarYUVLuminanceSource(data, dataWidth, dataHeight, cropX, cropY, cropW, cropH, !mirrored)
+                val bitmap = BinaryBitmap(HybridBinarizer(source))
+                val result = multiReader.decodeWithState(bitmap)
+                multiReader.reset()
+                result.text
+            } catch (_: NotFoundException) {
+                multiReader.reset()
+                null
+            }
+        }
 }

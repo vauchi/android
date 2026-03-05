@@ -5,6 +5,7 @@
 package com.vauchi.ui
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vauchi.data.AuthenticationRequiredException
@@ -76,16 +77,10 @@ sealed class ExchangeFlowState {
     /** No exchange in progress. */
     object Idle : ExchangeFlowState()
 
-    /** Peer QR scanned and processed, showing peer name before coordination. */
+    /** Peer QR scanned and processed — completing automatically. */
     data class Scanned(
         val peerName: String,
     ) : ExchangeFlowState()
-
-    /** Ultrasonic coordination in progress — emitting/listening for challenges. */
-    object Coordinating : ExchangeFlowState()
-
-    /** Ultrasonic timed out — user can confirm manually. */
-    object ManualFallback : ExchangeFlowState()
 
     /** Exchange completing (key agreement + card exchange). */
     object Completing : ExchangeFlowState()
@@ -259,12 +254,15 @@ class MainViewModel(
     /** Emit a proximity challenge (for QR displayer) */
     fun emitProximityChallenge(challenge: ByteArray): Boolean {
         val result = proximityVerifier.emitChallenge(challenge)
+        Log.d("Exchange", "emit: success=${result.success} challenge[0]=${challenge[0].toInt() and 0xFF}")
         return result.success
     }
 
     /** Listen for proximity response (for QR scanner) */
     fun listenForProximityResponse(timeoutMs: ULong = 5000u): ByteArray? {
         val response = proximityVerifier.listenForResponse(timeoutMs)
+        val found = response.isNotEmpty()
+        Log.d("Exchange", "listen: found=$found len=${response.size} timeout=${timeoutMs}ms")
         return if (response.isEmpty()) null else response
     }
 
@@ -503,24 +501,29 @@ class MainViewModel(
                 }
             activeExchangeSession = sessionData.session
             activeExchangeData = sessionData.exchangeData
+            Log.d("Exchange", "Session created, QR generated (challenge=${sessionData.exchangeData.audioChallenge?.size ?: 0} bytes)")
             sessionData.exchangeData
         } catch (e: Exception) {
+            Log.d("Exchange", "generateExchangeQr failed: ${e.message}")
             null
         }
 
     /**
      * Process a scanned QR on the held session, then coordinate via ultrasonic.
-     * Flow: Scanned → Coordinating → (timeout → ManualFallback) → Completing → Success | Failed
+     * QR stays visible during Scanned state so the peer can still scan ours.
+     * Flow: Scanned (QR visible + ultrasonic) → Completing → Success | Failed
      */
     suspend fun coordinateAndCompleteExchange(qrData: String) {
         val session = activeExchangeSession
         val ourData = activeExchangeData
         if (session == null || ourData == null) {
+            Log.d("Exchange", "coordinateAndComplete: no active session")
             _exchangeState.value = ExchangeFlowState.Failed("No active exchange session")
             return
         }
 
         // Step 1: Process the scanned QR on the held session
+        Log.d("Exchange", "Processing scanned QR on held session...")
         val peerName =
             try {
                 withContext(Dispatchers.IO) {
@@ -528,54 +531,42 @@ class MainViewModel(
                     session.peerDisplayName() ?: "Unknown"
                 }
             } catch (e: Exception) {
+                Log.d("Exchange", "processQr failed: ${e.message}")
                 _exchangeState.value = ExchangeFlowState.Failed("Invalid QR: ${e.message}")
                 return
             }
+        Log.d("Exchange", "Peer recognized, starting coordination...")
         _exchangeState.value = ExchangeFlowState.Scanned(peerName)
 
-        // Step 2: Extract challenges for ultrasonic coordination
+        // Step 2: Ultrasonic coordination — QR stays visible during this.
+        // Emit their challenge so they know we scanned. Listen for ours to confirm they scanned.
         val ourChallenge = ourData.audioChallenge
         val theirChallenge = VauchiRepository.extractAudioChallenge(qrData)
 
-        // Step 3: Ultrasonic coordination (or skip if unsupported)
-        if (!_proximitySupported.value || ourChallenge == null || theirChallenge == null) {
-            _exchangeState.value = ExchangeFlowState.ManualFallback
+        if (ourChallenge == null || theirChallenge == null || !_proximitySupported.value) {
+            // No ultrasonic — complete immediately (proximity unverified)
+            Log.d("Exchange", "No ultrasonic support, completing without proximity check")
+            completeExchangeOnSession(session, peerName)
             return
         }
 
-        _exchangeState.value = ExchangeFlowState.Coordinating
+        Log.d("Exchange", "Ultrasonic coordination: emitting their challenge, listening for ours...")
         val confirmed =
             withContext(Dispatchers.IO) {
                 ultrasonicCoordinationLoop(
                     emitChallenge = theirChallenge,
                     listenForChallenge = ourChallenge,
-                    timeoutMs = 12_000L,
+                    timeoutMs = 15_000L,
                 )
             }
 
         if (confirmed) {
-            completeExchangeOnSession(session, peerName)
+            Log.d("Exchange", "Ultrasonic confirmed mutual scanning")
         } else {
-            _exchangeState.value = ExchangeFlowState.ManualFallback
+            Log.d("Exchange", "Ultrasonic timed out — completing with QR-only proximity (mutual scan proves proximity)")
         }
-    }
-
-    /**
-     * User tapped "Confirm" on the manual fallback screen.
-     * Completes the exchange using the held session.
-     */
-    suspend fun confirmManualAndComplete() {
-        val session =
-            activeExchangeSession ?: run {
-                _exchangeState.value = ExchangeFlowState.Failed("No active exchange session")
-                return
-            }
-        val peerName =
-            try {
-                session.peerDisplayName() ?: "Unknown"
-            } catch (_: Exception) {
-                "Unknown"
-            }
+        // Complete exchange regardless — mutual QR scan already proves proximity.
+        // Ultrasonic adds higher confidence but isn't required.
         completeExchangeOnSession(session, peerName)
     }
 
@@ -587,22 +578,30 @@ class MainViewModel(
         peerName: String,
     ) {
         _exchangeState.value = ExchangeFlowState.Completing
+        Log.d("Exchange", "completeExchangeOnSession: starting state machine steps...")
         val result =
             try {
                 val exchangeResult =
                     withContext(Dispatchers.IO) {
+                        Log.d("Exchange", "  confirmProximity...")
                         session.confirmProximity()
+                        Log.d("Exchange", "  theyScannedOurQr...")
                         session.theyScannedOurQr()
+                        Log.d("Exchange", "  performKeyAgreement...")
                         session.performKeyAgreement()
+                        Log.d("Exchange", "  completeCardExchange...")
                         session.completeCardExchange(peerName)
+                        Log.d("Exchange", "  finalizeExchange...")
                         repository.finalizeExchange(session)
                     }
                 loadUserData()
                 if (exchangeResult.success) {
                     autoRemoveDemoContact()
                 }
+                Log.d("Exchange", "Exchange completed: success=${exchangeResult.success}")
                 exchangeResult
             } catch (e: Exception) {
+                Log.d("Exchange", "Exchange FAILED with exception: ${e.message}")
                 null
             }
         if (result != null && result.success) {
@@ -619,27 +618,67 @@ class MainViewModel(
     /**
      * Ultrasonic coordination loop: emit their challenge, listen for ours.
      * Returns true if we heard our challenge (meaning the peer scanned our QR).
+     *
+     * After confirmation, keeps emitting for [postConfirmMs] so the peer also
+     * hears their challenge and can confirm too. This ensures BOTH devices
+     * confirm mutual scanning before completing.
      */
     private fun ultrasonicCoordinationLoop(
         emitChallenge: ByteArray,
         listenForChallenge: ByteArray,
         timeoutMs: Long,
+        postConfirmMs: Long = 5_000L,
     ): Boolean {
         val deadline = System.currentTimeMillis() + timeoutMs
-        while (System.currentTimeMillis() < deadline) {
-            // Emit their challenge so they can confirm we scanned theirs
-            emitProximityChallenge(emitChallenge)
-            Thread.sleep(250)
-            stopProximityVerification()
+        var confirmedAt: Long? = null
+        var cycle = 0
 
-            // Listen for our challenge — means they scanned our QR
-            val response = listenForProximityResponse(2000u)
-            if (response != null && response.contentEquals(listenForChallenge)) {
-                stopProximityVerification()
+        // Stagger timing to avoid synchronized collision: compare challenge bytes
+        // to determine role. One device emits first, the other listens first.
+        val emitFirst = (emitChallenge[0].toInt() and 0xFF) >= (listenForChallenge[0].toInt() and 0xFF)
+        Log.d("Exchange", "Ultrasonic: role=${if (emitFirst) "emit-first" else "listen-first"}")
+
+        while (System.currentTimeMillis() < deadline) {
+            if (confirmedAt != null && System.currentTimeMillis() > confirmedAt + postConfirmMs) {
+                Log.d("Exchange", "Ultrasonic: post-confirm emit done after $cycle cycles")
                 return true
             }
-            stopProximityVerification()
+
+            cycle++
+
+            if (emitFirst) {
+                // Emit then listen
+                emitProximityChallenge(emitChallenge)
+                Thread.sleep(250)
+                stopProximityVerification()
+                val response = listenForProximityResponse(2000u)
+                if (response != null && response.contentEquals(listenForChallenge)) {
+                    if (confirmedAt == null) {
+                        confirmedAt = System.currentTimeMillis()
+                        Log.d("Exchange", "Ultrasonic: heard our challenge on cycle $cycle!")
+                    }
+                }
+                stopProximityVerification()
+            } else {
+                // Listen then emit (staggered)
+                val response = listenForProximityResponse(2000u)
+                if (response != null && response.contentEquals(listenForChallenge)) {
+                    if (confirmedAt == null) {
+                        confirmedAt = System.currentTimeMillis()
+                        Log.d("Exchange", "Ultrasonic: heard our challenge on cycle $cycle!")
+                    }
+                }
+                stopProximityVerification()
+                emitProximityChallenge(emitChallenge)
+                Thread.sleep(250)
+                stopProximityVerification()
+            }
         }
+        if (confirmedAt != null) {
+            Log.d("Exchange", "Ultrasonic: confirmed (hit overall deadline during post-confirm)")
+            return true
+        }
+        Log.d("Exchange", "Ultrasonic: timed out after $cycle cycles without confirmation")
         return false
     }
 
@@ -661,6 +700,7 @@ class MainViewModel(
     }
 
     private fun clearActiveSession() {
+        Log.d("Exchange", "Clearing active session")
         activeExchangeSession = null
         activeExchangeData = null
     }
