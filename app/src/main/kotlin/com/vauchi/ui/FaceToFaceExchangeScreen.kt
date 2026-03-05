@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -89,16 +90,18 @@ fun MultiStageExchangeScreen(
     // Force max screen brightness during exchange
     DisposableEffect(Unit) {
         val activity = context as? Activity
-        val previousBrightness = activity?.window?.attributes?.screenBrightness
-        activity?.window?.attributes =
-            activity?.window?.attributes?.apply {
-                screenBrightness = 1.0f
-            }
+        val previousBrightness = activity?.window?.attributes?.screenBrightness ?: -1.0f
+        activity?.window?.let { window ->
+            val params = window.attributes
+            params.screenBrightness = 1.0f
+            window.attributes = params
+        }
         onDispose {
-            activity?.window?.attributes =
-                activity?.window?.attributes?.apply {
-                    screenBrightness = previousBrightness ?: -1.0f
-                }
+            activity?.window?.let { window ->
+                val params = window.attributes
+                params.screenBrightness = previousBrightness
+                window.attributes = params
+            }
         }
     }
 
@@ -106,6 +109,7 @@ fun MultiStageExchangeScreen(
     var useFrontCamera by remember { mutableStateOf(true) }
     val scannerGuard = remember { AtomicBoolean(false) }
     val multiStageState by viewModel.multiStageState.collectAsState()
+    var graceCompleted by remember { mutableStateOf(false) }
 
     var cameraPermissionGranted by remember {
         mutableStateOf(
@@ -150,9 +154,8 @@ fun MultiStageExchangeScreen(
     // QR display cycling loop — gets next QR from core on a timer.
     // Core manages the grace period after Complete (cycling VRFY+CONF so slower
     // peers can catch up). We keep calling getDisplayQr() until core returns null.
-    LaunchedEffect(cameraPermissionGranted, multiStageState) {
+    LaunchedEffect(cameraPermissionGranted) {
         if (!cameraPermissionGranted) return@LaunchedEffect
-        if (multiStageState is MobileProtocolState.Failed) return@LaunchedEffect
         while (true) {
             val payload = viewModel.getMultiStageDisplayQr()
             if (payload != null) {
@@ -164,11 +167,16 @@ fun MultiStageExchangeScreen(
                 // Floor at 100ms to prevent tight CPU spin
                 delay(maxOf(payload.displayDurationMs.toLong(), 100L))
             } else {
-                // Core returned null — either not started or grace period expired
+                // Core returned null — grace period expired or failed
+                val state = viewModel.getMultiStageState()
+                if (state is MobileProtocolState.Complete) {
+                    graceCompleted = true
+                }
                 break
             }
             // Refresh protocol state from core
-            viewModel.getMultiStageState()
+            val state = viewModel.getMultiStageState()
+            if (state is MobileProtocolState.Failed) break
         }
     }
 
@@ -199,42 +207,80 @@ fun MultiStageExchangeScreen(
     ) { padding ->
         when (multiStageState) {
             is MobileProtocolState.Complete -> {
-                // Exchange completed successfully
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(padding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                if (!graceCompleted) {
+                    // Keep showing QR so slower peer can finish scanning
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(padding)
+                                .background(Color.Black),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = "Success",
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            "Contact exchanged!",
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                        Text(
-                            "The new contact has been added.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = onDone,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 24.dp),
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Text(localizationManager.t("action.done"))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Completing exchange...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.White,
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            qrBitmap?.let { bmp ->
+                                Image(
+                                    bitmap = bmp.asImageBitmap(),
+                                    contentDescription = "Exchange QR code",
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 2.dp),
+                                    contentScale = ContentScale.FillWidth,
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Grace period over — show success
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(padding),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = "Success",
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                "Contact exchanged!",
+                                style = MaterialTheme.typography.headlineSmall,
+                            )
+                            Text(
+                                "The new contact has been added.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = onDone,
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp),
+                            ) {
+                                Text(localizationManager.t("action.done"))
+                            }
                         }
                     }
                 }
@@ -295,7 +341,7 @@ fun MultiStageExchangeScreen(
                         Modifier
                             .fillMaxSize()
                             .padding(padding)
-                            .background(MaterialTheme.colorScheme.surface),
+                            .background(Color.Black),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (!cameraPermissionGranted && permissionsRequested) {
@@ -385,7 +431,7 @@ fun MultiStageExchangeScreen(
                             Text(
                                 text = "Point camera at other phone's QR",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = Color.White.copy(alpha = 0.7f),
                             )
 
                             Spacer(modifier = Modifier.weight(1f))
@@ -407,22 +453,24 @@ private fun MultiStageStatusIndicator(state: MobileProtocolState) {
         is MobileProtocolState.Advertising,
         -> {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     "Waiting for peer...",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White,
                 )
             }
         }
 
         is MobileProtocolState.Discovered -> {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     "Peer found! Exchanging data...",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White,
                 )
             }
         }
@@ -431,11 +479,12 @@ private fun MultiStageStatusIndicator(state: MobileProtocolState) {
             val transferState = state as MobileProtocolState.Transferring
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "Transferring data...",
                         style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -463,7 +512,7 @@ private fun MultiStageStatusIndicator(state: MobileProtocolState) {
                     "Sent ${transferState.chunksSent}/${transferState.chunksTotal} " +
                         "Received ${transferState.chunksReceived}/${transferState.peerChunksTotal}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Color.White.copy(alpha = 0.7f),
                 )
             }
         }
@@ -472,11 +521,12 @@ private fun MultiStageStatusIndicator(state: MobileProtocolState) {
         is MobileProtocolState.Confirming,
         -> {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     "Verifying exchange...",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White,
                 )
             }
         }
