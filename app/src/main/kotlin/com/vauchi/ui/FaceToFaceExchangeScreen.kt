@@ -49,20 +49,14 @@ import com.google.zxing.qrcode.QRCodeWriter
 import com.vauchi.data.ExchangeData
 import com.vauchi.util.LocalizationManager
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Face-to-face exchange screen: shows QR code in the top half and front camera
- * scanner in the bottom half simultaneously. Both users hold phones facing each
- * other and exchange contacts in a single gesture.
- *
- * Ultrasonic proximity verification runs in the background:
- * - While QR is displayed, the device emits its audio challenge
- * - When the front camera scans a QR, it listens briefly and compares
- * - Deterministic emit/listen slot assignment by public ID to avoid collision
+ * Face-to-face exchange screen: shows QR code and runs a headless camera scanner.
+ * Both users hold phones facing each other and exchange contacts in a single gesture.
+ * Mutual QR scanning proves physical proximity — no ultrasonic needed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,9 +64,6 @@ fun FaceToFaceExchangeScreen(
     onBack: () -> Unit,
     onGenerateQr: suspend () -> ExchangeData?,
     onQrScanned: suspend (String) -> Unit,
-    proximitySupported: Boolean = false,
-    onEmitChallenge: (ByteArray) -> Boolean = { false },
-    onStopVerification: () -> Unit = {},
     exchangeState: ExchangeFlowState = ExchangeFlowState.Idle,
     onExchangeDone: () -> Unit = {},
 ) {
@@ -95,7 +86,6 @@ fun FaceToFaceExchangeScreen(
     var isLoading by remember { mutableStateOf(true) }
     var retryTrigger by remember { mutableIntStateOf(0) }
     var useFrontCamera by remember { mutableStateOf(true) }
-    var proximityConfirmed by remember { mutableStateOf(false) }
     // AtomicBoolean guard prevents duplicate QR callbacks from the camera analyzer
     // thread — Compose state (`mutableStateOf`) doesn't propagate fast enough to
     // prevent the analyzer firing twice before recomposition.
@@ -106,60 +96,32 @@ fun FaceToFaceExchangeScreen(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
         )
     }
-    var micPermissionGranted by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED,
-        )
-    }
     var permissionsRequested by remember { mutableStateOf(false) }
-    val allPermissionsGranted = cameraPermissionGranted && micPermissionGranted
 
     val permissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
-            cameraPermissionGranted = results[Manifest.permission.CAMERA] == true
-            micPermissionGranted = results[Manifest.permission.RECORD_AUDIO] == true
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            cameraPermissionGranted = granted
             permissionsRequested = true
         }
 
-    // Request permissions on first compose
+    // Request camera permission on first compose
     LaunchedEffect(Unit) {
-        if (!allPermissionsGranted) {
-            permissionLauncher.launch(
-                arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO),
-            )
+        if (!cameraPermissionGranted) {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
         } else {
             permissionsRequested = true
         }
     }
 
     // Generate QR only after permissions are granted
-    LaunchedEffect(retryTrigger, allPermissionsGranted) {
-        if (!allPermissionsGranted) return@LaunchedEffect
+    LaunchedEffect(retryTrigger, cameraPermissionGranted) {
+        if (!cameraPermissionGranted) return@LaunchedEffect
         isLoading = true
         exchangeData = onGenerateQr()
         exchangeData?.let { data ->
             qrBitmap = generateQrBitmapForFace(data.qrData)
         }
         isLoading = false
-    }
-
-    // Emit ultrasonic challenge while QR is displayed
-    LaunchedEffect(exchangeData, exchangeState) {
-        val challenge = exchangeData?.audioChallenge ?: return@LaunchedEffect
-        if (exchangeState !is ExchangeFlowState.Idle) return@LaunchedEffect
-        if (!proximitySupported) return@LaunchedEffect
-
-        while (isActive) {
-            onEmitChallenge(challenge)
-            delay(1500)
-        }
-    }
-
-    // Stop ultrasonic on dispose
-    DisposableEffect(Unit) {
-        onDispose {
-            onStopVerification()
-        }
     }
 
     Scaffold(
@@ -193,7 +155,7 @@ fun FaceToFaceExchangeScreen(
                             .background(MaterialTheme.colorScheme.surface),
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (!allPermissionsGranted && permissionsRequested) {
+                    if (!cameraPermissionGranted && permissionsRequested) {
                         // Permissions denied — show prompt to grant
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -207,20 +169,18 @@ fun FaceToFaceExchangeScreen(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
-                                "Camera and microphone access required",
+                                "Camera access required",
                                 style = MaterialTheme.typography.titleMedium,
                             )
                             Text(
-                                "Camera scans QR codes. Microphone verifies proximity via ultrasonic.",
+                                "Camera is needed to scan QR codes for contact exchange.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Button(onClick = {
-                                permissionLauncher.launch(
-                                    arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO),
-                                )
+                                permissionLauncher.launch(Manifest.permission.CAMERA)
                             }) {
-                                Text("Grant Permissions")
+                                Text("Grant Permission")
                             }
                         }
                     } else if (isLoading) {
@@ -253,7 +213,7 @@ fun FaceToFaceExchangeScreen(
                                 }
 
                                 // Hidden camera scanner (no preview, just analysis)
-                                if (allPermissionsGranted && scannerActive) {
+                                if (cameraPermissionGranted && scannerActive) {
                                     Box(modifier = Modifier.size(1.dp)) {
                                         FaceToFaceCameraPreview(
                                             useFrontCamera = useFrontCamera,
@@ -320,34 +280,6 @@ fun FaceToFaceExchangeScreen(
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text("Refresh", style = MaterialTheme.typography.labelSmall)
                                     }
-                                }
-                            }
-
-                            // Proximity indicator
-                            if (proximitySupported) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    Icon(
-                                        painter =
-                                            androidx.compose.ui.res.painterResource(
-                                                android.R.drawable.ic_lock_silent_mode_off,
-                                            ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(12.dp),
-                                        tint =
-                                            if (proximityConfirmed) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                            },
-                                    )
-                                    Text(
-                                        text = if (proximityConfirmed) "Proximity verified" else "Ultrasonic active",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
                                 }
                             }
 
@@ -437,13 +369,6 @@ fun FaceToFaceExchangeScreen(
                             "Contact exchanged!",
                             style = MaterialTheme.typography.headlineSmall,
                         )
-                        if (proximityConfirmed) {
-                            Text(
-                                "Proximity verified via ultrasonic",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
                         Text(
                             "The new contact has been added.",
                             style = MaterialTheme.typography.bodyMedium,
@@ -454,7 +379,6 @@ fun FaceToFaceExchangeScreen(
                             onClick = {
                                 scannerGuard.set(true)
                                 scannerActive = true
-                                proximityConfirmed = false
                                 onExchangeDone()
                             },
                             modifier =
@@ -501,7 +425,6 @@ fun FaceToFaceExchangeScreen(
                             onClick = {
                                 scannerGuard.set(true)
                                 scannerActive = true
-                                proximityConfirmed = false
                                 onExchangeDone()
                             },
                             modifier =

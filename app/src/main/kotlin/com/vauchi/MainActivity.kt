@@ -272,7 +272,6 @@ fun MainScreen(
 
             Screen.Exchange -> {
                 val exchangeState by viewModel.exchangeState.collectAsState()
-                val proximitySupported by viewModel.proximitySupported.collectAsState()
                 FaceToFaceExchangeScreen(
                     onBack = {
                         viewModel.resetExchangeState()
@@ -282,9 +281,6 @@ fun MainScreen(
                     onQrScanned = { qrData: String ->
                         viewModel.coordinateAndCompleteExchange(qrData)
                     },
-                    proximitySupported = proximitySupported,
-                    onEmitChallenge = { challenge: ByteArray -> viewModel.emitProximityChallenge(challenge) },
-                    onStopVerification = { viewModel.stopProximityVerification() },
                     exchangeState = exchangeState,
                     onExchangeDone = {
                         viewModel.resetExchangeState()

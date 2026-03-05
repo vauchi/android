@@ -13,7 +13,6 @@ import com.vauchi.data.DeviceNotSecureException
 import com.vauchi.data.ExchangeData
 import com.vauchi.data.ExchangeSessionData
 import com.vauchi.data.VauchiRepository
-import com.vauchi.proximity.AudioProximityService
 import com.vauchi.ui.components.ProximityVerificationResult
 import com.vauchi.ui.model.PasswordStrengthLevel
 import com.vauchi.ui.model.PasswordStrengthResult
@@ -40,7 +39,6 @@ import uniffi.vauchi_mobile.MobileExchangeSession
 import uniffi.vauchi_mobile.MobileFieldType
 import uniffi.vauchi_mobile.MobileFieldValidation
 import uniffi.vauchi_mobile.MobileGdprExport
-import uniffi.vauchi_mobile.MobileProximityVerifier
 import uniffi.vauchi_mobile.MobileRecoveryClaim
 import uniffi.vauchi_mobile.MobileRecoveryProgress
 import uniffi.vauchi_mobile.MobileRecoveryVoucher
@@ -69,9 +67,7 @@ sealed class SyncState {
 /**
  * State machine for the bidirectional contact exchange flow.
  *
- * Flow: Idle -> Scanned (peer QR processed) -> Coordinating (ultrasonic loop)
- *       -> Completing -> Success | Failed
- *       Coordinating may timeout -> ManualFallback -> Completing -> Success | Failed
+ * Flow: Idle -> Scanned (peer QR processed) -> Completing -> Success | Failed
  */
 sealed class ExchangeFlowState {
     /** No exchange in progress. */
@@ -126,18 +122,6 @@ class MainViewModel(
     }
 
     private val networkMonitor = NetworkMonitor(application)
-
-    // Proximity verification
-    private val proximityVerifier: MobileProximityVerifier by lazy {
-        val audioHandler = AudioProximityService.getInstance(application)
-        MobileProximityVerifier(audioHandler)
-    }
-
-    private val _proximitySupported = MutableStateFlow(false)
-    val proximitySupported: StateFlow<Boolean> = _proximitySupported.asStateFlow()
-
-    private val _proximityCapability = MutableStateFlow("none")
-    val proximityCapability: StateFlow<String> = _proximityCapability.asStateFlow()
 
     // Exchange flow state (bidirectional coordination)
     private val _exchangeState = MutableStateFlow<ExchangeFlowState>(ExchangeFlowState.Idle)
@@ -217,7 +201,6 @@ class MainViewModel(
 
     init {
         checkIdentity()
-        initProximityVerification()
         loadAccessibilitySettingsSafely()
     }
 
@@ -244,31 +227,6 @@ class MainViewModel(
     fun setLargeTouchTargets(enabled: Boolean) {
         _largeTouchTargets.value = enabled
         repository.setLargeTouchTargets(enabled)
-    }
-
-    private fun initProximityVerification() {
-        _proximitySupported.value = proximityVerifier.isSupported()
-        _proximityCapability.value = proximityVerifier.getCapability()
-    }
-
-    /** Emit a proximity challenge (for QR displayer) */
-    fun emitProximityChallenge(challenge: ByteArray): Boolean {
-        val result = proximityVerifier.emitChallenge(challenge)
-        Log.d("Exchange", "emit: success=${result.success} challenge[0]=${challenge[0].toInt() and 0xFF}")
-        return result.success
-    }
-
-    /** Listen for proximity response (for QR scanner) */
-    fun listenForProximityResponse(timeoutMs: ULong = 5000u): ByteArray? {
-        val response = proximityVerifier.listenForResponse(timeoutMs)
-        val found = response.isNotEmpty()
-        Log.d("Exchange", "listen: found=$found len=${response.size} timeout=${timeoutMs}ms")
-        return if (response.isEmpty()) null else response
-    }
-
-    /** Stop any ongoing proximity verification */
-    fun stopProximityVerification() {
-        proximityVerifier.stop()
     }
 
     private fun checkIdentity() {
@@ -509,14 +467,13 @@ class MainViewModel(
         }
 
     /**
-     * Process a scanned QR on the held session, then coordinate via ultrasonic.
+     * Process a scanned QR on the held session and complete the exchange.
      * QR stays visible during Scanned state so the peer can still scan ours.
-     * Flow: Scanned (QR visible + ultrasonic) → Completing → Success | Failed
+     * Flow: Scanned (QR visible) → Completing → Success | Failed
      */
     suspend fun coordinateAndCompleteExchange(qrData: String) {
         val session = activeExchangeSession
-        val ourData = activeExchangeData
-        if (session == null || ourData == null) {
+        if (session == null) {
             Log.d("Exchange", "coordinateAndComplete: no active session")
             _exchangeState.value = ExchangeFlowState.Failed("No active exchange session")
             return
@@ -535,38 +492,10 @@ class MainViewModel(
                 _exchangeState.value = ExchangeFlowState.Failed("Invalid QR: ${e.message}")
                 return
             }
-        Log.d("Exchange", "Peer recognized, starting coordination...")
+        Log.d("Exchange", "Peer recognized: $peerName")
         _exchangeState.value = ExchangeFlowState.Scanned(peerName)
 
-        // Step 2: Ultrasonic coordination — QR stays visible during this.
-        // Emit their challenge so they know we scanned. Listen for ours to confirm they scanned.
-        val ourChallenge = ourData.audioChallenge
-        val theirChallenge = VauchiRepository.extractAudioChallenge(qrData)
-
-        if (ourChallenge == null || theirChallenge == null || !_proximitySupported.value) {
-            // No ultrasonic — complete immediately (proximity unverified)
-            Log.d("Exchange", "No ultrasonic support, completing without proximity check")
-            completeExchangeOnSession(session, peerName)
-            return
-        }
-
-        Log.d("Exchange", "Ultrasonic coordination: emitting their challenge, listening for ours...")
-        val confirmed =
-            withContext(Dispatchers.IO) {
-                ultrasonicCoordinationLoop(
-                    emitChallenge = theirChallenge,
-                    listenForChallenge = ourChallenge,
-                    timeoutMs = 15_000L,
-                )
-            }
-
-        if (confirmed) {
-            Log.d("Exchange", "Ultrasonic confirmed mutual scanning")
-        } else {
-            Log.d("Exchange", "Ultrasonic timed out — completing with QR-only proximity (mutual scan proves proximity)")
-        }
-        // Complete exchange regardless — mutual QR scan already proves proximity.
-        // Ultrasonic adds higher confidence but isn't required.
+        // Step 2: Complete exchange immediately — mutual QR scan proves proximity.
         completeExchangeOnSession(session, peerName)
     }
 
@@ -616,80 +545,22 @@ class MainViewModel(
     }
 
     /**
-     * Ultrasonic coordination loop: emit their challenge, listen for ours.
-     * Returns true if we heard our challenge (meaning the peer scanned our QR).
-     *
-     * After confirmation, keeps emitting for [postConfirmMs] so the peer also
-     * hears their challenge and can confirm too. This ensures BOTH devices
-     * confirm mutual scanning before completing.
-     */
-    private fun ultrasonicCoordinationLoop(
-        emitChallenge: ByteArray,
-        listenForChallenge: ByteArray,
-        timeoutMs: Long,
-        postConfirmMs: Long = 5_000L,
-    ): Boolean {
-        val deadline = System.currentTimeMillis() + timeoutMs
-        var confirmedAt: Long? = null
-        var cycle = 0
-
-        // Stagger timing to avoid synchronized collision: compare challenge bytes
-        // to determine role. One device emits first, the other listens first.
-        val emitFirst = (emitChallenge[0].toInt() and 0xFF) >= (listenForChallenge[0].toInt() and 0xFF)
-        Log.d("Exchange", "Ultrasonic: role=${if (emitFirst) "emit-first" else "listen-first"}")
-
-        while (System.currentTimeMillis() < deadline) {
-            if (confirmedAt != null && System.currentTimeMillis() > confirmedAt + postConfirmMs) {
-                Log.d("Exchange", "Ultrasonic: post-confirm emit done after $cycle cycles")
-                return true
-            }
-
-            cycle++
-
-            if (emitFirst) {
-                // Emit then listen
-                emitProximityChallenge(emitChallenge)
-                Thread.sleep(250)
-                stopProximityVerification()
-                val response = listenForProximityResponse(2000u)
-                if (response != null && response.contentEquals(listenForChallenge)) {
-                    if (confirmedAt == null) {
-                        confirmedAt = System.currentTimeMillis()
-                        Log.d("Exchange", "Ultrasonic: heard our challenge on cycle $cycle!")
-                    }
-                }
-                stopProximityVerification()
-            } else {
-                // Listen then emit (staggered)
-                val response = listenForProximityResponse(2000u)
-                if (response != null && response.contentEquals(listenForChallenge)) {
-                    if (confirmedAt == null) {
-                        confirmedAt = System.currentTimeMillis()
-                        Log.d("Exchange", "Ultrasonic: heard our challenge on cycle $cycle!")
-                    }
-                }
-                stopProximityVerification()
-                emitProximityChallenge(emitChallenge)
-                Thread.sleep(250)
-                stopProximityVerification()
-            }
-        }
-        if (confirmedAt != null) {
-            Log.d("Exchange", "Ultrasonic: confirmed (hit overall deadline during post-confirm)")
-            return true
-        }
-        Log.d("Exchange", "Ultrasonic: timed out after $cycle cycles without confirmation")
-        return false
-    }
-
-    /**
      * Cancel exchange and reset state.
      */
     fun cancelExchangeProximity() {
-        stopProximityVerification()
         clearActiveSession()
         _exchangeState.value = ExchangeFlowState.Idle
     }
+
+    // Proximity stubs — ultrasonic removed from exchange. Kept for DevicesScreen device linking.
+    val proximitySupported: StateFlow<Boolean> = MutableStateFlow(false)
+    val proximityCapability: StateFlow<String> = MutableStateFlow("none")
+
+    fun emitProximityChallenge(challenge: ByteArray): Boolean = false
+
+    fun listenForProximityResponse(timeoutMs: ULong = 5000u): ByteArray? = null
+
+    fun stopProximityVerification() {}
 
     /**
      * Reset exchange state back to idle (e.g., after success/failure acknowledged).
