@@ -441,13 +441,7 @@ class MainViewModel(
      * Get the next QR payload to display. Returns null when the core has
      * nothing to show (e.g., waiting for peer data).
      */
-    fun getMultiStageDisplayQr(): MobileQrPayload? {
-        val payload = multiStageSession?.getDisplayQr()
-        if (payload != null) {
-            Log.d("Exchange", "displayQr: ${payload.data.take(30)}... ec=${payload.errorCorrection} dur=${payload.displayDurationMs}ms")
-        }
-        return payload
-    }
+    fun getMultiStageDisplayQr(): MobileQrPayload? = multiStageSession?.getDisplayQr()
 
     /**
      * Pass a scanned QR string to the core for processing.
@@ -455,10 +449,8 @@ class MainViewModel(
      */
     fun processMultiStageQr(raw: String): MobileProtocolState {
         val session = multiStageSession ?: return MobileProtocolState.Failed("No session")
-        val prevState = _multiStageState.value
         val state = session.processScannedQr(raw)
         _multiStageState.value = state
-        Log.d("Exchange", "processQr: ${raw.take(30)}... prev=$prevState -> new=$state")
         return state
     }
 
