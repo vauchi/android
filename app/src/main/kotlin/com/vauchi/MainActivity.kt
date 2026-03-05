@@ -9,9 +9,10 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -32,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -69,7 +71,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     /** Mutable state for deep link URI, observed by Compose. */
     private val _deepLinkUri = mutableStateOf<Uri?>(null)
 
@@ -247,6 +249,15 @@ fun MainScreen(
                             isOnline = isOnline,
                             lastSyncTime = lastSyncTime,
                             onSync = { viewModel.sync() },
+                        )
+                    }
+
+                    is UiState.AuthRequired -> {
+                        AuthenticationGate(
+                            onAuthenticated = { viewModel.retryInit() },
+                            onError = { msg ->
+                                viewModel.setError(msg)
+                            },
                         )
                     }
 
@@ -1060,6 +1071,56 @@ fun AddFieldDialog(
             }
         },
     )
+}
+
+/**
+ * Automatically triggers BiometricPrompt when KeyStore auth has expired.
+ * Shows a loading screen while the prompt is displayed.
+ */
+@Composable
+fun AuthenticationGate(
+    onAuthenticated: () -> Unit,
+    onError: (String) -> Unit,
+) {
+    val activity = LocalContext.current as FragmentActivity
+
+    LaunchedEffect(Unit) {
+        val promptInfo =
+            BiometricPrompt.PromptInfo
+                .Builder()
+                .setTitle("Unlock Vauchi")
+                .setSubtitle("Enter your device PIN, pattern, or biometric")
+                .setAllowedAuthenticators(
+                    BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                        BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                        BiometricManager.Authenticators.DEVICE_CREDENTIAL,
+                ).build()
+
+        val prompt =
+            BiometricPrompt(
+                activity,
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        onAuthenticated()
+                    }
+
+                    override fun onAuthenticationError(
+                        errorCode: Int,
+                        errString: CharSequence,
+                    ) {
+                        if (errorCode != BiometricPrompt.ERROR_USER_CANCELED &&
+                            errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON
+                        ) {
+                            onError("Authentication failed: $errString")
+                        }
+                    }
+                },
+            )
+        prompt.authenticate(promptInfo)
+    }
+
+    // Show loading while biometric prompt is up
+    LoadingScreen()
 }
 
 @Composable

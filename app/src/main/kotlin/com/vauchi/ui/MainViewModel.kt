@@ -104,6 +104,9 @@ sealed class UiState {
 
     object Onboarding : UiState()
 
+    /** Device needs biometric/PIN authentication to access KeyStore keys. */
+    object AuthRequired : UiState()
+
     data class Ready(
         val displayName: String,
         val publicId: String,
@@ -285,12 +288,10 @@ class MainViewModel(
                         e.message ?: "A secure lock screen is required to use Vauchi.",
                     )
             } catch (e: AuthenticationRequiredException) {
-                _uiState.value =
-                    UiState.Error(
-                        "Your device needs to be unlocked to access your data. " +
-                            "Please unlock your device and tap Retry.",
-                    )
+                android.util.Log.e("Vauchi", "checkIdentity: auth required", e)
+                _uiState.value = UiState.AuthRequired
             } catch (e: Exception) {
+                android.util.Log.e("Vauchi", "checkIdentity: ${e.javaClass.simpleName}: ${e.message}", e)
                 _uiState.value = UiState.Error(e.message ?: "Unknown error")
             }
         }
@@ -372,12 +373,10 @@ class MainViewModel(
                     e.message ?: "A secure lock screen is required to use Vauchi.",
                 )
         } catch (e: AuthenticationRequiredException) {
-            _uiState.value =
-                UiState.Error(
-                    "Your device needs to be unlocked to access your data. " +
-                        "Please unlock your device and tap Retry.",
-                )
+            android.util.Log.e("Vauchi", "loadUserData: auth required", e)
+            _uiState.value = UiState.AuthRequired
         } catch (e: Exception) {
+            android.util.Log.e("Vauchi", "loadUserData: ${e.javaClass.simpleName}: ${e.message}", e)
             _uiState.value = UiState.Error(e.message ?: "Failed to load user data")
         }
     }
@@ -386,6 +385,15 @@ class MainViewModel(
         viewModelScope.launch {
             loadUserData()
         }
+    }
+
+    /** Re-run full initialization (identity check + load). Use after biometric auth. */
+    fun retryInit() {
+        checkIdentity()
+    }
+
+    fun setError(message: String) {
+        _uiState.value = UiState.Error(message)
     }
 
     fun sync() {
