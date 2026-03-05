@@ -159,7 +159,8 @@ fun MultiStageExchangeScreen(
                         payload.data,
                         payload.errorCorrection,
                     )
-                delay(payload.displayDurationMs.toLong())
+                // Floor at 100ms to prevent tight CPU spin
+                delay(maxOf(payload.displayDurationMs.toLong(), 100L))
             } else {
                 // No QR to display yet, poll at default rate
                 delay(300L)
