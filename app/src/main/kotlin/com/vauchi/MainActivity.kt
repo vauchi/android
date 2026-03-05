@@ -47,6 +47,7 @@ import com.vauchi.ui.LabelsScreen
 import com.vauchi.ui.LanguageSettingsScreen
 import com.vauchi.ui.MainViewModel
 import com.vauchi.ui.MultiStageExchangeScreen
+import com.vauchi.ui.QrDiagnosticScreen
 import com.vauchi.ui.RecoveryScreen
 import com.vauchi.ui.SettingsScreen
 import com.vauchi.ui.SyncState
@@ -77,7 +78,10 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        Log.i("Vauchi", "Build: v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) core=${coreVersion()}")
+        Log.i(
+            "Vauchi",
+            "Build: v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) core=${coreVersion()} buildId=${BuildConfig.BUILD_ID}",
+        )
 
         // Handle deep link from cold start
         handleIncomingIntent(intent)
@@ -127,6 +131,7 @@ enum class Screen {
     ThemeSettings,
     LanguageSettings,
     Help,
+    QrDiagnostic,
 }
 
 @Composable
@@ -421,6 +426,7 @@ fun MainScreen(
                                 .currentLocaleInfo.name,
                         // Help
                         onHelp = { currentScreen = Screen.Help },
+                        onQrDiagnostic = { currentScreen = Screen.QrDiagnostic },
                         // GDPR
                         onExportGdprData = {
                             val export = viewModel.exportGdprData()
@@ -518,6 +524,12 @@ fun MainScreen(
 
             Screen.Help -> {
                 HelpScreen(
+                    onBack = { currentScreen = Screen.Settings },
+                )
+            }
+
+            Screen.QrDiagnostic -> {
+                QrDiagnosticScreen(
                     onBack = { currentScreen = Screen.Settings },
                 )
             }

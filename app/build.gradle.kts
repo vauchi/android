@@ -1,3 +1,7 @@
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.TimeZone
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -19,6 +23,12 @@ android {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Timestamp-based build ID for dev diagnostics
+        val buildTimestamp = SimpleDateFormat("yyyyMMdd-HHmmss").apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }.format(Date())
+        buildConfigField("String", "BUILD_ID", "\"$buildTimestamp\"")
 
         // Load native libraries for these ABIs
         // arm64-v8a: Modern 64-bit ARM devices

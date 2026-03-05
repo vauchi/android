@@ -96,6 +96,8 @@ fun SettingsScreen(
     currentLanguageName: String = "English",
     // Help
     onHelp: () -> Unit = {},
+    // Diagnostics
+    onQrDiagnostic: () -> Unit = {},
     // GDPR / Privacy
     onExportGdprData: () -> Unit = {},
     onScheduleDeletion: () -> Unit = {},
@@ -822,6 +824,12 @@ fun SettingsScreen(
                 title = "Privacy Policy",
                 subtitle = "How we protect your data",
                 onClick = { openUrl("https://vauchi.app/privacy") },
+            )
+
+            HelpLinkItem(
+                title = "QR Diagnostic",
+                subtitle = "Test QR scanning and camera config",
+                onClick = onQrDiagnostic,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
