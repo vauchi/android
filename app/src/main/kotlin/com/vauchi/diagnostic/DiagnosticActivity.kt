@@ -5,6 +5,7 @@
 package com.vauchi.diagnostic
 
 import android.Manifest
+import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioRecord
@@ -69,6 +70,81 @@ class DiagnosticActivity : ComponentActivity() {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     DiagnosticScreen()
+                }
+            }
+        }
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    /**
+     * Run tests via ADB intent extras. Examples:
+     *   adb shell am start -n com.vauchi/.diagnostic.DiagnosticActivity --es test loopback
+     *   adb shell am start -n com.vauchi/.diagnostic.DiagnosticActivity --es test noise_floor
+     *   adb shell am start -n com.vauchi/.diagnostic.DiagnosticActivity --es test sweep
+     *   adb shell am start -n com.vauchi/.diagnostic.DiagnosticActivity --es test source_comparison
+     *   adb shell am start -n com.vauchi/.diagnostic.DiagnosticActivity --es test cross_device_emit
+     *   adb shell am start -n com.vauchi/.diagnostic.DiagnosticActivity --es test cross_device_listen
+     *   adb shell am start -n com.vauchi/.diagnostic.DiagnosticActivity --es test existing_loopback
+     *   adb shell am start -n com.vauchi/.diagnostic.DiagnosticActivity --es test existing_noise
+     *   adb shell am start -n com.vauchi/.diagnostic.DiagnosticActivity --es test all
+     */
+    private fun handleIntent(intent: Intent?) {
+        val testName = intent?.getStringExtra("test") ?: return
+        // Wait briefly for permission grant to settle
+        CoroutineScope(Dispatchers.Default).launch {
+            Thread.sleep(500)
+            micPermissionGranted = true // Already granted via adb shell pm grant
+            when (testName) {
+                "loopback" -> {
+                    runTest { testLoopback(it) }
+                }
+
+                "noise_floor" -> {
+                    runTest { testNoiseFloor(it) }
+                }
+
+                "sweep" -> {
+                    runTest { testSweep(it) }
+                }
+
+                "source_comparison" -> {
+                    runTest { testSourceComparison(it) }
+                }
+
+                "cross_device_emit" -> {
+                    runTest { testCrossDeviceEmit(it) }
+                }
+
+                "cross_device_listen" -> {
+                    runTest { testCrossDeviceListen(it) }
+                }
+
+                "existing_loopback" -> {
+                    runTest { log ->
+                        ExistingCodeDiagnostic(this@DiagnosticActivity).runLoopbackTest(log)
+                    }
+                }
+
+                "existing_noise" -> {
+                    runTest { log ->
+                        ExistingCodeDiagnostic(this@DiagnosticActivity).runNoiseFloorTest(log)
+                    }
+                }
+
+                "all" -> {
+                    runTest { log ->
+                        testLoopback(log)
+                        testNoiseFloor(log)
+                        testSweep(log)
+                        testSourceComparison(log)
+                        ExistingCodeDiagnostic(this@DiagnosticActivity).runLoopbackTest(log)
+                        ExistingCodeDiagnostic(this@DiagnosticActivity).runNoiseFloorTest(log)
+                    }
                 }
             }
         }
