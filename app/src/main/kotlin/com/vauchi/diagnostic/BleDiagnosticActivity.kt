@@ -289,6 +289,9 @@ class BleDiagnosticActivity : ComponentActivity() {
                 lines.add("ERROR: ${e.message}")
                 Log.e("Vauchi", "[BLE Diagnostic] Test error: ${e.javaClass.simpleName}")
             } finally {
+                for (line in lines) {
+                    Log.i("Vauchi", "[BLE Diag] $line")
+                }
                 logLines.addAll(lines)
                 running = false
             }
