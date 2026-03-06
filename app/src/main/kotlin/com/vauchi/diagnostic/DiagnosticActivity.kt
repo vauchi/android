@@ -246,6 +246,35 @@ class DiagnosticActivity : ComponentActivity() {
                 ) { Text("B: Noise (existing)") }
             }
 
+            Text(
+                text = "Other Diagnostics:",
+                style = MaterialTheme.typography.labelMedium,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+            )
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+            ) {
+                Button(
+                    onClick = {
+                        startActivity(
+                            Intent(
+                                this@DiagnosticActivity,
+                                com.vauchi.diagnostic.qr.QrTunerActivity::class.java,
+                            ),
+                        )
+                    },
+                    enabled = !running,
+                ) { Text("QR Camera Tuner") }
+            }
+
             if (running) {
                 CircularProgressIndicator(
                     modifier = Modifier.padding(16.dp),

@@ -92,6 +92,16 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".diagnostic.qr.QrTunerActivity"
+            android:exported="true"
+            android:label="QR Camera Tuner">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <!-- NFC test activity (launch via adb) -->
         <activity
             android:name=".nfc.NfcTestActivity"
