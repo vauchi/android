@@ -56,6 +56,7 @@ import com.google.zxing.qrcode.QRCodeWriter
 import com.vauchi.ui.theme.VauchiTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -66,6 +67,7 @@ import kotlinx.coroutines.withContext
  * Launch via ADB:
  *   adb shell am start -n com.vauchi/.diagnostic.qr.QrTunerActivity --es test sweep
  *   adb shell am start -n com.vauchi/.diagnostic.qr.QrTunerActivity --es test quick
+ *   adb shell am start -n com.vauchi/.diagnostic.qr.QrTunerActivity --es test throughput
  *   adb shell am start -n com.vauchi/.diagnostic.qr.QrTunerActivity  (interactive)
  */
 @androidx.camera.camera2.interop.ExperimentalCamera2Interop
@@ -134,6 +136,7 @@ class QrTunerActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         tuner?.release()
+        throughputTester?.release()
     }
 
     private fun handleIntent(intent: Intent?) {
@@ -165,11 +168,19 @@ class QrTunerActivity : ComponentActivity() {
         return bitmap
     }
 
+    private var throughputTester: QrThroughputTester? = null
+
     private fun startSweep(testName: String) {
         if (running) return
         running = true
         progress = 0f
         logLines.clear()
+
+        // Throughput test mode — separate path
+        if (testName == "throughput") {
+            startThroughputTest()
+            return
+        }
 
         val stabilization = intent?.getIntExtra("stabilization", -1)?.toLong()?.let { if (it >= 0) it else null }
         val scanner = intent?.getStringExtra("scanner") // "zxing" or "mlkit" (default)
@@ -296,6 +307,53 @@ class QrTunerActivity : ComponentActivity() {
                 if (file != null) {
                     log("JSON saved: ${file.name}")
                 }
+            } catch (e: Exception) {
+                log("ERROR: ${e.message}")
+            } finally {
+                withContext(Dispatchers.Main) {
+                    running = false
+                    progress = 1f
+                }
+            }
+        }
+    }
+
+    @androidx.camera.camera2.interop.ExperimentalCamera2Interop
+    private fun startThroughputTest() {
+        val durationSec = intent?.getIntExtra("duration", 10) ?: 10
+        val durationMs = durationSec * 1000L
+
+        log("=== THROUGHPUT TEST ===")
+        log("Device: ${android.os.Build.MODEL} (Android ${android.os.Build.VERSION.SDK_INT})")
+        log("Duration: ${durationSec}s per measurement")
+        log("Camera: front, 720p, zoom=1.0, ev=0 (MLKit)")
+        log("Ensure beacon device is showing QR codes!")
+        log("---")
+
+        val tester =
+            QrThroughputTester(
+                context = this,
+                lifecycleOwner = this,
+                measurementDurationMs = durationMs,
+            )
+        throughputTester = tester
+
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                // Small delay for UI to render
+                delay(500)
+                val result = tester.measure { msg -> log(msg) }
+                log("")
+                log("=== THROUGHPUT SUMMARY ===")
+                log("TTFD: ${result.ttfdMs}ms")
+                log("Throughput: ${"%.0f".format(result.effectiveBytesPerSec)} B/s")
+                log("Unique QRs: ${result.uniqueDecodes}")
+                log("Decodes/s: ${"%.1f".format(result.decodesPerSec)}")
+                log("Avg latency: ${"%.1f".format(result.avgDecodeLatencyMs)}ms")
+
+                // Save JSON
+                val file = tester.saveResultsJson(listOf(result))
+                if (file != null) log("JSON saved: ${file.name}")
             } catch (e: Exception) {
                 log("ERROR: ${e.message}")
             } finally {
