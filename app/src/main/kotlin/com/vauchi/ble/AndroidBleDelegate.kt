@@ -11,7 +11,6 @@ import android.util.Log
 import uniffi.vauchi_mobile.MobileBleDelegate
 import uniffi.vauchi_mobile.MobileBleExchangeResult
 import uniffi.vauchi_mobile.MobileBleState
-import uniffi.vauchi_mobile.MobileBleTransportError
 import java.util.UUID
 
 /**
@@ -29,23 +28,22 @@ class AndroidBleDelegate(
 ) : MobileBleDelegate {
     override fun sendData(
         characteristicUuid: String,
-        data: List<UByte>,
+        data: ByteArray,
     ) {
         val uuid = UUID.fromString(characteristicUuid)
-        val bytes = data.map { it.toByte() }.toByteArray()
 
         gatt?.let { client ->
             client.services
                 ?.flatMap { it.characteristics }
                 ?.find { it.uuid == uuid }
                 ?.let { characteristic ->
-                    characteristic.value = bytes
+                    characteristic.value = data
                     characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
                     client.writeCharacteristic(characteristic)
                 }
         }
 
-        Log.i("Vauchi", "[BLE] Sent ${bytes.size} bytes to $characteristicUuid")
+        Log.i("Vauchi", "[BLE] Sent ${data.size} bytes to $characteristicUuid")
     }
 
     override fun subscribeNotify(characteristicUuid: String) {
