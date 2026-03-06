@@ -171,8 +171,21 @@ class QrTunerActivity : ComponentActivity() {
         progress = 0f
         logLines.clear()
 
-        val t = CameraConfigTuner(context = this, lifecycleOwner = this)
+        val stabilization = intent?.getIntExtra("stabilization", -1)?.toLong()?.let { if (it >= 0) it else null }
+        val scanner = intent?.getStringExtra("scanner") // "zxing" or "mlkit" (default)
+        val useZxing = scanner == "zxing"
+
+        val t =
+            CameraConfigTuner(
+                context = this,
+                lifecycleOwner = this,
+                stabilizationMs = stabilization ?: 1500L,
+                useZxing = useZxing,
+            )
         tuner = t
+
+        if (stabilization != null) log("Stabilization: ${stabilization}ms (custom)")
+        if (useZxing) log("Scanner: ZXing (direct)") else log("Scanner: ML Kit (default)")
 
         val cameraFilter = intent?.getStringExtra("camera") // "front" or "rear"
 
