@@ -7,13 +7,18 @@ package com.vauchi.diagnostic.qr
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -37,11 +42,17 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 import com.vauchi.ui.theme.VauchiTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -68,6 +79,8 @@ class QrTunerActivity : ComponentActivity() {
     private var running by mutableStateOf(false)
     private var progress by mutableFloatStateOf(0f)
     private var cameraGranted by mutableStateOf(false)
+    private var showQrOverlay by mutableStateOf(false)
+    private var qrBitmap by mutableStateOf<Bitmap?>(null)
 
     private var tuner: CameraConfigTuner? = null
 
@@ -101,6 +114,7 @@ class QrTunerActivity : ComponentActivity() {
                     running = running,
                     progress = progress,
                     cameraGranted = cameraGranted,
+                    qrOverlay = if (showQrOverlay) qrBitmap else null,
                     onBack = { finish() },
                     onStartSweep = { startSweep("sweep") },
                     onStartQuick = { startSweep("quick") },
@@ -124,12 +138,31 @@ class QrTunerActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         val testName = intent?.getStringExtra("test") ?: return
+        val mode = intent?.getStringExtra("mode") // "dual" = show QR while scanning
+        if (mode == "dual") {
+            showQrOverlay = true
+            qrBitmap = generateQrBitmap("wb://BIDIRECTIONAL_TEST_${android.os.Build.MODEL}_${System.currentTimeMillis()}")
+            log("DUAL MODE: Showing QR on screen while scanning")
+        }
         if (!cameraGranted) {
             pendingTest = testName
             cameraPermLauncher.launch(Manifest.permission.CAMERA)
             return
         }
         startSweep(testName)
+    }
+
+    private fun generateQrBitmap(data: String): Bitmap {
+        val writer = QRCodeWriter()
+        val size = 600
+        val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, size, size)
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
+        for (x in 0 until size) {
+            for (y in 0 until size) {
+                bitmap.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+            }
+        }
+        return bitmap
     }
 
     private fun startSweep(testName: String) {
@@ -274,6 +307,7 @@ private fun QrTunerScreen(
     running: Boolean,
     progress: Float,
     cameraGranted: Boolean,
+    qrOverlay: Bitmap? = null,
     onBack: () -> Unit,
     onStartSweep: () -> Unit,
     onStartQuick: () -> Unit,
@@ -344,6 +378,28 @@ private fun QrTunerScreen(
                     text = "Testing... ${"%.0f".format(progress * 100)}%",
                     style = MaterialTheme.typography.bodySmall,
                 )
+            }
+
+            // QR overlay for dual mode (simulates showing your own QR while scanning)
+            if (qrOverlay != null) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(Color.White)
+                            .padding(8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        bitmap = qrOverlay.asImageBitmap(),
+                        contentDescription = "QR Code overlay",
+                        modifier =
+                            Modifier
+                                .fillMaxWidth(0.6f)
+                                .aspectRatio(1f),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
