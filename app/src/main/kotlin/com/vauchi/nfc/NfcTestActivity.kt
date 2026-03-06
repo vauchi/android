@@ -4,11 +4,7 @@
 
 package com.vauchi.nfc
 
-import android.app.PendingIntent
-import android.content.Intent
-import android.content.IntentFilter
 import android.nfc.NfcAdapter
-import android.nfc.Tag
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
@@ -76,65 +72,91 @@ class NfcTestActivity : FragmentActivity() {
             subtitle = "Authenticate to use NFC exchange",
             onSuccess = {
                 try {
-                    repo = VauchiRepository(this)
+                    Log.d(TAG, "Biometric auth succeeded, creating repo...")
+                    val r = VauchiRepository(this)
+                    repo = r
+                    // Trigger identity load from storage into memory
+                    if (!r.hasIdentity()) {
+                        _status.value = "No identity found — complete onboarding first"
+                        return@authenticate
+                    }
                     _authenticated.value = true
                     _status.value = "Tap a mode to begin"
+                    Log.d(TAG, "Repo created successfully, identity loaded")
                 } catch (e: Exception) {
-                    _status.value = "Init failed: ${e.message}"
+                    Log.e(TAG, "Init failed", e)
+                    _status.value = "Init failed: ${e.message ?: e.toString()}"
                 }
             },
             onError = { msg ->
+                Log.e(TAG, "Auth failed: $msg")
                 _status.value = if (msg != null) "Auth failed: $msg" else "Auth cancelled"
             },
         )
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (_mode.value == "reader") {
-            enableForegroundDispatch()
-        }
-    }
-
     override fun onPause() {
         super.onPause()
-        nfcAdapter?.disableForegroundDispatch(this)
+        disableNfcModes()
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        if (_mode.value != "reader") return
+    @Volatile
+    private var exchangeInProgress = false
 
-        val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG) ?: return
-        Log.d(TAG, "Tag discovered: ${tag.techList.joinToString()}")
-        _status.value = "Tag found, exchanging..."
+    private val readerCallback =
+        NfcAdapter.ReaderCallback { tag ->
+            // Prevent concurrent processing when reader mode re-discovers the tag
+            if (exchangeInProgress) return@ReaderCallback
+            exchangeInProgress = true
 
-        Thread {
-            val session = readerSession ?: return@Thread
+            Log.d(TAG, "ReaderMode tag discovered: ${tag.techList.joinToString()}")
+            runOnUiThread { _status.value = "Tag found, exchanging..." }
+
+            val session =
+                readerSession ?: run {
+                    exchangeInProgress = false
+                    return@ReaderCallback
+                }
             when (val outcome = readerService.performExchange(tag, session)) {
                 is NfcExchangeOutcome.Success -> {
-                    _result.value = "Exchange complete!\n" +
-                        "Remote: ${outcome.result.remoteDisplayName}\n" +
-                        "Identity key: ${outcome.result.remoteIdentityKey.take(8).joinToString("") { "%02x".format(it) }}..."
-                    _status.value = "Success"
-                    _nfcState.value = session.state().toString()
+                    // Disable reader mode after success — no need to keep scanning
+                    nfcAdapter?.disableReaderMode(this)
+                    runOnUiThread {
+                        _result.value = "Exchange complete!\n" +
+                            "Remote: ${outcome.result.remoteDisplayName}\n" +
+                            "Identity key: ${outcome.result.remoteIdentityKey.take(8).joinToString("") { "%02x".format(it) }}..."
+                        _status.value = "Success"
+                        _nfcState.value = session.state().toString()
+                    }
                 }
 
                 is NfcExchangeOutcome.RelayFallback -> {
-                    _result.value = "Relay fallback triggered\n" +
-                        "Exchange ID: ${outcome.exchangeId.take(8).joinToString("") { "%02x".format(it) }}..."
-                    _status.value = "Relay fallback"
-                    _nfcState.value = session.state().toString()
+                    nfcAdapter?.disableReaderMode(this)
+                    runOnUiThread {
+                        _result.value = "Relay fallback triggered\n" +
+                            "Exchange ID: ${outcome.exchangeId.take(8).joinToString("") { "%02x".format(it) }}..."
+                        _status.value = "Relay fallback"
+                        _nfcState.value = session.state().toString()
+                    }
                 }
 
                 is NfcExchangeOutcome.Error -> {
-                    _result.value = "Error: ${outcome.message}"
-                    _status.value = "Failed"
-                    _nfcState.value = session.state().toString()
+                    // Create a fresh session for the next attempt
+                    try {
+                        readerSession = repo?.createNfcInitiator()
+                        Log.d(TAG, "Created fresh session for retry")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to create fresh session", e)
+                    }
+                    exchangeInProgress = false
+                    runOnUiThread {
+                        _result.value = "Error: ${outcome.message}"
+                        _status.value = "Retrying..."
+                        _nfcState.value = session.state().toString()
+                    }
                 }
             }
-        }.start()
-    }
+        }
 
     private fun startReaderMode() {
         val r =
@@ -148,9 +170,10 @@ class NfcTestActivity : FragmentActivity() {
             _mode.value = "reader"
             _status.value = "Hold phone near other device..."
             _nfcState.value = session.state().toString()
-            enableForegroundDispatch()
+            enableReaderMode()
         } catch (e: Exception) {
-            _status.value = "Failed to create session: ${e.message}"
+            Log.e(TAG, "Failed to create reader session", e)
+            _status.value = "Failed to create session: ${e.message ?: e.toString()}"
         }
     }
 
@@ -166,6 +189,10 @@ class NfcTestActivity : FragmentActivity() {
             _mode.value = "hce"
             _status.value = "HCE ready — hold other device's reader near this phone"
             _nfcState.value = session.state().toString()
+
+            // Disable reader mode on HCE device to prevent it from
+            // acting as a reader and interfering with the other device's reader
+            nfcAdapter?.disableReaderMode(this)
 
             // Poll state changes
             Thread {
@@ -187,7 +214,8 @@ class NfcTestActivity : FragmentActivity() {
                 }
             }.start()
         } catch (e: Exception) {
-            _status.value = "Failed to create session: ${e.message}"
+            Log.e(TAG, "Failed to create HCE session", e)
+            _status.value = "Failed to create session: ${e.message ?: e.toString()}"
         }
     }
 
@@ -197,25 +225,30 @@ class NfcTestActivity : FragmentActivity() {
         _result.value = null
         _nfcState.value = "—"
         readerSession = null
+        exchangeInProgress = false
         VauchiHceService.activeSession = null
-        nfcAdapter?.disableForegroundDispatch(this)
+        disableNfcModes()
     }
 
-    private fun enableForegroundDispatch() {
+    private fun enableReaderMode() {
         val adapter = nfcAdapter ?: return
-        val intent =
-            PendingIntent.getActivity(
-                this,
-                0,
-                Intent(this, javaClass).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-                PendingIntent.FLAG_MUTABLE,
-            )
-        val filters =
-            arrayOf(
-                IntentFilter(NfcAdapter.ACTION_TECH_DISCOVERED),
-            )
-        val techLists = arrayOf(arrayOf("android.nfc.tech.IsoDep"))
-        adapter.enableForegroundDispatch(this, intent, filters, techLists)
+        // enableReaderMode forces the device into reader-only mode,
+        // preventing peer-to-peer negotiation issues with HCE devices.
+        // FLAG_READER_NFC_A covers IsoDep (ISO 14443-4) which HCE uses.
+        // FLAG_READER_SKIP_NDEF_CHECK skips NDEF detection for faster connection.
+        adapter.enableReaderMode(
+            this,
+            readerCallback,
+            NfcAdapter.FLAG_READER_NFC_A or
+                NfcAdapter.FLAG_READER_NFC_B or
+                NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
+            null,
+        )
+        Log.d(TAG, "Reader mode enabled")
+    }
+
+    private fun disableNfcModes() {
+        nfcAdapter?.disableReaderMode(this)
     }
 }
 

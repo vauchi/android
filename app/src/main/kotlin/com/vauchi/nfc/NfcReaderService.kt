@@ -41,34 +41,47 @@ class NfcReaderService {
             isoDep.connect()
             isoDep.timeout = TRANSCEIVE_TIMEOUT_MS
 
+            Log.d(
+                TAG,
+                "IsoDep connected, maxTransceiveLength=${isoDep.maxTransceiveLength}, isExtendedLengthApduSupported=${isoDep.isExtendedLengthApduSupported}",
+            )
+
             // Step 1: SELECT AID
             val selectApdu = buildSelectAid(VauchiHceService.VAUCHI_AID)
             val selectResponse = isoDep.transceive(selectApdu)
             if (!isSuccess(selectResponse)) {
+                Log.e(TAG, "AID selection failed, response=${selectResponse.joinToString("") { "%02x".format(it) }}")
                 return NfcExchangeOutcome.Error("AID selection failed")
             }
+            Log.d(TAG, "AID selected successfully")
 
-            // Step 2: Send key offer (Phase 1)
+            // Step 2a: Send key offer (Phase 1) → get key ack back
             val keyOffer = session.createKeyOffer()
+            Log.d(TAG, "Key offer created, size=${keyOffer.size}")
             val offerApdu = buildApdu(VauchiHceService.INS_KEY_OFFER, keyOffer)
-            val phase2Response = isoDep.transceive(offerApdu)
-            if (!isSuccess(phase2Response)) {
-                return NfcExchangeOutcome.Error("Key offer rejected")
+            Log.d(TAG, "Sending key offer APDU, size=${offerApdu.size}")
+            val ackResponse = isoDep.transceive(offerApdu)
+            Log.d(TAG, "Key ack response, size=${ackResponse.size}, sw=${ackResponse.takeLast(2).joinToString("") { "%02x".format(it) }}")
+            if (!isSuccess(ackResponse)) {
+                return NfcExchangeOutcome.Error("Key offer rejected (sw=${ackResponse.takeLast(2).joinToString("") { "%02x".format(it) }})")
             }
+            val ackBytes = ackResponse.sliceArray(0 until ackResponse.size - 2)
 
-            // Parse response: [ack_len_hi, ack_len_lo, ack_bytes..., card_bytes...]
-            val responseData = phase2Response.sliceArray(0 until phase2Response.size - 2)
-            if (responseData.size < 2) {
-                return NfcExchangeOutcome.Error("Response too short")
+            // Step 2b: Fetch encrypted card (Phase 2b)
+            val getCardApdu = buildApdu(VauchiHceService.INS_GET_ENCRYPTED_CARD, ByteArray(0))
+            Log.d(TAG, "Fetching encrypted card...")
+            val cardResponse = isoDep.transceive(getCardApdu)
+            Log.d(
+                TAG,
+                "Encrypted card response, size=${cardResponse.size}, sw=${cardResponse.takeLast(2).joinToString("") { "%02x".format(it) }}",
+            )
+            if (!isSuccess(cardResponse)) {
+                return NfcExchangeOutcome.Error("Failed to get encrypted card")
             }
-            val ackLen = ((responseData[0].toInt() and 0xFF) shl 8) or (responseData[1].toInt() and 0xFF)
-            if (responseData.size < 2 + ackLen) {
-                return NfcExchangeOutcome.Error("Invalid ack length")
-            }
-            val ackBytes = responseData.sliceArray(2 until 2 + ackLen)
-            val encryptedCard = responseData.sliceArray(2 + ackLen until responseData.size)
+            val encryptedCard = cardResponse.sliceArray(0 until cardResponse.size - 2)
 
             // Step 3: Process key ack + encrypted card (Phase 2 initiator side)
+            Log.d(TAG, "Processing key ack (${ackBytes.size} bytes) + encrypted card (${encryptedCard.size} bytes)")
             val ourEncryptedCard =
                 session.processKeyAck(
                     ackBytes,
@@ -119,15 +132,29 @@ class NfcReaderService {
         ins: Byte,
         data: ByteArray,
     ): ByteArray {
-        // CLA=00, INS, P1=00, P2=00, Lc=data.size, data
-        val apdu = ByteArray(5 + data.size)
-        apdu[0] = 0x00
-        apdu[1] = ins
-        apdu[2] = 0x00
-        apdu[3] = 0x00
-        apdu[4] = data.size.toByte()
-        System.arraycopy(data, 0, apdu, 5, data.size)
-        return apdu
+        if (data.size <= 255) {
+            // Short APDU: CLA=00, INS, P1=00, P2=00, Lc(1 byte), data
+            val apdu = ByteArray(5 + data.size)
+            apdu[0] = 0x00
+            apdu[1] = ins
+            apdu[2] = 0x00
+            apdu[3] = 0x00
+            apdu[4] = data.size.toByte()
+            System.arraycopy(data, 0, apdu, 5, data.size)
+            return apdu
+        } else {
+            // Extended APDU: CLA=00, INS, P1=00, P2=00, 0x00, Lc(2 bytes), data
+            val apdu = ByteArray(7 + data.size)
+            apdu[0] = 0x00
+            apdu[1] = ins
+            apdu[2] = 0x00
+            apdu[3] = 0x00
+            apdu[4] = 0x00 // extended length marker
+            apdu[5] = (data.size shr 8).toByte()
+            apdu[6] = (data.size and 0xFF).toByte()
+            System.arraycopy(data, 0, apdu, 7, data.size)
+            return apdu
+        }
     }
 
     private fun isSuccess(response: ByteArray): Boolean =

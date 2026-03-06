@@ -41,6 +41,7 @@ class VauchiHceService : HostApduService() {
         private val SW_WRONG_DATA = byteArrayOf(0x6A.toByte(), 0x80.toByte())
 
         const val INS_KEY_OFFER: Byte = 0xE0.toByte()
+        const val INS_GET_ENCRYPTED_CARD: Byte = 0xE1.toByte()
         const val INS_ENCRYPTED_CARD: Byte = 0xE2.toByte()
 
         /**
@@ -49,6 +50,9 @@ class VauchiHceService : HostApduService() {
         @Volatile
         var activeSession: MobileNfcHandshake? = null
     }
+
+    /** Encrypted card bytes from Phase 2, held until reader fetches with INS_GET_ENCRYPTED_CARD */
+    private var pendingEncryptedCard: ByteArray? = null
 
     override fun processCommandApdu(
         commandApdu: ByteArray,
@@ -68,13 +72,30 @@ class VauchiHceService : HostApduService() {
             }
 
         return try {
-            when (commandApdu[1]) {
-                INS_KEY_OFFER -> handleKeyOffer(session, extractData(commandApdu))
-                INS_ENCRYPTED_CARD -> handleEncryptedCard(session, extractData(commandApdu))
-                else -> SW_WRONG_DATA
+            val ins = commandApdu[1]
+            Log.d(TAG, "APDU received: INS=%02x, size=${commandApdu.size}".format(ins))
+            val data = extractData(commandApdu)
+            Log.d(TAG, "Extracted data: size=${data.size}")
+            when (ins) {
+                INS_KEY_OFFER -> {
+                    handleKeyOffer(session, data)
+                }
+
+                INS_GET_ENCRYPTED_CARD -> {
+                    handleGetEncryptedCard()
+                }
+
+                INS_ENCRYPTED_CARD -> {
+                    handleEncryptedCard(session, data)
+                }
+
+                else -> {
+                    Log.w(TAG, "Unknown INS: %02x".format(ins))
+                    SW_WRONG_DATA
+                }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "APDU error: ${e.message}")
+            Log.e(TAG, "APDU error: ${e.message}", e)
             SW_CONDITIONS_NOT_SATISFIED
         }
     }
@@ -94,32 +115,61 @@ class VauchiHceService : HostApduService() {
 
     private fun extractData(apdu: ByteArray): ByteArray {
         if (apdu.size < 5) return ByteArray(0)
-        val len = apdu[4].toInt() and 0xFF
-        if (apdu.size < 5 + len) return ByteArray(0)
-        return apdu.sliceArray(5 until 5 + len)
+        val lc = apdu[4].toInt() and 0xFF
+        if (lc != 0) {
+            // Short APDU: Lc is 1 byte
+            if (apdu.size < 5 + lc) return ByteArray(0)
+            return apdu.sliceArray(5 until 5 + lc)
+        } else if (apdu.size >= 7) {
+            // Extended APDU: Lc byte is 0x00, followed by 2-byte length
+            val extLen = ((apdu[5].toInt() and 0xFF) shl 8) or (apdu[6].toInt() and 0xFF)
+            if (apdu.size < 7 + extLen) return ByteArray(0)
+            return apdu.sliceArray(7 until 7 + extLen)
+        }
+        return ByteArray(0)
     }
 
     /**
-     * Phase 2 (Responder): Process key offer from reader.
-     * Returns key ack + encrypted card with 2-byte length prefix.
+     * Phase 2a (Responder): Process key offer from reader.
+     * Returns key ack bytes + SW_OK. Encrypted card is stored for retrieval via INS_GET_ENCRYPTED_CARD.
+     * Split into two APDUs to stay under HCE response size limits (~261 bytes).
      */
     private fun handleKeyOffer(
         session: MobileNfcHandshake,
         data: ByteArray,
     ): ByteArray {
+        Log.d(TAG, "Processing key offer, data size=${data.size}")
         val ackResult = session.processKeyOffer(data)
+        Log.d(TAG, "Key offer processed, ack size=${ackResult.keyAckBytes.size}, card size=${ackResult.encryptedCardBytes.size}")
 
+        // Store encrypted card for next APDU
+        pendingEncryptedCard = ackResult.encryptedCardBytes
+
+        // Return only key ack + SW_OK
         val ackBytes = ackResult.keyAckBytes
-        val cardBytes = ackResult.encryptedCardBytes
-
-        // Format: [ack_len_hi, ack_len_lo, ack_bytes..., card_bytes..., SW_OK]
-        val response = ByteArray(2 + ackBytes.size + cardBytes.size + 2)
-        response[0] = (ackBytes.size shr 8).toByte()
-        response[1] = (ackBytes.size and 0xFF).toByte()
-        System.arraycopy(ackBytes, 0, response, 2, ackBytes.size)
-        System.arraycopy(cardBytes, 0, response, 2 + ackBytes.size, cardBytes.size)
+        val response = ByteArray(ackBytes.size + 2)
+        System.arraycopy(ackBytes, 0, response, 0, ackBytes.size)
         response[response.size - 2] = 0x90.toByte()
         response[response.size - 1] = 0x00
+        Log.d(TAG, "Returning key ack response, size=${response.size}")
+        return response
+    }
+
+    /**
+     * Phase 2b (Responder): Return the encrypted card stored from Phase 2a.
+     */
+    private fun handleGetEncryptedCard(): ByteArray {
+        val card =
+            pendingEncryptedCard ?: run {
+                Log.w(TAG, "No pending encrypted card")
+                return SW_CONDITIONS_NOT_SATISFIED
+            }
+        pendingEncryptedCard = null
+        val response = ByteArray(card.size + 2)
+        System.arraycopy(card, 0, response, 0, card.size)
+        response[response.size - 2] = 0x90.toByte()
+        response[response.size - 1] = 0x00
+        Log.d(TAG, "Returning encrypted card, size=${response.size}")
         return response
     }
 

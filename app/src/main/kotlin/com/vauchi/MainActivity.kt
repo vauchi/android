@@ -427,6 +427,12 @@ fun MainScreen(
                         // Help
                         onHelp = { currentScreen = Screen.Help },
                         onQrDiagnostic = { currentScreen = Screen.QrDiagnostic },
+                        onUltrasonicDiagnostic = {
+                            context.startActivity(Intent(context, com.vauchi.diagnostic.DiagnosticActivity::class.java))
+                        },
+                        onNfcTest = {
+                            context.startActivity(Intent(context, com.vauchi.nfc.NfcTestActivity::class.java))
+                        },
                         // GDPR
                         onExportGdprData = {
                             val export = viewModel.exportGdprData()

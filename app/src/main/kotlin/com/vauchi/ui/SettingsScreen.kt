@@ -98,6 +98,8 @@ fun SettingsScreen(
     onHelp: () -> Unit = {},
     // Diagnostics
     onQrDiagnostic: () -> Unit = {},
+    onUltrasonicDiagnostic: () -> Unit = {},
+    onNfcTest: () -> Unit = {},
     // GDPR / Privacy
     onExportGdprData: () -> Unit = {},
     onScheduleDeletion: () -> Unit = {},
@@ -826,10 +828,30 @@ fun SettingsScreen(
                 onClick = { openUrl("https://vauchi.app/privacy") },
             )
 
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Diagnostics",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { heading() },
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
             HelpLinkItem(
                 title = "QR Diagnostic",
                 subtitle = "Test QR scanning and camera config",
                 onClick = onQrDiagnostic,
+            )
+
+            HelpLinkItem(
+                title = "Ultrasonic Diagnostic",
+                subtitle = "Test ultrasonic proximity verification",
+                onClick = onUltrasonicDiagnostic,
+            )
+
+            HelpLinkItem(
+                title = "NFC Exchange Test",
+                subtitle = "Test NFC contact exchange",
+                onClick = onNfcTest,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
