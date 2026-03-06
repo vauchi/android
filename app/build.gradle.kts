@@ -176,7 +176,7 @@ dependencies {
         implementation("net.java.dev.jna:jna:5.14.0@aar")
     } else {
         // Remote: published AAR includes JNA + JNI libs + Kotlin bindings
-        implementation("com.vauchi:vauchi-mobile:0.4.0-dev.0")
+        implementation("com.vauchi:vauchi-mobile:0.4.1-dev.0")
     }
 
     // Testing
