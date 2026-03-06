@@ -11,6 +11,11 @@ plugins {
     id("com.github.triplet.play")
 }
 
+// Local bindings: build with ./gradlew assembleDebug -PlocalBindings
+// to use jniLibs + Kotlin source from `just bindings` instead of Maven AAR.
+// See: .claude/docs/local-bindings.md
+val useLocalBindings = project.hasProperty("localBindings") || System.getenv("VAUCHI_LOCAL_BINDINGS") != null
+
 android {
     namespace = "com.vauchi"
     compileSdk = 35
@@ -80,6 +85,15 @@ android {
 
     lint {
         lintConfig = file("lint.xml")
+    }
+
+    // When using local bindings, include the locally-generated Kotlin source.
+    // Files live in src/local-bindings/kotlin/ (not the default source set),
+    // so they're only compiled when explicitly added.
+    if (useLocalBindings) {
+        sourceSets.getByName("main") {
+            kotlin.srcDir("src/local-bindings/kotlin")
+        }
     }
 
     packaging {
@@ -156,8 +170,14 @@ dependencies {
     // ML Kit for barcode scanning
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
-    // VauchiMobile native bindings (includes JNA + JNI libs)
-    implementation("com.vauchi:vauchi-mobile:0.3.2-dev.0")
+    // VauchiMobile native bindings
+    if (useLocalBindings) {
+        // Local: JNA needed explicitly (Maven AAR bundles it, local jniLibs don't)
+        implementation("net.java.dev.jna:jna:5.14.0@aar")
+    } else {
+        // Remote: published AAR includes JNA + JNI libs + Kotlin bindings
+        implementation("com.vauchi:vauchi-mobile:0.3.2-dev.0")
+    }
 
     // Testing
     testImplementation(kotlin("test"))
