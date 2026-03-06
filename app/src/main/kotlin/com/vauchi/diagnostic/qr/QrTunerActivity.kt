@@ -67,6 +67,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Diagnostic activity that sweeps camera configurations to find optimal
@@ -95,9 +96,8 @@ class QrTunerActivity : ComponentActivity() {
     private var camera: Camera? = null
     private val cameraExecutor = Executors.newSingleThreadExecutor()
 
-    // Deferred for frame decode results from the image analyzer
-    @Volatile
-    private var pendingFrame: CompletableDeferred<FrameResult>? = null
+    // Deferred for frame decode results from the image analyzer (atomic read-and-clear)
+    private val pendingFrame = AtomicReference<CompletableDeferred<FrameResult>?>(null)
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -210,7 +210,7 @@ class QrTunerActivity : ComponentActivity() {
 
     private suspend fun captureAndDecodeFrame(): FrameResult {
         val deferred = CompletableDeferred<FrameResult>()
-        pendingFrame = deferred
+        pendingFrame.set(deferred)
         return deferred.await()
     }
 
@@ -218,7 +218,7 @@ class QrTunerActivity : ComponentActivity() {
         decoded: Boolean,
         latencyMs: Float,
     ) {
-        val deferred = pendingFrame
+        val deferred = pendingFrame.getAndSet(null)
         if (deferred != null && !deferred.isCompleted) {
             deferred.complete(
                 FrameResult(
@@ -227,7 +227,6 @@ class QrTunerActivity : ComponentActivity() {
                     timestampNs = System.nanoTime(),
                 ),
             )
-            pendingFrame = null
         }
     }
 

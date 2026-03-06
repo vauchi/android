@@ -127,13 +127,10 @@ class DiagnosticCapture(
         height: Int,
         normBox: RectF,
     ): Bitmap {
-        val original =
-            BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+        val options = BitmapFactory.Options().apply { inMutable = true }
+        val mutable =
+            BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, options)
                 ?: Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val mutable = original.copy(Bitmap.Config.ARGB_8888, true)
-        if (original !== mutable) {
-            original.recycle()
-        }
 
         val canvas = Canvas(mutable)
         val paint =
