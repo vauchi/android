@@ -15,12 +15,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,6 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -55,7 +59,21 @@ import kotlinx.coroutines.launch
 import uniffi.vauchi_mobile.MobileProtocolState
 import uniffi.vauchi_mobile.MobileQrPayload
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+
+/** QR code colors: gray reduces screen glare at close face-to-face distance. */
+private val QR_FOREGROUND = android.graphics.Color.rgb(64, 64, 64) // #404040
+private val QR_BACKGROUND = android.graphics.Color.rgb(224, 224, 224) // #E0E0E0
+
+/** Warm beige background: soft, non-reflective. */
+private val ExchangeBackground = Color(0xFFF5F0EB)
+
+private enum class ScanQuality {
+    GOOD, // Green — QR being scanned right now
+    FAIR, // Orange — scanned recently but stale
+    NONE, // Red — no scan detected
+}
 
 /**
  * Multi-stage exchange screen: displays cycling QR codes driven by the core
@@ -110,6 +128,24 @@ fun MultiStageExchangeScreen(
     val scannerGuard = remember { AtomicBoolean(false) }
     val multiStageState by viewModel.multiStageState.collectAsState()
     var graceCompleted by remember { mutableStateOf(false) }
+    var lastScanTimestamp by remember { mutableLongStateOf(0L) }
+    var scanTick by remember { mutableLongStateOf(0L) }
+
+    // Scan quality: green = recent scan (<500ms), orange = stale (<2s), red = no scan
+    val scanQuality by remember {
+        derivedStateOf {
+            // Read scanTick to force recomposition on tick updates
+            @Suppress("UNUSED_EXPRESSION")
+            scanTick
+            val elapsed = System.currentTimeMillis() - lastScanTimestamp
+            when {
+                lastScanTimestamp == 0L -> ScanQuality.NONE
+                elapsed < 500 -> ScanQuality.GOOD
+                elapsed < 2000 -> ScanQuality.FAIR
+                else -> ScanQuality.NONE
+            }
+        }
+    }
 
     var cameraPermissionGranted by remember {
         mutableStateOf(
@@ -182,27 +218,31 @@ fun MultiStageExchangeScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(localizationManager.t("exchange.title")) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { useFrontCamera = !useFrontCamera }) {
-                        Icon(
-                            Icons.Default.Cameraswitch,
-                            contentDescription =
-                                if (useFrontCamera) {
-                                    "Switch to rear camera"
-                                } else {
-                                    "Switch to front camera"
-                                },
-                        )
-                    }
-                },
-            )
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(ExchangeBackground)
+                        .statusBarsPadding()
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
+                }
+                Text(
+                    localizationManager.t("exchange.title"),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f).padding(start = 4.dp),
+                )
+                IconButton(onClick = { useFrontCamera = !useFrontCamera }, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.Cameraswitch,
+                        contentDescription = if (useFrontCamera) "Switch to rear camera" else "Switch to front camera",
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
         },
     ) { padding ->
         when (multiStageState) {
@@ -214,19 +254,19 @@ fun MultiStageExchangeScreen(
                             Modifier
                                 .fillMaxSize()
                                 .padding(padding)
-                                .background(Color.Black),
+                                .background(ExchangeBackground),
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White)
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = StatusTextColor, strokeWidth = 2.dp)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     "Completing exchange...",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White,
+                                    color = StatusTextColor,
                                 )
                             }
                             Spacer(modifier = Modifier.height(8.dp))
@@ -237,7 +277,7 @@ fun MultiStageExchangeScreen(
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 2.dp),
+                                            .padding(horizontal = 24.dp),
                                     contentScale = ContentScale.FillWidth,
                                 )
                             }
@@ -336,20 +376,31 @@ fun MultiStageExchangeScreen(
 
             else -> {
                 // Active exchange states: Idle, Advertising, Discovered, Transferring, Verifying, Confirming
+
+                // Tick to refresh scan quality indicator color
+                LaunchedEffect(Unit) {
+                    while (true) {
+                        delay(300L)
+                        scanTick++
+                    }
+                }
+
                 Box(
                     modifier =
                         Modifier
                             .fillMaxSize()
                             .padding(padding)
-                            .background(Color.Black),
-                    contentAlignment = Alignment.Center,
+                            .background(ExchangeBackground),
                 ) {
                     if (!cameraPermissionGranted && permissionsRequested) {
                         // Camera permission denied
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.padding(32.dp),
+                            modifier =
+                                Modifier
+                                    .padding(32.dp)
+                                    .align(Alignment.Center),
                         ) {
                             Icon(
                                 Icons.Default.CameraAlt,
@@ -375,47 +426,80 @@ fun MultiStageExchangeScreen(
                     } else {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            // Status text
-                            MultiStageStatusIndicator(multiStageState)
-
+                            // === TOP: QR code with generous margins ===
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // QR code display with hidden camera scanner
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.fillMaxWidth(),
+                            qrBitmap?.let { bitmap ->
+                                Image(
+                                    bitmap = bitmap.asImageBitmap(),
+                                    contentDescription = "Exchange QR code",
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth(0.98f)
+                                            .aspectRatio(1f)
+                                            .background(
+                                                Color(0xFFE0E0E0),
+                                                shape = RoundedCornerShape(12.dp),
+                                            ).clip(RoundedCornerShape(12.dp)),
+                                )
+                            } ?: run {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth(0.98f)
+                                            .aspectRatio(1f)
+                                            .background(
+                                                Color(0xFFE0E0E0),
+                                                shape = RoundedCornerShape(12.dp),
+                                            ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            // === MIDDLE: Instruction text ===
+                            Text(
+                                text = "Point camera at other phone's QR",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFF666666),
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // === BOTTOM: Camera preview + status indicators ===
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.Bottom,
                             ) {
-                                qrBitmap?.let { bitmap ->
-                                    Image(
-                                        bitmap = bitmap.asImageBitmap(),
-                                        contentDescription = "Exchange QR code",
+                                // Small camera preview
+                                if (cameraPermissionGranted) {
+                                    Box(
                                         modifier =
                                             Modifier
-                                                .fillMaxWidth()
-                                                .aspectRatio(1f)
-                                                .background(Color.White),
-                                    )
-                                }
-
-                                // Hidden camera scanner — continuous scanning
-                                if (cameraPermissionGranted) {
-                                    Box(modifier = Modifier.size(1.dp)) {
+                                                .size(100.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .border(
+                                                    2.dp,
+                                                    Color(0xFF999999),
+                                                    RoundedCornerShape(12.dp),
+                                                ),
+                                    ) {
                                         FaceToFaceCameraPreview(
                                             useFrontCamera = useFrontCamera,
+                                            showPreview = true,
                                             onQrCodeDetected = { code ->
-                                                // Allow re-scanning after processing — the core
-                                                // needs multiple QR frames for the chunked protocol.
-                                                // Use scannerGuard to dedup consecutive identical frames.
                                                 if (!scannerGuard.getAndSet(true)) {
+                                                    lastScanTimestamp = System.currentTimeMillis()
                                                     coroutineScope.launch {
                                                         viewModel.processMultiStageQr(code)
-                                                        // Reset guard after a short delay to allow
-                                                        // the next distinct QR frame to be processed
                                                         delay(50L)
                                                         scannerGuard.set(false)
                                                     }
@@ -424,17 +508,24 @@ fun MultiStageExchangeScreen(
                                         )
                                     }
                                 }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                // Status indicators
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.Bottom,
+                                ) {
+                                    MultiStageStatusIndicator(multiStageState)
+                                }
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                            Text(
-                                text = "Point camera at other phone's QR",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.7f),
-                            )
+                            // === STATUS BAR: scan quality indicator ===
+                            ExchangeStatusBar(scanQuality, multiStageState)
 
-                            Spacer(modifier = Modifier.weight(1f))
+                            Spacer(modifier = Modifier.height(4.dp))
                         }
                     }
                 }
@@ -442,6 +533,9 @@ fun MultiStageExchangeScreen(
         }
     }
 }
+
+/** Text color for status indicators on beige background. */
+private val StatusTextColor = Color(0xFF444444)
 
 /**
  * Shows the current multi-stage protocol status with appropriate indicators.
@@ -453,47 +547,29 @@ private fun MultiStageStatusIndicator(state: MobileProtocolState) {
         is MobileProtocolState.Advertising,
         -> {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "Waiting for peer...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White,
-                )
+                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = StatusTextColor, strokeWidth = 2.dp)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Waiting for peer...", style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
             }
         }
 
         is MobileProtocolState.Discovered -> {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "Peer found! Exchanging data...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White,
-                )
+                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = StatusTextColor, strokeWidth = 2.dp)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Peer found! Exchanging...", style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
             }
         }
 
         is MobileProtocolState.Transferring -> {
             val transferState = state as MobileProtocolState.Transferring
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Transferring data...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White,
-                    )
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), color = StatusTextColor, strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Transferring...", style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                val sendProgress =
-                    if (transferState.chunksTotal > 0u) {
-                        transferState.chunksSent.toFloat() / transferState.chunksTotal.toFloat()
-                    } else {
-                        0f
-                    }
+                Spacer(modifier = Modifier.height(4.dp))
                 val receiveProgress =
                     if (transferState.peerChunksTotal > 0u) {
                         transferState.chunksReceived.toFloat() / transferState.peerChunksTotal.toFloat()
@@ -502,17 +578,14 @@ private fun MultiStageStatusIndicator(state: MobileProtocolState) {
                     }
                 LinearProgressIndicator(
                     progress = { receiveProgress },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 32.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    "Sent ${transferState.chunksSent}/${transferState.chunksTotal} " +
-                        "Received ${transferState.chunksReceived}/${transferState.peerChunksTotal}",
+                    "Rx ${transferState.chunksReceived}/${transferState.peerChunksTotal} " +
+                        "Tx ${transferState.chunksSent}/${transferState.chunksTotal}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = StatusTextColor.copy(alpha = 0.7f),
                 )
             }
         }
@@ -521,18 +594,65 @@ private fun MultiStageStatusIndicator(state: MobileProtocolState) {
         is MobileProtocolState.Confirming,
         -> {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "Verifying exchange...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White,
-                )
+                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = StatusTextColor, strokeWidth = 2.dp)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Verifying exchange...", style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
             }
         }
 
         // Complete and Failed are handled in the parent composable
         else -> {}
+    }
+}
+
+/**
+ * Bottom status bar with scan quality color indicator.
+ * Green = QR being actively scanned, Orange = recent scan, Red = no scan.
+ */
+@Composable
+private fun ExchangeStatusBar(
+    scanQuality: ScanQuality,
+    state: MobileProtocolState,
+) {
+    val indicatorColor =
+        when (scanQuality) {
+            ScanQuality.GOOD -> Color(0xFF4CAF50)
+
+            // Green
+            ScanQuality.FAIR -> Color(0xFFFF9800)
+
+            // Orange
+            ScanQuality.NONE -> Color(0xFFF44336) // Red
+        }
+    val label =
+        when (scanQuality) {
+            ScanQuality.GOOD -> "Scanning"
+            ScanQuality.FAIR -> "Weak signal"
+            ScanQuality.NONE -> "No QR detected"
+        }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFEDE8E3)) // Slightly darker beige
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Scan indicator dot
+        Box(
+            modifier =
+                Modifier
+                    .size(10.dp)
+                    .background(indicatorColor, shape = CircleShape),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            color = StatusTextColor,
+        )
     }
 }
 
@@ -555,15 +675,16 @@ private fun generateQrBitmapForMultiStage(
     val hints =
         mapOf(
             com.google.zxing.EncodeHintType.ERROR_CORRECTION to ecLevel,
-            com.google.zxing.EncodeHintType.MARGIN to 1,
+            com.google.zxing.EncodeHintType.MARGIN to 3,
         )
-    val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, 1024, 1024, hints)
+    val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, 800, 800, hints)
     val width = bitMatrix.width
     val height = bitMatrix.height
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+    // Gray QR: reduces screen glare at close face-to-face distance
     for (x in 0 until width) {
         for (y in 0 until height) {
-            bitmap.setPixel(x, y, if (bitMatrix[x, y]) 0xFF000000.toInt() else 0xFFFFFFFF.toInt())
+            bitmap.setPixel(x, y, if (bitMatrix[x, y]) QR_FOREGROUND else QR_BACKGROUND)
         }
     }
     return bitmap
@@ -572,10 +693,14 @@ private fun generateQrBitmapForMultiStage(
 /**
  * Camera preview that supports switching between front and rear cameras.
  * Scans for QR codes and reports them via [onQrCodeDetected].
+ *
+ * @param showPreview When true, renders a visible camera preview (for the small
+ *   preview square). When false, uses a 0dp invisible anchor.
  */
 @Composable
 fun FaceToFaceCameraPreview(
     useFrontCamera: Boolean,
+    showPreview: Boolean = false,
     onQrCodeDetected: (String) -> Unit,
 ) {
     val context = LocalContext.current
@@ -586,79 +711,102 @@ fun FaceToFaceCameraPreview(
         onDispose { cameraExecutor.shutdown() }
     }
 
-    // Use an invisible AndroidView just to anchor the lifecycle-aware camera.
-    // We only bind ImageAnalysis (no Preview use case) so no surface is needed,
-    // which avoids buffer dequeue failures on devices like Pixel 3a.
     AndroidView(
         factory = { ctx ->
-            android.view.View(ctx).apply {
-                // Trigger camera setup once the view is attached
-                post {
-                    val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-                    cameraProviderFuture.addListener({
-                        val cameraProvider = cameraProviderFuture.get()
-
-                        // 720p works better than 1080p on front cameras (less noise for ML Kit)
-                        val resolutionSelector =
-                            ResolutionSelector
-                                .Builder()
-                                .setResolutionStrategy(
-                                    ResolutionStrategy(
-                                        android.util.Size(1280, 720),
-                                        ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER,
-                                    ),
-                                ).build()
-
-                        val imageAnalyzer =
-                            ImageAnalysis
-                                .Builder()
-                                .setResolutionSelector(resolutionSelector)
-                                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                                .build()
-                                .also { analysis ->
-                                    analysis.setAnalyzer(
-                                        cameraExecutor,
-                                        QrCodeAnalyzer(
-                                            onQrCodeDetected = { code -> onQrCodeDetected(code) },
-                                            isFrontCamera = useFrontCamera,
-                                        ),
-                                    )
-                                }
-
-                        val cameraSelector =
-                            if (useFrontCamera) {
-                                CameraSelector.DEFAULT_FRONT_CAMERA
-                            } else {
-                                CameraSelector.DEFAULT_BACK_CAMERA
-                            }
-
-                        try {
-                            cameraProvider.unbindAll()
-                            val camera =
-                                cameraProvider.bindToLifecycle(
-                                    lifecycleOwner,
-                                    cameraSelector,
-                                    imageAnalyzer,
-                                )
-                            // Apply 1.5x zoom on front camera for better QR detection at distance
-                            if (useFrontCamera) {
-                                camera.cameraControl.setZoomRatio(1.5f)
-                            }
-                            // Trigger center auto-focus
-                            val factory = SurfaceOrientedMeteringPointFactory(1f, 1f)
-                            val action =
-                                FocusMeteringAction
-                                    .Builder(factory.createPoint(0.5f, 0.5f))
-                                    .setAutoCancelDuration(3, java.util.concurrent.TimeUnit.SECONDS)
-                                    .build()
-                            camera.cameraControl.startFocusAndMetering(action)
-                        } catch (e: Exception) {
-                            Log.e("FaceToFace", "Camera binding failed", e)
-                        }
-                    }, ContextCompat.getMainExecutor(ctx))
+            val previewView =
+                if (showPreview) {
+                    PreviewView(ctx).apply {
+                        scaleType = PreviewView.ScaleType.FILL_CENTER
+                        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                    }
+                } else {
+                    null
                 }
+
+            val rootView = previewView ?: android.view.View(ctx)
+
+            rootView.post {
+                val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                cameraProviderFuture.addListener({
+                    val cameraProvider = cameraProviderFuture.get()
+
+                    // 480p for front camera — best decode rate at close distance
+                    val resolutionSelector =
+                        ResolutionSelector
+                            .Builder()
+                            .setResolutionStrategy(
+                                ResolutionStrategy(
+                                    android.util.Size(640, 480),
+                                    ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER,
+                                ),
+                            ).build()
+
+                    val imageAnalyzer =
+                        ImageAnalysis
+                            .Builder()
+                            .setResolutionSelector(resolutionSelector)
+                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                            .build()
+                            .also { analysis ->
+                                analysis.setAnalyzer(
+                                    cameraExecutor,
+                                    QrCodeAnalyzer(
+                                        onQrCodeDetected = { code -> onQrCodeDetected(code) },
+                                        isFrontCamera = useFrontCamera,
+                                    ),
+                                )
+                            }
+
+                    val cameraSelector =
+                        if (useFrontCamera) {
+                            CameraSelector.DEFAULT_FRONT_CAMERA
+                        } else {
+                            CameraSelector.DEFAULT_BACK_CAMERA
+                        }
+
+                    try {
+                        cameraProvider.unbindAll()
+
+                        val useCases =
+                            if (showPreview && previewView != null) {
+                                val preview =
+                                    Preview
+                                        .Builder()
+                                        .setResolutionSelector(resolutionSelector)
+                                        .build()
+                                        .also { it.surfaceProvider = previewView.surfaceProvider }
+                                arrayOf(preview, imageAnalyzer)
+                            } else {
+                                arrayOf(imageAnalyzer)
+                            }
+
+                        val camera =
+                            cameraProvider.bindToLifecycle(
+                                lifecycleOwner,
+                                cameraSelector,
+                                *useCases,
+                            )
+                        // Trigger center auto-focus
+                        val factory = SurfaceOrientedMeteringPointFactory(1f, 1f)
+                        val action =
+                            FocusMeteringAction
+                                .Builder(factory.createPoint(0.5f, 0.5f))
+                                .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                                .build()
+                        camera.cameraControl.startFocusAndMetering(action)
+                    } catch (e: Exception) {
+                        Log.e("FaceToFace", "Camera binding failed", e)
+                    }
+                }, ContextCompat.getMainExecutor(ctx))
             }
+
+            rootView
         },
-        modifier = Modifier.size(0.dp),
+        modifier =
+            if (showPreview) {
+                Modifier.fillMaxSize()
+            } else {
+                Modifier.size(0.dp)
+            },
     )
 }
