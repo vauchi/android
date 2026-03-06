@@ -7,11 +7,8 @@ package com.vauchi.ui
 import android.Manifest
 import android.app.Activity
 import android.content.pm.ActivityInfo
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
@@ -53,6 +50,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import com.vauchi.ui.components.PermissionRationaleDialog
+import com.vauchi.ui.components.rememberPermissionState
 import com.vauchi.util.LocalizationManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -147,30 +146,18 @@ fun MultiStageExchangeScreen(
         }
     }
 
-    var cameraPermissionGranted by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.CAMERA,
-            ) == PackageManager.PERMISSION_GRANTED,
+    val cameraPermState =
+        rememberPermissionState(
+            permission = Manifest.permission.CAMERA,
+            title = "Camera Required",
+            rationale = "Vauchi needs the camera to scan your contact's QR code during the exchange.",
         )
-    }
-    var permissionsRequested by remember { mutableStateOf(false) }
+    val cameraPermissionGranted = cameraPermState.isGranted
+    var permissionsRequested by remember { mutableStateOf(cameraPermissionGranted) }
 
-    val permissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            cameraPermissionGranted = granted
-            permissionsRequested = true
-        }
-
-    // Request camera permission on first compose
-    LaunchedEffect(Unit) {
-        if (!cameraPermissionGranted) {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
-        } else {
-            permissionsRequested = true
-        }
-    }
+    LaunchedEffect(Unit) { cameraPermState.request() }
+    LaunchedEffect(cameraPermissionGranted) { if (cameraPermissionGranted) permissionsRequested = true }
+    PermissionRationaleDialog(cameraPermState)
 
     // Start multi-stage session on enter
     LaunchedEffect(Unit) {
@@ -417,9 +404,7 @@ fun MultiStageExchangeScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Button(onClick = {
-                                permissionLauncher.launch(Manifest.permission.CAMERA)
-                            }) {
+                            Button(onClick = { cameraPermState.request() }) {
                                 Text("Grant Permission")
                             }
                         }

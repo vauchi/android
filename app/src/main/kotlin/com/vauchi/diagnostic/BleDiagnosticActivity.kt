@@ -28,7 +28,6 @@ import android.os.ParcelUuid
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -44,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +53,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vauchi.ui.components.PermissionRationaleDialog
+import com.vauchi.ui.components.rememberMultiplePermissionsState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -99,31 +101,22 @@ class BleDiagnosticActivity : ComponentActivity() {
 
     private val blePermissions =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            arrayOf(
+            listOf(
                 Manifest.permission.BLUETOOTH_SCAN,
                 Manifest.permission.BLUETOOTH_CONNECT,
                 Manifest.permission.BLUETOOTH_ADVERTISE,
                 Manifest.permission.ACCESS_FINE_LOCATION,
             )
         } else {
-            arrayOf(
+            listOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
             )
-        }
-
-    private val requestPermissionsLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
-            blePermissionGranted = results.values.all { it }
-            if (!blePermissionGranted) {
-                logLines.add("ERROR: BLE permissions denied")
-            }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         bluetoothManager = getSystemService(BluetoothManager::class.java)
         bluetoothAdapter = bluetoothManager?.adapter
-        requestPermissionsLauncher.launch(blePermissions)
 
         Log.i("Vauchi", "[BLE Diagnostic] Activity created")
 
@@ -179,6 +172,18 @@ class BleDiagnosticActivity : ComponentActivity() {
     @OptIn(ExperimentalLayoutApi::class)
     @Composable
     private fun DiagnosticScreen() {
+        val permState =
+            rememberMultiplePermissionsState(
+                permissions = blePermissions,
+                title = "Bluetooth & Location Required",
+                rationale =
+                    "Vauchi needs Bluetooth to exchange contact cards with nearby devices. " +
+                        "Location access is required by Android to scan for Bluetooth devices.",
+            )
+        LaunchedEffect(Unit) { permState.request() }
+        LaunchedEffect(permState.allGranted) { blePermissionGranted = permState.allGranted }
+        PermissionRationaleDialog(permState)
+
         Column(
             modifier =
                 Modifier
