@@ -754,6 +754,7 @@ class BleDiagnosticActivity : ComponentActivity() {
                     newState: Int,
                 ) {
                     val state = if (newState == BluetoothProfile.STATE_CONNECTED) "connected" else "disconnected"
+                    Log.i("Vauchi", "[BLE Server] device $state addr=${device.address} status=$status")
                     logLines.add("Server: device $state")
                 }
 
@@ -766,8 +767,14 @@ class BleDiagnosticActivity : ComponentActivity() {
                     offset: Int,
                     value: ByteArray?,
                 ) {
+                    Log.i(
+                        "Vauchi",
+                        "[BLE Server] writeReq reqId=$requestId responseNeeded=$responseNeeded " +
+                            "len=${value?.size ?: 0} from=${device.address}",
+                    )
                     if (responseNeeded) {
-                        gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+                        val sent = gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+                        Log.i("Vauchi", "[BLE Server] sendResponse reqId=$requestId result=$sent")
                     }
                 }
 

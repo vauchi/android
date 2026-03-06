@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.fragment.app.FragmentActivity
+import com.vauchi.BuildConfig
 import com.vauchi.ui.model.*
 import com.vauchi.util.BiometricHelper
 import com.vauchi.util.ClipboardUtils
@@ -98,6 +99,7 @@ fun SettingsScreen(
     onHelp: () -> Unit = {},
     // Diagnostics
     onQrDiagnostic: () -> Unit = {},
+    onBleDiagnostic: () -> Unit = {},
     onUltrasonicDiagnostic: () -> Unit = {},
     onNfcTest: () -> Unit = {},
     // GDPR / Privacy
@@ -149,6 +151,44 @@ fun SettingsScreen(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
+            // Diagnostics Section (debug builds only)
+            if (BuildConfig.DEBUG) {
+                Text(
+                    text = "Diagnostics",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.semantics { heading() },
+                )
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        ),
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        HelpLinkItem(
+                            title = "QR Diagnostic",
+                            subtitle = "Test QR scanning and camera config",
+                            onClick = onQrDiagnostic,
+                        )
+                        HelpLinkItem(
+                            title = "BLE Diagnostic",
+                            subtitle = "Test Bluetooth LE connectivity",
+                            onClick = onBleDiagnostic,
+                        )
+                        HelpLinkItem(
+                            title = "Ultrasonic Diagnostic",
+                            subtitle = "Test ultrasonic proximity detection",
+                            onClick = onUltrasonicDiagnostic,
+                        )
+                    }
+                }
+
+                HorizontalDivider()
+            }
+
             // Account Section
             Text(
                 text = localizationManager.t("settings.account"),
@@ -840,6 +880,12 @@ fun SettingsScreen(
                 title = "QR Diagnostic",
                 subtitle = "Test QR scanning and camera config",
                 onClick = onQrDiagnostic,
+            )
+
+            HelpLinkItem(
+                title = "BLE Diagnostic",
+                subtitle = "Test BLE transport capabilities",
+                onClick = onBleDiagnostic,
             )
 
             HelpLinkItem(

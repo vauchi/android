@@ -427,11 +427,20 @@ fun MainScreen(
                         // Help
                         onHelp = { currentScreen = Screen.Help },
                         onQrDiagnostic = { currentScreen = Screen.QrDiagnostic },
+                        onBleDiagnostic = {
+                            context.startActivity(
+                                Intent(context, com.vauchi.diagnostic.BleDiagnosticActivity::class.java),
+                            )
+                        },
                         onUltrasonicDiagnostic = {
-                            context.startActivity(Intent(context, com.vauchi.diagnostic.DiagnosticActivity::class.java))
+                            context.startActivity(
+                                Intent(context, com.vauchi.diagnostic.DiagnosticActivity::class.java),
+                            )
                         },
                         onNfcTest = {
-                            context.startActivity(Intent(context, com.vauchi.nfc.NfcTestActivity::class.java))
+                            context.startActivity(
+                                Intent(context, com.vauchi.nfc.NfcTestActivity::class.java),
+                            )
                         },
                         // GDPR
                         onExportGdprData = {
