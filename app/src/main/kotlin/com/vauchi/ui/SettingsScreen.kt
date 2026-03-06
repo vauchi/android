@@ -183,6 +183,11 @@ fun SettingsScreen(
                             subtitle = "Test ultrasonic proximity detection",
                             onClick = onUltrasonicDiagnostic,
                         )
+                        HelpLinkItem(
+                            title = "NFC Exchange Test",
+                            subtitle = "Test NFC contact exchange",
+                            onClick = onNfcTest,
+                        )
                     }
                 }
 
@@ -866,38 +871,6 @@ fun SettingsScreen(
                 title = "Privacy Policy",
                 subtitle = "How we protect your data",
                 onClick = { openUrl("https://vauchi.app/privacy") },
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Diagnostics",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.semantics { heading() },
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            HelpLinkItem(
-                title = "QR Diagnostic",
-                subtitle = "Test QR scanning and camera config",
-                onClick = onQrDiagnostic,
-            )
-
-            HelpLinkItem(
-                title = "BLE Diagnostic",
-                subtitle = "Test BLE transport capabilities",
-                onClick = onBleDiagnostic,
-            )
-
-            HelpLinkItem(
-                title = "Ultrasonic Diagnostic",
-                subtitle = "Test ultrasonic proximity verification",
-                onClick = onUltrasonicDiagnostic,
-            )
-
-            HelpLinkItem(
-                title = "NFC Exchange Test",
-                subtitle = "Test NFC contact exchange",
-                onClick = onNfcTest,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
