@@ -331,10 +331,10 @@ class BleDiagnosticActivity : ComponentActivity() {
             }
         if (hasPeer) {
             log.add("PASS: Vauchi BLE diagnostic peer found")
-            DiagnosticLogger.logResult("ble_discovery", "pass", "peer_found=true count=${found.size}")
+            DiagnosticLogger.logResult("ble_discovery", "pass", message = "peer_found=true count=${found.size}")
         } else {
             log.add("INFO: No Vauchi peer found (start server on other device)")
-            DiagnosticLogger.logResult("ble_discovery", "info", "no_peer count=${found.size}")
+            DiagnosticLogger.logResult("ble_discovery", "info", message = "no_peer count=${found.size}")
         }
     }
 
@@ -379,13 +379,13 @@ class BleDiagnosticActivity : ComponentActivity() {
 
         if (negotiatedMtu >= MIN_MTU) {
             log.add("PASS: MTU=$negotiatedMtu (>= $MIN_MTU)")
-            DiagnosticLogger.logResult("ble_mtu", "pass", "mtu=$negotiatedMtu")
+            DiagnosticLogger.logResult("ble_mtu", "pass", message = "mtu=$negotiatedMtu")
         } else if (negotiatedMtu > 0) {
             log.add("FAIL: MTU=$negotiatedMtu (< $MIN_MTU)")
-            DiagnosticLogger.logResult("ble_mtu", "fail", "mtu=$negotiatedMtu")
+            DiagnosticLogger.logResult("ble_mtu", "fail", message = "mtu=$negotiatedMtu")
         } else {
             log.add("FAIL: MTU negotiation timed out (connected=$connected)")
-            DiagnosticLogger.logResult("ble_mtu", "fail", "timeout connected=$connected")
+            DiagnosticLogger.logResult("ble_mtu", "fail", message = "timeout connected=$connected")
         }
     }
 
@@ -464,7 +464,11 @@ class BleDiagnosticActivity : ComponentActivity() {
             val kbPerSec = if (elapsed > 0) (size.toDouble() / elapsed) else 0.0
             val pass = kbPerSec >= 2.0
             log.add("  ${size / 1024}KB: ${elapsed}ms (${String.format("%.1f", kbPerSec)} KB/s) ${if (pass) "PASS" else "FAIL"}")
-            DiagnosticLogger.logResult("ble_throughput", if (pass) "pass" else "fail", "size=$size elapsed=$elapsed kbps=$kbPerSec")
+            DiagnosticLogger.logResult(
+                "ble_throughput",
+                if (pass) "pass" else "fail",
+                message = "size=$size elapsed=$elapsed kbps=$kbPerSec",
+            )
         }
 
         gatt?.disconnect()
@@ -555,7 +559,7 @@ class BleDiagnosticActivity : ComponentActivity() {
         val mean = rtts.average()
         val pass = mean < 100
         log.add("Mean RTT: ${String.format("%.1f", mean)}ms ${if (pass) "PASS" else "FAIL"}")
-        DiagnosticLogger.logResult("ble_latency", if (pass) "pass" else "fail", "mean_rtt=$mean")
+        DiagnosticLogger.logResult("ble_latency", if (pass) "pass" else "fail", message = "mean_rtt=$mean")
     }
 
     // ── Test E: RSSI Range ──────────────────────────────────────────
@@ -621,10 +625,10 @@ class BleDiagnosticActivity : ComponentActivity() {
         log.add("RSSI: avg=${String.format("%.0f", avg)} min=$min max=$max (${rssiValues.size} readings)")
         if (allAboveThreshold) {
             log.add("PASS: All readings > -80 dBm")
-            DiagnosticLogger.logResult("ble_rssi", "pass", "avg=$avg min=$min max=$max")
+            DiagnosticLogger.logResult("ble_rssi", "pass", message = "avg=$avg min=$min max=$max")
         } else {
             log.add("FAIL: Some readings <= -80 dBm")
-            DiagnosticLogger.logResult("ble_rssi", "fail", "avg=$avg min=$min max=$max")
+            DiagnosticLogger.logResult("ble_rssi", "fail", message = "avg=$avg min=$min max=$max")
         }
     }
 
@@ -724,10 +728,10 @@ class BleDiagnosticActivity : ComponentActivity() {
         log.add("Pings: $pings sent, $successes succeeded, $drops dropped")
         if (drops == 0 && !disconnected) {
             log.add("PASS: 0 drops, connection stable")
-            DiagnosticLogger.logResult("ble_stability", "pass", "pings=$pings drops=0")
+            DiagnosticLogger.logResult("ble_stability", "pass", message = "pings=$pings drops=0")
         } else {
             log.add("FAIL: $drops drops, disconnected=$disconnected")
-            DiagnosticLogger.logResult("ble_stability", "fail", "pings=$pings drops=$drops disconnected=$disconnected")
+            DiagnosticLogger.logResult("ble_stability", "fail", message = "pings=$pings drops=$drops disconnected=$disconnected")
         }
     }
 
