@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vauchi.diagnostic.qr.QrTunerActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -244,6 +245,13 @@ class DiagnosticActivity : ComponentActivity() {
                     enabled = !running && micPermissionGranted,
                 ) { Text("B: Noise (existing)") }
             }
+
+            Button(
+                onClick = {
+                    startActivity(Intent(this@DiagnosticActivity, QrTunerActivity::class.java))
+                },
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            ) { Text("QR Camera Tuner") }
 
             if (running) {
                 CircularProgressIndicator(
