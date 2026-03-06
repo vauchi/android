@@ -73,18 +73,19 @@
         </activity>
 
         <activity
-            android:name=".diagnostic.qr.QrTunerActivity"
+            android:name=".diagnostic.BleDiagnosticActivity"
             android:exported="true"
-            android:label="QR Camera Tuner">
+            android:label="BLE Diagnostic">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
         <activity
-            android:name=".diagnostic.BleDiagnosticActivity"
+            android:name=".diagnostic.QrDiagnosticActivity"
             android:exported="true"
-            android:label="BLE Diagnostic">
+            android:label="QR Diagnostic">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.DEFAULT" />
