@@ -274,7 +274,7 @@ class QrTunerActivity : ComponentActivity() {
                     )
                 }
 
-            val sessionDir = capture.getSessionDir().parentFile ?: return
+            val sessionDir = capture.sessionDir.parentFile ?: return
             val outFile = File(sessionDir, "results.json")
             outFile.writeText(json.toString(2))
             log("Results saved to ${outFile.absolutePath}")

@@ -29,7 +29,7 @@ class DiagnosticCapture(
         private const val JPEG_QUALITY = 85
     }
 
-    private val sessionDir: File by lazy {
+    val sessionDir: File by lazy {
         val dir =
             File(
                 context.getExternalFilesDir("diagnostic"),
@@ -115,11 +115,6 @@ class DiagnosticCapture(
             Log.e(TAG, "Failed to save snapshot $baseName", e)
         }
     }
-
-    /**
-     * Returns the session directory path for external tooling.
-     */
-    fun getSessionDir(): File = sessionDir
 
     private fun redactRegion(
         imageBytes: ByteArray,
