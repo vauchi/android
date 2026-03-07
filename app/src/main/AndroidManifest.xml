@@ -119,6 +119,7 @@
         <activity
             android:name=".diagnostic.NfcDiagnosticActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:label="NFC Diagnostic">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -126,17 +127,12 @@
             </intent-filter>
         </activity>
 
-        <!-- NFC test activity (launch via adb) -->
+        <!-- NFC test activity (launch via adb only, no NFC intent filter
+             to avoid stealing tags from NfcDiagnosticActivity/enableReaderMode) -->
         <activity
             android:name=".nfc.NfcTestActivity"
             android:exported="true"
             android:launchMode="singleTask">
-            <intent-filter>
-                <action android:name="android.nfc.action.TECH_DISCOVERED" />
-            </intent-filter>
-            <meta-data
-                android:name="android.nfc.action.TECH_DISCOVERED"
-                android:resource="@xml/nfc_tech_filter" />
         </activity>
 
         <!-- NFC Host Card Emulation service for contact exchange -->
