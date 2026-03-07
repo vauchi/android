@@ -115,6 +115,17 @@
             </intent-filter>
         </activity>
 
+        <!-- NFC diagnostic activity -->
+        <activity
+            android:name=".diagnostic.NfcDiagnosticActivity"
+            android:exported="true"
+            android:label="NFC Diagnostic">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <!-- NFC test activity (launch via adb) -->
         <activity
             android:name=".nfc.NfcTestActivity"
@@ -139,6 +150,18 @@
             <meta-data
                 android:name="android.nfc.cardemulation.host_apdu_service"
                 android:resource="@xml/nfc_aid_list" />
+        </service>
+        <!-- NFC Diagnostic HCE service (no auth required) -->
+        <service
+            android:name=".diagnostic.NfcDiagnosticHceService"
+            android:exported="true"
+            android:permission="android.permission.BIND_NFC_SERVICE">
+            <intent-filter>
+                <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.cardemulation.host_apdu_service"
+                android:resource="@xml/nfc_diagnostic_aid_list" />
         </service>
     </application>
 

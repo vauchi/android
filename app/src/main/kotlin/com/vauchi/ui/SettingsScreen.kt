@@ -101,6 +101,7 @@ fun SettingsScreen(
     onQrDiagnostic: () -> Unit = {},
     onBleDiagnostic: () -> Unit = {},
     onUltrasonicDiagnostic: () -> Unit = {},
+    onNfcDiagnostic: () -> Unit = {},
     onNfcTest: () -> Unit = {},
     // GDPR / Privacy
     onExportGdprData: () -> Unit = {},
@@ -182,6 +183,11 @@ fun SettingsScreen(
                             title = "Ultrasonic Diagnostic",
                             subtitle = "Test ultrasonic proximity detection",
                             onClick = onUltrasonicDiagnostic,
+                        )
+                        HelpLinkItem(
+                            title = "NFC Diagnostic",
+                            subtitle = "Test NFC transport capabilities",
+                            onClick = onNfcDiagnostic,
                         )
                         HelpLinkItem(
                             title = "NFC Exchange Test",

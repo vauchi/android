@@ -437,6 +437,11 @@ fun MainScreen(
                                 Intent(context, com.vauchi.diagnostic.DiagnosticActivity::class.java),
                             )
                         },
+                        onNfcDiagnostic = {
+                            context.startActivity(
+                                Intent(context, com.vauchi.diagnostic.NfcDiagnosticActivity::class.java),
+                            )
+                        },
                         onNfcTest = {
                             context.startActivity(
                                 Intent(context, com.vauchi.nfc.NfcTestActivity::class.java),
