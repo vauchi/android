@@ -22,6 +22,7 @@ import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.ParcelUuid
@@ -53,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.vauchi.ui.components.PermissionRationaleDialog
 import com.vauchi.ui.components.rememberMultiplePermissionsState
 import kotlinx.coroutines.CoroutineScope
@@ -138,7 +140,12 @@ class BleDiagnosticActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         stopServer()
-        gatt?.close()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            gatt?.close()
+        }
     }
 
     private fun handleIntent(intent: Intent?) {
