@@ -799,6 +799,8 @@ class BleDiagnosticActivity : ComponentActivity() {
             }
 
         gattServer = bluetoothManager?.openGattServer(this, serverCallback)
+        // Set adapter name for scan response — iOS uses this for peripheral identity
+        bluetoothAdapter?.name = "Vauchi-Diag"
         val service = BluetoothGattService(DIAGNOSTIC_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
         val char =
             BluetoothGattCharacteristic(
@@ -823,6 +825,7 @@ class BleDiagnosticActivity : ComponentActivity() {
             AdvertiseSettings
                 .Builder()
                 .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
                 .setConnectable(true)
                 .setTimeout(0)
                 .build()
@@ -834,11 +837,21 @@ class BleDiagnosticActivity : ComponentActivity() {
                 .addServiceUuid(ParcelUuid(DIAGNOSTIC_SERVICE_UUID))
                 .build()
 
+        // Scan response carries the device name — iOS CoreBluetooth uses this
+        // to resolve the peripheral identity across Android 12+ RPA rotations
+        val scanResponse =
+            AdvertiseData
+                .Builder()
+                .setIncludeDeviceName(true)
+                .build()
+
         advertiser.startAdvertising(
             settings,
             data,
+            scanResponse,
             object : AdvertiseCallback() {
                 override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
+                    Log.i("Vauchi", "[BLE Server] Advertising started (mode=${settingsInEffect.mode} tx=${settingsInEffect.txPowerLevel})")
                     logLines.add("Server: advertising started")
                     isServerMode = true
                 }
