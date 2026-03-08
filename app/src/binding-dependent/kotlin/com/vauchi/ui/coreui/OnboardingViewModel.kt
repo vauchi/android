@@ -125,6 +125,18 @@ class OnboardingViewModel : ViewModel() {
             is ActionResult.Complete -> {
                 _isComplete.value = true
             }
+
+            is ActionResult.StartDeviceLink,
+            is ActionResult.StartBackupImport,
+            is ActionResult.OpenContact,
+            is ActionResult.OpenUrl,
+            is ActionResult.ShowAlert,
+            is ActionResult.RequestCamera,
+            is ActionResult.WipeComplete,
+            -> {
+                // These results are not expected during onboarding.
+                Log.w(TAG, "Unexpected ActionResult during onboarding: $result")
+            }
         }
     }
 

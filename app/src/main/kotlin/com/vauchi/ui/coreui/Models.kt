@@ -121,6 +121,54 @@ sealed class Component {
         val items: List<InfoItem>,
     ) : Component()
 
+    data class ContactList(
+        val id: String,
+        val contacts: List<ContactItem>,
+        val searchable: Boolean,
+    ) : Component()
+
+    data class SettingsGroup(
+        val id: String,
+        val label: String,
+        val items: List<SettingsItem>,
+    ) : Component()
+
+    data class ActionList(
+        val id: String,
+        val items: List<ActionListItem>,
+    ) : Component()
+
+    data class StatusIndicator(
+        val id: String,
+        val icon: String? = null,
+        val title: String,
+        val detail: String? = null,
+        val status: Status,
+    ) : Component()
+
+    data class PinInput(
+        val id: String,
+        val label: String,
+        val length: Int,
+        val masked: Boolean,
+        val validationError: String? = null,
+    ) : Component()
+
+    data class QrCode(
+        val id: String,
+        val data: String,
+        val mode: QrMode,
+        val label: String? = null,
+    ) : Component()
+
+    data class ConfirmationDialog(
+        val id: String,
+        val title: String,
+        val message: String,
+        val confirmText: String,
+        val destructive: Boolean,
+    ) : Component()
+
     data object Divider : Component()
 }
 
@@ -172,6 +220,61 @@ private data class InfoPanelContent(
     val icon: String? = null,
     val title: String,
     val items: List<InfoItem>,
+)
+
+@Serializable
+private data class ContactListContent(
+    val id: String,
+    val contacts: List<ContactItem>,
+    val searchable: Boolean,
+)
+
+@Serializable
+private data class SettingsGroupContent(
+    val id: String,
+    val label: String,
+    val items: List<SettingsItem>,
+)
+
+@Serializable
+private data class ActionListContent(
+    val id: String,
+    val items: List<ActionListItem>,
+)
+
+@Serializable
+private data class StatusIndicatorContent(
+    val id: String,
+    val icon: String? = null,
+    val title: String,
+    val detail: String? = null,
+    val status: Status,
+)
+
+@Serializable
+private data class PinInputContent(
+    val id: String,
+    val label: String,
+    val length: Int,
+    val masked: Boolean,
+    @SerialName("validation_error") val validationError: String? = null,
+)
+
+@Serializable
+private data class QrCodeContent(
+    val id: String,
+    val data: String,
+    val mode: QrMode,
+    val label: String? = null,
+)
+
+@Serializable
+private data class ConfirmationDialogContent(
+    val id: String,
+    val title: String,
+    val message: String,
+    @SerialName("confirm_text") val confirmText: String,
+    val destructive: Boolean,
 )
 
 internal object ComponentSerializer : KSerializer<Component> {
@@ -249,6 +352,66 @@ internal object ComponentSerializer : KSerializer<Component> {
                             icon = c.icon,
                             title = c.title,
                             items = c.items,
+                        )
+                    }
+
+                    "ContactList" in element -> {
+                        val c: ContactListContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["ContactList"]!!)
+                        Component.ContactList(id = c.id, contacts = c.contacts, searchable = c.searchable)
+                    }
+
+                    "SettingsGroup" in element -> {
+                        val c: SettingsGroupContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["SettingsGroup"]!!)
+                        Component.SettingsGroup(id = c.id, label = c.label, items = c.items)
+                    }
+
+                    "ActionList" in element -> {
+                        val c: ActionListContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["ActionList"]!!)
+                        Component.ActionList(id = c.id, items = c.items)
+                    }
+
+                    "StatusIndicator" in element -> {
+                        val c: StatusIndicatorContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["StatusIndicator"]!!)
+                        Component.StatusIndicator(
+                            id = c.id,
+                            icon = c.icon,
+                            title = c.title,
+                            detail = c.detail,
+                            status = c.status,
+                        )
+                    }
+
+                    "PinInput" in element -> {
+                        val c: PinInputContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["PinInput"]!!)
+                        Component.PinInput(
+                            id = c.id,
+                            label = c.label,
+                            length = c.length,
+                            masked = c.masked,
+                            validationError = c.validationError,
+                        )
+                    }
+
+                    "QrCode" in element -> {
+                        val c: QrCodeContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["QrCode"]!!)
+                        Component.QrCode(id = c.id, data = c.data, mode = c.mode, label = c.label)
+                    }
+
+                    "ConfirmationDialog" in element -> {
+                        val c: ConfirmationDialogContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["ConfirmationDialog"]!!)
+                        Component.ConfirmationDialog(
+                            id = c.id,
+                            title = c.title,
+                            message = c.message,
+                            confirmText = c.confirmText,
+                            destructive = c.destructive,
                         )
                     }
 
@@ -340,6 +503,72 @@ internal object ComponentSerializer : KSerializer<Component> {
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("InfoPanel" to inner)))
             }
+
+            is Component.ContactList -> {
+                val content =
+                    ContactListContent(id = value.id, contacts = value.contacts, searchable = value.searchable)
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("ContactList" to inner)))
+            }
+
+            is Component.SettingsGroup -> {
+                val content =
+                    SettingsGroupContent(id = value.id, label = value.label, items = value.items)
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("SettingsGroup" to inner)))
+            }
+
+            is Component.ActionList -> {
+                val content = ActionListContent(id = value.id, items = value.items)
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("ActionList" to inner)))
+            }
+
+            is Component.StatusIndicator -> {
+                val content =
+                    StatusIndicatorContent(
+                        id = value.id,
+                        icon = value.icon,
+                        title = value.title,
+                        detail = value.detail,
+                        status = value.status,
+                    )
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("StatusIndicator" to inner)))
+            }
+
+            is Component.PinInput -> {
+                val content =
+                    PinInputContent(
+                        id = value.id,
+                        label = value.label,
+                        length = value.length,
+                        masked = value.masked,
+                        validationError = value.validationError,
+                    )
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("PinInput" to inner)))
+            }
+
+            is Component.QrCode -> {
+                val content =
+                    QrCodeContent(id = value.id, data = value.data, mode = value.mode, label = value.label)
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("QrCode" to inner)))
+            }
+
+            is Component.ConfirmationDialog -> {
+                val content =
+                    ConfirmationDialogContent(
+                        id = value.id,
+                        title = value.title,
+                        message = value.message,
+                        confirmText = value.confirmText,
+                        destructive = value.destructive,
+                    )
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("ConfirmationDialog" to inner)))
+            }
         }
     }
 }
@@ -359,6 +588,7 @@ enum class InputType {
     Text,
     Phone,
     Email,
+    Password,
 }
 
 @Serializable
@@ -484,6 +714,134 @@ data class InfoItem(
     val detail: String,
 )
 
+@Serializable
+data class ContactItem(
+    val id: String,
+    val name: String,
+    val subtitle: String? = null,
+    @SerialName("avatar_initials") val avatarInitials: String,
+    val status: String? = null,
+)
+
+@Serializable
+data class SettingsItem(
+    val id: String,
+    val label: String,
+    val kind: SettingsItemKind,
+)
+
+@Serializable(with = SettingsItemKindSerializer::class)
+sealed class SettingsItemKind {
+    data class Toggle(
+        val enabled: Boolean,
+    ) : SettingsItemKind()
+
+    data class Value(
+        val value: String,
+    ) : SettingsItemKind()
+
+    data class Link(
+        val detail: String? = null,
+    ) : SettingsItemKind()
+
+    data class Destructive(
+        val label: String,
+    ) : SettingsItemKind()
+}
+
+internal object SettingsItemKindSerializer : KSerializer<SettingsItemKind> {
+    override val descriptor: SerialDescriptor = buildClassSerialDescriptor("SettingsItemKind")
+
+    override fun deserialize(decoder: Decoder): SettingsItemKind {
+        val jsonDecoder = decoder as JsonDecoder
+        val element = jsonDecoder.decodeJsonElement() as JsonObject
+        return when {
+            "Toggle" in element -> {
+                val obj = element["Toggle"] as JsonObject
+                SettingsItemKind.Toggle(enabled = obj["enabled"]!!.jsonPrimitive.content.toBooleanStrict())
+            }
+
+            "Value" in element -> {
+                val obj = element["Value"] as JsonObject
+                SettingsItemKind.Value(value = obj["value"]!!.jsonPrimitive.content)
+            }
+
+            "Link" in element -> {
+                val obj = element["Link"] as JsonObject
+                SettingsItemKind.Link(detail = obj["detail"]?.jsonPrimitive?.contentOrNull)
+            }
+
+            "Destructive" in element -> {
+                val obj = element["Destructive"] as JsonObject
+                SettingsItemKind.Destructive(label = obj["label"]!!.jsonPrimitive.content)
+            }
+
+            else -> {
+                throw IllegalArgumentException("Unknown SettingsItemKind: $element")
+            }
+        }
+    }
+
+    override fun serialize(
+        encoder: Encoder,
+        value: SettingsItemKind,
+    ) {
+        val jsonEncoder = encoder as JsonEncoder
+        val element =
+            when (value) {
+                is SettingsItemKind.Toggle -> {
+                    JsonObject(mapOf("Toggle" to JsonObject(mapOf("enabled" to JsonPrimitive(value.enabled)))))
+                }
+
+                is SettingsItemKind.Value -> {
+                    JsonObject(mapOf("Value" to JsonObject(mapOf("value" to JsonPrimitive(value.value)))))
+                }
+
+                is SettingsItemKind.Link -> {
+                    JsonObject(
+                        mapOf(
+                            "Link" to
+                                JsonObject(
+                                    mapOf(
+                                        "detail" to
+                                            if (value.detail != null) JsonPrimitive(value.detail) else JsonNull,
+                                    ),
+                                ),
+                        ),
+                    )
+                }
+
+                is SettingsItemKind.Destructive -> {
+                    JsonObject(mapOf("Destructive" to JsonObject(mapOf("label" to JsonPrimitive(value.label)))))
+                }
+            }
+        jsonEncoder.encodeJsonElement(element)
+    }
+}
+
+@Serializable
+data class ActionListItem(
+    val id: String,
+    val label: String,
+    val icon: String? = null,
+    val detail: String? = null,
+)
+
+@Serializable
+enum class Status {
+    Pending,
+    InProgress,
+    Success,
+    Failed,
+    Warning,
+}
+
+@Serializable
+enum class QrMode {
+    Display,
+    Scan,
+}
+
 // ── UserAction ──────────────────────────────────────────────────────
 
 /**
@@ -517,6 +875,21 @@ sealed class UserAction {
 
     data class GroupViewSelected(
         val groupName: String? = null,
+    ) : UserAction()
+
+    data class SearchChanged(
+        val componentId: String,
+        val query: String,
+    ) : UserAction()
+
+    data class ListItemSelected(
+        val componentId: String,
+        val itemId: String,
+    ) : UserAction()
+
+    data class SettingsToggled(
+        val componentId: String,
+        val itemId: String,
     ) : UserAction()
 }
 
@@ -607,6 +980,48 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                         ),
                     )
                 }
+
+                is UserAction.SearchChanged -> {
+                    JsonObject(
+                        mapOf(
+                            "SearchChanged" to
+                                JsonObject(
+                                    mapOf(
+                                        "component_id" to JsonPrimitive(value.componentId),
+                                        "query" to JsonPrimitive(value.query),
+                                    ),
+                                ),
+                        ),
+                    )
+                }
+
+                is UserAction.ListItemSelected -> {
+                    JsonObject(
+                        mapOf(
+                            "ListItemSelected" to
+                                JsonObject(
+                                    mapOf(
+                                        "component_id" to JsonPrimitive(value.componentId),
+                                        "item_id" to JsonPrimitive(value.itemId),
+                                    ),
+                                ),
+                        ),
+                    )
+                }
+
+                is UserAction.SettingsToggled -> {
+                    JsonObject(
+                        mapOf(
+                            "SettingsToggled" to
+                                JsonObject(
+                                    mapOf(
+                                        "component_id" to JsonPrimitive(value.componentId),
+                                        "item_id" to JsonPrimitive(value.itemId),
+                                    ),
+                                ),
+                        ),
+                    )
+                }
             }
         jsonEncoder.encodeJsonElement(element)
     }
@@ -654,6 +1069,30 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                 )
             }
 
+            "SearchChanged" in element -> {
+                val obj = element["SearchChanged"] as JsonObject
+                UserAction.SearchChanged(
+                    componentId = obj["component_id"]!!.jsonPrimitive.content,
+                    query = obj["query"]!!.jsonPrimitive.content,
+                )
+            }
+
+            "ListItemSelected" in element -> {
+                val obj = element["ListItemSelected"] as JsonObject
+                UserAction.ListItemSelected(
+                    componentId = obj["component_id"]!!.jsonPrimitive.content,
+                    itemId = obj["item_id"]!!.jsonPrimitive.content,
+                )
+            }
+
+            "SettingsToggled" in element -> {
+                val obj = element["SettingsToggled"] as JsonObject
+                UserAction.SettingsToggled(
+                    componentId = obj["component_id"]!!.jsonPrimitive.content,
+                    itemId = obj["item_id"]!!.jsonPrimitive.content,
+                )
+            }
+
             else -> {
                 throw IllegalArgumentException("Unknown UserAction variant: $element")
             }
@@ -689,6 +1128,27 @@ sealed class ActionResult {
     ) : ActionResult()
 
     data object Complete : ActionResult()
+
+    data object StartDeviceLink : ActionResult()
+
+    data object StartBackupImport : ActionResult()
+
+    data class OpenContact(
+        val contactId: String,
+    ) : ActionResult()
+
+    data class OpenUrl(
+        val url: String,
+    ) : ActionResult()
+
+    data class ShowAlert(
+        val title: String,
+        val message: String,
+    ) : ActionResult()
+
+    data object RequestCamera : ActionResult()
+
+    data object WipeComplete : ActionResult()
 }
 
 internal object ActionResultSerializer : KSerializer<ActionResult> {
@@ -701,6 +1161,14 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
             is JsonPrimitive -> {
                 when (element.content) {
                     "Complete" -> ActionResult.Complete
+
+                    "StartDeviceLink" -> ActionResult.StartDeviceLink
+
+                    "StartBackupImport" -> ActionResult.StartBackupImport
+
+                    "RequestCamera" -> ActionResult.RequestCamera
+
+                    "WipeComplete" -> ActionResult.WipeComplete
 
                     else -> throw IllegalArgumentException(
                         "Unknown ActionResult variant: ${element.content}",
@@ -726,6 +1194,28 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                         val obj = element["ValidationError"] as JsonObject
                         ActionResult.ValidationError(
                             componentId = obj["component_id"]!!.jsonPrimitive.content,
+                            message = obj["message"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "OpenContact" in element -> {
+                        val obj = element["OpenContact"] as JsonObject
+                        ActionResult.OpenContact(
+                            contactId = obj["contact_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "OpenUrl" in element -> {
+                        val obj = element["OpenUrl"] as JsonObject
+                        ActionResult.OpenUrl(
+                            url = obj["url"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "ShowAlert" in element -> {
+                        val obj = element["ShowAlert"] as JsonObject
+                        ActionResult.ShowAlert(
+                            title = obj["title"]!!.jsonPrimitive.content,
                             message = obj["message"]!!.jsonPrimitive.content,
                         )
                     }
@@ -774,6 +1264,64 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                                 JsonObject(
                                     mapOf(
                                         "component_id" to JsonPrimitive(value.componentId),
+                                        "message" to JsonPrimitive(value.message),
+                                    ),
+                                ),
+                        ),
+                    )
+                jsonEncoder.encodeJsonElement(obj)
+            }
+
+            is ActionResult.StartDeviceLink -> {
+                jsonEncoder.encodeJsonElement(JsonPrimitive("StartDeviceLink"))
+            }
+
+            is ActionResult.StartBackupImport -> {
+                jsonEncoder.encodeJsonElement(JsonPrimitive("StartBackupImport"))
+            }
+
+            is ActionResult.RequestCamera -> {
+                jsonEncoder.encodeJsonElement(JsonPrimitive("RequestCamera"))
+            }
+
+            is ActionResult.WipeComplete -> {
+                jsonEncoder.encodeJsonElement(JsonPrimitive("WipeComplete"))
+            }
+
+            is ActionResult.OpenContact -> {
+                val obj =
+                    JsonObject(
+                        mapOf(
+                            "OpenContact" to
+                                JsonObject(
+                                    mapOf("contact_id" to JsonPrimitive(value.contactId)),
+                                ),
+                        ),
+                    )
+                jsonEncoder.encodeJsonElement(obj)
+            }
+
+            is ActionResult.OpenUrl -> {
+                val obj =
+                    JsonObject(
+                        mapOf(
+                            "OpenUrl" to
+                                JsonObject(
+                                    mapOf("url" to JsonPrimitive(value.url)),
+                                ),
+                        ),
+                    )
+                jsonEncoder.encodeJsonElement(obj)
+            }
+
+            is ActionResult.ShowAlert -> {
+                val obj =
+                    JsonObject(
+                        mapOf(
+                            "ShowAlert" to
+                                JsonObject(
+                                    mapOf(
+                                        "title" to JsonPrimitive(value.title),
                                         "message" to JsonPrimitive(value.message),
                                     ),
                                 ),

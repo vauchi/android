@@ -23,9 +23,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.vauchi.ui.coreui.components.ActionListComponent
 import com.vauchi.ui.coreui.components.CardPreviewComponent
+import com.vauchi.ui.coreui.components.ConfirmationDialogComponent
+import com.vauchi.ui.coreui.components.ContactListComponent
 import com.vauchi.ui.coreui.components.FieldListComponent
 import com.vauchi.ui.coreui.components.InfoPanelComponent
+import com.vauchi.ui.coreui.components.PinInputComponent
+import com.vauchi.ui.coreui.components.QrCodeComponent
+import com.vauchi.ui.coreui.components.SettingsGroupComponent
+import com.vauchi.ui.coreui.components.StatusIndicatorComponent
 import com.vauchi.ui.coreui.components.TextComponent
 import com.vauchi.ui.coreui.components.TextInputComponent
 import com.vauchi.ui.coreui.components.ToggleListComponent
@@ -177,6 +184,80 @@ fun ComponentRenderer(
                 icon = component.icon,
                 title = component.title,
                 items = component.items,
+                modifier = modifier,
+            )
+        }
+
+        is Component.ContactList -> {
+            ContactListComponent(
+                componentId = component.id,
+                contacts = component.contacts,
+                searchable = component.searchable,
+                onAction = onAction,
+                modifier = modifier,
+            )
+        }
+
+        is Component.SettingsGroup -> {
+            SettingsGroupComponent(
+                componentId = component.id,
+                label = component.label,
+                items = component.items,
+                onAction = onAction,
+                modifier = modifier,
+            )
+        }
+
+        is Component.ActionList -> {
+            ActionListComponent(
+                componentId = component.id,
+                items = component.items,
+                onAction = onAction,
+                modifier = modifier,
+            )
+        }
+
+        is Component.StatusIndicator -> {
+            StatusIndicatorComponent(
+                icon = component.icon,
+                title = component.title,
+                detail = component.detail,
+                status = component.status,
+                modifier = modifier,
+            )
+        }
+
+        is Component.PinInput -> {
+            PinInputComponent(
+                componentId = component.id,
+                label = component.label,
+                length = component.length,
+                masked = component.masked,
+                validationError = component.validationError,
+                onAction = onAction,
+                modifier = modifier,
+            )
+        }
+
+        is Component.QrCode -> {
+            QrCodeComponent(
+                componentId = component.id,
+                data = component.data,
+                mode = component.mode,
+                label = component.label,
+                onAction = onAction,
+                modifier = modifier,
+            )
+        }
+
+        is Component.ConfirmationDialog -> {
+            ConfirmationDialogComponent(
+                componentId = component.id,
+                title = component.title,
+                message = component.message,
+                confirmText = component.confirmText,
+                destructive = component.destructive,
+                onAction = onAction,
                 modifier = modifier,
             )
         }

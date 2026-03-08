@@ -6,7 +6,6 @@ package com.vauchi.ui.coreui.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -14,35 +13,32 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
-import com.vauchi.ui.coreui.InputType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import com.vauchi.ui.coreui.UserAction
 
 /**
- * Renders a core TextInput component as a Material3 OutlinedTextField
- * with validation error display and keyboard type hints.
+ * Renders a core PinInput component as a PIN entry field
+ * with optional masking and validation error display.
  */
 @Composable
-fun TextInputComponent(
+fun PinInputComponent(
     componentId: String,
     label: String,
-    value: String,
-    placeholder: String?,
-    maxLength: Int?,
+    length: Int,
+    masked: Boolean,
     validationError: String?,
-    inputType: InputType,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
-            value = value,
+            value = "",
             onValueChange = { newValue ->
-                val bounded = if (maxLength != null) newValue.take(maxLength) else newValue
+                val bounded = newValue.take(length)
                 onAction(UserAction.TextChanged(componentId = componentId, value = bounded))
             },
             label = { Text(label) },
-            placeholder = placeholder?.let { { Text(it) } },
             isError = validationError != null,
             supportingText =
                 validationError?.let {
@@ -54,29 +50,10 @@ fun TextInputComponent(
                     }
                 },
             singleLine = true,
-            keyboardOptions =
-                KeyboardOptions(
-                    keyboardType =
-                        when (inputType) {
-                            InputType.Text -> KeyboardType.Text
-                            InputType.Phone -> KeyboardType.Phone
-                            InputType.Email -> KeyboardType.Email
-                            InputType.Password -> KeyboardType.Password
-                        },
-                ),
+            visualTransformation =
+                if (masked) PasswordVisualTransformation() else VisualTransformation.None,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             modifier = Modifier.fillMaxWidth(),
         )
-
-        if (maxLength != null) {
-            Text(
-                text = "${value.length}/$maxLength",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier =
-                    Modifier
-                        .padding(top = 4.dp)
-                        .align(androidx.compose.ui.Alignment.End),
-            )
-        }
     }
 }
