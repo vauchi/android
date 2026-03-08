@@ -93,6 +93,10 @@ android {
     if (useLocalBindings) {
         sourceSets.getByName("main") {
             kotlin.srcDir("src/local-bindings/kotlin")
+            // UI code that depends on UniFFI-generated types (e.g. MobileOnboardingWorkflow).
+            // Only compiled when bindings are available locally. After core release publishes
+            // bindings with these types, move files back to the main source set.
+            kotlin.srcDir("src/binding-dependent/kotlin")
         }
     }
 
