@@ -37,6 +37,7 @@ import uniffi.vauchi_mobile.MobileContactCard
 import uniffi.vauchi_mobile.MobileExchangeResult
 import uniffi.vauchi_mobile.MobileExchangeSession
 import uniffi.vauchi_mobile.MobileFieldType
+import uniffi.vauchi_mobile.MobileMultiStageSession
 import uniffi.vauchi_mobile.MobileSyncResult
 import uniffi.vauchi_mobile.VauchiMobile
 
@@ -249,6 +250,12 @@ class VauchiRepository(
      * theyScannedOurQr → performKeyAgreement → completeCardExchange.
      */
     fun finalizeExchange(session: MobileExchangeSession): MobileExchangeResult = vauchi.finalizeExchange(session)
+
+    /** Create a multi-stage exchange session with the real identity and card data. */
+    fun createMultistageSession(): MobileMultiStageSession = vauchi.createMultistageSession()
+
+    /** Finalize a multi-stage exchange: save peer contact and initialize ratchet. */
+    fun finalizeMultistageExchange(session: MobileMultiStageSession): MobileExchangeResult = vauchi.finalizeMultistageExchange(session)
 
     /** Create an NFC initiator (reader) handshake session. */
     fun createNfcInitiator() = vauchi.createNfcInitiator()

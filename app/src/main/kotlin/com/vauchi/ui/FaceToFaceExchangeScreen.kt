@@ -127,6 +127,8 @@ fun MultiStageExchangeScreen(
     val scannerGuard = remember { AtomicBoolean(false) }
     val multiStageState by viewModel.multiStageState.collectAsState()
     var graceCompleted by remember { mutableStateOf(false) }
+    var finalizationResult by remember { mutableStateOf<String?>(null) }
+    var finalizationError by remember { mutableStateOf<String?>(null) }
     var lastScanTimestamp by remember { mutableLongStateOf(0L) }
     var scanTick by remember { mutableLongStateOf(0L) }
 
@@ -161,10 +163,7 @@ fun MultiStageExchangeScreen(
 
     // Start multi-stage session on enter
     LaunchedEffect(Unit) {
-        // TODO: Replace placeholder with actual serialized local contact card
-        // e.g., viewModel.getLocalContactCardBytes()
-        val localCard = "Vauchi User".toByteArray()
-        viewModel.startMultiStageExchange(localCard)
+        viewModel.startMultiStageExchange()
     }
 
     // Cancel session on exit
@@ -193,6 +192,15 @@ fun MultiStageExchangeScreen(
                 // Core returned null — grace period expired or failed
                 val state = viewModel.getMultiStageState()
                 if (state is MobileProtocolState.Complete) {
+                    // Finalize: save the received contact to storage
+                    val result = viewModel.finalizeMultiStageExchange()
+                    if (result != null) {
+                        finalizationResult = result.contactName
+                        Log.i("Exchange", "Contact saved: ${result.contactId}")
+                    } else {
+                        finalizationError = "Failed to save contact"
+                        Log.e("Exchange", "Finalization returned null")
+                    }
                     graceCompleted = true
                 }
                 break
@@ -271,7 +279,7 @@ fun MultiStageExchangeScreen(
                         }
                     }
                 } else {
-                    // Grace period over — show success
+                    // Grace period over — show success or finalization error
                     Box(
                         modifier =
                             Modifier
@@ -283,21 +291,44 @@ fun MultiStageExchangeScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = "Success",
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                            Text(
-                                "Contact exchanged!",
-                                style = MaterialTheme.typography.headlineSmall,
-                            )
-                            Text(
-                                "The new contact has been added.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            if (finalizationError != null) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Error",
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                                Text(
+                                    "Exchange completed but save failed",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                Text(
+                                    finalizationError!!,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = "Success",
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Text(
+                                    "Contact exchanged!",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                )
+                                Text(
+                                    if (finalizationResult != null) {
+                                        "$finalizationResult has been added."
+                                    } else {
+                                        "The new contact has been added."
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                             Spacer(modifier = Modifier.height(8.dp))
                             Button(
                                 onClick = onDone,
@@ -347,8 +378,7 @@ fun MultiStageExchangeScreen(
                         Button(
                             onClick = {
                                 // Restart the session on retry
-                                val localCard = "Vauchi User".toByteArray()
-                                viewModel.startMultiStageExchange(localCard)
+                                viewModel.startMultiStageExchange()
                             },
                             modifier =
                                 Modifier

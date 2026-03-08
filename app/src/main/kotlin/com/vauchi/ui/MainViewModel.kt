@@ -429,12 +429,21 @@ class MainViewModel(
 
     /**
      * Start a new multi-stage exchange session.
-     * The core drives the entire protocol — Android is a pure display shell.
+     * Creates the session through VauchiMobile which serializes the real
+     * identity public key and contact card into the exchange payload.
      */
-    fun startMultiStageExchange(localCard: ByteArray) {
-        multiStageSession = MobileMultiStageSession(localCard)
-        _multiStageState.value = MobileProtocolState.Advertising
-        Log.d("Exchange", "Multi-stage session started")
+    fun startMultiStageExchange() {
+        try {
+            multiStageSession = repository.createMultistageSession()
+            _multiStageState.value = MobileProtocolState.Advertising
+            Log.d("Exchange", "Multi-stage session started with real card data")
+        } catch (e: Exception) {
+            Log.e("Exchange", "Failed to create multi-stage session", e)
+            _multiStageState.value =
+                MobileProtocolState.Failed(
+                    e.message ?: "Failed to create exchange session",
+                )
+        }
     }
 
     /**
@@ -467,6 +476,24 @@ class MainViewModel(
      * Retrieve received card data after exchange completes.
      */
     fun getMultiStageReceivedData(): ByteArray? = multiStageSession?.getReceivedData()
+
+    /**
+     * Finalize a completed multi-stage exchange: save the received contact
+     * to storage and initialize the double ratchet.
+     *
+     * Returns the exchange result on success, null on failure.
+     */
+    fun finalizeMultiStageExchange(): uniffi.vauchi_mobile.MobileExchangeResult? {
+        val session = multiStageSession ?: return null
+        return try {
+            val result = repository.finalizeMultistageExchange(session)
+            Log.i("Exchange", "Contact finalized: ${result.contactId} (${result.contactName})")
+            result
+        } catch (e: Exception) {
+            Log.e("Exchange", "Failed to finalize multi-stage exchange", e)
+            null
+        }
+    }
 
     /**
      * Cancel the multi-stage exchange and reset state.
