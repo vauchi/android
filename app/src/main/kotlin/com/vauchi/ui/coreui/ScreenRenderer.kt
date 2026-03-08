@@ -153,7 +153,6 @@ fun ComponentRenderer(
 
         is Component.FieldList -> {
             FieldListComponent(
-                componentId = component.id,
                 fields = component.fields,
                 visibilityMode = component.visibilityMode,
                 availableGroups = component.availableGroups,

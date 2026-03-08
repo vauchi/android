@@ -37,7 +37,6 @@ import com.vauchi.ui.coreui.VisibilityMode
  */
 @Composable
 fun FieldListComponent(
-    componentId: String,
     fields: List<FieldDisplay>,
     visibilityMode: VisibilityMode,
     availableGroups: List<String>,
