@@ -91,6 +91,10 @@ class NfcDiagnosticActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Skip foreground dispatch when using enableReaderMode (they conflict — Android
+        // auto-disables foreground dispatch when reader mode is active) or in HCE mode.
+        // Only enable for manual UI usage (non-ADB) as a Samsung Android 8 fallback.
+        if (isHceMode || launchedViaAdb) return
         // Enable foreground dispatch as fallback for Samsung Android 8 where
         // enableReaderMode doesn't fully suppress standard NFC dispatch
         val pendingIntent =
@@ -103,6 +107,7 @@ class NfcDiagnosticActivity : ComponentActivity() {
         val filters = arrayOf(IntentFilter(NfcAdapter.ACTION_TECH_DISCOVERED))
         val techLists = arrayOf(arrayOf(IsoDep::class.java.name))
         nfcAdapter?.enableForegroundDispatch(this, pendingIntent, filters, techLists)
+        Log.i("Vauchi", "[NFC Diagnostic] Foreground dispatch enabled in onResume (isHceMode=$isHceMode)")
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -122,8 +127,13 @@ class NfcDiagnosticActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        nfcAdapter?.disableForegroundDispatch(this)
-        nfcAdapter?.disableReaderMode(this)
+        // Don't disable NFC while a test is running — the foreground dispatch
+        // intent delivery causes a brief onPause/onResume cycle, and disabling
+        // NFC here would invalidate the tag handle before the test can use it.
+        if (!running) {
+            nfcAdapter?.disableForegroundDispatch(this)
+            nfcAdapter?.disableReaderMode(this)
+        }
     }
 
     private fun handleIntent(intent: android.content.Intent?) {
@@ -132,6 +142,8 @@ class NfcDiagnosticActivity : ComponentActivity() {
         if (testName != null || mode != null) launchedViaAdb = true
 
         if (mode == "hce_server") {
+            // Set HCE mode immediately so onResume() skips foreground dispatch
+            isHceMode = true
             CoroutineScope(Dispatchers.Default).launch {
                 delay(500)
                 startHceServer(mutableListOf())
@@ -315,7 +327,7 @@ class NfcDiagnosticActivity : ComponentActivity() {
             }
         }
 
-        val deadline = System.currentTimeMillis() + 20_000
+        val deadline = System.currentTimeMillis() + 60_000
         while (connectedIsoDep == null && discoveryError == null && System.currentTimeMillis() < deadline) {
             delay(100)
         }
@@ -343,7 +355,7 @@ class NfcDiagnosticActivity : ComponentActivity() {
             log.add("FAIL: $discoveryError")
             DiagnosticLogger.logResult("nfc_discovery", "fail", message = discoveryError!!)
         } else {
-            log.add("FAIL: No NFC tag found within 20s")
+            log.add("FAIL: No NFC tag found within 60s")
             DiagnosticLogger.logResult("nfc_discovery", "fail", message = "timeout")
         }
         nfcAdapter?.disableReaderMode(this@NfcDiagnosticActivity)
@@ -510,7 +522,8 @@ class NfcDiagnosticActivity : ComponentActivity() {
             }
 
             // Send multiple APDUs in sequence, measure aggregate throughput
-            val chunkSize = 200 // safe payload size for short APDU
+            // Use smaller chunks to avoid HCE link loss on older devices (Samsung S7)
+            val chunkSize = 128 // conservative for short APDU compatibility
             val totalSizes = intArrayOf(1024, 5120, 10240)
 
             for (totalSize in totalSizes) {
@@ -533,8 +546,11 @@ class NfcDiagnosticActivity : ComponentActivity() {
                             failed++
                         }
                     } catch (e: Exception) {
+                        Log.w("Vauchi", "[NFC Diag] Transceive error at chunk $i/$chunks: ${e.message}")
                         failed++
-                        break
+                        // Don't break — try remaining chunks (connection may recover)
+                        // But if IsoDep is disconnected, subsequent transceives will also fail
+                        if (!isoDep.isConnected) break
                     }
                 }
 
@@ -569,6 +585,11 @@ class NfcDiagnosticActivity : ComponentActivity() {
 
     private suspend fun promptUser(message: String) {
         Log.i("Vauchi", "[NFC Diagnostic] Prompt: $message")
+        if (launchedViaAdb) {
+            // Auto-confirm when launched via ADB — physical coordination handled externally
+            Log.i("Vauchi", "[NFC Diagnostic] Auto-confirmed (ADB): $message")
+            return
+        }
         actionConfirmed = false
         actionPrompt = message
         while (!actionConfirmed) {
@@ -580,10 +601,24 @@ class NfcDiagnosticActivity : ComponentActivity() {
 
     // ── Helpers ──────────────────────────────────────────────────────
 
+    /**
+     * Enable reader mode with periodic resets to detect tags already in the NFC field.
+     *
+     * Uses enableReaderMode (not foreground dispatch) because foreground dispatch
+     * causes onPause/onNewIntent/onResume lifecycle events that invalidate tag handles.
+     * enableReaderMode callbacks run on the NFC thread without lifecycle disruption.
+     *
+     * Periodically disables and re-enables reader mode to force new NFC polling
+     * cycles, which is needed when the peer device is already in the field.
+     */
     private fun enableReaderMode(onTag: (Tag) -> Unit) {
         val adapter = nfcAdapter ?: return
-        // Only set presence check delay on Android 10+ — older Samsung firmware
-        // treats any extras Bundle as "same config" and skips NFC reconfiguration
+        val flags =
+            NfcAdapter.FLAG_READER_NFC_A or
+                NfcAdapter.FLAG_READER_NFC_B or
+                NfcAdapter.FLAG_READER_NFC_F or
+                NfcAdapter.FLAG_READER_NFC_V or
+                NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK
         val extras =
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
                 Bundle().apply {
@@ -592,37 +627,39 @@ class NfcDiagnosticActivity : ComponentActivity() {
             } else {
                 null
             }
-        // Check if a foreground-dispatched tag is already available
-        val existingTag = foregroundTag
-        if (existingTag != null) {
-            foregroundTag = null
-            Log.i("Vauchi", "[NFC Diagnostic] Using pre-existing foreground-dispatched tag")
-            onTag(existingTag)
-            return
+
+        val tagDelivered =
+            java.util.concurrent.atomic
+                .AtomicBoolean(false)
+
+        fun startReaderMode() {
+            adapter.enableReaderMode(
+                this,
+                { tag ->
+                    if (tagDelivered.compareAndSet(false, true)) {
+                        Log.i("Vauchi", "[NFC Diagnostic] Reader mode detected tag: ${tag.techList.joinToString()}")
+                        onTag(tag)
+                    }
+                },
+                flags,
+                extras,
+            )
         }
-        // Try enableReaderMode (works on most devices)
-        adapter.enableReaderMode(
-            this,
-            { tag -> onTag(tag) },
-            NfcAdapter.FLAG_READER_NFC_A or
-                NfcAdapter.FLAG_READER_NFC_B or
-                NfcAdapter.FLAG_READER_NFC_F or
-                NfcAdapter.FLAG_READER_NFC_V or
-                NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
-            extras,
-        )
-        // Also start polling for foreground-dispatched tags (Samsung Android 8 fallback)
-        CoroutineScope(Dispatchers.Default).launch {
-            val deadline = System.currentTimeMillis() + 22_000
-            while (System.currentTimeMillis() < deadline) {
-                val tag = foregroundTag
-                if (tag != null) {
-                    foregroundTag = null
-                    Log.i("Vauchi", "[NFC Diagnostic] Using foreground-dispatched tag")
-                    onTag(tag)
-                    break
+
+        Log.i("Vauchi", "[NFC Diagnostic] Enabling reader mode with periodic reset")
+        startReaderMode()
+
+        // Periodically reset reader mode to force new polling cycles
+        CoroutineScope(Dispatchers.Main).launch {
+            val deadline = System.currentTimeMillis() + 62_000
+            while (!tagDelivered.get() && System.currentTimeMillis() < deadline) {
+                delay(3000)
+                if (!tagDelivered.get()) {
+                    Log.i("Vauchi", "[NFC Diagnostic] Resetting reader mode (forcing new poll cycle)")
+                    adapter.disableReaderMode(this@NfcDiagnosticActivity)
+                    delay(200) // brief gap for NFC stack to reset
+                    startReaderMode()
                 }
-                delay(100)
             }
         }
     }
@@ -653,7 +690,7 @@ class NfcDiagnosticActivity : ComponentActivity() {
             }
         }
 
-        val deadline = System.currentTimeMillis() + 20_000
+        val deadline = System.currentTimeMillis() + 60_000
         while (connectedIsoDep == null && connectError == null && System.currentTimeMillis() < deadline) {
             delay(100)
         }
@@ -661,7 +698,7 @@ class NfcDiagnosticActivity : ComponentActivity() {
         val isoDep = connectedIsoDep
         if (isoDep == null) {
             nfcAdapter?.disableReaderMode(this@NfcDiagnosticActivity)
-            val msg = connectError ?: "No NFC tag found within 20s"
+            val msg = connectError ?: "No NFC tag found within 60s"
             log.add("FAIL: $msg")
             DiagnosticLogger.logResult(testName, "fail", message = msg)
             return

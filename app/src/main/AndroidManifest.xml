@@ -119,7 +119,7 @@
         <activity
             android:name=".diagnostic.NfcDiagnosticActivity"
             android:exported="true"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
             android:label="NFC Diagnostic">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
