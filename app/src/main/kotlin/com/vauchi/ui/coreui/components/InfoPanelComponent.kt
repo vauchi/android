@@ -13,12 +13,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContactPage
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -128,5 +139,16 @@ internal fun resolveIcon(name: String): ImageVector =
         "check", "check_circle" -> Icons.Default.CheckCircle
         "warning" -> Icons.Default.Warning
         "visibility_off" -> Icons.Default.VisibilityOff
+        "refresh" -> Icons.Default.Refresh
+        "people" -> Icons.Default.People
+        "group" -> Icons.Default.Group
+        "card" -> Icons.Default.ContactPage
+        "eye" -> Icons.Default.Visibility
+        "server" -> Icons.Default.Dns
+        "key" -> Icons.Default.VpnKey
+        "backup" -> Icons.Default.Backup
+        "devices" -> Icons.Default.Devices
+        "share" -> Icons.Default.Share
+        "edit" -> Icons.Default.Edit
         else -> Icons.Default.Info
     }
