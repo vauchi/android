@@ -28,8 +28,8 @@ import androidx.compose.ui.unit.dp
 import com.vauchi.util.LocalizationManager
 import com.vauchi.util.ThemeManager
 import com.vauchi.util.hexToColor
-import uniffi.vauchi_mobile.MobileTheme
-import uniffi.vauchi_mobile.MobileThemeMode
+import uniffi.vauchi_platform.MobileTheme
+import uniffi.vauchi_platform.MobileThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

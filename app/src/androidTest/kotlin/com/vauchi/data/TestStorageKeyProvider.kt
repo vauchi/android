@@ -27,7 +27,7 @@ class TestStorageKeyProvider : StorageKeyProvider {
     }
 
     override fun generateEncryptedStorageKey(): ByteArray {
-        val storageKey = uniffi.vauchi_mobile.generateStorageKey()
+        val storageKey = uniffi.vauchi_platform.generateStorageKey()
         return encryptStorageKey(storageKey)
     }
 

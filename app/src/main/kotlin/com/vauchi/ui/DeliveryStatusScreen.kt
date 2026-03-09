@@ -21,10 +21,10 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.vauchi.util.LocalizationManager
-import uniffi.vauchi_mobile.MobileDeliveryRecord
-import uniffi.vauchi_mobile.MobileDeliveryStatus
-import uniffi.vauchi_mobile.MobileDeliverySummary
-import uniffi.vauchi_mobile.MobileRetryEntry
+import uniffi.vauchi_platform.MobileDeliveryRecord
+import uniffi.vauchi_platform.MobileDeliveryStatus
+import uniffi.vauchi_platform.MobileDeliverySummary
+import uniffi.vauchi_platform.MobileRetryEntry
 import java.text.SimpleDateFormat
 import java.util.*
 

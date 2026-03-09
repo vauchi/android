@@ -16,8 +16,8 @@ import androidx.work.WorkerParameters
 import com.vauchi.data.VauchiRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import uniffi.vauchi_mobile.MobileApplyResult
-import uniffi.vauchi_mobile.MobileUpdateStatus
+import uniffi.vauchi_platform.MobileApplyResult
+import uniffi.vauchi_platform.MobileUpdateStatus
 import java.util.concurrent.TimeUnit
 
 /**
@@ -125,7 +125,7 @@ class ContentUpdateWorker(
                         )
                         // Reload social networks if networks were updated
                         if (applyResult.applied.any {
-                                it == uniffi.vauchi_mobile.MobileContentType.NETWORKS
+                                it == uniffi.vauchi_platform.MobileContentType.NETWORKS
                             }
                         ) {
                             repository.reloadSocialNetworks()

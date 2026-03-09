@@ -7,7 +7,7 @@ package com.vauchi.nfc
 import android.nfc.cardemulation.HostApduService
 import android.os.Bundle
 import android.util.Log
-import uniffi.vauchi_mobile.MobileNfcHandshake
+import uniffi.vauchi_platform.MobileNfcHandshake
 
 /**
  * Android Host Card Emulation service for NFC contact exchange.

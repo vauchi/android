@@ -28,7 +28,7 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * These mirror the Rust types in `vauchi-core/src/ui/` and are serialized
  * using serde's default externally-tagged enum format. The JSON transport
- * layer is documented in `vauchi-mobile/src/mobile_ui.rs`.
+ * layer is documented in `vauchi-platform/src/mobile_ui.rs`.
  */
 
 // ── ScreenModel ─────────────────────────────────────────────────────

@@ -26,7 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vauchi.util.LocalizationManager
-import uniffi.vauchi_mobile.MobileVisibilityLabel
+import uniffi.vauchi_platform.MobileVisibilityLabel
 
 /**
  * Screen for managing visibility labels.

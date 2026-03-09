@@ -33,13 +33,13 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
-import uniffi.vauchi_mobile.MobileContactCard
-import uniffi.vauchi_mobile.MobileExchangeResult
-import uniffi.vauchi_mobile.MobileExchangeSession
-import uniffi.vauchi_mobile.MobileFieldType
-import uniffi.vauchi_mobile.MobileMultiStageSession
-import uniffi.vauchi_mobile.MobileSyncResult
-import uniffi.vauchi_mobile.VauchiMobile
+import uniffi.vauchi_platform.MobileContactCard
+import uniffi.vauchi_platform.MobileExchangeResult
+import uniffi.vauchi_platform.MobileExchangeSession
+import uniffi.vauchi_platform.MobileFieldType
+import uniffi.vauchi_platform.MobileMultiStageSession
+import uniffi.vauchi_platform.MobileSyncResult
+import uniffi.vauchi_platform.VauchiPlatform
 
 /**
  * Exchange data for QR display (replaces deleted MobileExchangeData).
@@ -77,14 +77,14 @@ data class ExchangeSessionData(
 )
 
 /**
- * Repository class wrapping VauchiMobile UniFFI bindings.
+ * Repository class wrapping VauchiPlatform UniFFI bindings.
  * Uses Android KeyStore for secure storage key management.
  */
 class VauchiRepository(
     context: Context,
     private val keyStoreHelper: StorageKeyProvider = KeyStoreHelper(),
 ) {
-    private val vauchi: VauchiMobile
+    private val vauchi: VauchiPlatform
     private val prefs: SharedPreferences
     private val preferences: VauchiPreferences
 
@@ -128,7 +128,7 @@ class VauchiRepository(
         val storageKeyBytes = getOrCreateStorageKey(dataDir)
 
         // Initialize with secure key from KeyStore
-        vauchi = VauchiMobile.newWithSecureKey(dataDir, relayUrl, storageKeyBytes)
+        vauchi = VauchiPlatform.newWithSecureKey(dataDir, relayUrl, storageKeyBytes)
     }
 
     /**
@@ -434,7 +434,7 @@ class VauchiRepository(
         vauchi.importBackup(backupData, password)
     }
 
-    fun checkPasswordStrength(password: String) = uniffi.vauchi_mobile.checkPasswordStrength(password)
+    fun checkPasswordStrength(password: String) = uniffi.vauchi_platform.checkPasswordStrength(password)
 
     // Social network operations
     fun listSocialNetworks() = vauchi.listSocialNetworks()
@@ -474,18 +474,18 @@ class VauchiRepository(
     /**
      * Check if user has seen a specific aha moment
      */
-    fun hasSeenAhaMoment(momentType: uniffi.vauchi_mobile.MobileAhaMomentType): Boolean = vauchi.hasSeenAhaMoment(momentType)
+    fun hasSeenAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType): Boolean = vauchi.hasSeenAhaMoment(momentType)
 
     /**
      * Try to trigger an aha moment (returns null if already seen)
      */
-    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_mobile.MobileAhaMomentType) = vauchi.tryTriggerAhaMoment(momentType)
+    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType) = vauchi.tryTriggerAhaMoment(momentType)
 
     /**
      * Try to trigger an aha moment with context (returns null if already seen)
      */
     fun tryTriggerAhaMomentWithContext(
-        momentType: uniffi.vauchi_mobile.MobileAhaMomentType,
+        momentType: uniffi.vauchi_platform.MobileAhaMomentType,
         context: String,
     ) = vauchi.tryTriggerAhaMomentWithContext(momentType, context)
 
@@ -519,7 +519,7 @@ class VauchiRepository(
 
     // Duress PIN operations
     // NOTE: These methods are stubs until vauchi-core duress bindings
-    // are published via vauchi-mobile-android.
+    // are published via vauchi-platform-kotlin.
 
     /**
      * Check if duress PIN is enabled
@@ -551,7 +551,7 @@ class VauchiRepository(
 
     // Emergency Broadcast operations
     // NOTE: These methods are stubs until vauchi-core emergency broadcast bindings
-    // are published via vauchi-mobile-android.
+    // are published via vauchi-platform-kotlin.
 
     /**
      * Configure emergency broadcast
@@ -589,7 +589,7 @@ class VauchiRepository(
     // Tor Mode Operations
     // Based on: features/tor_mode.feature - R4 Tor Mode
     // NOTE: These methods are stubs until vauchi-core tor bindings
-    // are published via vauchi-mobile-android.
+    // are published via vauchi-platform-kotlin.
 
     fun isTorEnabled(): Boolean = false
 
@@ -762,7 +762,7 @@ class VauchiRepository(
      * Start the device link protocol as initiator (primary device).
      * Returns an initiator state machine that generates QR data and drives the protocol.
      *
-     * NOTE: Stub until relay transport bindings are published via vauchi-mobile-android.
+     * NOTE: Stub until relay transport bindings are published via vauchi-platform-kotlin.
      */
     fun startDeviceLink(): Any {
         // TODO: Replace with vauchi.startDeviceLink() once bindings are published
@@ -772,7 +772,7 @@ class VauchiRepository(
     /**
      * Start the device link protocol as responder (new device joining).
      *
-     * NOTE: Stub until relay transport bindings are published via vauchi-mobile-android.
+     * NOTE: Stub until relay transport bindings are published via vauchi-platform-kotlin.
      */
     fun startDeviceJoin(
         qrData: String,
@@ -785,7 +785,7 @@ class VauchiRepository(
     /**
      * Listen for an incoming device link request via the relay.
      *
-     * NOTE: Stub until relay transport bindings are published via vauchi-mobile-android.
+     * NOTE: Stub until relay transport bindings are published via vauchi-platform-kotlin.
      */
     fun listenForDeviceLinkRequest(timeoutSecs: ULong): Any {
         // TODO: Replace with vauchi.listenForDeviceLinkRequest(timeoutSecs) once bindings are published
@@ -795,7 +795,7 @@ class VauchiRepository(
     /**
      * Send a device link response back via the relay.
      *
-     * NOTE: Stub until relay transport bindings are published via vauchi-mobile-android.
+     * NOTE: Stub until relay transport bindings are published via vauchi-platform-kotlin.
      */
     fun sendDeviceLinkResponse(
         senderToken: String,
@@ -808,7 +808,7 @@ class VauchiRepository(
     /**
      * Send a device link request via the relay and wait for a response.
      *
-     * NOTE: Stub until relay transport bindings are published via vauchi-mobile-android.
+     * NOTE: Stub until relay transport bindings are published via vauchi-platform-kotlin.
      */
     fun sendDeviceLinkRequest(
         targetIdentity: String,
@@ -856,14 +856,14 @@ class VauchiRepository(
      *
      * @param consentType The type of consent to grant
      */
-    fun grantConsent(consentType: uniffi.vauchi_mobile.MobileConsentType) = vauchi.grantConsent(consentType)
+    fun grantConsent(consentType: uniffi.vauchi_platform.MobileConsentType) = vauchi.grantConsent(consentType)
 
     /**
      * Revoke consent for a specific type.
      *
      * @param consentType The type of consent to revoke
      */
-    fun revokeConsent(consentType: uniffi.vauchi_mobile.MobileConsentType) = vauchi.revokeConsent(consentType)
+    fun revokeConsent(consentType: uniffi.vauchi_platform.MobileConsentType) = vauchi.revokeConsent(consentType)
 
     /**
      * Check if consent is granted for a specific type.
@@ -871,7 +871,7 @@ class VauchiRepository(
      * @param consentType The type to check
      * @return True if consent is currently granted
      */
-    fun checkConsent(consentType: uniffi.vauchi_mobile.MobileConsentType): Boolean = vauchi.checkConsent(consentType)
+    fun checkConsent(consentType: uniffi.vauchi_platform.MobileConsentType): Boolean = vauchi.checkConsent(consentType)
 
     /**
      * Get all consent records.

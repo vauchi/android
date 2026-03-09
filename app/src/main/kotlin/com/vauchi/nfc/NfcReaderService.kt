@@ -7,8 +7,8 @@ package com.vauchi.nfc
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
 import android.util.Log
-import uniffi.vauchi_mobile.MobileNfcExchangeResult
-import uniffi.vauchi_mobile.MobileNfcHandshake
+import uniffi.vauchi_platform.MobileNfcExchangeResult
+import uniffi.vauchi_platform.MobileNfcHandshake
 
 /**
  * NFC reader (initiator) for the three-phase encrypted exchange.

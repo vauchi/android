@@ -174,13 +174,13 @@ dependencies {
     // ML Kit for barcode scanning
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
-    // VauchiMobile native bindings
+    // VauchiPlatform native bindings
     if (useLocalBindings) {
         // Local: JNA needed explicitly (Maven AAR bundles it, local jniLibs don't)
         implementation("net.java.dev.jna:jna:5.14.0@aar")
     } else {
         // Remote: published AAR includes JNA + JNI libs + Kotlin bindings
-        implementation("com.vauchi:vauchi-mobile:0.5.0-rc.0")
+        implementation("com.vauchi:vauchi-platform:0.5.0-rc.0")
     }
 
     // Testing

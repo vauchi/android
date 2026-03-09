@@ -25,7 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.vauchi.util.LocalizationManager
-import uniffi.vauchi_mobile.*
+import uniffi.vauchi_platform.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

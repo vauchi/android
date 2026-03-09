@@ -7,9 +7,9 @@
 # Android app (Kotlin/Compose)
 #
 # Native bindings:
-#   Consumed from vauchi-mobile-android via GitLab Maven registry.
+#   Consumed from vauchi-platform-kotlin via GitLab Maven registry.
 #   The vauchi/core release pipeline builds UniFFI bindings, packages them,
-#   and triggers vauchi-mobile-android to publish an AAR to Maven.
+#   and triggers vauchi-platform-kotlin to publish an AAR to Maven.
 #
 # Performance optimizations:
 #   - Change-based rules: Jobs run only when relevant files change
@@ -140,7 +140,7 @@ auto-tag:version:
 # Update Stage (triggered by upstream distribution repo)
 # ============================================================
 
-# Automatically bump vauchi-mobile dependency and create MR
+# Automatically bump vauchi-platform dependency and create MR
 update:bindings-version:
   stage: update
   image: alpine:latest
@@ -151,9 +151,9 @@ update:bindings-version:
     - |
       # Strip v prefix if present (upstream trigger passes v0.1.16 format)
       BINDINGS_VERSION="${BINDINGS_VERSION#v}"
-      echo "Bumping vauchi-mobile to $BINDINGS_VERSION"
+      echo "Bumping vauchi-platform to $BINDINGS_VERSION"
 
-      BRANCH="chore/bump-vauchi-mobile-${BINDINGS_VERSION}"
+      BRANCH="chore/bump-vauchi-platform-${BINDINGS_VERSION}"
       BUILD_FILE="app/build.gradle.kts"
 
       # Configure git
@@ -169,16 +169,16 @@ update:bindings-version:
 
       # Create branch and update version
       git checkout -b "$BRANCH"
-      sed -i "s/implementation(\"com.vauchi:vauchi-mobile:[^\"]*\")/implementation(\"com.vauchi:vauchi-mobile:${BINDINGS_VERSION}\")/" "$BUILD_FILE"
+      sed -i "s/implementation(\"com.vauchi:vauchi-platform:[^\"]*\")/implementation(\"com.vauchi:vauchi-platform:${BINDINGS_VERSION}\")/" "$BUILD_FILE"
 
       # Verify the change was made
-      if ! grep -q "com.vauchi:vauchi-mobile:${BINDINGS_VERSION}" "$BUILD_FILE"; then
+      if ! grep -q "com.vauchi:vauchi-platform:${BINDINGS_VERSION}" "$BUILD_FILE"; then
         echo "ERROR: Version replacement failed"
         exit 1
       fi
 
       git add "$BUILD_FILE"
-      git commit -m "chore: Bump vauchi-mobile to $BINDINGS_VERSION"
+      git commit -m "chore: Bump vauchi-platform to $BINDINGS_VERSION"
       git push -u origin "$BRANCH"
 
       # Create MR via GitLab API
@@ -188,8 +188,8 @@ update:bindings-version:
         --data "{
           \"source_branch\": \"$BRANCH\",
           \"target_branch\": \"main\",
-          \"title\": \"chore: Bump vauchi-mobile to $BINDINGS_VERSION\",
-          \"description\": \"Automated version bump triggered by vauchi-mobile-android release.\\n\\nUpdates \`com.vauchi:vauchi-mobile\` from current version to \`$BINDINGS_VERSION\`.\\n\\n---\\n_This MR was created automatically by CI._\",
+          \"title\": \"chore: Bump vauchi-platform to $BINDINGS_VERSION\",
+          \"description\": \"Automated version bump triggered by vauchi-platform-kotlin release.\\n\\nUpdates \`com.vauchi:vauchi-platform\` from current version to \`$BINDINGS_VERSION\`.\\n\\n---\\n_This MR was created automatically by CI._\",
           \"remove_source_branch\": true
         }" \
         "${CI_SERVER_URL}/api/v4/projects/${CI_PROJECT_ID}/merge_requests")

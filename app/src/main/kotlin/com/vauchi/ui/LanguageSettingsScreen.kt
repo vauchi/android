@@ -20,7 +20,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.vauchi.util.LocalizationManager
-import uniffi.vauchi_mobile.MobileLocaleInfo
+import uniffi.vauchi_platform.MobileLocaleInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

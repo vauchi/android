@@ -386,7 +386,7 @@ fun HelpOthersContent(
     var showVouchDialog by remember { mutableStateOf(false) }
     var isCreatingVoucher by remember { mutableStateOf(false) }
     var isParsing by remember { mutableStateOf(false) }
-    var parsedClaimInfo by remember { mutableStateOf<uniffi.vauchi_mobile.MobileRecoveryClaim?>(null) }
+    var parsedClaimInfo by remember { mutableStateOf<uniffi.vauchi_platform.MobileRecoveryClaim?>(null) }
     var generatedVoucherData by remember { mutableStateOf<String?>(null) }
 
     fun copyToClipboard(

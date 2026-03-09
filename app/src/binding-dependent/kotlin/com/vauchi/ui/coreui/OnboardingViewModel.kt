@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import uniffi.vauchi_mobile.MobileOnboardingWorkflow
+import uniffi.vauchi_platform.MobileOnboardingWorkflow
 
 /**
  * ViewModel that bridges the core onboarding workflow to Compose UI.

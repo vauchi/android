@@ -8,15 +8,15 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import uniffi.vauchi_mobile.MobileContactField
-import uniffi.vauchi_mobile.MobileFieldType
+import uniffi.vauchi_platform.MobileContactField
+import uniffi.vauchi_platform.MobileFieldType
 
 /**
  * Utility object for opening contact fields in external applications.
  *
  * URL safety validation and social network URLs are now handled by vauchi-core.
  * Use the UniFFI functions: isSafeUrl(), isAllowedScheme(), isBlockedScheme()
- * and VauchiMobile.getProfileUrl() for social networks (40+ networks supported).
+ * and VauchiPlatform.getProfileUrl() for social networks (40+ networks supported).
  */
 object ContactActions {
     /**
@@ -38,7 +38,7 @@ object ContactActions {
         }
 
         // Security check: validate URI using vauchi-core
-        if (!uniffi.vauchi_mobile.isSafeUrl(uri.toString())) {
+        if (!uniffi.vauchi_platform.isSafeUrl(uri.toString())) {
             Toast.makeText(context, "Cannot open: blocked for security", Toast.LENGTH_SHORT).show()
             copyToClipboard(context, field.value, field.label)
             return false
@@ -95,7 +95,7 @@ object ContactActions {
         // Check for blocked schemes using vauchi-core
         val scheme = value.substringBefore("://").lowercase()
         if (scheme.isNotEmpty() && value.contains("://")) {
-            if (uniffi.vauchi_mobile.isBlockedScheme(scheme)) return null
+            if (uniffi.vauchi_platform.isBlockedScheme(scheme)) return null
         }
 
         return ContactPatterns.normalizeWebsiteUrl(value)?.let { Uri.parse(it) }
@@ -105,7 +105,7 @@ object ContactActions {
      * Converts a social media field to a profile URL.
      * URL building logic delegated to [ContactPatterns].
      *
-     * Note: For full social network support, use VauchiMobile.getProfileUrl() directly.
+     * Note: For full social network support, use VauchiPlatform.getProfileUrl() directly.
      */
     private fun socialToUri(
         label: String,

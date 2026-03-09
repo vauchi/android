@@ -35,8 +35,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import com.vauchi.util.LocalizationManager
-import uniffi.vauchi_mobile.MobileContact
-import uniffi.vauchi_mobile.MobileDemoContact
+import uniffi.vauchi_platform.MobileContact
+import uniffi.vauchi_platform.MobileDemoContact
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable

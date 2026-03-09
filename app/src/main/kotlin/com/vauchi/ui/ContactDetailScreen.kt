@@ -23,10 +23,10 @@ import androidx.compose.ui.unit.dp
 import com.vauchi.util.ContactActions
 import com.vauchi.util.LocalizationManager
 import kotlinx.coroutines.launch
-import uniffi.vauchi_mobile.MobileContact
-import uniffi.vauchi_mobile.MobileContactCard
-import uniffi.vauchi_mobile.MobileContactField
-import uniffi.vauchi_mobile.MobileValidationStatus
+import uniffi.vauchi_platform.MobileContact
+import uniffi.vauchi_platform.MobileContactCard
+import uniffi.vauchi_platform.MobileContactField
+import uniffi.vauchi_platform.MobileValidationStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

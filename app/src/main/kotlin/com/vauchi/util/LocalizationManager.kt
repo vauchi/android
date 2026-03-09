@@ -10,18 +10,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
-import uniffi.vauchi_mobile.MobileLocale
-import uniffi.vauchi_mobile.MobileLocaleInfo
-import uniffi.vauchi_mobile.getAvailableLocales
-import uniffi.vauchi_mobile.getLocaleInfo
-import uniffi.vauchi_mobile.getString
-import uniffi.vauchi_mobile.getStringWithArgs
-import uniffi.vauchi_mobile.parseLocaleCode
+import uniffi.vauchi_platform.MobileLocale
+import uniffi.vauchi_platform.MobileLocaleInfo
+import uniffi.vauchi_platform.getAvailableLocales
+import uniffi.vauchi_platform.getLocaleInfo
+import uniffi.vauchi_platform.getString
+import uniffi.vauchi_platform.getStringWithArgs
+import uniffi.vauchi_platform.parseLocaleCode
 import java.util.Locale
 
 /**
  * Manages localization/internationalization.
- * Integrates with vauchi-mobile for string translations.
+ * Integrates with vauchi-platform for string translations.
  */
 class LocalizationManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

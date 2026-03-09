@@ -11,15 +11,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.edit
-import uniffi.vauchi_mobile.MobileTheme
-import uniffi.vauchi_mobile.MobileThemeMode
-import uniffi.vauchi_mobile.getAvailableThemes
-import uniffi.vauchi_mobile.getDefaultThemeId
-import uniffi.vauchi_mobile.getTheme
+import uniffi.vauchi_platform.MobileTheme
+import uniffi.vauchi_platform.MobileThemeMode
+import uniffi.vauchi_platform.getAvailableThemes
+import uniffi.vauchi_platform.getDefaultThemeId
+import uniffi.vauchi_platform.getTheme
 
 /**
  * Manages theme selection and application.
- * Integrates with vauchi-mobile for theme definitions.
+ * Integrates with vauchi-platform for theme definitions.
  */
 class ThemeManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

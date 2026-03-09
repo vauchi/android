@@ -28,13 +28,13 @@ import com.vauchi.ui.onboarding.ReadyStep
 import com.vauchi.ui.onboarding.SecurityStep
 import com.vauchi.ui.onboarding.WelcomeStep
 import com.vauchi.ui.theme.VauchiTheme
-import uniffi.vauchi_mobile.MobileDeliveryRecord
-import uniffi.vauchi_mobile.MobileDeliveryStatus
-import uniffi.vauchi_mobile.MobileRetryEntry
-import uniffi.vauchi_mobile.MobileVisibilityLabel
-import uniffi.vauchi_mobile.MobileContactCard
-import uniffi.vauchi_mobile.MobileContactField
-import uniffi.vauchi_mobile.MobileFieldType
+import uniffi.vauchi_platform.MobileDeliveryRecord
+import uniffi.vauchi_platform.MobileDeliveryStatus
+import uniffi.vauchi_platform.MobileRetryEntry
+import uniffi.vauchi_platform.MobileVisibilityLabel
+import uniffi.vauchi_platform.MobileContactCard
+import uniffi.vauchi_platform.MobileContactField
+import uniffi.vauchi_platform.MobileFieldType
 import java.util.Locale
 
 // VRT device spec: 360dp wide, 800dp tall, xhdpi (2x) = 720×1600 px.

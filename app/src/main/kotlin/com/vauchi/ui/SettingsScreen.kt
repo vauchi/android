@@ -33,10 +33,10 @@ import com.vauchi.util.BiometricHelper
 import com.vauchi.util.ClipboardUtils
 import com.vauchi.util.LocalizationManager
 import kotlinx.coroutines.launch
-import uniffi.vauchi_mobile.MobileConsentRecord
-import uniffi.vauchi_mobile.MobileConsentType
-import uniffi.vauchi_mobile.MobileDeletionInfo
-import uniffi.vauchi_mobile.MobileDeletionState
+import uniffi.vauchi_platform.MobileConsentRecord
+import uniffi.vauchi_platform.MobileConsentType
+import uniffi.vauchi_platform.MobileDeletionInfo
+import uniffi.vauchi_platform.MobileDeletionState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

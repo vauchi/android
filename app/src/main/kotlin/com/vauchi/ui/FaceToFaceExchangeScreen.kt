@@ -56,8 +56,8 @@ import com.vauchi.ui.components.rememberPermissionState
 import com.vauchi.util.LocalizationManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import uniffi.vauchi_mobile.MobileProtocolState
-import uniffi.vauchi_mobile.MobileQrPayload
+import uniffi.vauchi_platform.MobileProtocolState
+import uniffi.vauchi_platform.MobileQrPayload
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean

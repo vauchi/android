@@ -134,7 +134,7 @@ class KeyStoreHelper : StorageKeyProvider {
      * Returns the encrypted storage key bytes (IV + ciphertext + tag).
      */
     override fun generateEncryptedStorageKey(): ByteArray {
-        val storageKey = uniffi.vauchi_mobile.generateStorageKey()
+        val storageKey = uniffi.vauchi_platform.generateStorageKey()
         return encryptStorageKey(storageKey)
     }
 

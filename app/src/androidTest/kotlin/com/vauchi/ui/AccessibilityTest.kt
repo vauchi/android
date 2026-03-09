@@ -19,7 +19,7 @@ import com.vauchi.ui.onboarding.WelcomeStep
 import com.vauchi.ui.theme.VauchiTheme
 import org.junit.Rule
 import org.junit.Test
-import uniffi.vauchi_mobile.MobileVisibilityLabel
+import uniffi.vauchi_platform.MobileVisibilityLabel
 
 /**
  * Accessibility tests for Compose UI screens.

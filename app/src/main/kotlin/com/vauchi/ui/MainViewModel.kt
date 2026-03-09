@@ -23,30 +23,30 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uniffi.vauchi_mobile.MobileApplyResult
-import uniffi.vauchi_mobile.MobileConsentRecord
-import uniffi.vauchi_mobile.MobileConsentType
-import uniffi.vauchi_mobile.MobileContact
-import uniffi.vauchi_mobile.MobileContactCard
-import uniffi.vauchi_mobile.MobileDeletionInfo
-import uniffi.vauchi_mobile.MobileDeletionState
-import uniffi.vauchi_mobile.MobileDemoContact
-import uniffi.vauchi_mobile.MobileDemoContactState
-import uniffi.vauchi_mobile.MobileFieldType
-import uniffi.vauchi_mobile.MobileFieldValidation
-import uniffi.vauchi_mobile.MobileGdprExport
-import uniffi.vauchi_mobile.MobileMultiStageSession
-import uniffi.vauchi_mobile.MobileProtocolState
-import uniffi.vauchi_mobile.MobileQrPayload
-import uniffi.vauchi_mobile.MobileRecoveryClaim
-import uniffi.vauchi_mobile.MobileRecoveryProgress
-import uniffi.vauchi_mobile.MobileRecoveryVoucher
-import uniffi.vauchi_mobile.MobileSocialNetwork
-import uniffi.vauchi_mobile.MobileSyncResult
-import uniffi.vauchi_mobile.MobileUpdateStatus
-import uniffi.vauchi_mobile.MobileValidationStatus
-import uniffi.vauchi_mobile.MobileVisibilityLabel
-import uniffi.vauchi_mobile.MobileVisibilityLabelDetail
+import uniffi.vauchi_platform.MobileApplyResult
+import uniffi.vauchi_platform.MobileConsentRecord
+import uniffi.vauchi_platform.MobileConsentType
+import uniffi.vauchi_platform.MobileContact
+import uniffi.vauchi_platform.MobileContactCard
+import uniffi.vauchi_platform.MobileDeletionInfo
+import uniffi.vauchi_platform.MobileDeletionState
+import uniffi.vauchi_platform.MobileDemoContact
+import uniffi.vauchi_platform.MobileDemoContactState
+import uniffi.vauchi_platform.MobileFieldType
+import uniffi.vauchi_platform.MobileFieldValidation
+import uniffi.vauchi_platform.MobileGdprExport
+import uniffi.vauchi_platform.MobileMultiStageSession
+import uniffi.vauchi_platform.MobileProtocolState
+import uniffi.vauchi_platform.MobileQrPayload
+import uniffi.vauchi_platform.MobileRecoveryClaim
+import uniffi.vauchi_platform.MobileRecoveryProgress
+import uniffi.vauchi_platform.MobileRecoveryVoucher
+import uniffi.vauchi_platform.MobileSocialNetwork
+import uniffi.vauchi_platform.MobileSyncResult
+import uniffi.vauchi_platform.MobileUpdateStatus
+import uniffi.vauchi_platform.MobileValidationStatus
+import uniffi.vauchi_platform.MobileVisibilityLabel
+import uniffi.vauchi_platform.MobileVisibilityLabelDetail
 import java.time.Instant
 
 sealed class SyncState {
@@ -145,8 +145,8 @@ class MainViewModel(
     val largeTouchTargets: StateFlow<Boolean> = _largeTouchTargets.asStateFlow()
 
     // Aha moments (progressive onboarding)
-    private val _currentAhaMoment = MutableStateFlow<uniffi.vauchi_mobile.MobileAhaMoment?>(null)
-    val currentAhaMoment: StateFlow<uniffi.vauchi_mobile.MobileAhaMoment?> = _currentAhaMoment.asStateFlow()
+    private val _currentAhaMoment = MutableStateFlow<uniffi.vauchi_platform.MobileAhaMoment?>(null)
+    val currentAhaMoment: StateFlow<uniffi.vauchi_platform.MobileAhaMoment?> = _currentAhaMoment.asStateFlow()
 
     // GDPR state
     private val _deletionState = MutableStateFlow<MobileDeletionInfo?>(null)
@@ -429,7 +429,7 @@ class MainViewModel(
 
     /**
      * Start a new multi-stage exchange session.
-     * Creates the session through VauchiMobile which serializes the real
+     * Creates the session through VauchiPlatform which serializes the real
      * identity public key and contact card into the exchange payload.
      */
     fun startMultiStageExchange() {
@@ -483,7 +483,7 @@ class MainViewModel(
      *
      * Returns the exchange result on success, null on failure.
      */
-    fun finalizeMultiStageExchange(): uniffi.vauchi_mobile.MobileExchangeResult? {
+    fun finalizeMultiStageExchange(): uniffi.vauchi_platform.MobileExchangeResult? {
         val session = multiStageSession ?: return null
         return try {
             val result = repository.finalizeMultistageExchange(session)
@@ -718,10 +718,10 @@ class MainViewModel(
             PasswordStrengthResult(
                 level =
                     when (check.strength) {
-                        uniffi.vauchi_mobile.MobilePasswordStrength.TOO_WEAK -> PasswordStrengthLevel.TooWeak
-                        uniffi.vauchi_mobile.MobilePasswordStrength.FAIR -> PasswordStrengthLevel.Fair
-                        uniffi.vauchi_mobile.MobilePasswordStrength.STRONG -> PasswordStrengthLevel.Strong
-                        uniffi.vauchi_mobile.MobilePasswordStrength.VERY_STRONG -> PasswordStrengthLevel.VeryStrong
+                        uniffi.vauchi_platform.MobilePasswordStrength.TOO_WEAK -> PasswordStrengthLevel.TooWeak
+                        uniffi.vauchi_platform.MobilePasswordStrength.FAIR -> PasswordStrengthLevel.Fair
+                        uniffi.vauchi_platform.MobilePasswordStrength.STRONG -> PasswordStrengthLevel.Strong
+                        uniffi.vauchi_platform.MobilePasswordStrength.VERY_STRONG -> PasswordStrengthLevel.VeryStrong
                     },
                 description = check.description,
                 feedback = check.feedback,
@@ -797,7 +797,7 @@ class MainViewModel(
     }
 
     // Aha Moments operations (Progressive Onboarding)
-    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_mobile.MobileAhaMomentType) {
+    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType) {
         viewModelScope.launch {
             try {
                 val moment =
@@ -812,7 +812,7 @@ class MainViewModel(
     }
 
     fun tryTriggerAhaMomentWithContext(
-        momentType: uniffi.vauchi_mobile.MobileAhaMomentType,
+        momentType: uniffi.vauchi_platform.MobileAhaMomentType,
         context: String,
     ) {
         viewModelScope.launch {
@@ -832,7 +832,7 @@ class MainViewModel(
         _currentAhaMoment.value = null
     }
 
-    fun hasSeenAhaMoment(momentType: uniffi.vauchi_mobile.MobileAhaMomentType): Boolean =
+    fun hasSeenAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType): Boolean =
         try {
             repository.hasSeenAhaMoment(momentType)
         } catch (e: Exception) {

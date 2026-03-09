@@ -61,12 +61,12 @@ import com.vauchi.ui.model.PasswordStrengthResult
 import com.vauchi.ui.onboarding.OnboardingScreen
 import com.vauchi.ui.theme.VauchiTheme
 import kotlinx.coroutines.launch
-import uniffi.vauchi_mobile.MobileApplyResult
-import uniffi.vauchi_mobile.MobileContactCard
-import uniffi.vauchi_mobile.MobileContentType
-import uniffi.vauchi_mobile.MobileFieldType
-import uniffi.vauchi_mobile.MobileUpdateStatus
-import uniffi.vauchi_mobile.coreVersion
+import uniffi.vauchi_platform.MobileApplyResult
+import uniffi.vauchi_platform.MobileContactCard
+import uniffi.vauchi_platform.MobileContentType
+import uniffi.vauchi_platform.MobileFieldType
+import uniffi.vauchi_platform.MobileUpdateStatus
+import uniffi.vauchi_platform.coreVersion
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -695,7 +695,7 @@ fun ReadyScreen(
     onExchange: () -> Unit,
     onContacts: () -> Unit,
     onSettings: () -> Unit,
-    socialNetworks: List<uniffi.vauchi_mobile.MobileSocialNetwork> = emptyList(),
+    socialNetworks: List<uniffi.vauchi_platform.MobileSocialNetwork> = emptyList(),
     onGetProfileUrl: (String, String) -> String? = { _, _ -> null },
     syncState: SyncState = SyncState.Idle,
     isOnline: Boolean = true,
@@ -917,14 +917,14 @@ fun ReadyScreen(
 fun AddFieldDialog(
     onDismiss: () -> Unit,
     onAdd: (MobileFieldType, String, String) -> Unit,
-    socialNetworks: List<uniffi.vauchi_mobile.MobileSocialNetwork> = emptyList(),
+    socialNetworks: List<uniffi.vauchi_platform.MobileSocialNetwork> = emptyList(),
 ) {
     var selectedType by remember { mutableStateOf(MobileFieldType.EMAIL) }
     var label by remember { mutableStateOf("") }
     var value by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
     var socialExpanded by remember { mutableStateOf(false) }
-    var selectedNetwork by remember { mutableStateOf<uniffi.vauchi_mobile.MobileSocialNetwork?>(null) }
+    var selectedNetwork by remember { mutableStateOf<uniffi.vauchi_platform.MobileSocialNetwork?>(null) }
     var socialSearch by remember { mutableStateOf("") }
 
     val fieldTypes =

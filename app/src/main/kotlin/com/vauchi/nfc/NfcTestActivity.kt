@@ -17,8 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.vauchi.data.VauchiRepository
 import com.vauchi.util.BiometricHelper
-import uniffi.vauchi_mobile.MobileNfcHandshake
-import uniffi.vauchi_mobile.MobileNfcState
+import uniffi.vauchi_platform.MobileNfcHandshake
+import uniffi.vauchi_platform.MobileNfcState
 
 /**
  * Minimal test activity for NFC encrypted exchange.

@@ -14,13 +14,13 @@ import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
 import androidx.core.content.ContextCompat
-import uniffi.vauchi_mobile.PlatformAudioHandler
+import uniffi.vauchi_platform.PlatformAudioHandler
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.min
 
 /**
  * Ultrasonic audio proximity verification service for Android.
- * Implements PlatformAudioHandler callback interface for vauchi-mobile.
+ * Implements PlatformAudioHandler callback interface for vauchi-platform.
  *
  * Uses AudioRecord for recording and AudioTrack for playback at 18-20 kHz.
  */

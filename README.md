@@ -20,7 +20,7 @@ Native Android app for privacy-focused contact card exchange.
 ## Tech Stack
 
 - Kotlin + Jetpack Compose (Material Design 3)
-- UniFFI bindings to Rust core (`vauchi-mobile`)
+- UniFFI bindings to Rust core (`vauchi-platform`)
 - CameraX + ML Kit for QR scanning
 - Android KeyStore for secure key storage
 
@@ -63,7 +63,7 @@ app/src/main/kotlin/com/vauchi/
 
 ### Getting UniFFI Bindings
 
-This app requires the `vauchi-mobile` UniFFI bindings from the core repo:
+This app requires the `vauchi-platform` UniFFI bindings from the core repo:
 
 ```bash
 # Option 1: Download from CI (when available)
@@ -72,7 +72,7 @@ This app requires the `vauchi-mobile` UniFFI bindings from the core repo:
 # Option 2: Build from source
 git clone git@gitlab.com:vauchi/code.git ../code
 cd ../code
-cargo build -p vauchi-mobile --release --target aarch64-linux-android
+cargo build -p vauchi-platform --release --target aarch64-linux-android
 ```
 
 ### Building the App

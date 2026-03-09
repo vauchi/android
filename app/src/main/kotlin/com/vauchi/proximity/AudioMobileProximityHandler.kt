@@ -4,8 +4,8 @@
 
 package com.vauchi.proximity
 
-import uniffi.vauchi_mobile.MobileProximityHandler
-import uniffi.vauchi_mobile.MobileProximityVerifier
+import uniffi.vauchi_platform.MobileProximityHandler
+import uniffi.vauchi_platform.MobileProximityVerifier
 
 /**
  * Adapts [AudioProximityService] to the [MobileProximityHandler] callback

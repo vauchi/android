@@ -42,8 +42,8 @@ import com.vauchi.util.ClipboardUtils
 import com.vauchi.util.LocalizationManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import uniffi.vauchi_mobile.MobileDeviceInfo
-import uniffi.vauchi_mobile.MobileDeviceLinkData
+import uniffi.vauchi_platform.MobileDeviceInfo
+import uniffi.vauchi_platform.MobileDeviceLinkData
 
 /**
  * Screen for managing linked devices.

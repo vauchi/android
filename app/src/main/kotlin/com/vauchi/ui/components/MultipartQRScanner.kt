@@ -97,7 +97,7 @@ fun MultipartQRScanner(
             ) {
                 MultipartCameraPreview(
                     onChunkScanned = { rawValue ->
-                        // TODO: When vauchi-mobile-android publishes MobileMultipartDecoder,
+                        // TODO: When vauchi-platform-kotlin publishes MobileMultipartDecoder,
                         // replace this local parsing with the Rust-backed decoder for
                         // proper CRC32 validation and base64url decoding.
                         val parsed = parseChunkHeader(rawValue)
@@ -372,7 +372,7 @@ private class MultipartQRAnalyzer(
  *
  * Expected format: `{index}/{total}/{crc32_hex}/{base64url_data}`
  *
- * TODO: When vauchi-mobile-android publishes MobileMultipartDecoder bindings,
+ * TODO: When vauchi-platform-kotlin publishes MobileMultipartDecoder bindings,
  * replace this with the Rust-backed decoder for proper CRC32 validation.
  *
  * @param raw The raw QR code content string.

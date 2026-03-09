@@ -13,9 +13,9 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
-import uniffi.vauchi_mobile.MobileBleDelegate
-import uniffi.vauchi_mobile.MobileBleExchangeResult
-import uniffi.vauchi_mobile.MobileBleState
+import uniffi.vauchi_platform.MobileBleDelegate
+import uniffi.vauchi_platform.MobileBleExchangeResult
+import uniffi.vauchi_platform.MobileBleState
 import java.util.UUID
 
 /**

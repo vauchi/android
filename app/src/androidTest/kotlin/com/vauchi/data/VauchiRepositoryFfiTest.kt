@@ -12,7 +12,7 @@ import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import uniffi.vauchi_mobile.MobileFieldType
+import uniffi.vauchi_platform.MobileFieldType
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket
