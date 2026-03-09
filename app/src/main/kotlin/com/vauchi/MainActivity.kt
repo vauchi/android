@@ -31,6 +31,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
@@ -714,15 +715,16 @@ fun ReadyScreen(
                         isOnline = isOnline,
                         lastSyncTime = lastSyncTime,
                         onSync = onSync,
+                        modifier = Modifier.testTag("home.sync"),
                     )
-                    IconButton(onClick = onSettings) {
+                    IconButton(onClick = onSettings, modifier = Modifier.testTag("home.settings")) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 },
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
+            FloatingActionButton(onClick = { showAddDialog = true }, modifier = Modifier.testTag("home.add_field")) {
                 Icon(Icons.Default.Add, contentDescription = "Add field")
             }
         },
@@ -878,7 +880,7 @@ fun ReadyScreen(
                     ) {
                         Button(
                             onClick = onExchange,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).testTag("home.exchange"),
                         ) {
                             Icon(Icons.Default.Share, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
@@ -886,7 +888,7 @@ fun ReadyScreen(
                         }
                         OutlinedButton(
                             onClick = onContacts,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).testTag("home.contacts"),
                         ) {
                             Icon(Icons.Default.Person, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
@@ -1115,9 +1117,12 @@ fun AuthenticationGate(
                         errorCode: Int,
                         errString: CharSequence,
                     ) {
-                        if (errorCode != BiometricPrompt.ERROR_USER_CANCELED &&
-                            errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON
+                        if (errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
+                            errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
+                            errorCode == BiometricPrompt.ERROR_CANCELED
                         ) {
+                            onError("Authentication cancelled. Tap retry to unlock.")
+                        } else {
                             onError("Authentication failed: $errString")
                         }
                     }
@@ -1139,6 +1144,7 @@ fun ErrorScreen(
     val isLockScreenError =
         message.contains("lock screen", ignoreCase = true) ||
             message.contains("device authentication", ignoreCase = true)
+    val isCancelledError = message.contains("cancelled", ignoreCase = true)
 
     Box(
         modifier =
@@ -1156,9 +1162,16 @@ fun ErrorScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = if (isLockScreenError) "Device Lock Required" else "Something went wrong",
+                text =
+                    if (isLockScreenError) {
+                        "Device Lock Required"
+                    } else if (isCancelledError) {
+                        "Authentication Required"
+                    } else {
+                        "Something went wrong"
+                    },
                 style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.error,
+                color = if (isCancelledError) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -1167,6 +1180,8 @@ fun ErrorScreen(
                     if (isLockScreenError) {
                         "A device lock screen is required to use Vauchi. " +
                             "PIN, pattern, fingerprint, or face unlock all qualify."
+                    } else if (isCancelledError) {
+                        "Vauchi needs to verify your identity to unlock your encrypted contacts."
                     } else {
                         message
                     },
@@ -1194,7 +1209,7 @@ fun ErrorScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedButton(
                     onClick = onRetry,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("error.retry"),
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -1202,7 +1217,7 @@ fun ErrorScreen(
                 }
             } else {
                 Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = onRetry) {
+                Button(onClick = onRetry, modifier = Modifier.testTag("error.retry")) {
                     Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Retry")
@@ -1243,6 +1258,7 @@ fun SyncStatusChip(
     isOnline: Boolean,
     lastSyncTime: Instant?,
     onSync: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val (text, color) =
         when {
@@ -1278,6 +1294,7 @@ fun SyncStatusChip(
     TextButton(
         onClick = { if (isOnline && syncState !is SyncState.Syncing) onSync() },
         enabled = isOnline && syncState !is SyncState.Syncing,
+        modifier = modifier,
     ) {
         if (syncState is SyncState.Syncing) {
             CircularProgressIndicator(

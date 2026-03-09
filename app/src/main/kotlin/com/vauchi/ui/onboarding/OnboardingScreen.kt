@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -255,14 +256,14 @@ fun WelcomeStep(
         // Actions
         Button(
             onClick = onContinue,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("onboarding.get_started"),
         ) {
             Text(localizationManager.t("setup.create"))
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        TextButton(onClick = onRestore) {
+        TextButton(onClick = onRestore, modifier = Modifier.testTag("onboarding.restore")) {
             Text(localizationManager.t("setup.import"))
         }
     }
@@ -368,7 +369,8 @@ fun CreateIdentityStep(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .focusRequester(focusRequester),
+                        .focusRequester(focusRequester)
+                        .testTag("onboarding.name_field"),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { if (isValid) onContinue() }),
             )
@@ -379,7 +381,7 @@ fun CreateIdentityStep(
         Button(
             onClick = onContinue,
             enabled = isValid,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("onboarding.name_next"),
         ) {
             Text(localizationManager.t("action.next"))
         }
@@ -491,7 +493,7 @@ fun AddFieldsStep(
 
         Button(
             onClick = onContinue,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("onboarding.info_next"),
         ) {
             Text(localizationManager.t("action.next"))
         }
@@ -500,7 +502,7 @@ fun AddFieldsStep(
 
         TextButton(
             onClick = onSkip,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
+            modifier = Modifier.align(Alignment.CenterHorizontally).testTag("onboarding.info_skip"),
         ) {
             Text("Skip for now")
         }
@@ -626,7 +628,7 @@ fun PreviewStep(
 
         Button(
             onClick = onContinue,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("onboarding.preview_confirm"),
         ) {
             Icon(Icons.Default.Check, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
@@ -637,7 +639,7 @@ fun PreviewStep(
 
         TextButton(
             onClick = onBack,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
+            modifier = Modifier.align(Alignment.CenterHorizontally).testTag("onboarding.preview_edit"),
         ) {
             Text("Edit card")
         }
@@ -806,7 +808,7 @@ fun SecurityStep(
 
         Button(
             onClick = onContinue,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("onboarding.finish_setup"),
         ) {
             Text("Finish setup")
         }

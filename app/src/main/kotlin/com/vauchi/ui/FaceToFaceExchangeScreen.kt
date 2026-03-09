@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -222,7 +223,7 @@ fun MultiStageExchangeScreen(
                         .padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = onBack, modifier = Modifier.size(36.dp).testTag("exchange.back")) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
                 }
                 Text(
@@ -230,7 +231,10 @@ fun MultiStageExchangeScreen(
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f).padding(start = 4.dp),
                 )
-                IconButton(onClick = { useFrontCamera = !useFrontCamera }, modifier = Modifier.size(36.dp)) {
+                IconButton(
+                    onClick = { useFrontCamera = !useFrontCamera },
+                    modifier = Modifier.size(36.dp).testTag("exchange.camera_switch"),
+                ) {
                     Icon(
                         Icons.Default.Cameraswitch,
                         contentDescription = if (useFrontCamera) "Switch to rear camera" else "Switch to front camera",
@@ -335,7 +339,8 @@ fun MultiStageExchangeScreen(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 24.dp),
+                                        .padding(horizontal = 24.dp)
+                                        .testTag("exchange.done"),
                             ) {
                                 Text(localizationManager.t("action.done"))
                             }
@@ -383,7 +388,8 @@ fun MultiStageExchangeScreen(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 24.dp),
+                                    .padding(horizontal = 24.dp)
+                                    .testTag("exchange.retry"),
                         ) {
                             Text(localizationManager.t("action.retry"))
                         }
@@ -434,7 +440,7 @@ fun MultiStageExchangeScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Button(onClick = { cameraPermState.request() }) {
+                            Button(onClick = { cameraPermState.request() }, modifier = Modifier.testTag("exchange.grant_permission")) {
                                 Text("Grant Permission")
                             }
                         }
