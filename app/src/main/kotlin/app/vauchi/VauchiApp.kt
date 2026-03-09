@@ -1,0 +1,54 @@
+// SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+package app.vauchi
+
+import android.app.Application
+import android.util.Log
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import app.vauchi.worker.SyncWorker
+import java.util.concurrent.TimeUnit
+
+class VauchiApp : Application() {
+
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+        schedulePeriodicSync()
+    }
+
+    private fun schedulePeriodicSync() {
+        Log.d(TAG, "Scheduling periodic sync")
+
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val syncRequest = PeriodicWorkRequestBuilder<SyncWorker>(
+            repeatInterval = 15,
+            repeatIntervalTimeUnit = TimeUnit.MINUTES
+        )
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            SyncWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            syncRequest
+        )
+
+        Log.d(TAG, "Periodic sync scheduled (every 15 minutes)")
+    }
+
+    companion object {
+        private const val TAG = "VauchiApp"
+
+        lateinit var instance: VauchiApp
+            private set
+    }
+}

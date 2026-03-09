@@ -169,10 +169,10 @@ update:bindings-version:
 
       # Create branch and update version
       git checkout -b "$BRANCH"
-      sed -i "s/implementation(\"com.vauchi:vauchi-platform:[^\"]*\")/implementation(\"com.vauchi:vauchi-platform:${BINDINGS_VERSION}\")/" "$BUILD_FILE"
+      sed -i "s/implementation(\"app.vauchi:vauchi-platform:[^\"]*\")/implementation(\"app.vauchi:vauchi-platform:${BINDINGS_VERSION}\")/" "$BUILD_FILE"
 
       # Verify the change was made
-      if ! grep -q "com.vauchi:vauchi-platform:${BINDINGS_VERSION}" "$BUILD_FILE"; then
+      if ! grep -q "app.vauchi:vauchi-platform:${BINDINGS_VERSION}" "$BUILD_FILE"; then
         echo "ERROR: Version replacement failed"
         exit 1
       fi
@@ -189,7 +189,7 @@ update:bindings-version:
           \"source_branch\": \"$BRANCH\",
           \"target_branch\": \"main\",
           \"title\": \"chore: Bump vauchi-platform to $BINDINGS_VERSION\",
-          \"description\": \"Automated version bump triggered by vauchi-platform-kotlin release.\\n\\nUpdates \`com.vauchi:vauchi-platform\` from current version to \`$BINDINGS_VERSION\`.\\n\\n---\\n_This MR was created automatically by CI._\",
+          \"description\": \"Automated version bump triggered by vauchi-platform-kotlin release.\\n\\nUpdates \`app.vauchi:vauchi-platform\` from current version to \`$BINDINGS_VERSION\`.\\n\\n---\\n_This MR was created automatically by CI._\",
           \"remove_source_branch\": true
         }" \
         "${CI_SERVER_URL}/api/v4/projects/${CI_PROJECT_ID}/merge_requests")

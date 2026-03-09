@@ -17,11 +17,11 @@ plugins {
 val useLocalBindings = project.hasProperty("localBindings") || System.getenv("VAUCHI_LOCAL_BINDINGS") != null
 
 android {
-    namespace = "com.vauchi"
+    namespace = "app.vauchi"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.vauchi"
+        applicationId = "app.vauchi"
         minSdk = 26  // Android 8.0 - 94.8% coverage
         targetSdk = 35
         versionCode = 1
@@ -180,7 +180,7 @@ dependencies {
         implementation("net.java.dev.jna:jna:5.14.0@aar")
     } else {
         // Remote: published AAR includes JNA + JNI libs + Kotlin bindings
-        implementation("com.vauchi:vauchi-platform:0.5.0-rc.0")
+        implementation("app.vauchi:vauchi-platform:0.6.2")
     }
 
     // Testing

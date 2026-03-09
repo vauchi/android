@@ -2,7 +2,7 @@
 
 # Keep UniFFI generated classes
 -keep class uniffi.** { *; }
--keep class com.vauchi.uniffi.** { *; }
+-keep class app.vauchi.uniffi.** { *; }
 
 # Keep JNA classes
 -keep class com.sun.jna.** { *; }
