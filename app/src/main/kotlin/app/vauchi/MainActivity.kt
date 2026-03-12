@@ -200,6 +200,14 @@ fun MainScreen(
         }
     }
 
+    // Dynamic default screen: land on Contacts if user has contacts
+    LaunchedEffect(uiState) {
+        val state = uiState
+        if (state is UiState.Ready && currentScreen == Screen.Home && state.contactCount > 0u) {
+            currentScreen = Screen.Contacts
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         when (currentScreen) {
             Screen.Home -> {
