@@ -225,12 +225,7 @@ lint:
   extends: [.android-job, .timeout-standard]
   stage: lint
   cache:
-    key: ${CI_COMMIT_REF_SLUG}-gradle
-    fallback_keys:
-      - ${CI_DEFAULT_BRANCH}-gradle
-      - gradle
-    paths:
-      - .gradle/
+    <<: *gradle-cache
     policy: pull  # Read-only for lint
   script:
     - ./gradlew lint
@@ -317,6 +312,7 @@ build:release:
 test:unit:
   extends: [.android-job, .timeout-standard]
   stage: test
+  needs: []
   script:
     - ./gradlew test
   artifacts:
@@ -363,6 +359,7 @@ coverage:unit:
 test:screenshots:
   extends: [.android-job, .timeout-standard]
   stage: test
+  needs: []
   allow_failure: true
   script:
     - ./gradlew validateDebugScreenshotTest
