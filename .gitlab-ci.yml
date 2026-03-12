@@ -38,6 +38,7 @@ include:
     file:
       - '/ci-templates/timeouts.yml'
       - '/ci-templates/reuse.yml'
+      - '/ci-templates/design-drift.yml'
 
 stages:
   - auto-tag
@@ -250,6 +251,15 @@ lint:
           - "build.gradle*"
           - "app/build.gradle*"
           - ".gitlab-ci.yml"
+
+# Design drift: verify all design-spec components are implemented
+check:design-drift:
+  extends: .design-drift-job
+  variables:
+    DESIGN_DRIFT_COMPONENT_DIR: "app/src/main/kotlin/app/vauchi/ui/coreui/components"
+    DESIGN_DRIFT_FILE_EXT: ".kt"
+    DESIGN_DRIFT_FILE_SUFFIX: "Component"
+    DESIGN_DRIFT_CASE: "pascal"
 
 # ============================================================
 # Build Stage (MR: debug, Tag: release)
