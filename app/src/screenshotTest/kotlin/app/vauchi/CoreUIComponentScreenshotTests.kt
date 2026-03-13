@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.android.tools.screenshot.PreviewTest
 import app.vauchi.ui.coreui.FieldDisplay
 import app.vauchi.ui.coreui.GroupCardView
 import app.vauchi.ui.coreui.InfoItem
@@ -21,12 +20,15 @@ import app.vauchi.ui.coreui.UiFieldVisibility
 import app.vauchi.ui.coreui.UserAction
 import app.vauchi.ui.coreui.VisibilityMode
 import app.vauchi.ui.coreui.components.CardPreviewComponent
+import app.vauchi.ui.coreui.components.EditableTextComponent
 import app.vauchi.ui.coreui.components.FieldListComponent
 import app.vauchi.ui.coreui.components.InfoPanelComponent
+import app.vauchi.ui.coreui.components.InlineConfirmComponent
 import app.vauchi.ui.coreui.components.TextComponent
 import app.vauchi.ui.coreui.components.TextInputComponent
 import app.vauchi.ui.coreui.components.ToggleListComponent
 import app.vauchi.ui.theme.VauchiTheme
+import com.android.tools.screenshot.PreviewTest
 
 // VRT device spec: 360dp wide, 800dp tall, xhdpi (2x) = 720×1600 px.
 private const val VRT_DEVICE = "spec:width=360dp,height=800dp,dpi=320"
@@ -669,6 +671,154 @@ fun TextComponentStylesDarkScreenshot() {
                 TextComponent(content = "Body Style — This is the main text content.", style = TextStyle.Body)
                 Spacer(modifier = Modifier.height(8.dp))
                 TextComponent(content = "Caption Style — Small secondary text.", style = TextStyle.Caption)
+            }
+        }
+    }
+}
+
+// =============================================================
+// InlineConfirmComponent
+// =============================================================
+
+@PreviewTest
+@Preview(showSystemUi = true, device = VRT_DEVICE)
+@Composable
+fun InlineConfirmComponentDestructiveScreenshot() {
+    VauchiTheme(dynamicColor = false) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                InlineConfirmComponent(
+                    componentId = "confirm-delete",
+                    warning = "Are you sure you want to delete this contact?",
+                    confirmText = "Delete",
+                    cancelText = "Cancel",
+                    destructive = true,
+                    onAction = {},
+                )
+            }
+        }
+    }
+}
+
+@PreviewTest
+@Preview(showSystemUi = true, device = VRT_DEVICE)
+@Composable
+fun InlineConfirmComponentNonDestructiveScreenshot() {
+    VauchiTheme(dynamicColor = false) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                InlineConfirmComponent(
+                    componentId = "confirm-merge",
+                    warning = "Merge these two contacts?",
+                    confirmText = "Merge",
+                    cancelText = "Keep Separate",
+                    destructive = false,
+                    onAction = {},
+                )
+            }
+        }
+    }
+}
+
+@PreviewTest
+@Preview(showSystemUi = true, device = VRT_DEVICE)
+@Composable
+fun InlineConfirmComponentDestructiveDarkScreenshot() {
+    VauchiTheme(darkTheme = true, dynamicColor = false) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                InlineConfirmComponent(
+                    componentId = "confirm-delete",
+                    warning = "Are you sure you want to delete this contact?",
+                    confirmText = "Delete",
+                    cancelText = "Cancel",
+                    destructive = true,
+                    onAction = {},
+                )
+            }
+        }
+    }
+}
+
+// =============================================================
+// EditableTextComponent
+// =============================================================
+
+@PreviewTest
+@Preview(showSystemUi = true, device = VRT_DEVICE)
+@Composable
+fun EditableTextComponentDisplayScreenshot() {
+    VauchiTheme(dynamicColor = false) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                EditableTextComponent(
+                    componentId = "display-name",
+                    label = "Display Name",
+                    value = "Alice",
+                    editing = false,
+                    validationError = null,
+                    onAction = {},
+                )
+            }
+        }
+    }
+}
+
+@PreviewTest
+@Preview(showSystemUi = true, device = VRT_DEVICE)
+@Composable
+fun EditableTextComponentEditingScreenshot() {
+    VauchiTheme(dynamicColor = false) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                EditableTextComponent(
+                    componentId = "display-name",
+                    label = "Display Name",
+                    value = "Alice",
+                    editing = true,
+                    validationError = null,
+                    onAction = {},
+                )
+            }
+        }
+    }
+}
+
+@PreviewTest
+@Preview(showSystemUi = true, device = VRT_DEVICE)
+@Composable
+fun EditableTextComponentErrorScreenshot() {
+    VauchiTheme(dynamicColor = false) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                EditableTextComponent(
+                    componentId = "display-name",
+                    label = "Display Name",
+                    value = "",
+                    editing = true,
+                    validationError = "Name cannot be empty",
+                    onAction = {},
+                )
+            }
+        }
+    }
+}
+
+@PreviewTest
+@Preview(showSystemUi = true, device = VRT_DEVICE)
+@Composable
+fun EditableTextComponentDisplayDarkScreenshot() {
+    VauchiTheme(darkTheme = true, dynamicColor = false) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                EditableTextComponent(
+                    componentId = "display-name",
+                    label = "Display Name",
+                    value = "Alice",
+                    editing = false,
+                    validationError = null,
+                    onAction = {},
+                )
             }
         }
     }

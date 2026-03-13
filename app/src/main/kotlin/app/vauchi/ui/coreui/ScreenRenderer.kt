@@ -27,8 +27,10 @@ import app.vauchi.ui.coreui.components.ActionListComponent
 import app.vauchi.ui.coreui.components.CardPreviewComponent
 import app.vauchi.ui.coreui.components.ConfirmationDialogComponent
 import app.vauchi.ui.coreui.components.ContactListComponent
+import app.vauchi.ui.coreui.components.EditableTextComponent
 import app.vauchi.ui.coreui.components.FieldListComponent
 import app.vauchi.ui.coreui.components.InfoPanelComponent
+import app.vauchi.ui.coreui.components.InlineConfirmComponent
 import app.vauchi.ui.coreui.components.PinInputComponent
 import app.vauchi.ui.coreui.components.QrCodeComponent
 import app.vauchi.ui.coreui.components.SettingsGroupComponent
@@ -257,6 +259,34 @@ fun ComponentRenderer(
                 message = component.message,
                 confirmText = component.confirmText,
                 destructive = component.destructive,
+                onAction = onAction,
+                modifier = modifier,
+            )
+        }
+
+        is Component.ShowToast -> {
+            // Toast rendering is handled at the screen level (SnackbarHost), not inline
+        }
+
+        is Component.InlineConfirm -> {
+            InlineConfirmComponent(
+                componentId = component.id,
+                warning = component.warning,
+                confirmText = component.confirmText,
+                cancelText = component.cancelText,
+                destructive = component.destructive,
+                onAction = onAction,
+                modifier = modifier,
+            )
+        }
+
+        is Component.EditableText -> {
+            EditableTextComponent(
+                componentId = component.id,
+                label = component.label,
+                value = component.value,
+                editing = component.editing,
+                validationError = component.validationError,
                 onAction = onAction,
                 modifier = modifier,
             )

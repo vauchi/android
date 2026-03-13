@@ -169,6 +169,29 @@ sealed class Component {
         val destructive: Boolean,
     ) : Component()
 
+    data class ShowToast(
+        val id: String,
+        val message: String,
+        val undoActionId: String? = null,
+        val durationMs: Int,
+    ) : Component()
+
+    data class InlineConfirm(
+        val id: String,
+        val warning: String,
+        val confirmText: String,
+        val cancelText: String,
+        val destructive: Boolean,
+    ) : Component()
+
+    data class EditableText(
+        val id: String,
+        val label: String,
+        val value: String,
+        val editing: Boolean,
+        val validationError: String? = null,
+    ) : Component()
+
     data object Divider : Component()
 }
 
@@ -275,6 +298,32 @@ private data class ConfirmationDialogContent(
     val message: String,
     @SerialName("confirm_text") val confirmText: String,
     val destructive: Boolean,
+)
+
+@Serializable
+private data class ShowToastContent(
+    val id: String,
+    val message: String,
+    @SerialName("undo_action_id") val undoActionId: String? = null,
+    @SerialName("duration_ms") val durationMs: Int,
+)
+
+@Serializable
+private data class InlineConfirmContent(
+    val id: String,
+    val warning: String,
+    @SerialName("confirm_text") val confirmText: String,
+    @SerialName("cancel_text") val cancelText: String,
+    val destructive: Boolean,
+)
+
+@Serializable
+private data class EditableTextContent(
+    val id: String,
+    val label: String,
+    val value: String,
+    val editing: Boolean,
+    @SerialName("validation_error") val validationError: String? = null,
 )
 
 internal object ComponentSerializer : KSerializer<Component> {
@@ -412,6 +461,41 @@ internal object ComponentSerializer : KSerializer<Component> {
                             message = c.message,
                             confirmText = c.confirmText,
                             destructive = c.destructive,
+                        )
+                    }
+
+                    "ShowToast" in element -> {
+                        val c: ShowToastContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["ShowToast"]!!)
+                        Component.ShowToast(
+                            id = c.id,
+                            message = c.message,
+                            undoActionId = c.undoActionId,
+                            durationMs = c.durationMs,
+                        )
+                    }
+
+                    "InlineConfirm" in element -> {
+                        val c: InlineConfirmContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["InlineConfirm"]!!)
+                        Component.InlineConfirm(
+                            id = c.id,
+                            warning = c.warning,
+                            confirmText = c.confirmText,
+                            cancelText = c.cancelText,
+                            destructive = c.destructive,
+                        )
+                    }
+
+                    "EditableText" in element -> {
+                        val c: EditableTextContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["EditableText"]!!)
+                        Component.EditableText(
+                            id = c.id,
+                            label = c.label,
+                            value = c.value,
+                            editing = c.editing,
+                            validationError = c.validationError,
                         )
                     }
 
@@ -568,6 +652,44 @@ internal object ComponentSerializer : KSerializer<Component> {
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("ConfirmationDialog" to inner)))
+            }
+
+            is Component.ShowToast -> {
+                val content =
+                    ShowToastContent(
+                        id = value.id,
+                        message = value.message,
+                        undoActionId = value.undoActionId,
+                        durationMs = value.durationMs,
+                    )
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("ShowToast" to inner)))
+            }
+
+            is Component.InlineConfirm -> {
+                val content =
+                    InlineConfirmContent(
+                        id = value.id,
+                        warning = value.warning,
+                        confirmText = value.confirmText,
+                        cancelText = value.cancelText,
+                        destructive = value.destructive,
+                    )
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("InlineConfirm" to inner)))
+            }
+
+            is Component.EditableText -> {
+                val content =
+                    EditableTextContent(
+                        id = value.id,
+                        label = value.label,
+                        value = value.value,
+                        editing = value.editing,
+                        validationError = value.validationError,
+                    )
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("EditableText" to inner)))
             }
         }
     }
