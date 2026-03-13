@@ -761,66 +761,37 @@ class VauchiRepository(
     /**
      * Start the device link protocol as initiator (primary device).
      * Returns an initiator state machine that generates QR data and drives the protocol.
-     *
-     * NOTE: Stub until relay transport bindings are published via vauchi-platform-kotlin.
      */
-    fun startDeviceLink(): Any {
-        // TODO: Replace with vauchi.startDeviceLink() once bindings are published
-        throw UnsupportedOperationException("Relay transport not yet available in bindings")
-    }
-
-    /**
-     * Start the device link protocol as responder (new device joining).
-     *
-     * NOTE: Stub until relay transport bindings are published via vauchi-platform-kotlin.
-     */
-    fun startDeviceJoin(
-        qrData: String,
-        deviceName: String,
-    ): Any {
-        // TODO: Replace with vauchi.startDeviceJoin(qrData, deviceName) once bindings are published
-        throw UnsupportedOperationException("Relay transport not yet available in bindings")
-    }
+    fun startDeviceLink() = vauchi.startDeviceLink()
 
     /**
      * Listen for an incoming device link request via the relay.
-     *
-     * NOTE: Stub until relay transport bindings are published via vauchi-platform-kotlin.
      */
-    fun listenForDeviceLinkRequest(timeoutSecs: ULong): Any {
-        // TODO: Replace with vauchi.listenForDeviceLinkRequest(timeoutSecs) once bindings are published
-        throw UnsupportedOperationException("Relay transport not yet available in bindings")
-    }
+    fun listenForDeviceLinkRequest(timeoutSecs: ULong) = vauchi.listenForDeviceLinkRequest(timeoutSecs)
 
     /**
      * Send a device link response back via the relay.
-     *
-     * NOTE: Stub until relay transport bindings are published via vauchi-platform-kotlin.
      */
     fun sendDeviceLinkResponse(
         senderToken: String,
         encryptedResponse: ByteArray,
-    ) {
-        // TODO: Replace with vauchi.sendDeviceLinkResponse(senderToken, encryptedResponse.toList())
-        throw UnsupportedOperationException("Relay transport not yet available in bindings")
-    }
+    ) = vauchi.sendDeviceLinkResponse(senderToken, encryptedResponse)
 
     /**
      * Send a device link request via the relay and wait for a response.
-     *
-     * NOTE: Stub until relay transport bindings are published via vauchi-platform-kotlin.
      */
     fun sendDeviceLinkRequest(
         targetIdentity: String,
         senderToken: String,
         encryptedRequest: ByteArray,
         timeoutSecs: ULong,
-    ): ByteArray {
-        // TODO: Replace with vauchi.sendDeviceLinkRequest(
-        //     targetIdentity, senderToken, encryptedRequest.toList(), timeoutSecs
-        // ).toByteArray()
-        throw UnsupportedOperationException("Relay transport not yet available in bindings")
-    }
+    ): ByteArray =
+        vauchi.sendDeviceLinkRequest(
+            targetIdentity,
+            senderToken,
+            encryptedRequest,
+            timeoutSecs,
+        )
 
     // GDPR operations
     // Based on: features/privacy_compliance.feature

@@ -32,6 +32,7 @@ import uniffi.vauchi_platform.MobileDeletionInfo
 import uniffi.vauchi_platform.MobileDeletionState
 import uniffi.vauchi_platform.MobileDemoContact
 import uniffi.vauchi_platform.MobileDemoContactState
+import uniffi.vauchi_platform.MobileDeviceLinkInitiator
 import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileFieldValidation
 import uniffi.vauchi_platform.MobileGdprExport
@@ -1466,23 +1467,22 @@ class MainViewModel(
     private val _deviceLinkState = MutableStateFlow<DeviceLinkState>(DeviceLinkState.Idle)
     val deviceLinkState: StateFlow<DeviceLinkState> = _deviceLinkState.asStateFlow()
 
-    // The initiator state machine from the device link protocol.
-    // Typed as Any because MobileDeviceLinkInitiator may not be available in current bindings.
-    private var currentInitiator: Any? = null
+    private var currentInitiator: MobileDeviceLinkInitiator? = null
     private var currentSenderToken: String? = null
 
     /**
      * Start the device link protocol as initiator.
-     * Generates QR data for the new device to scan.
+     * Creates an initiator state machine and generates QR data for the new device to scan.
      */
     suspend fun startDeviceLinkInitiator(): String? {
         _deviceLinkState.value = DeviceLinkState.GeneratingQR
         return try {
-            val qrData =
+            val (initiator, qrData) =
                 withContext(Dispatchers.IO) {
-                    val linkData = repository.generateDeviceLinkQr()
-                    linkData.qrData
+                    val init = repository.startDeviceLink()
+                    Pair(init, init.qrData())
                 }
+            currentInitiator = initiator
             _deviceLinkState.value = DeviceLinkState.WaitingForRequest(qrData)
             qrData
         } catch (e: Exception) {
@@ -1497,22 +1497,23 @@ class MainViewModel(
      */
     suspend fun listenForDeviceLinkRequest() {
         try {
+            val initiator =
+                currentInitiator
+                    ?: throw IllegalStateException("No initiator — call startDeviceLinkInitiator first")
+
             val request =
                 withContext(Dispatchers.IO) {
                     repository.listenForDeviceLinkRequest(300u)
                 }
-            // NOTE: When real bindings are available, extract fields from request:
-            // currentSenderToken = request.senderToken
-            // val confirmation = currentInitiator.prepareConfirmation(request.encryptedPayload)
-            // val challenge = currentInitiator.proximityChallenge().toByteArray()
-            // _deviceLinkState.value = DeviceLinkState.ConfirmingDevice(
-            //     deviceName = confirmation.deviceName,
-            //     confirmationCode = confirmation.confirmationCode,
-            //     challenge = challenge
-            // )
-
-            // For now, this will throw UnsupportedOperationException from the stub
-            _deviceLinkState.value = DeviceLinkState.Failed("Relay transport not yet available")
+            currentSenderToken = request.senderToken
+            val confirmation = initiator.prepareConfirmation(request.encryptedPayload)
+            val challenge = initiator.proximityChallenge()
+            _deviceLinkState.value =
+                DeviceLinkState.ConfirmingDevice(
+                    deviceName = confirmation.deviceName,
+                    confirmationCode = confirmation.confirmationCode,
+                    challenge = challenge,
+                )
         } catch (e: Exception) {
             _deviceLinkState.value = DeviceLinkState.Failed(e.message ?: "Failed to listen for request")
         }
@@ -1521,36 +1522,54 @@ class MainViewModel(
     /**
      * Approve the device link after proximity verification.
      *
+     * Calls core's confirm_link with the proximity proof. Core validates the proof
+     * cryptographically (HMAC for manual, challenge match for ultrasonic) and rejects
+     * expired or invalid proofs. The encrypted response is sent to the new device
+     * via relay only on success.
+     *
      * @param verificationResult The proximity proof from the verification step.
      */
     suspend fun approveDeviceLink(verificationResult: ProximityVerificationResult) {
         _deviceLinkState.value = DeviceLinkState.Completing
         try {
-            // NOTE: When real bindings are available, construct proof and call:
-            // val initiator = currentInitiator as MobileDeviceLinkInitiator
-            // val senderToken = currentSenderToken ?: throw IllegalStateException("No sender token")
-            // val proof = when (verificationResult) {
-            //     is ProximityVerificationResult.Ultrasonic -> MobileProximityProof.Ultrasonic(
-            //         challengeResponse = verificationResult.challengeResponse.toList(),
-            //         verifiedAt = verificationResult.verifiedAt,
-            //     )
-            //     is ProximityVerificationResult.Manual -> MobileProximityProof.ManualConfirmation(
-            //         confirmationCode = verificationResult.confirmationCode,
-            //         confirmedAt = verificationResult.confirmedAt,
-            //     )
-            // }
-            // val result = initiator.confirmLink(proof)
-            // result.encryptedResponse?.let { responseBytes ->
-            //     withContext(Dispatchers.IO) {
-            //         repository.sendDeviceLinkResponse(senderToken, responseBytes.toByteArray())
-            //     }
-            // }
+            val initiator =
+                currentInitiator
+                    ?: throw IllegalStateException("No initiator — call startDeviceLinkInitiator first")
+            val senderToken =
+                currentSenderToken
+                    ?: throw IllegalStateException("No sender token — call listenForDeviceLinkRequest first")
+
+            val result =
+                withContext(Dispatchers.IO) {
+                    when (verificationResult) {
+                        is ProximityVerificationResult.Ultrasonic -> {
+                            initiator.confirmLinkUltrasonic(
+                                verificationResult.challengeResponse,
+                                verificationResult.verifiedAt,
+                            )
+                        }
+
+                        is ProximityVerificationResult.Manual -> {
+                            initiator.confirmLinkManual(
+                                verificationResult.confirmationCode,
+                                verificationResult.confirmedAt,
+                            )
+                        }
+                    }
+                }
+            result.encryptedResponse?.let { responseBytes ->
+                withContext(Dispatchers.IO) {
+                    repository.sendDeviceLinkResponse(senderToken, responseBytes)
+                }
+            }
 
             _deviceLinkState.value = DeviceLinkState.Success
             currentInitiator = null
             currentSenderToken = null
         } catch (e: Exception) {
             _deviceLinkState.value = DeviceLinkState.Failed(e.message ?: "Failed to complete link")
+            currentInitiator = null
+            currentSenderToken = null
         }
     }
 
