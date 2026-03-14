@@ -564,7 +564,6 @@ fun SettingsScreen(
                 listOf(
                     MobileConsentType.DATA_PROCESSING to localizationManager.t("privacy.consent_data_processing"),
                     MobileConsentType.CONTACT_SHARING to localizationManager.t("privacy.consent_contact_sharing"),
-                    MobileConsentType.ANALYTICS to localizationManager.t("privacy.consent_analytics"),
                     MobileConsentType.RECOVERY_VOUCHING to localizationManager.t("privacy.consent_recovery_vouching"),
                 )
 
