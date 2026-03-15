@@ -1291,6 +1291,8 @@ sealed class ActionResult {
     data class ExchangeCommands(
         val commands: List<ExchangeCommandDTO>,
     ) : ActionResult()
+
+    data object Unknown : ActionResult()
 }
 
 // / DTO for exchange commands from core (ADR-031).
@@ -1365,8 +1367,7 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
 
                     "WipeComplete" -> ActionResult.WipeComplete
 
-                    else -> throw IllegalArgumentException(
-                        "Unknown ActionResult variant: ${element.content}",
+                    else -> ActionResult.Unknown
                     )
                 }
             }
@@ -1449,11 +1450,7 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                         ActionResult.ExchangeCommands(commands = cmds)
                     }
 
-                    else -> {
-                        throw IllegalArgumentException(
-                            "Unknown ActionResult variant: $element",
-                        )
-                    }
+                    else -> ActionResult.Unknown
                 }
             }
 
@@ -1597,6 +1594,10 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
             is ActionResult.ExchangeCommands -> {
                 // Serialization not needed for incoming-only variant
                 jsonEncoder.encodeJsonElement(JsonPrimitive("ExchangeCommands"))
+            }
+
+            is ActionResult.Unknown -> {
+                jsonEncoder.encodeJsonElement(JsonPrimitive("Unknown"))
             }
         }
     }

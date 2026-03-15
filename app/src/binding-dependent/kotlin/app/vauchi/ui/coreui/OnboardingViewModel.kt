@@ -137,6 +137,7 @@ class OnboardingViewModel : ViewModel() {
             is ActionResult.RequestCamera,
             is ActionResult.WipeComplete,
             is ActionResult.ExchangeCommands,
+            is ActionResult.Unknown,
             -> {
                 // These results are not expected during onboarding.
                 Log.w(TAG, "Unexpected ActionResult during onboarding: $result")
