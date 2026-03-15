@@ -129,10 +129,14 @@ class OnboardingViewModel : ViewModel() {
             is ActionResult.StartDeviceLink,
             is ActionResult.StartBackupImport,
             is ActionResult.OpenContact,
+            is ActionResult.EditContact,
             is ActionResult.OpenUrl,
             is ActionResult.ShowAlert,
+            is ActionResult.OpenEntryDetail,
+            is ActionResult.ShowToast,
             is ActionResult.RequestCamera,
             is ActionResult.WipeComplete,
+            is ActionResult.ExchangeCommands,
             -> {
                 // These results are not expected during onboarding.
                 Log.w(TAG, "Unexpected ActionResult during onboarding: $result")

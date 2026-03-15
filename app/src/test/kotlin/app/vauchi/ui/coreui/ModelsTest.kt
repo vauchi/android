@@ -374,6 +374,43 @@ class ModelsTest {
         assertEquals("groups", (result as ActionResult.NavigateTo).screen.screenId)
     }
 
+    @Test
+    fun `ActionResult ExchangeCommands deserialization`() {
+        val input = """{"ExchangeCommands": {"commands": ["QrRequestScan", {"QrDisplay": {"data": "test-qr"}}]}}"""
+        val result = json.decodeFromString<ActionResult>(input)
+        assertTrue(result is ActionResult.ExchangeCommands)
+        val cmds = (result as ActionResult.ExchangeCommands).commands
+        assertEquals(2, cmds.size)
+        assertTrue(cmds[0] is ExchangeCommandDTO.QrRequestScan)
+        assertTrue(cmds[1] is ExchangeCommandDTO.QrDisplay)
+        assertEquals("test-qr", (cmds[1] as ExchangeCommandDTO.QrDisplay).data)
+    }
+
+    @Test
+    fun `ActionResult ShowToast deserialization`() {
+        val input = """{"ShowToast": {"message": "Saved", "undo_action_id": "undo_1"}}"""
+        val result = json.decodeFromString<ActionResult>(input)
+        assertTrue(result is ActionResult.ShowToast)
+        assertEquals("Saved", (result as ActionResult.ShowToast).message)
+        assertEquals("undo_1", result.undoActionId)
+    }
+
+    @Test
+    fun `ActionResult EditContact deserialization`() {
+        val input = """{"EditContact": {"contact_id": "c123"}}"""
+        val result = json.decodeFromString<ActionResult>(input)
+        assertTrue(result is ActionResult.EditContact)
+        assertEquals("c123", (result as ActionResult.EditContact).contactId)
+    }
+
+    @Test
+    fun `ActionResult OpenEntryDetail deserialization`() {
+        val input = """{"OpenEntryDetail": {"field_id": "phone_1"}}"""
+        val result = json.decodeFromString<ActionResult>(input)
+        assertTrue(result is ActionResult.OpenEntryDetail)
+        assertEquals("phone_1", (result as ActionResult.OpenEntryDetail).fieldId)
+    }
+
     // ── Full round-trip ─────────────────────────────────────────────
 
     @Test

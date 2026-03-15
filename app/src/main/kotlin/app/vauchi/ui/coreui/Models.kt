@@ -13,6 +13,7 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -20,8 +21,10 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 
 /**
  * Kotlin data classes matching core UI JSON types.
@@ -1270,7 +1273,63 @@ sealed class ActionResult {
 
     data object RequestCamera : ActionResult()
 
+    data class EditContact(
+        val contactId: String,
+    ) : ActionResult()
+
+    data class OpenEntryDetail(
+        val fieldId: String,
+    ) : ActionResult()
+
+    data class ShowToast(
+        val message: String,
+        val undoActionId: String?,
+    ) : ActionResult()
+
     data object WipeComplete : ActionResult()
+
+    data class ExchangeCommands(
+        val commands: List<ExchangeCommandDTO>,
+    ) : ActionResult()
+}
+
+// / DTO for exchange commands from core (ADR-031).
+// / Maps to: `vauchi-core::exchange::command::ExchangeCommand`
+@Serializable(with = ExchangeCommandDTOSerializer::class)
+sealed class ExchangeCommandDTO {
+    data class QrDisplay(
+        val data: String,
+    ) : ExchangeCommandDTO()
+
+    data object QrRequestScan : ExchangeCommandDTO()
+
+    data class BleStartScanning(
+        val serviceUuid: String,
+    ) : ExchangeCommandDTO()
+
+    data class BleConnect(
+        val deviceId: String,
+    ) : ExchangeCommandDTO()
+
+    data object BleDisconnect : ExchangeCommandDTO()
+
+    data class NfcActivate(
+        val payload: List<Int>,
+    ) : ExchangeCommandDTO()
+
+    data object NfcDeactivate : ExchangeCommandDTO()
+
+    data class AudioEmitChallenge(
+        val data: List<Int>,
+    ) : ExchangeCommandDTO()
+
+    data class AudioListenForResponse(
+        val timeoutMs: Long,
+    ) : ExchangeCommandDTO()
+
+    data object AudioStop : ExchangeCommandDTO()
+
+    data object Unknown : ExchangeCommandDTO()
 }
 
 internal object ActionResultSerializer : KSerializer<ActionResult> {
@@ -1340,6 +1399,40 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                             title = obj["title"]!!.jsonPrimitive.content,
                             message = obj["message"]!!.jsonPrimitive.content,
                         )
+                    }
+
+                    "EditContact" in element -> {
+                        val obj = element["EditContact"] as JsonObject
+                        ActionResult.EditContact(
+                            contactId = obj["contact_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "OpenEntryDetail" in element -> {
+                        val obj = element["OpenEntryDetail"] as JsonObject
+                        ActionResult.OpenEntryDetail(
+                            fieldId = obj["field_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "ShowToast" in element -> {
+                        val obj = element["ShowToast"] as JsonObject
+                        ActionResult.ShowToast(
+                            message = obj["message"]!!.jsonPrimitive.content,
+                            undoActionId = obj["undo_action_id"]?.jsonPrimitive?.contentOrNull,
+                        )
+                    }
+
+                    "ExchangeCommands" in element -> {
+                        val obj = element["ExchangeCommands"] as JsonObject
+                        val cmds =
+                            obj["commands"]!!.jsonArray.map { cmdElement ->
+                                jsonDecoder.json.decodeFromJsonElement(
+                                    ExchangeCommandDTOSerializer,
+                                    cmdElement,
+                                )
+                            }
+                        ActionResult.ExchangeCommands(commands = cmds)
                     }
 
                     else -> {
@@ -1451,6 +1544,122 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                     )
                 jsonEncoder.encodeJsonElement(obj)
             }
+
+            is ActionResult.EditContact -> {
+                val obj =
+                    JsonObject(
+                        mapOf(
+                            "EditContact" to
+                                JsonObject(
+                                    mapOf("contact_id" to JsonPrimitive(value.contactId)),
+                                ),
+                        ),
+                    )
+                jsonEncoder.encodeJsonElement(obj)
+            }
+
+            is ActionResult.OpenEntryDetail -> {
+                val obj =
+                    JsonObject(
+                        mapOf(
+                            "OpenEntryDetail" to
+                                JsonObject(
+                                    mapOf("field_id" to JsonPrimitive(value.fieldId)),
+                                ),
+                        ),
+                    )
+                jsonEncoder.encodeJsonElement(obj)
+            }
+
+            is ActionResult.ShowToast -> {
+                val inner =
+                    buildMap<String, JsonElement> {
+                        put("message", JsonPrimitive(value.message))
+                        put("undo_action_id", JsonPrimitive(value.undoActionId))
+                    }
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("ShowToast" to JsonObject(inner))))
+            }
+
+            is ActionResult.ExchangeCommands -> {
+                // Serialization not needed for incoming-only variant
+                jsonEncoder.encodeJsonElement(JsonPrimitive("ExchangeCommands"))
+            }
         }
+    }
+}
+
+internal object ExchangeCommandDTOSerializer : KSerializer<ExchangeCommandDTO> {
+    override val descriptor: SerialDescriptor =
+        buildClassSerialDescriptor("ExchangeCommandDTO")
+
+    override fun deserialize(decoder: Decoder): ExchangeCommandDTO {
+        val jsonDecoder = decoder as JsonDecoder
+        return when (val element = jsonDecoder.decodeJsonElement()) {
+            is JsonPrimitive -> {
+                when (element.content) {
+                    "QrRequestScan" -> ExchangeCommandDTO.QrRequestScan
+                    "BleDisconnect" -> ExchangeCommandDTO.BleDisconnect
+                    "NfcDeactivate" -> ExchangeCommandDTO.NfcDeactivate
+                    "AudioStop" -> ExchangeCommandDTO.AudioStop
+                    else -> ExchangeCommandDTO.Unknown
+                }
+            }
+
+            is JsonObject -> {
+                when {
+                    "QrDisplay" in element -> {
+                        val obj = element["QrDisplay"] as JsonObject
+                        ExchangeCommandDTO.QrDisplay(
+                            data = obj["data"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "BleStartScanning" in element -> {
+                        val obj = element["BleStartScanning"] as JsonObject
+                        ExchangeCommandDTO.BleStartScanning(
+                            serviceUuid = obj["service_uuid"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "BleConnect" in element -> {
+                        val obj = element["BleConnect"] as JsonObject
+                        ExchangeCommandDTO.BleConnect(
+                            deviceId = obj["device_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "AudioEmitChallenge" in element -> {
+                        val obj = element["AudioEmitChallenge"] as JsonObject
+                        ExchangeCommandDTO.AudioEmitChallenge(
+                            data = obj["data"]!!.jsonArray.map { it.jsonPrimitive.int },
+                        )
+                    }
+
+                    "AudioListenForResponse" in element -> {
+                        val obj = element["AudioListenForResponse"] as JsonObject
+                        ExchangeCommandDTO.AudioListenForResponse(
+                            timeoutMs = obj["timeout_ms"]!!.jsonPrimitive.long,
+                        )
+                    }
+
+                    else -> {
+                        ExchangeCommandDTO.Unknown
+                    }
+                }
+            }
+
+            else -> {
+                ExchangeCommandDTO.Unknown
+            }
+        }
+    }
+
+    override fun serialize(
+        encoder: Encoder,
+        value: ExchangeCommandDTO,
+    ) {
+        // Exchange commands are incoming-only — serialization not needed
+        val jsonEncoder = encoder as JsonEncoder
+        jsonEncoder.encodeJsonElement(JsonPrimitive("ExchangeCommandDTO"))
     }
 }
