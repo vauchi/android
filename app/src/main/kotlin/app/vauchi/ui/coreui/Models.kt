@@ -1307,8 +1307,22 @@ sealed class ExchangeCommandDTO {
         val serviceUuid: String,
     ) : ExchangeCommandDTO()
 
+    data class BleStartAdvertising(
+        val serviceUuid: String,
+        val payload: List<Int>,
+    ) : ExchangeCommandDTO()
+
     data class BleConnect(
         val deviceId: String,
+    ) : ExchangeCommandDTO()
+
+    data class BleWriteCharacteristic(
+        val uuid: String,
+        val data: List<Int>,
+    ) : ExchangeCommandDTO()
+
+    data class BleReadCharacteristic(
+        val uuid: String,
     ) : ExchangeCommandDTO()
 
     data object BleDisconnect : ExchangeCommandDTO()
@@ -1621,10 +1635,40 @@ internal object ExchangeCommandDTOSerializer : KSerializer<ExchangeCommandDTO> {
                         )
                     }
 
+                    "BleStartAdvertising" in element -> {
+                        val obj = element["BleStartAdvertising"] as JsonObject
+                        ExchangeCommandDTO.BleStartAdvertising(
+                            serviceUuid = obj["service_uuid"]!!.jsonPrimitive.content,
+                            payload = obj["payload"]!!.jsonArray.map { it.jsonPrimitive.int },
+                        )
+                    }
+
                     "BleConnect" in element -> {
                         val obj = element["BleConnect"] as JsonObject
                         ExchangeCommandDTO.BleConnect(
                             deviceId = obj["device_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "BleWriteCharacteristic" in element -> {
+                        val obj = element["BleWriteCharacteristic"] as JsonObject
+                        ExchangeCommandDTO.BleWriteCharacteristic(
+                            uuid = obj["uuid"]!!.jsonPrimitive.content,
+                            data = obj["data"]!!.jsonArray.map { it.jsonPrimitive.int },
+                        )
+                    }
+
+                    "BleReadCharacteristic" in element -> {
+                        val obj = element["BleReadCharacteristic"] as JsonObject
+                        ExchangeCommandDTO.BleReadCharacteristic(
+                            uuid = obj["uuid"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "NfcActivate" in element -> {
+                        val obj = element["NfcActivate"] as JsonObject
+                        ExchangeCommandDTO.NfcActivate(
+                            payload = obj["payload"]!!.jsonArray.map { it.jsonPrimitive.int },
                         )
                     }
 

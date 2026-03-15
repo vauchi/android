@@ -411,6 +411,31 @@ class ModelsTest {
         assertEquals("phone_1", (result as ActionResult.OpenEntryDetail).fieldId)
     }
 
+    @Test
+    fun `ExchangeCommandDTO BleStartAdvertising deserialization`() {
+        val input = """{"BleStartAdvertising": {"service_uuid": "1234-abcd", "payload": [1, 2, 3]}}"""
+        val result = json.decodeFromString(ExchangeCommandDTOSerializer, input)
+        assertTrue(result is ExchangeCommandDTO.BleStartAdvertising)
+        assertEquals("1234-abcd", (result as ExchangeCommandDTO.BleStartAdvertising).serviceUuid)
+        assertEquals(listOf(1, 2, 3), result.payload)
+    }
+
+    @Test
+    fun `ExchangeCommandDTO NfcActivate deserialization`() {
+        val input = """{"NfcActivate": {"payload": [170]}}"""
+        val result = json.decodeFromString(ExchangeCommandDTOSerializer, input)
+        assertTrue(result is ExchangeCommandDTO.NfcActivate)
+        assertEquals(listOf(170), (result as ExchangeCommandDTO.NfcActivate).payload)
+    }
+
+    @Test
+    fun `ExchangeCommandDTO BleWriteCharacteristic deserialization`() {
+        val input = """{"BleWriteCharacteristic": {"uuid": "char-uuid", "data": [255, 0]}}"""
+        val result = json.decodeFromString(ExchangeCommandDTOSerializer, input)
+        assertTrue(result is ExchangeCommandDTO.BleWriteCharacteristic)
+        assertEquals("char-uuid", (result as ExchangeCommandDTO.BleWriteCharacteristic).uuid)
+    }
+
     // ── Full round-trip ─────────────────────────────────────────────
 
     @Test
