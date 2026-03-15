@@ -1358,17 +1358,11 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
             is JsonPrimitive -> {
                 when (element.content) {
                     "Complete" -> ActionResult.Complete
-
                     "StartDeviceLink" -> ActionResult.StartDeviceLink
-
                     "StartBackupImport" -> ActionResult.StartBackupImport
-
                     "RequestCamera" -> ActionResult.RequestCamera
-
                     "WipeComplete" -> ActionResult.WipeComplete
-
                     else -> ActionResult.Unknown
-                    )
                 }
             }
 
@@ -1450,14 +1444,14 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                         ActionResult.ExchangeCommands(commands = cmds)
                     }
 
-                    else -> ActionResult.Unknown
+                    else -> {
+                        ActionResult.Unknown
+                    }
                 }
             }
 
             else -> {
-                throw IllegalArgumentException(
-                    "Unexpected JSON element for ActionResult: $element",
-                )
+                ActionResult.Unknown
             }
         }
     }
