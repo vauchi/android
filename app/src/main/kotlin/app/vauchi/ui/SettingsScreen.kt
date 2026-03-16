@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.fragment.app.FragmentActivity
 import app.vauchi.BuildConfig
+import app.vauchi.FeatureFlags
 import app.vauchi.ui.model.*
 import app.vauchi.util.BiometricHelper
 import app.vauchi.util.ClipboardUtils
@@ -202,7 +203,7 @@ fun SettingsScreen(
 
             // Account Section
             Text(
-                text = localizationManager.t("settings.account"),
+                text = localizationManager.t("settings.identity"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.semantics { heading() },
@@ -436,20 +437,22 @@ fun SettingsScreen(
                 modifier = Modifier.semantics { heading() },
             )
 
-            OutlinedButton(
-                onClick = onLabels,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(localizationManager.t("visibility.title"))
+            if (FeatureFlags.VISIBILITY_LABELS) {
+                OutlinedButton(
+                    onClick = onLabels,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(localizationManager.t("visibility.title"))
+                }
+
+                Text(
+                    text = "Organize contacts into groups and control what they can see",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
             }
-
-            Text(
-                text = "Organize contacts into groups and control what they can see",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             // GDPR Export
             OutlinedButton(
@@ -502,7 +505,7 @@ fun SettingsScreen(
                             contentColor = MaterialTheme.colorScheme.error,
                         ),
                 ) {
-                    Text(localizationManager.t("privacy.delete_account"))
+                    Text(localizationManager.t("privacy.delete_identity"))
                 }
 
                 Text(
@@ -675,28 +678,34 @@ fun SettingsScreen(
                 onSetCertificate = onSetPinnedCertificate,
             )
 
-            // Duress PIN Section
-            DuressPinSection(
-                isDuressEnabled = isDuressEnabled,
-                onSetupDuressPin = onSetupDuressPin,
-                onDisableDuress = onDisableDuress,
-            )
+            if (FeatureFlags.DURESS_PIN) {
+                // Duress PIN Section
+                DuressPinSection(
+                    isDuressEnabled = isDuressEnabled,
+                    onSetupDuressPin = onSetupDuressPin,
+                    onDisableDuress = onDisableDuress,
+                )
+            }
 
-            // Emergency Broadcast Section
-            EmergencyBroadcastSection(
-                isConfigured = isEmergencyConfigured,
-                onConfigure = onConfigureEmergency,
-                onSend = onSendEmergency,
-                onDisable = onDisableEmergency,
-            )
+            if (FeatureFlags.EMERGENCY_BROADCAST) {
+                // Emergency Broadcast Section
+                EmergencyBroadcastSection(
+                    isConfigured = isEmergencyConfigured,
+                    onConfigure = onConfigureEmergency,
+                    onSend = onSendEmergency,
+                    onDisable = onDisableEmergency,
+                )
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            TorSettingsSection(
-                isTorEnabled = isTorEnabled,
-                torPreferOnion = torPreferOnion,
-                torBridges = torBridges,
-                onSaveTorConfig = onSaveTorConfig,
-            )
+            if (FeatureFlags.TOR_MODE) {
+                Spacer(modifier = Modifier.height(16.dp))
+                TorSettingsSection(
+                    isTorEnabled = isTorEnabled,
+                    torPreferOnion = torPreferOnion,
+                    torBridges = torBridges,
+                    onSaveTorConfig = onSaveTorConfig,
+                )
+            }
 
             // Content Updates Section (only if supported)
             if (isContentUpdatesSupported) {
