@@ -6,6 +6,7 @@ package app.vauchi.util
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -16,14 +17,18 @@ import uniffi.vauchi_platform.getAvailableLocales
 import uniffi.vauchi_platform.getLocaleInfo
 import uniffi.vauchi_platform.getString
 import uniffi.vauchi_platform.getStringWithArgs
+import uniffi.vauchi_platform.initLocales
 import uniffi.vauchi_platform.parseLocaleCode
+import java.io.File
 import java.util.Locale
 
 /**
  * Manages localization/internationalization.
  * Integrates with vauchi-platform for string translations.
  */
-class LocalizationManager(context: Context) {
+class LocalizationManager(
+    context: Context,
+) {
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     /** Currently selected locale */
@@ -47,8 +52,51 @@ class LocalizationManager(context: Context) {
 
     init {
         followSystem = prefs.getBoolean(KEY_FOLLOW_SYSTEM, true)
+        extractAndInitLocales(context)
         loadLocales()
     }
+
+    /**
+     * Extract locale JSON files from assets to internal storage and initialize
+     * the core i18n system. Runs once per install/update.
+     */
+    private fun extractAndInitLocales(context: Context) {
+        val localesDir = File(context.filesDir, "locales")
+        val versionFile = File(localesDir, ".version")
+        val currentVersion = getAppVersionCode(context)
+
+        // Skip extraction if already done for this app version
+        if (versionFile.exists() && versionFile.readText().trim() == currentVersion) {
+            initLocales(localesDir.absolutePath)
+            return
+        }
+
+        localesDir.mkdirs()
+
+        try {
+            val assetFiles = context.assets.list("locales") ?: emptyArray()
+            for (filename in assetFiles) {
+                if (!filename.endsWith(".json")) continue
+                context.assets.open("locales/$filename").use { input ->
+                    File(localesDir, filename).outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
+            versionFile.writeText(currentVersion)
+            initLocales(localesDir.absolutePath)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to extract locales: ${e.message}")
+        }
+    }
+
+    private fun getAppVersionCode(context: Context): String =
+        try {
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            "${info.versionName}-${info.longVersionCode}"
+        } catch (_: Exception) {
+            "unknown"
+        }
 
     private fun loadLocales() {
         availableLocales = getAvailableLocales()
@@ -59,13 +107,14 @@ class LocalizationManager(context: Context) {
      * Apply the currently selected locale.
      */
     fun applySelectedLocale() {
-        currentLocale = if (!followSystem && selectedLocaleCode != null) {
-            parseLocaleCode(selectedLocaleCode!!) ?: MobileLocale.ENGLISH
-        } else {
-            // Use system language
-            val systemLanguage = Locale.getDefault().language
-            parseLocaleCode(systemLanguage) ?: MobileLocale.ENGLISH
-        }
+        currentLocale =
+            if (!followSystem && selectedLocaleCode != null) {
+                parseLocaleCode(selectedLocaleCode!!) ?: MobileLocale.ENGLISH
+            } else {
+                // Use system language
+                val systemLanguage = Locale.getDefault().language
+                parseLocaleCode(systemLanguage) ?: MobileLocale.ENGLISH
+            }
     }
 
     /**
@@ -99,16 +148,15 @@ class LocalizationManager(context: Context) {
     /**
      * Get a localized string by key.
      */
-    fun t(key: String): String {
-        return getString(currentLocale, key)
-    }
+    fun t(key: String): String = getString(currentLocale, key)
 
     /**
      * Get a localized string with arguments.
      */
-    fun t(key: String, args: Map<String, String>): String {
-        return getStringWithArgs(currentLocale, key, args)
-    }
+    fun t(
+        key: String,
+        args: Map<String, String>,
+    ): String = getStringWithArgs(currentLocale, key, args)
 
     /** Get info for the current locale */
     val currentLocaleInfo: MobileLocaleInfo
@@ -119,6 +167,7 @@ class LocalizationManager(context: Context) {
         get() = currentLocaleInfo.isRtl
 
     companion object {
+        private const val TAG = "LocalizationManager"
         private const val PREFS_NAME = "vauchi_locale_settings"
         private const val KEY_SELECTED_LOCALE = "selected_locale_code"
         private const val KEY_FOLLOW_SYSTEM = "follow_system"
@@ -126,10 +175,9 @@ class LocalizationManager(context: Context) {
         @Volatile
         private var instance: LocalizationManager? = null
 
-        fun getInstance(context: Context): LocalizationManager {
-            return instance ?: synchronized(this) {
+        fun getInstance(context: Context): LocalizationManager =
+            instance ?: synchronized(this) {
                 instance ?: LocalizationManager(context.applicationContext).also { instance = it }
             }
-        }
     }
 }
