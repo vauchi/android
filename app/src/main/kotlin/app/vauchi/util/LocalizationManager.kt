@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
+import androidx.core.content.pm.PackageInfoCompat
 import uniffi.vauchi_platform.MobileLocale
 import uniffi.vauchi_platform.MobileLocaleInfo
 import uniffi.vauchi_platform.getAvailableLocales
@@ -93,7 +94,7 @@ class LocalizationManager(
     private fun getAppVersionCode(context: Context): String =
         try {
             val info = context.packageManager.getPackageInfo(context.packageName, 0)
-            "${info.versionName}-${info.longVersionCode}"
+            "${info.versionName}-${PackageInfoCompat.getLongVersionCode(info)}"
         } catch (_: Exception) {
             "unknown"
         }
