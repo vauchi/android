@@ -3,7 +3,9 @@
 
 package app.vauchi.exchange
 
+import android.content.Context
 import android.util.Log
+import app.vauchi.ble.BleExchangeService
 import uniffi.vauchi_platform.MobileExchangeCommand
 import uniffi.vauchi_platform.MobileExchangeHardwareEvent
 import uniffi.vauchi_platform.MobileExchangeSession
@@ -17,7 +19,18 @@ import uniffi.vauchi_platform.MobileExchangeSession
  */
 class ExchangeCommandHandler(
     private val session: MobileExchangeSession,
+    context: Context,
 ) {
+    private val bleService =
+        BleExchangeService(context) { event ->
+            try {
+                session.applyHardwareEvent(event)
+                drainAndDispatch()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to apply BLE event: $e")
+            }
+        }
+
     companion object {
         private const val TAG = "ExchangeCmd"
     }
@@ -58,29 +71,30 @@ class ExchangeCommandHandler(
                 // Audio operations are one-shot — no persistent state to stop
             }
 
-            // ── BLE ─────────────────────────────────────────────────
+            // ── BLE (native Android) ──────────────────────────────────
             is MobileExchangeCommand.BleStartScanning -> {
-                reportUnavailable("BLE")
+                bleService.startScanning(command.serviceUuid)
             }
 
             is MobileExchangeCommand.BleStartAdvertising -> {
-                reportUnavailable("BLE")
+                // Android peripheral advertising not yet wired
+                reportUnavailable("BLE-advertise")
             }
 
             is MobileExchangeCommand.BleConnect -> {
-                reportUnavailable("BLE")
+                bleService.connect(command.deviceId)
             }
 
             is MobileExchangeCommand.BleWriteCharacteristic -> {
-                reportUnavailable("BLE")
+                bleService.writeCharacteristic(command.uuid, command.data.map { it.toByte() }.toByteArray())
             }
 
             is MobileExchangeCommand.BleReadCharacteristic -> {
-                reportUnavailable("BLE")
+                bleService.readCharacteristic(command.uuid)
             }
 
             is MobileExchangeCommand.BleDisconnect -> {
-                // No-op
+                bleService.disconnect()
             }
 
             // ── NFC ─────────────────────────────────────────────────
