@@ -49,11 +49,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
 import app.vauchi.ui.components.PermissionRationaleDialog
 import app.vauchi.ui.components.rememberPermissionState
 import app.vauchi.util.LocalizationManager
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import uniffi.vauchi_platform.MobileProtocolState
@@ -158,7 +158,7 @@ fun MultiStageExchangeScreen(
     val cameraPermissionGranted = cameraPermState.isGranted
     var permissionsRequested by remember { mutableStateOf(cameraPermissionGranted) }
 
-    LaunchedEffect(Unit) { cameraPermState.request() }
+    LaunchedEffect(cameraPermissionGranted) { if (!cameraPermissionGranted) cameraPermState.request() }
     LaunchedEffect(cameraPermissionGranted) { if (cameraPermissionGranted) permissionsRequested = true }
     PermissionRationaleDialog(cameraPermState)
 
