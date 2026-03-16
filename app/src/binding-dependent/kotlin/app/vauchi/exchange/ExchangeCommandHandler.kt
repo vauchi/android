@@ -60,7 +60,7 @@ class ExchangeCommandHandler(
 
             // ── Audio (ultrasonic proximity) ────────────────────────
             is MobileExchangeCommand.AudioEmitChallenge -> {
-                emitAudioChallenge(command.data)
+                emitAudioChallenge(command.data.toList().map { it.toUByte() })
             }
 
             is MobileExchangeCommand.AudioListenForResponse -> {
@@ -86,7 +86,7 @@ class ExchangeCommandHandler(
             }
 
             is MobileExchangeCommand.BleWriteCharacteristic -> {
-                bleService.writeCharacteristic(command.uuid, command.data.map { it.toByte() }.toByteArray())
+                bleService.writeCharacteristic(command.uuid, command.data)
             }
 
             is MobileExchangeCommand.BleReadCharacteristic -> {

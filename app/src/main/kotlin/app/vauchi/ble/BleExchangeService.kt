@@ -82,11 +82,7 @@ class BleExchangeService(
             ) {
                 val device = result.device
                 val rssi = result.rssi
-                val advData =
-                    result.scanRecord
-                        ?.bytes
-                        ?.toList()
-                        ?.map { it.toUByte() } ?: emptyList()
+                val advData = result.scanRecord?.bytes ?: byteArrayOf()
 
                 eventCallback(
                     MobileExchangeHardwareEvent.BleDeviceDiscovered(
@@ -228,7 +224,7 @@ class BleExchangeService(
                     eventCallback(
                         MobileExchangeHardwareEvent.BleCharacteristicRead(
                             uuid = uuid,
-                            data = value.toList().map { it.toUByte() },
+                            data = value,
                         ),
                     )
                 }
@@ -243,7 +239,7 @@ class BleExchangeService(
                 eventCallback(
                     MobileExchangeHardwareEvent.BleCharacteristicNotified(
                         uuid = uuid,
-                        data = value.toList().map { it.toUByte() },
+                        data = value,
                     ),
                 )
             }
