@@ -349,6 +349,7 @@ fun MainScreen(
                         },
                         onDone = {
                             viewModel.cancelMultiStageExchange()
+                            viewModel.refresh()
                             currentScreen = Screen.Contacts
                         },
                     )
