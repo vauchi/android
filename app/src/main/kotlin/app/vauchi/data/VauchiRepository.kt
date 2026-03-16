@@ -20,8 +20,8 @@ package app.vauchi.data
 // dismissDemoContact(), autoRemoveDemoContact(), restoreDemoContact().
 //
 // DONE: Visibility labels - listLabels(), createLabel(), getLabel(), renameLabel(),
-// deleteLabel(), addContactToLabel(), removeContactFromLabel(), getLabelsForContact(),
-// setLabelFieldVisibility(), getSuggestedLabels().
+// deleteLabel(), addContactToGroup(), removeContactFromGroup(), getGroupsForContact(),
+// setGroupFieldVisibility(), getSuggestedLabels().
 //
 // DONE: Certificate pinning - isCertificatePinningEnabled(), setPinnedCertificate()
 // methods implemented. UI added to Settings under Security section.
@@ -340,7 +340,7 @@ class VauchiRepository(
         labelId: String,
         contactId: String,
     ) {
-        vauchi.addContactToLabel(labelId, contactId)
+        vauchi.addContactToGroup(labelId, contactId)
     }
 
     /**
@@ -350,13 +350,13 @@ class VauchiRepository(
         labelId: String,
         contactId: String,
     ) {
-        vauchi.removeContactFromLabel(labelId, contactId)
+        vauchi.removeContactFromGroup(labelId, contactId)
     }
 
     /**
      * Get all labels for a contact
      */
-    fun getLabelsForContact(contactId: String) = vauchi.getLabelsForContact(contactId)
+    fun getLabelsForContact(contactId: String) = vauchi.getGroupsForContact(contactId)
 
     /**
      * Set field visibility for a label
@@ -366,7 +366,7 @@ class VauchiRepository(
         fieldId: String,
         visible: Boolean,
     ) {
-        vauchi.setLabelFieldVisibility(labelId, fieldId, visible)
+        vauchi.setGroupFieldVisibility(labelId, fieldId, visible)
     }
 
     /**
