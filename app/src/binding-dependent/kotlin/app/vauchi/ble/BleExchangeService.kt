@@ -20,7 +20,7 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
-// TODO: Replace with uniffi.vauchi_platform.MobileExchangeHardwareEvent when bindings >= 0.2.0
+import uniffi.vauchi_platform.MobileExchangeHardwareEvent
 import java.util.UUID
 
 /**
