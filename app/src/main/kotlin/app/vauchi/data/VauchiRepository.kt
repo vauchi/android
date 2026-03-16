@@ -333,41 +333,24 @@ class VauchiRepository(
         vauchi.deleteLabel(labelId)
     }
 
-    /**
-     * Add contact to a label
-     */
+    // TODO: Wire to vauchi.addContactToGroup() etc. when vauchi-platform >= 0.2.0
     fun addContactToLabel(
         labelId: String,
         contactId: String,
-    ) {
-        vauchi.addContactToGroup(labelId, contactId)
-    }
+    ): Unit = throw UnsupportedOperationException("Group management requires vauchi-platform >= 0.2.0")
 
-    /**
-     * Remove contact from a label
-     */
     fun removeContactFromLabel(
         labelId: String,
         contactId: String,
-    ) {
-        vauchi.removeContactFromGroup(labelId, contactId)
-    }
+    ): Unit = throw UnsupportedOperationException("Group management requires vauchi-platform >= 0.2.0")
 
-    /**
-     * Get all labels for a contact
-     */
-    fun getLabelsForContact(contactId: String) = vauchi.getGroupsForContact(contactId)
+    fun getLabelsForContact(contactId: String): List<uniffi.vauchi_platform.MobileVisibilityLabel> = emptyList()
 
-    /**
-     * Set field visibility for a label
-     */
     fun setLabelFieldVisibility(
         labelId: String,
         fieldId: String,
         visible: Boolean,
-    ) {
-        vauchi.setGroupFieldVisibility(labelId, fieldId, visible)
-    }
+    ): Unit = throw UnsupportedOperationException("Group management requires vauchi-platform >= 0.2.0")
 
     /**
      * Get suggested label names
