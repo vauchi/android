@@ -192,7 +192,7 @@ fun MultiStageExchangeScreen(
             } else {
                 // Core returned null — grace period expired or failed
                 val state = viewModel.getMultiStageState()
-                if (state is MobileProtocolState.Complete) {
+                if (state is MobileProtocolState.Finalized) {
                     // Finalize: save the received contact to storage
                     val result = viewModel.finalizeMultiStageExchange()
                     if (result != null) {
@@ -245,9 +245,9 @@ fun MultiStageExchangeScreen(
         },
     ) { padding ->
         when (multiStageState) {
-            is MobileProtocolState.Complete -> {
+            is MobileProtocolState.Complete, is MobileProtocolState.Finalized -> {
                 if (!graceCompleted) {
-                    // Keep showing QR so slower peer can finish scanning
+                    // Keep showing QR while confirming mutual readiness
                     Box(
                         modifier =
                             Modifier
