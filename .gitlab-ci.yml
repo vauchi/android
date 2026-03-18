@@ -371,8 +371,12 @@ test:screenshots:
   # no native dependency, or (b) CI provides the native .so in the rendering classpath.
   allow_failure: true
   script:
-    # Self-detecting snapshot mode
-    - BASELINE_COUNT=$(find app/src/screenshotTestDebug/reference -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
+    # Self-detecting snapshot mode (pipefail-safe: check dir exists before find)
+    - |
+      BASELINE_COUNT=0
+      if [ -d app/src/screenshotTestDebug/reference ]; then
+        BASELINE_COUNT=$(find app/src/screenshotTestDebug/reference -name '*.png' | wc -l | tr -d ' ')
+      fi
     - |
       if [ "$BASELINE_COUNT" -eq 0 ]; then
         echo "⚠️  SCREENSHOT BASELINES MISSING ($BASELINE_COUNT PNGs in reference/)"
