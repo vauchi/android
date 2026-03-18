@@ -364,8 +364,19 @@ test:screenshots:
   extends: [.android-job, .timeout-standard]
   stage: test
   needs: []
-  allow_failure: true
+  allow_failure: false
   script:
+    # Self-detecting snapshot mode
+    - BASELINE_COUNT=$(find app/src/screenshotTestDebug/reference -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
+    - |
+      if [ "$BASELINE_COUNT" -eq 0 ]; then
+        echo "⚠️  SCREENSHOT BASELINES MISSING ($BASELINE_COUNT PNGs in reference/)"
+        echo "    Run './gradlew updateDebugScreenshotTest' locally to generate baselines,"
+        echo "    then commit app/src/screenshotTestDebug/reference/"
+        echo "    Screenshot validation skipped — no baselines to compare against."
+        exit 0
+      fi
+    - echo "✅ Found $BASELINE_COUNT screenshot baselines — running validation"
     - ./gradlew validateDebugScreenshotTest
   artifacts:
     when: on_failure
