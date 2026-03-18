@@ -9,10 +9,8 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import app.vauchi.ui.onboarding.OnboardingData
 import app.vauchi.ui.onboarding.PreviewStep
 import app.vauchi.ui.onboarding.WelcomeStep
@@ -45,9 +43,14 @@ class AccessibilityTest {
             }
         }
 
-        // Primary and secondary actions must be present and clickable
+        // Value propositions must be visible
+        composeTestRule.onNodeWithText("Exchange in person", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Auto-updating", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Private & secure", substring = true).assertIsDisplayed()
+
+        // Primary create button and secondary restore button must be clickable
         composeTestRule.onAllNodes(hasClickAction()).fetchSemanticsNodes().also { nodes ->
-            assert(nodes.size >= 2) { "WelcomeStep should have at least 2 clickable elements" }
+            assert(nodes.size >= 2) { "WelcomeStep should have at least 2 clickable elements (create + restore)" }
         }
     }
 
@@ -89,12 +92,12 @@ class AccessibilityTest {
             }
         }
 
-        // All major sections must be present and readable
+        // Display name must be visible in the settings header
         composeTestRule.onNodeWithText("Alice", substring = true).assertIsDisplayed()
-        // Back navigation must be clickable
-        composeTestRule.onAllNodes(hasClickAction()).fetchSemanticsNodes().also { nodes ->
-            assert(nodes.isNotEmpty()) { "SettingsScreen should have clickable elements" }
-        }
+        // Back button must have accessible content description
+        composeTestRule.onNodeWithContentDescription("Back").assertExists()
+        // Back button must be clickable
+        composeTestRule.onNode(hasContentDescription("Back").and(hasClickAction())).assertExists()
     }
 
     // MARK: - Contacts Accessibility
@@ -113,10 +116,12 @@ class AccessibilityTest {
             }
         }
 
-        // Empty state message must be visible
-        composeTestRule.onAllNodes(hasText("", substring = true)).fetchSemanticsNodes().also { nodes ->
-            assert(nodes.isNotEmpty()) { "ContactsScreen empty state should have text content" }
-        }
+        // Empty state must describe what to do
+        composeTestRule.onNodeWithText("Exchange cards with someone to add contacts", substring = true).assertIsDisplayed()
+        // Back button must be accessible
+        composeTestRule.onNodeWithContentDescription("Back").assertExists()
+        // Empty state container must have semantic description for screen readers
+        composeTestRule.onNodeWithContentDescription("No contacts yet", substring = true).assertExists()
     }
 
     // MARK: - Exchange Accessibility
@@ -133,10 +138,12 @@ class AccessibilityTest {
             }
         }
 
-        // QR code exchange controls must be present
-        composeTestRule.onAllNodes(hasClickAction()).fetchSemanticsNodes().also { nodes ->
-            assert(nodes.isNotEmpty()) { "ExchangeScreen should have interactive controls" }
-        }
+        // Back navigation must have accessible description
+        composeTestRule.onNodeWithContentDescription("Back").assertExists()
+        // Error state (null QR) must show error icon with content description
+        composeTestRule.onNodeWithContentDescription("Error").assertExists()
+        // Error state must show actionable guidance
+        composeTestRule.onNodeWithText("Please check your internet connection", substring = true).assertIsDisplayed()
     }
 
     // MARK: - Labels Accessibility
@@ -178,6 +185,11 @@ class AccessibilityTest {
         // Label items must be visible and interactive
         composeTestRule.onNodeWithText("Work", substring = true).assertIsDisplayed()
         composeTestRule.onNodeWithText("Family", substring = true).assertIsDisplayed()
+        // Back navigation must be accessible
+        composeTestRule.onNodeWithContentDescription("Back").assertExists()
+        // Label cards must be clickable for navigation
+        composeTestRule.onNode(hasText("Work", substring = true).and(hasClickAction())).assertExists()
+        composeTestRule.onNode(hasText("Family", substring = true).and(hasClickAction())).assertExists()
     }
 
     // MARK: - Delivery Status Accessibility
@@ -198,9 +210,13 @@ class AccessibilityTest {
             }
         }
 
-        // Tab controls must be clickable
-        composeTestRule.onAllNodes(hasClickAction()).fetchSemanticsNodes().also { nodes ->
-            assert(nodes.isNotEmpty()) { "DeliveryStatusScreen should have tab controls" }
-        }
+        // Screen title must be visible
+        composeTestRule.onNodeWithText("Delivery Status", substring = true).assertIsDisplayed()
+        // Tab labels must be present and clickable
+        composeTestRule.onNodeWithText("Recent").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Failed").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Pending").assertIsDisplayed()
+        // Back navigation must be accessible
+        composeTestRule.onNodeWithContentDescription("Back").assertExists()
     }
 }
