@@ -416,12 +416,16 @@ test:screenshots:record:
   script:
     - echo "📸 Recording screenshot baselines..."
     - ./gradlew updateDebugScreenshotTest || true
+    # Preserve recorded baselines across git checkout
+    - cp -r app/src/screenshotTestDebug/reference/ /tmp/screenshot-reference/
     # Configure git for push
     - git config user.name "vauchi-ci-bot"
     - git config user.email "ci@vauchi.app"
     - git remote set-url origin "https://vauchi-gitlab-runner:${PROJECT_ACCESS_TOKEN}@gitlab.com/${CI_PROJECT_PATH}.git"
     - git fetch origin "${CI_COMMIT_REF_NAME}"
     - git checkout "${CI_COMMIT_REF_NAME}"
+    # Restore recorded baselines (git checkout above resets working directory)
+    - cp -r /tmp/screenshot-reference/ app/src/screenshotTestDebug/reference/
     # Commit and push baselines (skip if unchanged)
     - |
       git add app/src/screenshotTestDebug/reference/
