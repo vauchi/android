@@ -261,7 +261,7 @@ build-and-lint:
       - app/build/outputs/apk/debug/
       - app/build/reports/lint-results-*.html
     reports:
-      codequality: app/build/reports/lint-results.xml
+      codequality: app/build/reports/lint-results-debug.xml
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
