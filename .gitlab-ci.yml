@@ -54,6 +54,12 @@ variables:
   ANDROID_COMPILE_SDK: "35"
   ANDROID_BUILD_TOOLS: "35.0.0"
   GIT_DEPTH: "1"
+  # Gradle performance flags for self-hosted runner with persistent disk
+  GRADLE_OPTS: >-
+    -Dorg.gradle.daemon=true
+    -Dorg.gradle.caching=true
+    -Dorg.gradle.parallel=true
+    -Dorg.gradle.jvmargs=-Xmx4g
 
   # GitLab Ultimate Security Configuration
   SAST_EXCLUDED_PATHS: "build/, .gradle/"
@@ -88,7 +94,13 @@ workflow:
       - ~/.gradle/wrapper/
 
 .android-job:
-  image: cimg/android:2024.01
+  tags: [linux, self-hosted]
+  variables:
+    ANDROID_HOME: /opt/android-sdk
+  cache: {}  # No GitLab cache — self-hosted runner has persistent ~/.gradle
+
+.android-docker-job:
+  image: cimg/android:2025.01
   cache:
     <<: *gradle-cache
 
@@ -225,32 +237,6 @@ update:bindings-version:
 # Lint Stage (MR only, change-based)
 # ============================================================
 
-lint:
-  extends: [.android-job, .timeout-standard]
-  stage: lint
-  cache:
-    <<: *gradle-cache
-    policy: pull  # Read-only for lint
-  script:
-    - ./gradlew lint
-  artifacts:
-    reports:
-      codequality: app/build/reports/lint-results.xml
-    paths:
-      - app/build/reports/lint-results-*.html
-    expire_in: 1 week
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes:
-        compare_to: refs/heads/main
-        paths:
-          - "**/*.kt"
-          - "**/*.java"
-          - "**/*.xml"
-          - "build.gradle*"
-          - "app/build.gradle*"
-          - ".gitlab-ci.yml"
-
 # Design drift: verify all design-spec components are implemented
 check:design-drift:
   extends: .design-drift-job
@@ -261,18 +247,21 @@ check:design-drift:
     DESIGN_DRIFT_CASE: "pascal"
 
 # ============================================================
-# Build Stage (MR: debug, Tag: release)
+# Build Stage (MR: debug + lint, Tag: release)
 # ============================================================
 
-build:debug:
+build-and-lint:
   extends: [.android-job, .timeout-standard]
   stage: build
   needs: []
   script:
-    - ./gradlew assembleDebug
+    - ./gradlew assembleDebug lint
   artifacts:
     paths:
       - app/build/outputs/apk/debug/
+      - app/build/reports/lint-results-*.html
+    reports:
+      codequality: app/build/reports/lint-results.xml
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -287,7 +276,7 @@ build:debug:
           - ".gitlab-ci.yml"
 
 build:release:
-  extends: [.android-job, .timeout-long]
+  extends: [.android-docker-job, .timeout-long]
   stage: build
   # Required CI/CD variables (Settings > CI/CD > Variables, protected + masked):
   #   ANDROID_KEYSTORE          - Base64-encoded upload keystore (.jks)
@@ -316,7 +305,9 @@ build:release:
 test:unit:
   extends: [.android-job, .timeout-standard]
   stage: test
-  needs: []
+  needs:
+    - job: build-and-lint
+      artifacts: false  # Build cache on persistent disk handles reuse, not artifacts
   script:
     - ./gradlew test
   artifacts:
@@ -404,6 +395,7 @@ test:screenshots:
           - "app/build.gradle*"
           - "gradle.properties"
           - ".gitlab-ci.yml"
+      when: manual
 
 # Manual job: record screenshot baselines on CI and commit them to the branch.
 # CI is the single source of truth for baselines — never record locally.
@@ -509,7 +501,7 @@ secret_detection:
 # ============================================================
 
 deploy:internal:
-  extends: [.android-job, .timeout-long]
+  extends: [.android-docker-job, .timeout-long]
   stage: deploy
   interruptible: false
   # Required CI/CD variables (in addition to build:release variables):
