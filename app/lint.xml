@@ -5,4 +5,11 @@
     <issue id="NewApi">
         <ignore path="**/uniffi/**" />
     </issue>
+
+    <!-- Gate 5: Frontend architecture audit (2026-03-18).
+         Enforce contentDescription on clickable Image/Icon elements.
+         Decorative icons should use contentDescription = null explicitly
+         AND be wrapped in a non-clickable container. Icon-only buttons
+         must use IconButton (which enforces 48dp touch target + semantics). -->
+    <issue id="ContentDescription" severity="error" />
 </lint>
