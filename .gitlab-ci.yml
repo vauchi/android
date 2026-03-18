@@ -415,7 +415,17 @@ test:screenshots:record:
   allow_failure: true
   script:
     - echo "📸 Recording screenshot baselines..."
-    - ./gradlew updateDebugScreenshotTest || true
+    - |
+      set +e
+      ./gradlew updateDebugScreenshotTest 2>&1 | tee /tmp/gradle-record.log
+      GRADLE_EXIT=$?
+      set -e
+      if [ "$GRADLE_EXIT" -ne 0 ]; then
+        echo "❌ Gradle failed (exit code ${GRADLE_EXIT})"
+        tail -20 /tmp/gradle-record.log
+        exit 1
+      fi
+      echo "✅ Screenshot recording completed"
     # Preserve recorded baselines across git checkout
     - cp -r app/src/screenshotTestDebug/reference/ /tmp/screenshot-reference/
     # Configure git for push
