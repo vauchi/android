@@ -333,24 +333,29 @@ class VauchiRepository(
         vauchi.deleteLabel(labelId)
     }
 
-    // TODO: Wire to vauchi.addContactToGroup() etc. when vauchi-platform >= 0.2.0
     fun addContactToLabel(
         labelId: String,
         contactId: String,
-    ): Unit = throw UnsupportedOperationException("Group management requires vauchi-platform >= 0.2.0")
+    ) {
+        vauchi.addContactToGroup(labelId, contactId)
+    }
 
     fun removeContactFromLabel(
         labelId: String,
         contactId: String,
-    ): Unit = throw UnsupportedOperationException("Group management requires vauchi-platform >= 0.2.0")
+    ) {
+        vauchi.removeContactFromGroup(labelId, contactId)
+    }
 
-    fun getLabelsForContact(contactId: String): List<uniffi.vauchi_platform.MobileVisibilityLabel> = emptyList()
+    fun getLabelsForContact(contactId: String): List<uniffi.vauchi_platform.MobileVisibilityLabel> = vauchi.getGroupsForContact(contactId)
 
     fun setLabelFieldVisibility(
         labelId: String,
         fieldId: String,
         visible: Boolean,
-    ): Unit = throw UnsupportedOperationException("Group management requires vauchi-platform >= 0.2.0")
+    ) {
+        vauchi.setGroupFieldVisibility(labelId, fieldId, visible)
+    }
 
     /**
      * Get suggested label names
@@ -501,29 +506,44 @@ class VauchiRepository(
     fun setPinnedCertificate(certPem: String) = vauchi.setPinnedCertificate(certPem)
 
     // Duress PIN operations
-    // NOTE: These methods are stubs until vauchi-core duress bindings
-    // are published via vauchi-platform-kotlin.
 
     /**
      * Check if duress PIN is enabled
      */
-    fun isDuressEnabled(): Boolean = false // TODO: Replace with vauchi.isDuressEnabled()
+    fun isDuressEnabled(): Boolean = vauchi.isDuressEnabled()
 
     /**
      * Set up duress PIN (requires app password to be set first)
      */
     fun setupDuressPassword(duressPassword: String) {
-        // TODO: Replace with vauchi.setupDuressPassword(duressPassword)
-        throw UnsupportedOperationException("Duress PIN not yet available in bindings")
+        vauchi.setupDuressPassword(duressPassword)
     }
 
     /**
      * Disable duress PIN
      */
     fun disableDuress() {
-        // TODO: Replace with vauchi.disableDuress()
-        throw UnsupportedOperationException("Duress PIN not yet available in bindings")
+        vauchi.disableDuress()
     }
+
+    fun hideContact(contactId: String) {
+        vauchi.hideContact(contactId)
+    }
+
+    fun unhideContact(contactId: String) {
+        vauchi.unhideContact(contactId)
+    }
+
+    fun listHiddenContacts(): List<uniffi.vauchi_platform.MobileContact> = vauchi.listHiddenContacts()
+
+    fun configureDuressAlerts(
+        contactIds: List<String>,
+        message: String,
+    ) {
+        vauchi.configureDuressAlerts(contactIds, message)
+    }
+
+    fun getDuressSettings(): uniffi.vauchi_platform.MobileDuressSettings? = vauchi.getDuressSettings()
 
     // Panic Shred operations
 
@@ -533,8 +553,6 @@ class VauchiRepository(
     fun panicShred() = vauchi.panicShred()
 
     // Emergency Broadcast operations
-    // NOTE: These methods are stubs until vauchi-core emergency broadcast bindings
-    // are published via vauchi-platform-kotlin.
 
     /**
      * Configure emergency broadcast
@@ -544,41 +562,34 @@ class VauchiRepository(
         message: String,
         includeLocation: Boolean,
     ) {
-        // TODO: Replace with vauchi.configureEmergencyBroadcast(contactIds, message, includeLocation)
-        throw UnsupportedOperationException("Emergency broadcast not yet available in bindings")
+        vauchi.configureEmergencyBroadcast(contactIds, message, includeLocation)
     }
 
     /**
      * Get emergency broadcast config
      */
-    fun getEmergencyConfig(): Any? = null // TODO: Replace with vauchi.getEmergencyConfig()
+    fun getEmergencyConfig(): uniffi.vauchi_platform.MobileEmergencyConfig? = vauchi.getEmergencyConfig()
 
     /**
      * Send emergency broadcast
      */
-    fun sendEmergencyBroadcast() {
-        // TODO: Replace with vauchi.sendEmergencyBroadcast()
-        throw UnsupportedOperationException("Emergency broadcast not yet available in bindings")
-    }
+    fun sendEmergencyBroadcast(): uniffi.vauchi_platform.MobileBroadcastResult = vauchi.sendEmergencyBroadcast()
 
     /**
      * Disable emergency broadcast
      */
     fun disableEmergencyBroadcast() {
-        // TODO: Replace with vauchi.disableEmergencyBroadcast()
-        throw UnsupportedOperationException("Emergency broadcast not yet available in bindings")
+        vauchi.disableEmergencyBroadcast()
     }
 
     // Tor Mode Operations
     // Based on: features/tor_mode.feature - R4 Tor Mode
-    // NOTE: These methods are stubs until vauchi-core tor bindings
-    // are published via vauchi-platform-kotlin.
 
-    fun isTorEnabled(): Boolean = false
+    fun isTorEnabled(): Boolean = vauchi.loadTorConfig().enabled
 
     fun getTorConfig(): Triple<Boolean, List<String>, Boolean> {
-        // Returns (enabled, bridges, preferOnion)
-        return Triple(false, emptyList(), true)
+        val config = vauchi.loadTorConfig()
+        return Triple(config.enabled, config.bridges, config.preferOnion)
     }
 
     fun saveTorConfig(
@@ -586,8 +597,8 @@ class VauchiRepository(
         bridges: List<String>,
         preferOnion: Boolean,
     ) {
-        // TODO: Replace with actual UniFFI call once bindings are published
-        throw UnsupportedOperationException("Tor mode not yet available in bindings")
+        if (enabled) vauchi.enableTor() else vauchi.disableTor()
+        if (bridges.isNotEmpty()) vauchi.configureTorBridges(bridges)
     }
 
     // Verification operations
