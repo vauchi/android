@@ -19,9 +19,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Refresh
@@ -49,6 +51,7 @@ import app.vauchi.ui.LabelDetailScreen
 import app.vauchi.ui.LabelsScreen
 import app.vauchi.ui.LanguageSettingsScreen
 import app.vauchi.ui.MainViewModel
+import app.vauchi.ui.MoreScreen
 import app.vauchi.ui.MultiStageExchangeScreen
 import app.vauchi.ui.QrDiagnosticScreen
 import app.vauchi.ui.RecoveryScreen
@@ -135,6 +138,7 @@ enum class Screen {
     LanguageSettings,
     Help,
     QrDiagnostic,
+    More,
 }
 
 @Composable
@@ -217,8 +221,8 @@ fun MainScreen(
                 Screen.Home,
                 Screen.Contacts,
                 Screen.MultiStageExchange,
-                Screen.Settings,
-                Screen.Help,
+                Screen.Labels,
+                Screen.More,
             )
 
     Scaffold(
@@ -227,17 +231,12 @@ fun MainScreen(
                 NavigationBar {
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Person, contentDescription = null) },
-                        label = { Text("My Info") },
+                        label = { Text("My Card") },
                         selected = currentScreen == Screen.Home,
                         onClick = { currentScreen = Screen.Home },
                     )
                     NavigationBarItem(
-                        icon = {
-                            Icon(
-                                Icons.Default.Share,
-                                contentDescription = null,
-                            )
-                        },
+                        icon = { Icon(Icons.Default.People, contentDescription = null) },
                         label = { Text("Contacts") },
                         selected = currentScreen == Screen.Contacts,
                         onClick = { currentScreen = Screen.Contacts },
@@ -249,16 +248,16 @@ fun MainScreen(
                         onClick = { currentScreen = Screen.MultiStageExchange },
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                        label = { Text("Settings") },
-                        selected = currentScreen == Screen.Settings,
-                        onClick = { currentScreen = Screen.Settings },
+                        icon = { Icon(Icons.Default.Group, contentDescription = null) },
+                        label = { Text("Groups") },
+                        selected = currentScreen == Screen.Labels,
+                        onClick = { currentScreen = Screen.Labels },
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null) },
-                        label = { Text("Help") },
-                        selected = currentScreen == Screen.Help,
-                        onClick = { currentScreen = Screen.Help },
+                        icon = { Icon(Icons.Default.MoreHoriz, contentDescription = null) },
+                        label = { Text("More") },
+                        selected = currentScreen == Screen.More,
+                        onClick = { currentScreen = Screen.More },
                     )
                 }
             }
@@ -428,7 +427,7 @@ fun MainScreen(
                         }
                         SettingsScreen(
                             displayName = state.displayName,
-                            onBack = { currentScreen = Screen.Home },
+                            onBack = { currentScreen = Screen.More },
                             onExportBackup = { password -> viewModel.exportBackup(password) },
                             onImportBackup = { data, password -> viewModel.importBackup(data, password) },
                             relayUrl = viewModel.getRelayUrl(),
@@ -543,7 +542,7 @@ fun MainScreen(
 
                 Screen.Devices -> {
                     DevicesScreen(
-                        onBack = { currentScreen = Screen.Settings },
+                        onBack = { currentScreen = Screen.More },
                         viewModel = viewModel,
                         getDevices = { viewModel.getDevices() },
                         generateLinkQr = { viewModel.generateDeviceLinkQr() },
@@ -555,7 +554,7 @@ fun MainScreen(
                 Screen.Recovery -> {
                     RecoveryScreen(
                         viewModel = viewModel,
-                        onBack = { currentScreen = Screen.Settings },
+                        onBack = { currentScreen = Screen.More },
                     )
                 }
 
@@ -565,7 +564,7 @@ fun MainScreen(
                     LabelsScreen(
                         labels = labels,
                         suggestedLabels = suggestedLabels,
-                        onBack = { currentScreen = Screen.Settings },
+                        onBack = { currentScreen = Screen.Home },
                         onLabelClick = { labelId ->
                             selectedLabelId = labelId
                             currentScreen = Screen.LabelDetail
@@ -613,13 +612,22 @@ fun MainScreen(
 
                 Screen.Help -> {
                     HelpScreen(
-                        onBack = { currentScreen = Screen.Settings },
+                        onBack = { currentScreen = Screen.More },
                     )
                 }
 
                 Screen.QrDiagnostic -> {
                     QrDiagnosticScreen(
                         onBack = { currentScreen = Screen.Settings },
+                    )
+                }
+
+                Screen.More -> {
+                    MoreScreen(
+                        onSettings = { currentScreen = Screen.Settings },
+                        onHelp = { currentScreen = Screen.Help },
+                        onDevices = { currentScreen = Screen.Devices },
+                        onRecovery = { currentScreen = Screen.Recovery },
                     )
                 }
             }
