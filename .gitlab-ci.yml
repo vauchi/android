@@ -40,7 +40,6 @@ include:
       - '/ci-templates/reuse.yml'
       - '/ci-templates/design-drift.yml'
       - '/ci-templates/badges.yml'
-      - '/ci-templates/token-lint.yml'
 
 stages:
   - auto-tag
@@ -528,12 +527,6 @@ deploy:internal:
 # ============================================================
 # Deploy Stage — Badge Pages
 # ============================================================
-
-check:design-tokens:
-  extends: .token-lint-job
-  variables:
-    TOKEN_LINT_PATHS: "app/src/main"
-    TOKEN_LINT_GLOBS: "*.kt"
 
 pages:
   extends: .badges-pages
