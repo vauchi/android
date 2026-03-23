@@ -41,4 +41,42 @@ class AudioMobileProximityHandler(
 
         return "" // Success
     }
+
+    override fun verifyProximityTwoWay(
+        emitChallenge: ByteArray,
+        listenChallenge: ByteArray,
+        timeoutMs: ULong,
+        isInitiator: Boolean,
+    ): String {
+        // Initiator emits first then listens; responder listens first then emits
+        if (isInitiator) {
+            val emitResult = verifier.emitChallenge(emitChallenge)
+            if (!emitResult.success) {
+                return emitResult.error.ifEmpty { "Emit failed" }
+            }
+
+            val response = verifier.listenForResponse(timeoutMs)
+            if (response.isEmpty()) {
+                return "No proximity response received"
+            }
+            if (!response.contentEquals(listenChallenge)) {
+                return "Proximity verification failed: response mismatch"
+            }
+        } else {
+            val response = verifier.listenForResponse(timeoutMs)
+            if (response.isEmpty()) {
+                return "No proximity response received"
+            }
+            if (!response.contentEquals(listenChallenge)) {
+                return "Proximity verification failed: response mismatch"
+            }
+
+            val emitResult = verifier.emitChallenge(emitChallenge)
+            if (!emitResult.success) {
+                return emitResult.error.ifEmpty { "Emit failed" }
+            }
+        }
+
+        return "" // Success
+    }
 }
