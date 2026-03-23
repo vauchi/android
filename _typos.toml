@@ -5,3 +5,11 @@
 [default.extend-words]
 PNGs = "PNGs"
 PN = "PN"
+
+# Locale files contain German, French, Spanish — not English typos
+[type.json]
+extend-glob = []
+check-file = false
+
+[files]
+extend-exclude = ["**/assets/locales/*.json"]
