@@ -6,6 +6,7 @@ package app.vauchi.ui
 
 import android.app.Application
 import android.util.Log
+import androidx.biometric.BiometricManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.vauchi.data.AuthenticationRequiredException
@@ -201,6 +202,25 @@ class MainViewModel(
     private fun checkIdentity() {
         viewModelScope.launch {
             try {
+                // Pre-check: verify biometric/credential authentication is possible
+                // before attempting any KeyStore operations. This prevents users on
+                // devices without a lock screen from hitting a silent BiometricPrompt
+                // failure loop (T1-8).
+                val biometricManager = BiometricManager.from(getApplication())
+                val canAuth =
+                    biometricManager.canAuthenticate(
+                        BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                            BiometricManager.Authenticators.DEVICE_CREDENTIAL,
+                    )
+                if (canAuth != BiometricManager.BIOMETRIC_SUCCESS) {
+                    _uiState.value =
+                        UiState.Error(
+                            "A device lock screen (PIN, pattern, or biometric) is required to use Vauchi. " +
+                                "Please set one up in Settings.",
+                        )
+                    return@launch
+                }
+
                 val hasIdentity =
                     withContext(Dispatchers.IO) {
                         repository.hasIdentity()
