@@ -20,8 +20,8 @@
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
     <!-- Internet for relay sync -->
@@ -63,77 +63,46 @@
             </intent-filter>
         </activity>
 
+        <!-- Diagnostic activities: exported=false (internal only, launched via Settings or ADB) -->
         <activity
             android:name=".diagnostic.DiagnosticActivity"
-            android:exported="true"
-            android:label="Ultrasonic Diagnostic">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+            android:exported="false"
+            android:label="Ultrasonic Diagnostic" />
 
         <activity
             android:name=".diagnostic.BleDiagnosticActivity"
-            android:exported="true"
-            android:label="BLE Diagnostic">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+            android:exported="false"
+            android:label="BLE Diagnostic" />
 
         <activity
             android:name=".diagnostic.QrDiagnosticActivity"
-            android:exported="true"
-            android:label="QR Diagnostic">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+            android:exported="false"
+            android:label="QR Diagnostic" />
 
         <activity
             android:name=".diagnostic.qr.QrTunerActivity"
-            android:exported="true"
-            android:label="QR Camera Tuner">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+            android:exported="false"
+            android:label="QR Camera Tuner" />
 
         <activity
             android:name=".diagnostic.qr.QrBeaconActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="QR Beacon"
             android:screenOrientation="portrait"
-            android:keepScreenOn="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+            android:keepScreenOn="true" />
 
         <!-- NFC diagnostic activity -->
         <activity
             android:name=".diagnostic.NfcDiagnosticActivity"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTask"
-            android:label="NFC Diagnostic">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+            android:label="NFC Diagnostic" />
 
-        <!-- NFC test activity (launch via adb only, no NFC intent filter
-             to avoid stealing tags from NfcDiagnosticActivity/enableReaderMode) -->
+        <!-- NFC test activity (launch via ADB only) -->
         <activity
             android:name=".nfc.NfcTestActivity"
-            android:exported="true"
-            android:launchMode="singleTask">
-        </activity>
+            android:exported="false"
+            android:launchMode="singleTask" />
 
         <!-- NFC Host Card Emulation service for contact exchange -->
         <service
