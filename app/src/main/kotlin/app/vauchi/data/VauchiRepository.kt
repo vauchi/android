@@ -81,10 +81,11 @@ data class ExchangeSessionData(
  * Uses Android KeyStore for secure storage key management.
  */
 class VauchiRepository(
-    context: Context,
+    private val context: Context,
     private val keyStoreHelper: StorageKeyProvider = KeyStoreHelper(),
 ) {
-    private val vauchi: VauchiPlatform
+    private lateinit var _vauchi: VauchiPlatform
+    private var initialized = false
     private val prefs: SharedPreferences
     private val preferences: VauchiPreferences
 
@@ -110,12 +111,12 @@ class VauchiRepository(
     }
 
     init {
-        val dataDir = context.filesDir.absolutePath
         prefs = context.getSharedPreferences(VauchiPreferences.PREFS_NAME, Context.MODE_PRIVATE)
         preferences = VauchiPreferences(prefs)
-        val relayUrl = preferences.getRelayUrl()
 
-        // Pre-check: device must have a secure lock screen for KeyStore operations
+        // Pre-check: device must have a secure lock screen for KeyStore operations.
+        // This is a fast check (no KeyStore access). The actual KeyStore entry is
+        // created lazily in platform() on first use — NOT here.
         val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
         if (!keyguardManager.isDeviceSecure) {
             throw DeviceNotSecureException(
@@ -123,12 +124,26 @@ class VauchiRepository(
                     "Please set one up in your device Settings.",
             )
         }
+    }
 
-        // Get or create storage key using Android KeyStore
-        val storageKeyBytes = getOrCreateStorageKey(dataDir)
-
-        // Initialize with secure key from KeyStore
-        vauchi = VauchiPlatform.newWithSecureKey(dataDir, relayUrl, storageKeyBytes)
+    /**
+     * Lazily initialize the VauchiPlatform on first use.
+     *
+     * This defers KeyStore entry creation from app startup to the first actual
+     * operation (e.g., createIdentity, hasIdentity). This prevents the bug where
+     * force-stopping during onboarding left a KeyStore entry that trapped users
+     * in an "Authentication Required" loop.
+     */
+    @Synchronized
+    private fun platform(): VauchiPlatform {
+        if (!initialized) {
+            val dataDir = context.filesDir.absolutePath
+            val relayUrl = preferences.getRelayUrl()
+            val storageKeyBytes = getOrCreateStorageKey(dataDir)
+            _vauchi = VauchiPlatform.newWithSecureKey(dataDir, relayUrl, storageKeyBytes)
+            initialized = true
+        }
+        return _vauchi
     }
 
     /**
@@ -164,7 +179,7 @@ class VauchiRepository(
      * Export current storage key (for backup purposes only).
      * WARNING: Handle the returned data with extreme care.
      */
-    fun exportStorageKey(): ByteArray = vauchi.exportStorageKey().map { it.toByte() }.toByteArray()
+    fun exportStorageKey(): ByteArray = platform().exportStorageKey().map { it.toByte() }.toByteArray()
 
     fun getRelayUrl(): String = preferences.getRelayUrl()
 
@@ -194,36 +209,36 @@ class VauchiRepository(
 
     fun setLargeTouchTargets(enabled: Boolean) = preferences.setLargeTouchTargets(enabled)
 
-    fun sync(): MobileSyncResult = vauchi.sync()
+    fun sync(): MobileSyncResult = platform().sync()
 
-    fun hasIdentity(): Boolean = vauchi.hasIdentity()
+    fun hasIdentity(): Boolean = platform().hasIdentity()
 
     fun createIdentity(displayName: String) {
-        vauchi.createIdentity(displayName)
+        platform().createIdentity(displayName)
     }
 
-    fun getDisplayName(): String = vauchi.getDisplayName()
+    fun getDisplayName(): String = platform().getDisplayName()
 
-    fun getPublicId(): String = vauchi.getPublicId()
+    fun getPublicId(): String = platform().getPublicId()
 
-    fun getOwnCard(): MobileContactCard = vauchi.getOwnCard()
+    fun getOwnCard(): MobileContactCard = platform().getOwnCard()
 
     fun addField(
         fieldType: MobileFieldType,
         label: String,
         value: String,
     ) {
-        vauchi.addField(fieldType, label, value)
+        platform().addField(fieldType, label, value)
     }
 
     fun updateField(
         label: String,
         newValue: String,
     ) {
-        vauchi.updateField(label, newValue)
+        platform().updateField(label, newValue)
     }
 
-    fun removeField(label: String): Boolean = vauchi.removeField(label)
+    fun removeField(label: String): Boolean = platform().removeField(label)
 
     /**
      * Generate exchange QR data AND return the live session.
@@ -231,13 +246,13 @@ class VauchiRepository(
      * — creating a new session generates different ephemeral keys.
      */
     fun generateExchangeQrWithSession(): ExchangeSessionData {
-        val session = vauchi.createQrExchangeManual()
+        val session = platform().createQrExchangeManual()
         val qrData = session.generateQr()
         val expiresAt = System.currentTimeMillis() / 1000 + 300 // 5 minutes
         val data =
             ExchangeData(
                 qrData = qrData,
-                publicId = vauchi.getPublicId(),
+                publicId = platform().getPublicId(),
                 expiresAt = expiresAt.toULong(),
                 audioChallenge = extractAudioChallenge(qrData),
             )
@@ -249,54 +264,54 @@ class VauchiRepository(
      * The session must have already been driven through processQr → confirmProximity →
      * theyScannedOurQr → performKeyAgreement → completeCardExchange.
      */
-    fun finalizeExchange(session: MobileExchangeSession): MobileExchangeResult = vauchi.finalizeExchange(session)
+    fun finalizeExchange(session: MobileExchangeSession): MobileExchangeResult = platform().finalizeExchange(session)
 
     /** Create a multi-stage exchange session with the real identity and card data. */
-    fun createMultistageSession(): MobileMultiStageSession = vauchi.createMultistageSession()
+    fun createMultistageSession(): MobileMultiStageSession = platform().createMultistageSession()
 
     /** Finalize a multi-stage exchange: save peer contact and initialize ratchet. */
-    fun finalizeMultistageExchange(session: MobileMultiStageSession): MobileExchangeResult = vauchi.finalizeMultistageExchange(session)
+    fun finalizeMultistageExchange(session: MobileMultiStageSession): MobileExchangeResult = platform().finalizeMultistageExchange(session)
 
     /** Create an NFC initiator (reader) handshake session. */
-    fun createNfcInitiator() = vauchi.createNfcInitiator()
+    fun createNfcInitiator() = platform().createNfcInitiator()
 
     /** Create an NFC responder (HCE) handshake session. */
-    fun createNfcResponder() = vauchi.createNfcResponder()
+    fun createNfcResponder() = platform().createNfcResponder()
 
-    fun contactCount(): UInt = vauchi.contactCount()
+    fun contactCount(): UInt = platform().contactCount()
 
-    fun listContacts() = vauchi.listContacts()
+    fun listContacts() = platform().listContacts()
 
     fun listContactsPaginated(
         offset: UInt,
         limit: UInt,
-    ) = vauchi.listContactsPaginated(offset, limit)
+    ) = platform().listContactsPaginated(offset, limit)
 
-    fun searchContacts(query: String) = vauchi.searchContacts(query)
+    fun searchContacts(query: String) = platform().searchContacts(query)
 
-    fun getContact(id: String) = vauchi.getContact(id)
+    fun getContact(id: String) = platform().getContact(id)
 
-    fun removeContact(id: String) = vauchi.removeContact(id)
+    fun removeContact(id: String) = platform().removeContact(id)
 
     // Visibility operations
     fun hideFieldFromContact(
         contactId: String,
         fieldLabel: String,
     ) {
-        vauchi.hideFieldFromContact(contactId, fieldLabel)
+        platform().hideFieldFromContact(contactId, fieldLabel)
     }
 
     fun showFieldToContact(
         contactId: String,
         fieldLabel: String,
     ) {
-        vauchi.showFieldToContact(contactId, fieldLabel)
+        platform().showFieldToContact(contactId, fieldLabel)
     }
 
     fun isFieldVisibleToContact(
         contactId: String,
         fieldLabel: String,
-    ): Boolean = vauchi.isFieldVisibleToContact(contactId, fieldLabel)
+    ): Boolean = platform().isFieldVisibleToContact(contactId, fieldLabel)
 
     // Visibility Labels operations
     // Based on: features/visibility_labels.feature
@@ -304,17 +319,17 @@ class VauchiRepository(
     /**
      * List all visibility labels
      */
-    fun listLabels() = vauchi.listLabels()
+    fun listLabels() = platform().listLabels()
 
     /**
      * Create a new visibility label
      */
-    fun createLabel(name: String) = vauchi.createLabel(name)
+    fun createLabel(name: String) = platform().createLabel(name)
 
     /**
      * Get label details by ID
      */
-    fun getLabel(labelId: String) = vauchi.getLabel(labelId)
+    fun getLabel(labelId: String) = platform().getLabel(labelId)
 
     /**
      * Rename a visibility label
@@ -323,44 +338,45 @@ class VauchiRepository(
         labelId: String,
         newName: String,
     ) {
-        vauchi.renameLabel(labelId, newName)
+        platform().renameLabel(labelId, newName)
     }
 
     /**
      * Delete a visibility label
      */
     fun deleteLabel(labelId: String) {
-        vauchi.deleteLabel(labelId)
+        platform().deleteLabel(labelId)
     }
 
     fun addContactToLabel(
         labelId: String,
         contactId: String,
     ) {
-        vauchi.addContactToGroup(labelId, contactId)
+        platform().addContactToGroup(labelId, contactId)
     }
 
     fun removeContactFromLabel(
         labelId: String,
         contactId: String,
     ) {
-        vauchi.removeContactFromGroup(labelId, contactId)
+        platform().removeContactFromGroup(labelId, contactId)
     }
 
-    fun getLabelsForContact(contactId: String): List<uniffi.vauchi_platform.MobileVisibilityLabel> = vauchi.getGroupsForContact(contactId)
+    fun getLabelsForContact(contactId: String): List<uniffi.vauchi_platform.MobileVisibilityLabel> =
+        platform().getGroupsForContact(contactId)
 
     fun setLabelFieldVisibility(
         labelId: String,
         fieldId: String,
         visible: Boolean,
     ) {
-        vauchi.setGroupFieldVisibility(labelId, fieldId, visible)
+        platform().setGroupFieldVisibility(labelId, fieldId, visible)
     }
 
     /**
      * Get suggested label names
      */
-    fun getSuggestedLabels(): List<String> = vauchi.getSuggestedLabels()
+    fun getSuggestedLabels(): List<String> = platform().getSuggestedLabels()
 
     // Field Validation operations
     // Based on: features/field_validation.feature
@@ -372,7 +388,7 @@ class VauchiRepository(
         contactId: String,
         fieldId: String,
         fieldValue: String,
-    ) = vauchi.validateField(contactId, fieldId, fieldValue)
+    ) = platform().validateField(contactId, fieldId, fieldValue)
 
     /**
      * Get validation status for a contact's field
@@ -381,7 +397,7 @@ class VauchiRepository(
         contactId: String,
         fieldId: String,
         fieldValue: String,
-    ) = vauchi.getFieldValidationStatus(contactId, fieldId, fieldValue)
+    ) = platform().getFieldValidationStatus(contactId, fieldId, fieldValue)
 
     /**
      * Revoke your validation of a contact's field
@@ -389,12 +405,12 @@ class VauchiRepository(
     fun revokeFieldValidation(
         contactId: String,
         fieldId: String,
-    ): Boolean = vauchi.revokeFieldValidation(contactId, fieldId)
+    ): Boolean = platform().revokeFieldValidation(contactId, fieldId)
 
     /**
      * List all validations you have made
      */
-    fun listMyValidations() = vauchi.listMyValidations()
+    fun listMyValidations() = platform().listMyValidations()
 
     /**
      * Check if you have validated a specific field
@@ -402,7 +418,7 @@ class VauchiRepository(
     fun hasValidatedField(
         contactId: String,
         fieldId: String,
-    ): Boolean = vauchi.hasValidatedField(contactId, fieldId)
+    ): Boolean = platform().hasValidatedField(contactId, fieldId)
 
     /**
      * Get the validation count for a field
@@ -410,29 +426,29 @@ class VauchiRepository(
     fun getFieldValidationCount(
         contactId: String,
         fieldId: String,
-    ): UInt = vauchi.getFieldValidationCount(contactId, fieldId)
+    ): UInt = platform().getFieldValidationCount(contactId, fieldId)
 
     // Backup operations
-    fun exportBackup(password: String): String = vauchi.exportBackup(password)
+    fun exportBackup(password: String): String = platform().exportBackup(password)
 
     fun importBackup(
         backupData: String,
         password: String,
     ) {
-        vauchi.importBackup(backupData, password)
+        platform().importBackup(backupData, password)
     }
 
     fun checkPasswordStrength(password: String) = uniffi.vauchi_platform.checkPasswordStrength(password)
 
     // Social network operations
-    fun listSocialNetworks() = vauchi.listSocialNetworks()
+    fun listSocialNetworks() = platform().listSocialNetworks()
 
-    fun searchSocialNetworks(query: String) = vauchi.searchSocialNetworks(query)
+    fun searchSocialNetworks(query: String) = platform().searchSocialNetworks(query)
 
     fun getProfileUrl(
         networkId: String,
         username: String,
-    ): String? = vauchi.getProfileUrl(networkId, username)
+    ): String? = platform().getProfileUrl(networkId, username)
 
     // Content Updates operations
     // Based on: features/content_updates.feature
@@ -440,34 +456,34 @@ class VauchiRepository(
     /**
      * Check if content updates feature is supported
      */
-    fun isContentUpdatesSupported(): Boolean = vauchi.isContentUpdatesSupported()
+    fun isContentUpdatesSupported(): Boolean = platform().isContentUpdatesSupported()
 
     /**
      * Check for available content updates
      */
-    fun checkContentUpdates() = vauchi.checkContentUpdates()
+    fun checkContentUpdates() = platform().checkContentUpdates()
 
     /**
      * Apply available content updates
      */
-    fun applyContentUpdates() = vauchi.applyContentUpdates()
+    fun applyContentUpdates() = platform().applyContentUpdates()
 
     /**
      * Reload social networks after content updates
      */
-    fun reloadSocialNetworks() = vauchi.reloadSocialNetworks()
+    fun reloadSocialNetworks() = platform().reloadSocialNetworks()
 
     // Aha Moments operations (Progressive Onboarding)
 
     /**
      * Check if user has seen a specific aha moment
      */
-    fun hasSeenAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType): Boolean = vauchi.hasSeenAhaMoment(momentType)
+    fun hasSeenAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType): Boolean = platform().hasSeenAhaMoment(momentType)
 
     /**
      * Try to trigger an aha moment (returns null if already seen)
      */
-    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType) = vauchi.tryTriggerAhaMoment(momentType)
+    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType) = platform().tryTriggerAhaMoment(momentType)
 
     /**
      * Try to trigger an aha moment with context (returns null if already seen)
@@ -475,82 +491,82 @@ class VauchiRepository(
     fun tryTriggerAhaMomentWithContext(
         momentType: uniffi.vauchi_platform.MobileAhaMomentType,
         context: String,
-    ) = vauchi.tryTriggerAhaMomentWithContext(momentType, context)
+    ) = platform().tryTriggerAhaMomentWithContext(momentType, context)
 
     /**
      * Get count of seen aha moments
      */
-    fun ahaMomentsSeenCount(): UInt = vauchi.ahaMomentsSeenCount()
+    fun ahaMomentsSeenCount(): UInt = platform().ahaMomentsSeenCount()
 
     /**
      * Get total count of aha moments
      */
-    fun ahaMomentsTotalCount(): UInt = vauchi.ahaMomentsTotalCount()
+    fun ahaMomentsTotalCount(): UInt = platform().ahaMomentsTotalCount()
 
     /**
      * Reset all aha moments (for development/testing)
      */
-    fun resetAhaMoments() = vauchi.resetAhaMoments()
+    fun resetAhaMoments() = platform().resetAhaMoments()
 
     // Certificate Pinning operations
 
     /**
      * Check if certificate pinning is enabled
      */
-    fun isCertificatePinningEnabled(): Boolean = vauchi.isCertificatePinningEnabled()
+    fun isCertificatePinningEnabled(): Boolean = platform().isCertificatePinningEnabled()
 
     /**
      * Set the pinned certificate for relay TLS connections
      * @param certPem Certificate in PEM format
      */
-    fun setPinnedCertificate(certPem: String) = vauchi.setPinnedCertificate(certPem)
+    fun setPinnedCertificate(certPem: String) = platform().setPinnedCertificate(certPem)
 
     // Duress PIN operations
 
     /**
      * Check if duress PIN is enabled
      */
-    fun isDuressEnabled(): Boolean = vauchi.isDuressEnabled()
+    fun isDuressEnabled(): Boolean = platform().isDuressEnabled()
 
     /**
      * Set up duress PIN (requires app password to be set first)
      */
     fun setupDuressPassword(duressPassword: String) {
-        vauchi.setupDuressPassword(duressPassword)
+        platform().setupDuressPassword(duressPassword)
     }
 
     /**
      * Disable duress PIN
      */
     fun disableDuress() {
-        vauchi.disableDuress()
+        platform().disableDuress()
     }
 
     fun hideContact(contactId: String) {
-        vauchi.hideContact(contactId)
+        platform().hideContact(contactId)
     }
 
     fun unhideContact(contactId: String) {
-        vauchi.unhideContact(contactId)
+        platform().unhideContact(contactId)
     }
 
-    fun listHiddenContacts(): List<uniffi.vauchi_platform.MobileContact> = vauchi.listHiddenContacts()
+    fun listHiddenContacts(): List<uniffi.vauchi_platform.MobileContact> = platform().listHiddenContacts()
 
     fun configureDuressAlerts(
         contactIds: List<String>,
         message: String,
     ) {
-        vauchi.configureDuressAlerts(contactIds, message)
+        platform().configureDuressAlerts(contactIds, message)
     }
 
-    fun getDuressSettings(): uniffi.vauchi_platform.MobileDuressSettings? = vauchi.getDuressSettings()
+    fun getDuressSettings(): uniffi.vauchi_platform.MobileDuressSettings? = platform().getDuressSettings()
 
     // Panic Shred operations
 
     /**
      * Execute emergency panic shred — destroys all data immediately
      */
-    fun panicShred() = vauchi.panicShred()
+    fun panicShred() = platform().panicShred()
 
     // Emergency Broadcast operations
 
@@ -562,33 +578,33 @@ class VauchiRepository(
         message: String,
         includeLocation: Boolean,
     ) {
-        vauchi.configureEmergencyBroadcast(contactIds, message, includeLocation)
+        platform().configureEmergencyBroadcast(contactIds, message, includeLocation)
     }
 
     /**
      * Get emergency broadcast config
      */
-    fun getEmergencyConfig(): uniffi.vauchi_platform.MobileEmergencyConfig? = vauchi.getEmergencyConfig()
+    fun getEmergencyConfig(): uniffi.vauchi_platform.MobileEmergencyConfig? = platform().getEmergencyConfig()
 
     /**
      * Send emergency broadcast
      */
-    fun sendEmergencyBroadcast(): uniffi.vauchi_platform.MobileBroadcastResult = vauchi.sendEmergencyBroadcast()
+    fun sendEmergencyBroadcast(): uniffi.vauchi_platform.MobileBroadcastResult = platform().sendEmergencyBroadcast()
 
     /**
      * Disable emergency broadcast
      */
     fun disableEmergencyBroadcast() {
-        vauchi.disableEmergencyBroadcast()
+        platform().disableEmergencyBroadcast()
     }
 
     // Tor Mode Operations
     // Based on: features/tor_mode.feature - R4 Tor Mode
 
-    fun isTorEnabled(): Boolean = vauchi.loadTorConfig().enabled
+    fun isTorEnabled(): Boolean = platform().loadTorConfig().enabled
 
     fun getTorConfig(): Triple<Boolean, List<String>, Boolean> {
-        val config = vauchi.loadTorConfig()
+        val config = platform().loadTorConfig()
         return Triple(config.enabled, config.bridges, config.preferOnion)
     }
 
@@ -597,51 +613,51 @@ class VauchiRepository(
         bridges: List<String>,
         preferOnion: Boolean,
     ) {
-        if (enabled) vauchi.enableTor() else vauchi.disableTor()
-        if (bridges.isNotEmpty()) vauchi.configureTorBridges(bridges)
+        if (enabled) platform().enableTor() else platform().disableTor()
+        if (bridges.isNotEmpty()) platform().configureTorBridges(bridges)
     }
 
     // Verification operations
-    fun verifyContact(id: String) = vauchi.verifyContact(id)
+    fun verifyContact(id: String) = platform().verifyContact(id)
 
-    fun getPublicKey(): String = vauchi.getPublicId()
+    fun getPublicKey(): String = platform().getPublicId()
 
-    fun getOwnFingerprint(): String = vauchi.getOwnFingerprint()
+    fun getOwnFingerprint(): String = platform().getOwnFingerprint()
 
     // Recovery trust operations
-    fun trustContactForRecovery(id: String) = vauchi.trustContactForRecovery(id)
+    fun trustContactForRecovery(id: String) = platform().trustContactForRecovery(id)
 
-    fun untrustContactForRecovery(id: String) = vauchi.untrustContactForRecovery(id)
+    fun untrustContactForRecovery(id: String) = platform().untrustContactForRecovery(id)
 
-    fun trustedContactCount(): UInt = vauchi.trustedContactCount()
+    fun trustedContactCount(): UInt = platform().trustedContactCount()
 
     // Recovery operations
-    fun createRecoveryClaim(oldPkHex: String) = vauchi.createRecoveryClaim(oldPkHex)
+    fun createRecoveryClaim(oldPkHex: String) = platform().createRecoveryClaim(oldPkHex)
 
-    fun parseRecoveryClaim(claimB64: String) = vauchi.parseRecoveryClaim(claimB64)
+    fun parseRecoveryClaim(claimB64: String) = platform().parseRecoveryClaim(claimB64)
 
-    fun createRecoveryVoucher(claimB64: String) = vauchi.createRecoveryVoucher(claimB64)
+    fun createRecoveryVoucher(claimB64: String) = platform().createRecoveryVoucher(claimB64)
 
-    fun addRecoveryVoucher(voucherB64: String) = vauchi.addRecoveryVoucher(voucherB64)
+    fun addRecoveryVoucher(voucherB64: String) = platform().addRecoveryVoucher(voucherB64)
 
-    fun getRecoveryStatus() = vauchi.getRecoveryStatus()
+    fun getRecoveryStatus() = platform().getRecoveryStatus()
 
-    fun getRecoveryProof(): String? = vauchi.getRecoveryProof()
+    fun getRecoveryProof(): String? = platform().getRecoveryProof()
 
-    fun verifyRecoveryProof(proofB64: String) = vauchi.verifyRecoveryProof(proofB64)
+    fun verifyRecoveryProof(proofB64: String) = platform().verifyRecoveryProof(proofB64)
 
     // Delivery status operations
-    fun getAllDeliveryRecords() = vauchi.getAllDeliveryRecords()
+    fun getAllDeliveryRecords() = platform().getAllDeliveryRecords()
 
-    fun getDeliveryRecordsForContact(contactId: String) = vauchi.getDeliveryRecordsForContact(contactId)
+    fun getDeliveryRecordsForContact(contactId: String) = platform().getDeliveryRecordsForContact(contactId)
 
-    fun getDeliverySummary(messageId: String) = vauchi.getDeliverySummary(messageId)
+    fun getDeliverySummary(messageId: String) = platform().getDeliverySummary(messageId)
 
-    fun getDueRetries() = vauchi.getDueRetries()
+    fun getDueRetries() = platform().getDueRetries()
 
-    fun countFailedDeliveries(): UInt = vauchi.countFailedDeliveries()
+    fun countFailedDeliveries(): UInt = platform().countFailedDeliveries()
 
-    fun manualRetry(messageId: String): Boolean = vauchi.manualRetry(messageId)
+    fun manualRetry(messageId: String): Boolean = platform().manualRetry(messageId)
 
     // Demo contact operations
     // Based on: features/demo_contact.feature
@@ -652,40 +668,40 @@ class VauchiRepository(
      *
      * @return The demo contact if created, null if user has contacts or demo was dismissed
      */
-    fun initDemoContactIfNeeded() = vauchi.initDemoContactIfNeeded()
+    fun initDemoContactIfNeeded() = platform().initDemoContactIfNeeded()
 
     /**
      * Get the current demo contact if active.
      *
      * @return The demo contact if active, null otherwise
      */
-    fun getDemoContact() = vauchi.getDemoContact()
+    fun getDemoContact() = platform().getDemoContact()
 
     /**
      * Get the demo contact state.
      *
      * @return Current state of the demo contact
      */
-    fun getDemoContactState() = vauchi.getDemoContactState()
+    fun getDemoContactState() = platform().getDemoContactState()
 
     /**
      * Check if a demo update is available.
      *
      * @return True if an update is due (based on 2-hour interval)
      */
-    fun isDemoUpdateAvailable(): Boolean = vauchi.isDemoUpdateAvailable()
+    fun isDemoUpdateAvailable(): Boolean = platform().isDemoUpdateAvailable()
 
     /**
      * Trigger a demo update and get the new content.
      *
      * @return Updated demo contact with new tip, null if demo not active
      */
-    fun triggerDemoUpdate() = vauchi.triggerDemoUpdate()
+    fun triggerDemoUpdate() = platform().triggerDemoUpdate()
 
     /**
      * Dismiss the demo contact manually.
      */
-    fun dismissDemoContact() = vauchi.dismissDemoContact()
+    fun dismissDemoContact() = platform().dismissDemoContact()
 
     /**
      * Auto-remove demo contact after first real exchange.
@@ -693,14 +709,14 @@ class VauchiRepository(
      *
      * @return True if demo was removed, false if it wasn't active
      */
-    fun autoRemoveDemoContact(): Boolean = vauchi.autoRemoveDemoContact()
+    fun autoRemoveDemoContact(): Boolean = platform().autoRemoveDemoContact()
 
     /**
      * Restore the demo contact from Settings.
      *
      * @return The restored demo contact
      */
-    fun restoreDemoContact() = vauchi.restoreDemoContact()
+    fun restoreDemoContact() = platform().restoreDemoContact()
 
     // Device Linking operations
     // Based on: features/device_management.feature
@@ -710,14 +726,14 @@ class VauchiRepository(
      *
      * @return List of device info for all linked devices
      */
-    fun getDevices() = vauchi.getDevices()
+    fun getDevices() = platform().getDevices()
 
     /**
      * Generate a device link QR code for a new device to scan.
      *
      * @return QR code data with expiration info
      */
-    fun generateDeviceLinkQr() = vauchi.generateDeviceLinkQr()
+    fun generateDeviceLinkQr() = platform().generateDeviceLinkQr()
 
     /**
      * Parse a device link QR code scanned from another device.
@@ -725,14 +741,14 @@ class VauchiRepository(
      * @param qrData The raw QR code data string
      * @return Parsed device link info
      */
-    fun parseDeviceLinkQr(qrData: String) = vauchi.parseDeviceLinkQr(qrData)
+    fun parseDeviceLinkQr(qrData: String) = platform().parseDeviceLinkQr(qrData)
 
     /**
      * Get the number of linked devices.
      *
      * @return Count of linked devices
      */
-    fun deviceCount(): UInt = vauchi.deviceCount()
+    fun deviceCount(): UInt = platform().deviceCount()
 
     /**
      * Unlink a device by its index in the device list.
@@ -741,14 +757,14 @@ class VauchiRepository(
      * @param deviceIndex The index of the device to unlink
      * @return True if the device was successfully unlinked
      */
-    fun unlinkDevice(deviceIndex: UInt): Boolean = vauchi.unlinkDevice(deviceIndex)
+    fun unlinkDevice(deviceIndex: UInt): Boolean = platform().unlinkDevice(deviceIndex)
 
     /**
      * Check if this is the primary (first) device.
      *
      * @return True if this is the primary device
      */
-    fun isPrimaryDevice(): Boolean = vauchi.isPrimaryDevice()
+    fun isPrimaryDevice(): Boolean = platform().isPrimaryDevice()
 
     // Device Linking Protocol operations (relay transport)
 
@@ -756,12 +772,12 @@ class VauchiRepository(
      * Start the device link protocol as initiator (primary device).
      * Returns an initiator state machine that generates QR data and drives the protocol.
      */
-    fun startDeviceLink() = vauchi.startDeviceLink()
+    fun startDeviceLink() = platform().startDeviceLink()
 
     /**
      * Listen for an incoming device link request via the relay.
      */
-    fun listenForDeviceLinkRequest(timeoutSecs: ULong) = vauchi.listenForDeviceLinkRequest(timeoutSecs)
+    fun listenForDeviceLinkRequest(timeoutSecs: ULong) = platform().listenForDeviceLinkRequest(timeoutSecs)
 
     /**
      * Send a device link response back via the relay.
@@ -769,7 +785,7 @@ class VauchiRepository(
     fun sendDeviceLinkResponse(
         senderToken: String,
         encryptedResponse: ByteArray,
-    ) = vauchi.sendDeviceLinkResponse(senderToken, encryptedResponse)
+    ) = platform().sendDeviceLinkResponse(senderToken, encryptedResponse)
 
     /**
      * Send a device link request via the relay and wait for a response.
@@ -780,7 +796,7 @@ class VauchiRepository(
         encryptedRequest: ByteArray,
         timeoutSecs: ULong,
     ): ByteArray =
-        vauchi.sendDeviceLinkRequest(
+        platform().sendDeviceLinkRequest(
             targetIdentity,
             senderToken,
             encryptedRequest,
@@ -795,40 +811,40 @@ class VauchiRepository(
      *
      * @return GDPR export with JSON data, timestamp, and version
      */
-    fun exportGdprData() = vauchi.exportGdprData()
+    fun exportGdprData() = platform().exportGdprData()
 
     /**
      * Schedule account deletion with 7-day grace period.
      *
      * @return Deletion info with state and timing
      */
-    fun scheduleAccountDeletion() = vauchi.scheduleAccountDeletion()
+    fun scheduleAccountDeletion() = platform().scheduleAccountDeletion()
 
     /**
      * Cancel a scheduled account deletion.
      */
-    fun cancelAccountDeletion() = vauchi.cancelAccountDeletion()
+    fun cancelAccountDeletion() = platform().cancelAccountDeletion()
 
     /**
      * Get current deletion state.
      *
      * @return Current deletion info
      */
-    fun getDeletionState() = vauchi.getDeletionState()
+    fun getDeletionState() = platform().getDeletionState()
 
     /**
      * Grant consent for a specific type.
      *
      * @param consentType The type of consent to grant
      */
-    fun grantConsent(consentType: uniffi.vauchi_platform.MobileConsentType) = vauchi.grantConsent(consentType)
+    fun grantConsent(consentType: uniffi.vauchi_platform.MobileConsentType) = platform().grantConsent(consentType)
 
     /**
      * Revoke consent for a specific type.
      *
      * @param consentType The type of consent to revoke
      */
-    fun revokeConsent(consentType: uniffi.vauchi_platform.MobileConsentType) = vauchi.revokeConsent(consentType)
+    fun revokeConsent(consentType: uniffi.vauchi_platform.MobileConsentType) = platform().revokeConsent(consentType)
 
     /**
      * Check if consent is granted for a specific type.
@@ -836,12 +852,12 @@ class VauchiRepository(
      * @param consentType The type to check
      * @return True if consent is currently granted
      */
-    fun checkConsent(consentType: uniffi.vauchi_platform.MobileConsentType): Boolean = vauchi.checkConsent(consentType)
+    fun checkConsent(consentType: uniffi.vauchi_platform.MobileConsentType): Boolean = platform().checkConsent(consentType)
 
     /**
      * Get all consent records.
      *
      * @return List of all consent records
      */
-    fun getConsentRecords() = vauchi.getConsentRecords()
+    fun getConsentRecords() = platform().getConsentRecords()
 }
