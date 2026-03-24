@@ -15,7 +15,6 @@ import app.vauchi.worker.SyncWorker
 import java.util.concurrent.TimeUnit
 
 class VauchiApp : Application() {
-
     override fun onCreate() {
         super.onCreate()
         instance = this
@@ -25,21 +24,24 @@ class VauchiApp : Application() {
     private fun schedulePeriodicSync() {
         Log.d(TAG, "Scheduling periodic sync")
 
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        val constraints =
+            Constraints
+                .Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .setRequiresBatteryNotLow(true)
+                .build()
 
-        val syncRequest = PeriodicWorkRequestBuilder<SyncWorker>(
-            repeatInterval = 15,
-            repeatIntervalTimeUnit = TimeUnit.MINUTES
-        )
-            .setConstraints(constraints)
-            .build()
+        val syncRequest =
+            PeriodicWorkRequestBuilder<SyncWorker>(
+                repeatInterval = 15,
+                repeatIntervalTimeUnit = TimeUnit.MINUTES,
+            ).setConstraints(constraints)
+                .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             SyncWorker.WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
-            syncRequest
+            syncRequest,
         )
 
         Log.d(TAG, "Periodic sync scheduled (every 15 minutes)")

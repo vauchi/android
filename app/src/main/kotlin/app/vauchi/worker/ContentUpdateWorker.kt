@@ -43,6 +43,7 @@ class ContentUpdateWorker(
                 Constraints
                     .Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .setRequiresBatteryNotLow(true)
                     .build()
 
             val request =
