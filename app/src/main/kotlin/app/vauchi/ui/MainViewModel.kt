@@ -63,6 +63,10 @@ sealed class SyncState {
     data class Error(
         val message: String,
     ) : SyncState()
+
+    data class RateLimited(
+        val retryAfterSecs: Long,
+    ) : SyncState()
 }
 
 sealed class UiState {
@@ -361,12 +365,19 @@ class MainViewModel(
                 _lastSyncTime.value = Instant.now()
                 loadUserData()
                 val msg =
-                    buildString {
-                        append("Sync complete")
-                        if (result.contactsAdded > 0u) append(" - ${result.contactsAdded} new contacts")
-                        if (result.cardsUpdated > 0u) append(" - ${result.cardsUpdated} cards updated")
+                    if (result.updatedContactNames.isNotEmpty()) {
+                        "Updated: ${result.updatedContactNames.joinToString(", ")}"
+                    } else {
+                        buildString {
+                            append("Sync complete")
+                            if (result.contactsAdded > 0u) append(" - ${result.contactsAdded} new contacts")
+                            if (result.cardsUpdated > 0u) append(" - ${result.cardsUpdated} cards updated")
+                        }
                     }
                 showMessage(msg)
+            } catch (e: MobileError.RateLimited) {
+                _syncState.value = SyncState.RateLimited(e.retryAfterSecs.toLong())
+                showMessage("Please wait ${e.retryAfterSecs}s before syncing again")
             } catch (e: Exception) {
                 val errorMsg =
                     if (!networkMonitor.isCurrentlyConnected()) {
