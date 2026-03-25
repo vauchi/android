@@ -40,6 +40,7 @@ include:
       - '/ci-templates/reuse.yml'
       - '/ci-templates/design-drift.yml'
       - '/ci-templates/image-lint.yml'
+      - '/ci-templates/removed-symbols.yml'
       - '/ci-templates/badges.yml'
 
 stages:
@@ -249,6 +250,12 @@ check:design-drift:
     DESIGN_DRIFT_FILE_EXT: ".kt"
     DESIGN_DRIFT_FILE_SUFFIX: "Component"
     DESIGN_DRIFT_CASE: "pascal"
+
+# Removed symbols: detect stale references to removed features
+check:removed-symbols:
+  extends: .removed-symbols-job
+  variables:
+    SEARCH_DIRS: "app/src/"
 
 # ============================================================
 # Build Stage (MR: debug + lint, Tag: release)
