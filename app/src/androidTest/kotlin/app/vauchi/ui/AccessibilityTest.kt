@@ -49,9 +49,9 @@ class AccessibilityTest {
         composeTestRule.onNodeWithText("Private & secure", substring = true).assertIsDisplayed()
 
         // Primary create button and secondary restore button must be clickable
-        composeTestRule.onAllNodes(hasClickAction()).fetchSemanticsNodes().also { nodes ->
-            assert(nodes.size >= 2) { "WelcomeStep should have at least 2 clickable elements (create + restore)" }
-        }
+        // CC-20: assert specific buttons exist, not minimum clickable count
+        composeTestRule.onNodeWithContentDescription("setup.create.button").assertHasClickAction()
+        composeTestRule.onNodeWithText("Restore from Backup", substring = true).assertHasClickAction()
     }
 
     @Test
