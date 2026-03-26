@@ -366,22 +366,32 @@ test:screenshots:
   extends: [.android-job, .timeout-standard]
   stage: test
   needs: []
+  # allow_failure until core tags align with published AAR version.
+  # The host .so is built from the core tag matching the AAR version;
+  # if no matching tag exists, falls back to main (may have symbol mismatches).
+  allow_failure: true
   script:
     # Build host-platform native library so layoutlib can load UniFFI types.
+    # Uses the same core ref that produced the published AAR bindings.
     # The self-hosted runner has Rust installed (shared with vauchi/core).
     - |
       NATIVE_LIB="app/native-host-libs/libvauchi_platform.so"
       if [ ! -f "$NATIVE_LIB" ]; then
         echo "📦 Building libvauchi_platform.so for host platform..."
+        # Extract AAR version to clone the matching core tag
+        AAR_VERSION=$(grep 'vauchi-platform:' app/build.gradle.kts | sed -n 's/.*vauchi-platform:\([0-9.]*\).*/\1/p')
+        CORE_REF="v${AAR_VERSION:-main}"
         CORE_DIR="${CI_PROJECT_DIR}/../core"
         if [ ! -d "$CORE_DIR" ]; then
-          git clone --depth=1 --branch=main \
-            "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
+          git clone --depth=1 --branch="${CORE_REF}" \
+            "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR" \
+            || git clone --depth=1 --branch=main \
+              "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
         fi
         cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
         mkdir -p app/native-host-libs
         cp "$CORE_DIR/target/release/libvauchi_platform.so" "$NATIVE_LIB"
-        echo "✅ Native library built: $(ls -lh "$NATIVE_LIB" | awk '{print $5}')"
+        echo "✅ Native library built from ${CORE_REF}: $(ls -lh "$NATIVE_LIB" | awk '{print $5}')"
       else
         echo "✅ Native library cached: $NATIVE_LIB"
       fi
@@ -434,10 +444,14 @@ test:screenshots:record:
     - |
       NATIVE_LIB="app/native-host-libs/libvauchi_platform.so"
       if [ ! -f "$NATIVE_LIB" ]; then
+        AAR_VERSION=$(grep 'vauchi-platform:' app/build.gradle.kts | sed -n 's/.*vauchi-platform:\([0-9.]*\).*/\1/p')
+        CORE_REF="v${AAR_VERSION:-main}"
         CORE_DIR="${CI_PROJECT_DIR}/../core"
         if [ ! -d "$CORE_DIR" ]; then
-          git clone --depth=1 --branch=main \
-            "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
+          git clone --depth=1 --branch="${CORE_REF}" \
+            "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR" \
+            || git clone --depth=1 --branch=main \
+              "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
         fi
         cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
         mkdir -p app/native-host-libs
