@@ -70,20 +70,20 @@ private val QR_BACKGROUND = android.graphics.Color.rgb(224, 224, 224) // #E0E0E0
 private val ExchangeBackground = Color(0xFFF5F0EB)
 
 /** QR placeholder and background tint: light gray. */
-private val QrPlaceholderBackground = QrPlaceholderBackground
+private val QrPlaceholderBackground = Color(0xFFE0E0E0)
 
 /** Instruction text color: medium gray on beige. */
 private val InstructionTextColor = Color(0xFF666666)
 
 /** Camera preview border: medium gray. */
-private val CameraBorderColor = CameraBorderColor
+private val CameraBorderColor = Color(0xFF999999)
 
 /** Status bar background: slightly darker beige. */
 private val StatusBarBackground = Color(0xFFEDE8E3)
 
 /** Scan quality indicator colors. */
-private val ScanGoodColor = ScanGoodColor
-private val ScanFairColor = ScanFairColor
+private val ScanGoodColor = Color(0xFF4CAF50)
+private val ScanFairColor = Color(0xFFFF9800)
 private val ScanNoneColor = Color(0xFFF44336)
 
 private enum class ScanQuality {
@@ -182,14 +182,28 @@ fun MultiStageExchangeScreen(
     LaunchedEffect(cameraPermissionGranted) { if (cameraPermissionGranted) permissionsRequested = true }
     PermissionRationaleDialog(cameraPermState)
 
-    // Start multi-stage session on enter
-    LaunchedEffect(Unit) {
-        viewModel.startMultiStageExchange()
-    }
+    // Start exchange on screen entry, restart on re-entry (tab switch).
+    // Uses lifecycle ON_RESUME/ON_PAUSE so it works even when the
+    // composable is cached in the navigation back stack.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            androidx.lifecycle.LifecycleEventObserver { _, event ->
+                when (event) {
+                    androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
+                        viewModel.startMultiStageExchange()
+                    }
 
-    // Cancel session on exit
-    DisposableEffect(Unit) {
+                    androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> {
+                        viewModel.cancelMultiStageExchange()
+                    }
+
+                    else -> {}
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             viewModel.cancelMultiStageExchange()
         }
     }
