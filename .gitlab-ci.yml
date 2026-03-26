@@ -410,7 +410,7 @@ test:screenshots:
 
 # Manual job: record screenshot baselines on CI and commit them to the branch.
 # CI is the single source of truth for baselines — never record locally.
-test:screenshots:record:
+test:snapshots:record:
   extends: [.android-job, .timeout-standard]
   stage: test
   needs: []
