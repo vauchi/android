@@ -83,6 +83,16 @@ android {
 
     experimentalProperties["android.experimental.enableScreenshotTest"] = true
 
+    // Screenshot tests render via layoutlib (host JVM), which needs the native library
+    // for the host platform. The library is built by CI (build:native-host job) or
+    // locally via `just build-host-lib`. See: 2026-03-18-android-screenshot-native-dep
+    val hostNativeLibDir = file("native-host-libs")
+    tasks.withType<Test>().configureEach {
+        if (name.contains("Screenshot", ignoreCase = true)) {
+            systemProperty("jna.library.path", hostNativeLibDir.absolutePath)
+        }
+    }
+
     lint {
         lintConfig = file("lint.xml")
     }

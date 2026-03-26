@@ -367,13 +367,25 @@ test:screenshots:
   extends: [.android-job, .timeout-standard]
   stage: test
   needs: []
-  # allow_failure: true because Compose Preview Screenshot Testing renders off-device
-  # via layoutlib, which cannot load libvauchi_platform.so (JNI). Composables that
-  # reference VauchiRepository or FFI types crash during headless rendering.
-  # Strict mode requires either: (a) screenshot composables use only mock data with
-  # no native dependency, or (b) CI provides the native .so in the rendering classpath.
-  allow_failure: true
   script:
+    # Build host-platform native library so layoutlib can load UniFFI types.
+    # The self-hosted runner has Rust installed (shared with vauchi/core).
+    - |
+      NATIVE_LIB="app/native-host-libs/libvauchi_platform.so"
+      if [ ! -f "$NATIVE_LIB" ]; then
+        echo "📦 Building libvauchi_platform.so for host platform..."
+        CORE_DIR="${CI_PROJECT_DIR}/../core"
+        if [ ! -d "$CORE_DIR" ]; then
+          git clone --depth=1 --branch=main \
+            "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
+        fi
+        cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
+        mkdir -p app/native-host-libs
+        cp "$CORE_DIR/target/release/libvauchi_platform.so" "$NATIVE_LIB"
+        echo "✅ Native library built: $(ls -lh "$NATIVE_LIB" | awk '{print $5}')"
+      else
+        echo "✅ Native library cached: $NATIVE_LIB"
+      fi
     # Self-detecting snapshot mode (pipefail-safe: check dir exists before find)
     - |
       BASELINE_COUNT=0
@@ -419,6 +431,19 @@ test:snapshots:record:
   allow_failure: true
   script:
     - echo "📸 Recording screenshot baselines..."
+    # Build host-platform native library (same as test:screenshots)
+    - |
+      NATIVE_LIB="app/native-host-libs/libvauchi_platform.so"
+      if [ ! -f "$NATIVE_LIB" ]; then
+        CORE_DIR="${CI_PROJECT_DIR}/../core"
+        if [ ! -d "$CORE_DIR" ]; then
+          git clone --depth=1 --branch=main \
+            "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
+        fi
+        cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
+        mkdir -p app/native-host-libs
+        cp "$CORE_DIR/target/release/libvauchi_platform.so" "$NATIVE_LIB"
+      fi
     - |
       set +e
       ./gradlew updateDebugScreenshotTest 2>&1 | tee /tmp/gradle-record.log
