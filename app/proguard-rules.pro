@@ -16,3 +16,10 @@
 -keepclassmembers class * {
     native <methods>;
 }
+
+# Strip debug and verbose log calls from release builds.
+# Log.i/Log.w/Log.e are kept — they indicate startup or actionable errors.
+-assumenosideeffects class android.util.Log {
+    public static int d(...);
+    public static int v(...);
+}
