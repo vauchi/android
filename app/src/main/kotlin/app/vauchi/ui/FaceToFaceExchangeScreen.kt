@@ -330,241 +330,305 @@ fun MultiStageExchangeScreen(
         ) {
             // === PERSISTENT LAYER: Camera + QR (always composed while active) ===
             if (isExchangeActive) {
-                if (!cameraPermissionGranted && permissionsRequested) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier =
-                            Modifier
-                                .padding(32.dp)
-                                .align(Alignment.Center),
-                    ) {
-                        Icon(
-                            Icons.Default.CameraAlt,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            localizationManager.t("exchange.camera_access_required"),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            localizationManager.t("exchange.camera_needed_description"),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Button(onClick = { cameraPermState.request() }, modifier = Modifier.testTag("exchange.grant_permission")) {
-                            Text(localizationManager.t("exchange.grant_permission"))
-                        }
-                    }
-                } else {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        qrBitmap?.let { bitmap ->
-                            Image(
-                                bitmap = bitmap.asImageBitmap(),
-                                contentDescription = localizationManager.t("exchange.qr_code"),
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth(0.98f)
-                                        .aspectRatio(1f)
-                                        .background(
-                                            QrPlaceholderBackground,
-                                            shape = RoundedCornerShape(12.dp),
-                                        ).clip(RoundedCornerShape(12.dp)),
-                            )
-                        } ?: run {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth(0.98f)
-                                        .aspectRatio(1f)
-                                        .background(
-                                            QrPlaceholderBackground,
-                                            shape = RoundedCornerShape(12.dp),
-                                        ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator()
+                ExchangeActiveContent(
+                    qrBitmap = qrBitmap,
+                    cameraPermissionGranted = cameraPermissionGranted,
+                    permissionsRequested = permissionsRequested,
+                    useFrontCamera = useFrontCamera,
+                    multiStageState = multiStageState,
+                    scanQuality = scanQuality,
+                    localizationManager = localizationManager,
+                    onQrScanned = { code ->
+                        if (!scannerGuard.getAndSet(true)) {
+                            lastScanTimestamp = System.currentTimeMillis()
+                            coroutineScope.launch {
+                                viewModel.processMultiStageQr(code)
+                                delay(50L)
+                                scannerGuard.set(false)
                             }
                         }
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        Text(
-                            text = localizationManager.t("exchange.point_camera"),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = InstructionTextColor,
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.Bottom,
-                        ) {
-                            if (cameraPermissionGranted) {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .size(100.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .border(
-                                                2.dp,
-                                                CameraBorderColor,
-                                                RoundedCornerShape(12.dp),
-                                            ),
-                                ) {
-                                    FaceToFaceCameraPreview(
-                                        useFrontCamera = useFrontCamera,
-                                        showPreview = true,
-                                        onQrCodeDetected = { code ->
-                                            if (!scannerGuard.getAndSet(true)) {
-                                                lastScanTimestamp = System.currentTimeMillis()
-                                                coroutineScope.launch {
-                                                    viewModel.processMultiStageQr(code)
-                                                    delay(50L)
-                                                    scannerGuard.set(false)
-                                                }
-                                            }
-                                        },
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.Bottom,
-                            ) {
-                                MultiStageStatusIndicator(multiStageState, localizationManager)
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-                        ExchangeStatusBar(scanQuality, multiStageState, localizationManager)
-                        Spacer(modifier = Modifier.height(4.dp))
-                    }
-                }
+                    },
+                    onRequestPermission = { cameraPermState.request() },
+                )
             }
 
             // === TERMINAL OVERLAY: Success (after grace period) ===
             if (graceCompleted) {
-                // Grace period over — show success or finalization error
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(padding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        if (finalizationError != null) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = localizationManager.t("status.error"),
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                            Text(
-                                localizationManager.t("exchange.save_failed"),
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                            Text(
-                                finalizationError!!,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = localizationManager.t("status.success"),
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                            Text(
-                                localizationManager.t("exchange.contact_exchanged"),
-                                style = MaterialTheme.typography.headlineSmall,
-                            )
-                            Text(
-                                if (finalizationResult != null) {
-                                    localizationManager.t("exchange.contact_added", mapOf("name" to finalizationResult!!))
-                                } else {
-                                    localizationManager.t("exchange.new_contact_added")
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = onDone,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 24.dp)
-                                    .testTag("exchange.done"),
-                        ) {
-                            Text(localizationManager.t("action.done"))
-                        }
-                    }
-                }
+                ExchangeSuccessOverlay(
+                    finalizationError = finalizationError,
+                    finalizationResult = finalizationResult,
+                    localizationManager = localizationManager,
+                    onDone = onDone,
+                )
             }
             // === TERMINAL OVERLAY: Failed ===
             if (multiStageState is MobileProtocolState.Failed) {
                 val failedState = multiStageState as MobileProtocolState.Failed
+                ExchangeFailedOverlay(
+                    reason = failedState.reason,
+                    localizationManager = localizationManager,
+                    onRetry = { viewModel.startMultiStageExchange() },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Active exchange content: QR display, camera preview, status indicators.
+ * Shown while the exchange is in progress (not completed or failed).
+ */
+@Composable
+private fun ExchangeActiveContent(
+    qrBitmap: Bitmap?,
+    cameraPermissionGranted: Boolean,
+    permissionsRequested: Boolean,
+    useFrontCamera: Boolean,
+    multiStageState: MobileProtocolState,
+    scanQuality: ScanQuality,
+    localizationManager: LocalizationManager,
+    onQrScanned: (String) -> Unit,
+    onRequestPermission: () -> Unit,
+) {
+    if (!cameraPermissionGranted && permissionsRequested) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(32.dp),
+            ) {
+                Icon(
+                    Icons.Default.CameraAlt,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    localizationManager.t("exchange.camera_access_required"),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    localizationManager.t("exchange.camera_needed_description"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Button(onClick = onRequestPermission, modifier = Modifier.testTag("exchange.grant_permission")) {
+                    Text(localizationManager.t("exchange.grant_permission"))
+                }
+            }
+        }
+    } else {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            qrBitmap?.let { bitmap ->
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = localizationManager.t("exchange.qr_code"),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(0.98f)
+                            .aspectRatio(1f)
+                            .background(
+                                QrPlaceholderBackground,
+                                shape = RoundedCornerShape(12.dp),
+                            ).clip(RoundedCornerShape(12.dp)),
+                )
+            } ?: run {
                 Box(
-                    modifier = Modifier.fillMaxSize().background(ExchangeBackground),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(0.98f)
+                            .aspectRatio(1f)
+                            .background(
+                                QrPlaceholderBackground,
+                                shape = RoundedCornerShape(12.dp),
+                            ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    CircularProgressIndicator()
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Text(
+                text = localizationManager.t("exchange.point_camera"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = InstructionTextColor,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                if (cameraPermissionGranted) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(100.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .border(
+                                    2.dp,
+                                    CameraBorderColor,
+                                    RoundedCornerShape(12.dp),
+                                ),
                     ) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = localizationManager.t("status.failed"),
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                        Text(
-                            localizationManager.t("exchange.failed_title"),
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        Text(
-                            failedState.reason,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = {
-                                viewModel.startMultiStageExchange()
-                            },
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 24.dp)
-                                    .testTag("exchange.retry"),
-                        ) {
-                            Text(localizationManager.t("action.retry"))
+                        key(useFrontCamera) {
+                            FaceToFaceCameraPreview(
+                                useFrontCamera = useFrontCamera,
+                                showPreview = true,
+                                onQrCodeDetected = onQrScanned,
+                            )
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Bottom,
+                ) {
+                    MultiStageStatusIndicator(multiStageState, localizationManager)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            ExchangeStatusBar(scanQuality, multiStageState, localizationManager)
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+    }
+}
+
+/**
+ * Success overlay shown after the grace period completes.
+ * Displays either a success message with the contact name, or a finalization error.
+ */
+@Composable
+private fun ExchangeSuccessOverlay(
+    finalizationError: String?,
+    finalizationResult: String?,
+    localizationManager: LocalizationManager,
+    onDone: () -> Unit,
+) {
+    // Grace period over — show success or finalization error
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            if (finalizationError != null) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = localizationManager.t("status.error"),
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+                Text(
+                    localizationManager.t("exchange.save_failed"),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                Text(
+                    finalizationError,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = localizationManager.t("status.success"),
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    localizationManager.t("exchange.contact_exchanged"),
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                Text(
+                    if (finalizationResult != null) {
+                        localizationManager.t("exchange.contact_added", mapOf("name" to finalizationResult))
+                    } else {
+                        localizationManager.t("exchange.new_contact_added")
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onDone,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .testTag("exchange.done"),
+            ) {
+                Text(localizationManager.t("action.done"))
+            }
+        }
+    }
+}
+
+/**
+ * Failed overlay shown when the exchange protocol fails.
+ * Displays the failure reason and a retry button.
+ */
+@Composable
+private fun ExchangeFailedOverlay(
+    reason: String,
+    localizationManager: LocalizationManager,
+    onRetry: () -> Unit,
+) {
+    Box(
+        modifier = Modifier.fillMaxSize().background(ExchangeBackground),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = localizationManager.t("status.failed"),
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.error,
+            )
+            Text(
+                localizationManager.t("exchange.failed_title"),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Text(
+                reason,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onRetry,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .testTag("exchange.retry"),
+            ) {
+                Text(localizationManager.t("action.retry"))
             }
         }
     }
