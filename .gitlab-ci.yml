@@ -118,6 +118,7 @@ workflow:
 auto-tag:version:
   stage: auto-tag
   image: alpine:3.21
+  tags: [docker]
   resource_group: auto-tag
   needs: []
   variables:
@@ -162,6 +163,7 @@ auto-tag:version:
 update:bindings-version:
   stage: update
   image: alpine:3.21
+  tags: [docker]
   rules:
     - if: ($CI_PIPELINE_SOURCE == "trigger" || $CI_PIPELINE_SOURCE == "pipeline" || $CI_PIPELINE_SOURCE == "api") && $BINDINGS_VERSION
   script:
