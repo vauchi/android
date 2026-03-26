@@ -262,7 +262,7 @@ check:removed-symbols:
 # Build Stage (MR: debug + lint, Tag: release)
 # ============================================================
 
-build-and-lint:
+build:debug:
   extends: [.android-job, .timeout-standard]
   stage: build
   needs: []
@@ -318,7 +318,7 @@ test:unit:
   extends: [.android-job, .timeout-standard]
   stage: test
   needs:
-    - job: build-and-lint
+    - job: build:debug
       artifacts: false  # Build cache on persistent disk handles reuse, not artifacts
   script:
     - ./gradlew test
