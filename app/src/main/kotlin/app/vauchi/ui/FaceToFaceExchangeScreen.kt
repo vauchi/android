@@ -188,12 +188,11 @@ fun MultiStageExchangeScreen(
             val payload = viewModel.getMultiStageDisplayQr()
             cycleCount++
             if (payload != null) {
-                val prefix = if (payload.data.length >= 4) payload.data.substring(0, 4) else "????"
                 val elapsed = System.currentTimeMillis() - startMs
                 if (cycleCount % 10 == 0) {
                     Log.d(
                         "Exchange",
-                        "cycle=$cycleCount t=${elapsed}ms qr=$prefix dur=${payload.displayDurationMs}ms state=${viewModel.getMultiStageState()}",
+                        "cycle=$cycleCount t=${elapsed}ms dur=${payload.displayDurationMs}ms state=${viewModel.getMultiStageState()}",
                     )
                 }
                 qrBitmap =

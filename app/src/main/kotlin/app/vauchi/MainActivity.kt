@@ -84,12 +84,14 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Prevent screenshots and screen recording (T1-5: screenshot prevention)
-        // TODO: re-enable before release — disabled for device testing automation
-        // window.setFlags(
-        //     android.view.WindowManager.LayoutParams.FLAG_SECURE,
-        //     android.view.WindowManager.LayoutParams.FLAG_SECURE,
-        // )
+        // Prevent screenshots and screen recording (T1-5: screenshot prevention).
+        // Disabled in debug builds for device testing automation (uiautomator).
+        if (!BuildConfig.DEBUG) {
+            window.setFlags(
+                android.view.WindowManager.LayoutParams.FLAG_SECURE,
+                android.view.WindowManager.LayoutParams.FLAG_SECURE,
+            )
+        }
 
         Log.i(
             "Vauchi",
@@ -135,8 +137,10 @@ class MainActivity : FragmentActivity() {
         }
         // Support direct navigation via: am start -n app.vauchi/.MainActivity --es navigate exchange
         // Used by device testing automation to open exchange screen programmatically.
-        intent?.getStringExtra("navigate")?.let { target ->
-            _navigateTo.value = target
+        if (BuildConfig.DEBUG) {
+            intent?.getStringExtra("navigate")?.let { target ->
+                _navigateTo.value = target
+            }
         }
     }
 }
