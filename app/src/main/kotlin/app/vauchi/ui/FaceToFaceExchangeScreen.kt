@@ -69,6 +69,23 @@ private val QR_BACKGROUND = android.graphics.Color.rgb(224, 224, 224) // #E0E0E0
 /** Warm beige background: soft, non-reflective. */
 private val ExchangeBackground = Color(0xFFF5F0EB)
 
+/** QR placeholder and background tint: light gray. */
+private val QrPlaceholderBackground = QrPlaceholderBackground
+
+/** Instruction text color: medium gray on beige. */
+private val InstructionTextColor = Color(0xFF666666)
+
+/** Camera preview border: medium gray. */
+private val CameraBorderColor = CameraBorderColor
+
+/** Status bar background: slightly darker beige. */
+private val StatusBarBackground = Color(0xFFEDE8E3)
+
+/** Scan quality indicator colors. */
+private val ScanGoodColor = ScanGoodColor
+private val ScanFairColor = ScanFairColor
+private val ScanNoneColor = Color(0xFFF44336)
+
 private enum class ScanQuality {
     GOOD, // Green — QR being scanned right now
     FAIR, // Orange — scanned recently but stale
@@ -357,7 +374,7 @@ fun MultiStageExchangeScreen(
                                         .fillMaxWidth(0.98f)
                                         .aspectRatio(1f)
                                         .background(
-                                            Color(0xFFE0E0E0),
+                                            QrPlaceholderBackground,
                                             shape = RoundedCornerShape(12.dp),
                                         ).clip(RoundedCornerShape(12.dp)),
                             )
@@ -368,7 +385,7 @@ fun MultiStageExchangeScreen(
                                         .fillMaxWidth(0.98f)
                                         .aspectRatio(1f)
                                         .background(
-                                            Color(0xFFE0E0E0),
+                                            QrPlaceholderBackground,
                                             shape = RoundedCornerShape(12.dp),
                                         ),
                                 contentAlignment = Alignment.Center,
@@ -382,7 +399,7 @@ fun MultiStageExchangeScreen(
                         Text(
                             text = localizationManager.t("exchange.point_camera"),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF666666),
+                            color = InstructionTextColor,
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -402,7 +419,7 @@ fun MultiStageExchangeScreen(
                                             .clip(RoundedCornerShape(12.dp))
                                             .border(
                                                 2.dp,
-                                                Color(0xFF999999),
+                                                CameraBorderColor,
                                                 RoundedCornerShape(12.dp),
                                             ),
                                 ) {
@@ -643,13 +660,13 @@ private fun ExchangeStatusBar(
 ) {
     val indicatorColor =
         when (scanQuality) {
-            ScanQuality.GOOD -> Color(0xFF4CAF50)
+            ScanQuality.GOOD -> ScanGoodColor
 
             // Green
-            ScanQuality.FAIR -> Color(0xFFFF9800)
+            ScanQuality.FAIR -> ScanFairColor
 
             // Orange
-            ScanQuality.NONE -> Color(0xFFF44336) // Red
+            ScanQuality.NONE -> ScanNoneColor
         }
     val label =
         when (scanQuality) {
@@ -662,7 +679,7 @@ private fun ExchangeStatusBar(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(Color(0xFFEDE8E3)) // Slightly darker beige
+                .background(StatusBarBackground)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
