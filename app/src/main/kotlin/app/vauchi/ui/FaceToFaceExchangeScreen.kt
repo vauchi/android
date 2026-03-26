@@ -282,93 +282,7 @@ fun MultiStageExchangeScreen(
     ) { padding ->
         when (multiStageState) {
             is MobileProtocolState.Complete, is MobileProtocolState.Finalized -> {
-                if (!graceCompleted) {
-                    // Keep showing QR + camera while confirming mutual readiness.
-                    // CRITICAL: Camera must stay active so we can scan peer's RDYY.
-                    // Previously the camera was destroyed here, causing both sides
-                    // to broadcast RDYY without scanning — the root cause of
-                    // asymmetric exchange failure on real devices.
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .padding(padding)
-                                .background(ExchangeBackground),
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(top = 8.dp),
-                            ) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = StatusTextColor, strokeWidth = 2.dp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Completing exchange...",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = StatusTextColor,
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            // QR code display
-                            qrBitmap?.let { bmp ->
-                                Image(
-                                    bitmap = bmp.asImageBitmap(),
-                                    contentDescription = "Exchange QR code",
-                                    modifier =
-                                        Modifier
-                                            .weight(1f)
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 24.dp),
-                                    contentScale = ContentScale.FillWidth,
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            // Camera preview — must stay active to scan peer's RDYY
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.Bottom,
-                            ) {
-                                if (cameraPermissionGranted) {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .size(100.dp)
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .border(2.dp, Color(0xFF999999), RoundedCornerShape(12.dp)),
-                                    ) {
-                                        FaceToFaceCameraPreview(
-                                            useFrontCamera = useFrontCamera,
-                                            showPreview = true,
-                                            onQrCodeDetected = { code ->
-                                                if (!scannerGuard.getAndSet(true)) {
-                                                    lastScanTimestamp = System.currentTimeMillis()
-                                                    coroutineScope.launch {
-                                                        viewModel.processMultiStageQr(code)
-                                                        delay(50L)
-                                                        scannerGuard.set(false)
-                                                    }
-                                                }
-                                            },
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    "Hold steady — scanning peer...",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = StatusTextColor,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                        }
-                    }
-                } else {
+                if (graceCompleted) {
                     // Grace period over — show success or finalization error
                     Box(
                         modifier =
@@ -837,7 +751,9 @@ fun FaceToFaceCameraPreview(
                 cameraProviderFuture.addListener({
                     val cameraProvider = cameraProviderFuture.get()
 
-                    // 480p for front camera — best decode rate at close distance
+                    // 480p — balance between fast ML Kit processing and enough
+                    // resolution for QR decoding. 320x240 was too low (Samsung S7
+                    // couldn't decode). 640x480 is the sweet spot.
                     val resolutionSelector =
                         ResolutionSelector
                             .Builder()
