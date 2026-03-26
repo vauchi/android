@@ -155,8 +155,8 @@ fun MultiStageExchangeScreen(
     val cameraPermState =
         rememberPermissionState(
             permission = Manifest.permission.CAMERA,
-            title = "Camera Required",
-            rationale = "Vauchi needs the camera to scan your contact's QR code during the exchange.",
+            title = localizationManager.t("exchange.camera_permission_title"),
+            rationale = localizationManager.t("exchange.camera_needed_description"),
         )
     val cameraPermissionGranted = cameraPermState.isGranted
     var permissionsRequested by remember { mutableStateOf(cameraPermissionGranted) }
@@ -214,7 +214,7 @@ fun MultiStageExchangeScreen(
                         finalizationResult = result.contactName
                         Log.i("Exchange", "Contact saved: ${result.contactId}")
                     } else {
-                        finalizationError = "Failed to save contact"
+                        finalizationError = localizationManager.t("exchange.save_failed")
                         Log.e("Exchange", "Finalization returned null")
                     }
                     graceCompleted = true
@@ -233,7 +233,7 @@ fun MultiStageExchangeScreen(
                     finalizationResult = result.contactName
                     Log.i("Exchange", "Contact saved: ${result.contactId}")
                 } else {
-                    finalizationError = "Failed to save contact"
+                    finalizationError = localizationManager.t("exchange.save_failed")
                     Log.e("Exchange", "Finalization returned null")
                 }
                 graceCompleted = true
@@ -259,7 +259,11 @@ fun MultiStageExchangeScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack, modifier = Modifier.size(36.dp).testTag("exchange.back")) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = localizationManager.t("action.back"),
+                        modifier = Modifier.size(20.dp),
+                    )
                 }
                 Text(
                     localizationManager.t("exchange.title"),
@@ -272,7 +276,14 @@ fun MultiStageExchangeScreen(
                 ) {
                     Icon(
                         Icons.Default.Cameraswitch,
-                        contentDescription = if (useFrontCamera) "Switch to rear camera" else "Switch to front camera",
+                        contentDescription =
+                            if (useFrontCamera) {
+                                localizationManager.t(
+                                    "exchange.switch_rear_camera",
+                                )
+                            } else {
+                                localizationManager.t("exchange.switch_front_camera")
+                            },
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -318,16 +329,16 @@ fun MultiStageExchangeScreen(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            "Camera access required",
+                            localizationManager.t("exchange.camera_access_required"),
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            "Camera is needed to scan QR codes for contact exchange.",
+                            localizationManager.t("exchange.camera_needed_description"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Button(onClick = { cameraPermState.request() }, modifier = Modifier.testTag("exchange.grant_permission")) {
-                            Text("Grant Permission")
+                            Text(localizationManager.t("exchange.grant_permission"))
                         }
                     }
                 } else {
@@ -340,7 +351,7 @@ fun MultiStageExchangeScreen(
                         qrBitmap?.let { bitmap ->
                             Image(
                                 bitmap = bitmap.asImageBitmap(),
-                                contentDescription = "Exchange QR code",
+                                contentDescription = localizationManager.t("exchange.qr_code"),
                                 modifier =
                                     Modifier
                                         .fillMaxWidth(0.98f)
@@ -369,7 +380,7 @@ fun MultiStageExchangeScreen(
                         Spacer(modifier = Modifier.weight(1f))
 
                         Text(
-                            text = "Point camera at other phone's QR",
+                            text = localizationManager.t("exchange.point_camera"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color(0xFF666666),
                         )
@@ -418,12 +429,12 @@ fun MultiStageExchangeScreen(
                                 modifier = Modifier.weight(1f),
                                 verticalArrangement = Arrangement.Bottom,
                             ) {
-                                MultiStageStatusIndicator(multiStageState)
+                                MultiStageStatusIndicator(multiStageState, localizationManager)
                             }
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
-                        ExchangeStatusBar(scanQuality, multiStageState)
+                        ExchangeStatusBar(scanQuality, multiStageState, localizationManager)
                         Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
@@ -446,12 +457,12 @@ fun MultiStageExchangeScreen(
                         if (finalizationError != null) {
                             Icon(
                                 Icons.Default.Close,
-                                contentDescription = "Error",
+                                contentDescription = localizationManager.t("status.error"),
                                 modifier = Modifier.size(64.dp),
                                 tint = MaterialTheme.colorScheme.error,
                             )
                             Text(
-                                "Exchange completed but save failed",
+                                localizationManager.t("exchange.save_failed"),
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -463,19 +474,19 @@ fun MultiStageExchangeScreen(
                         } else {
                             Icon(
                                 Icons.Default.CheckCircle,
-                                contentDescription = "Success",
+                                contentDescription = localizationManager.t("status.success"),
                                 modifier = Modifier.size(64.dp),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                             Text(
-                                "Contact exchanged!",
+                                localizationManager.t("exchange.contact_exchanged"),
                                 style = MaterialTheme.typography.headlineSmall,
                             )
                             Text(
                                 if (finalizationResult != null) {
-                                    "$finalizationResult has been added."
+                                    localizationManager.t("exchange.contact_added", mapOf("name" to finalizationResult!!))
                                 } else {
-                                    "The new contact has been added."
+                                    localizationManager.t("exchange.new_contact_added")
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -508,12 +519,12 @@ fun MultiStageExchangeScreen(
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Failed",
+                            contentDescription = localizationManager.t("status.failed"),
                             modifier = Modifier.size(64.dp),
                             tint = MaterialTheme.colorScheme.error,
                         )
                         Text(
-                            "Exchange failed",
+                            localizationManager.t("exchange.failed_title"),
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -549,7 +560,10 @@ private val StatusTextColor = Color(0xFF444444)
  * Shows the current multi-stage protocol status with appropriate indicators.
  */
 @Composable
-private fun MultiStageStatusIndicator(state: MobileProtocolState) {
+private fun MultiStageStatusIndicator(
+    state: MobileProtocolState,
+    localizationManager: LocalizationManager,
+) {
     when (state) {
         is MobileProtocolState.Idle,
         is MobileProtocolState.Advertising,
@@ -557,7 +571,7 @@ private fun MultiStageStatusIndicator(state: MobileProtocolState) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(14.dp), color = StatusTextColor, strokeWidth = 2.dp)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Waiting for peer...", style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
+                Text(localizationManager.t("exchange.waiting_peer"), style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
             }
         }
 
@@ -565,7 +579,7 @@ private fun MultiStageStatusIndicator(state: MobileProtocolState) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(14.dp), color = StatusTextColor, strokeWidth = 2.dp)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Peer found! Exchanging...", style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
+                Text(localizationManager.t("exchange.peer_found"), style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
             }
         }
 
@@ -575,7 +589,11 @@ private fun MultiStageStatusIndicator(state: MobileProtocolState) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(modifier = Modifier.size(14.dp), color = StatusTextColor, strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Transferring...", style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
+                    Text(
+                        localizationManager.t("exchange.transferring"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = StatusTextColor,
+                    )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 val receiveProgress =
@@ -604,7 +622,7 @@ private fun MultiStageStatusIndicator(state: MobileProtocolState) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(14.dp), color = StatusTextColor, strokeWidth = 2.dp)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Verifying exchange...", style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
+                Text(localizationManager.t("exchange.verifying"), style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
             }
         }
 
@@ -621,6 +639,7 @@ private fun MultiStageStatusIndicator(state: MobileProtocolState) {
 private fun ExchangeStatusBar(
     scanQuality: ScanQuality,
     state: MobileProtocolState,
+    localizationManager: LocalizationManager,
 ) {
     val indicatorColor =
         when (scanQuality) {
@@ -634,9 +653,9 @@ private fun ExchangeStatusBar(
         }
     val label =
         when (scanQuality) {
-            ScanQuality.GOOD -> "Scanning"
-            ScanQuality.FAIR -> "Weak signal"
-            ScanQuality.NONE -> "No QR detected"
+            ScanQuality.GOOD -> localizationManager.t("exchange.scanning")
+            ScanQuality.FAIR -> localizationManager.t("exchange.weak_signal")
+            ScanQuality.NONE -> localizationManager.t("exchange.no_qr_detected")
         }
 
     Row(
