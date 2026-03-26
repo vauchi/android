@@ -25,6 +25,9 @@ app/src/main/jniLibs/
 app/src/main/kotlin/uniffi/
 app/src/local-bindings/
 
+# Host-platform native library for screenshot tests (built by CI or locally)
+app/native-host-libs/
+
 # CI local testing
 .gitlab-ci-local/
 
