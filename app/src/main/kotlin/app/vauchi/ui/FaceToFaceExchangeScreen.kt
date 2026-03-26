@@ -105,13 +105,16 @@ fun MultiStageExchangeScreen(
         }
     }
 
-    // Force max screen brightness during exchange
+    // Set moderate brightness during exchange (65%).
+    // Counter-intuitive: max brightness causes camera overexposure on the
+    // scanning device, washing out QR module contrast. 65% gives the peer's
+    // camera better dynamic range for reliable QR detection.
     DisposableEffect(Unit) {
         val activity = context as? Activity
         val previousBrightness = activity?.window?.attributes?.screenBrightness ?: -1.0f
         activity?.window?.let { window ->
             val params = window.attributes
-            params.screenBrightness = 1.0f
+            params.screenBrightness = 0.65f
             window.attributes = params
         }
         onDispose {
@@ -175,13 +178,24 @@ fun MultiStageExchangeScreen(
     }
 
     // QR display cycling loop — gets next QR from core on a timer.
-    // Core manages the grace period after Complete (cycling VRFY+CONF so slower
+    // Core manages the grace period after Complete (cycling RDYY so slower
     // peers can catch up). We keep calling getDisplayQr() until core returns null.
     LaunchedEffect(cameraPermissionGranted) {
         if (!cameraPermissionGranted) return@LaunchedEffect
+        var cycleCount = 0
+        val startMs = System.currentTimeMillis()
         while (true) {
             val payload = viewModel.getMultiStageDisplayQr()
+            cycleCount++
             if (payload != null) {
+                val prefix = if (payload.data.length >= 4) payload.data.substring(0, 4) else "????"
+                val elapsed = System.currentTimeMillis() - startMs
+                if (cycleCount % 10 == 0) {
+                    Log.d(
+                        "Exchange",
+                        "cycle=$cycleCount t=${elapsed}ms qr=$prefix dur=${payload.displayDurationMs}ms state=${viewModel.getMultiStageState()}",
+                    )
+                }
                 qrBitmap =
                     generateQrBitmapForMultiStage(
                         payload.data,
@@ -192,6 +206,8 @@ fun MultiStageExchangeScreen(
             } else {
                 // Core returned null — grace period expired or failed
                 val state = viewModel.getMultiStageState()
+                val elapsed = System.currentTimeMillis() - startMs
+                Log.w("Exchange", "null QR at cycle=$cycleCount t=${elapsed}ms state=$state")
                 if (state is MobileProtocolState.Finalized) {
                     // Finalize: save the received contact to storage
                     val result = viewModel.finalizeMultiStageExchange()
@@ -208,7 +224,27 @@ fun MultiStageExchangeScreen(
             }
             // Refresh protocol state from core
             val state = viewModel.getMultiStageState()
-            if (state is MobileProtocolState.Failed) break
+            // Save contact immediately on Finalized — don't wait for grace period.
+            // The QR loop continues in the background so the peer can still scan.
+            if (state is MobileProtocolState.Finalized && !graceCompleted) {
+                val elapsed = System.currentTimeMillis() - startMs
+                Log.i("Exchange", "Finalized at cycle=$cycleCount t=${elapsed}ms — saving contact")
+                val result = viewModel.finalizeMultiStageExchange()
+                if (result != null) {
+                    finalizationResult = result.contactName
+                    Log.i("Exchange", "Contact saved: ${result.contactId}")
+                } else {
+                    finalizationError = "Failed to save contact"
+                    Log.e("Exchange", "Finalization returned null")
+                }
+                graceCompleted = true
+                // Don't break — keep showing RDYY QR so peer can finalize too
+            }
+            if (state is MobileProtocolState.Failed) {
+                val elapsed = System.currentTimeMillis() - startMs
+                Log.w("Exchange", "FAILED at cycle=$cycleCount t=${elapsed}ms state=$state")
+                break
+            }
         }
     }
 
@@ -247,19 +283,26 @@ fun MultiStageExchangeScreen(
         when (multiStageState) {
             is MobileProtocolState.Complete, is MobileProtocolState.Finalized -> {
                 if (!graceCompleted) {
-                    // Keep showing QR while confirming mutual readiness
+                    // Keep showing QR + camera while confirming mutual readiness.
+                    // CRITICAL: Camera must stay active so we can scan peer's RDYY.
+                    // Previously the camera was destroyed here, causing both sides
+                    // to broadcast RDYY without scanning — the root cause of
+                    // asymmetric exchange failure on real devices.
                     Box(
                         modifier =
                             Modifier
                                 .fillMaxSize()
                                 .padding(padding)
                                 .background(ExchangeBackground),
-                        contentAlignment = Alignment.Center,
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxSize(),
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(top = 8.dp),
+                            ) {
                                 CircularProgressIndicator(modifier = Modifier.size(16.dp), color = StatusTextColor, strokeWidth = 2.dp)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
@@ -268,16 +311,59 @@ fun MultiStageExchangeScreen(
                                     color = StatusTextColor,
                                 )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            // QR code display
                             qrBitmap?.let { bmp ->
                                 Image(
                                     bitmap = bmp.asImageBitmap(),
                                     contentDescription = "Exchange QR code",
                                     modifier =
                                         Modifier
+                                            .weight(1f)
                                             .fillMaxWidth()
                                             .padding(horizontal = 24.dp),
                                     contentScale = ContentScale.FillWidth,
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            // Camera preview — must stay active to scan peer's RDYY
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.Bottom,
+                            ) {
+                                if (cameraPermissionGranted) {
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .size(100.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .border(2.dp, Color(0xFF999999), RoundedCornerShape(12.dp)),
+                                    ) {
+                                        FaceToFaceCameraPreview(
+                                            useFrontCamera = useFrontCamera,
+                                            showPreview = true,
+                                            onQrCodeDetected = { code ->
+                                                if (!scannerGuard.getAndSet(true)) {
+                                                    lastScanTimestamp = System.currentTimeMillis()
+                                                    coroutineScope.launch {
+                                                        viewModel.processMultiStageQr(code)
+                                                        delay(50L)
+                                                        scannerGuard.set(false)
+                                                    }
+                                                }
+                                            },
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    "Hold steady — scanning peer...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = StatusTextColor,
+                                    modifier = Modifier.weight(1f),
                                 )
                             }
                         }

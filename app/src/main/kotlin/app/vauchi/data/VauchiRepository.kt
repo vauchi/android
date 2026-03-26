@@ -606,6 +606,7 @@ class VauchiRepository(
 
     fun getTorConfig(): Triple<Boolean, List<String>, Boolean> = Triple(false, emptyList(), false)
 
+    @Suppress("UNUSED_PARAMETER")
     fun saveTorConfig(
         enabled: Boolean,
         bridges: List<String>,
