@@ -85,10 +85,11 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
 
         // Prevent screenshots and screen recording (T1-5: screenshot prevention)
-        window.setFlags(
-            android.view.WindowManager.LayoutParams.FLAG_SECURE,
-            android.view.WindowManager.LayoutParams.FLAG_SECURE,
-        )
+        // TODO: re-enable before release — disabled for device testing automation
+        // window.setFlags(
+        //     android.view.WindowManager.LayoutParams.FLAG_SECURE,
+        //     android.view.WindowManager.LayoutParams.FLAG_SECURE,
+        // )
 
         Log.i(
             "Vauchi",
@@ -100,6 +101,7 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val deepLinkUri by _deepLinkUri
+            val navigateTo by _navigateTo
             VauchiTheme {
                 Surface(
                     modifier =
@@ -111,6 +113,8 @@ class MainActivity : FragmentActivity() {
                     MainScreen(
                         deepLinkUri = deepLinkUri,
                         onDeepLinkConsumed = { _deepLinkUri.value = null },
+                        navigateTo = navigateTo,
+                        onNavigateConsumed = { _navigateTo.value = null },
                     )
                 }
             }
@@ -123,9 +127,16 @@ class MainActivity : FragmentActivity() {
         handleIncomingIntent(intent)
     }
 
+    private val _navigateTo = mutableStateOf<String?>(null)
+
     private fun handleIncomingIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_VIEW) {
             _deepLinkUri.value = intent.data
+        }
+        // Support direct navigation via: am start -n app.vauchi/.MainActivity --es navigate exchange
+        // Used by device testing automation to open exchange screen programmatically.
+        intent?.getStringExtra("navigate")?.let { target ->
+            _navigateTo.value = target
         }
     }
 }
@@ -152,6 +163,8 @@ fun MainScreen(
     viewModel: MainViewModel = viewModel(),
     deepLinkUri: Uri? = null,
     onDeepLinkConsumed: () -> Unit = {},
+    navigateTo: String? = null,
+    onNavigateConsumed: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
@@ -171,6 +184,20 @@ fun MainScreen(
     val deepLinkHandler = remember { app.vauchi.deeplink.DeepLinkHandler() }
     var showDeepLinkConsent by remember { mutableStateOf(false) }
     var deepLinkPayload by remember { mutableStateOf<String?>(null) }
+
+    // Handle programmatic navigation (device testing: --es navigate exchange)
+    // Must wait for UiState.Ready — auth must complete before navigating.
+    LaunchedEffect(navigateTo, uiState) {
+        if (navigateTo != null && uiState is UiState.Ready) {
+            when (navigateTo) {
+                "exchange" -> currentScreen = Screen.MultiStageExchange
+                "contacts" -> currentScreen = Screen.Contacts
+                "settings" -> currentScreen = Screen.Settings
+                "home" -> currentScreen = Screen.Home
+            }
+            onNavigateConsumed()
+        }
+    }
 
     // Handle incoming deep link URI with consent gate
     LaunchedEffect(deepLinkUri) {
