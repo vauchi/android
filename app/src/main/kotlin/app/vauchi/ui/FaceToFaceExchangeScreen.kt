@@ -222,8 +222,8 @@ fun MultiStageExchangeScreen(
                 val elapsed = System.currentTimeMillis() - startMs
                 if (cycleCount % 10 == 0) {
                     Log.d(
-                        "Exchange",
-                        "cycle=$cycleCount t=${elapsed}ms dur=${payload.displayDurationMs}ms state=${viewModel.getMultiStageState()}",
+                        "Vauchi",
+                        "Exchange: cycle=$cycleCount t=${elapsed}ms dur=${payload.displayDurationMs}ms",
                     )
                 }
                 qrBitmap =
@@ -237,16 +237,16 @@ fun MultiStageExchangeScreen(
                 // Core returned null — grace period expired or failed
                 val state = viewModel.getMultiStageState()
                 val elapsed = System.currentTimeMillis() - startMs
-                Log.w("Exchange", "null QR at cycle=$cycleCount t=${elapsed}ms state=$state")
+                Log.w("Vauchi", "Exchange: null QR at cycle=$cycleCount t=${elapsed}ms")
                 if (state is MobileProtocolState.Finalized && !graceCompleted) {
                     // Finalize: save the received contact to storage
                     val result = viewModel.finalizeMultiStageExchange()
                     if (result != null) {
                         finalizationResult = result.contactName
-                        Log.i("Exchange", "Contact saved: ${result.contactId}")
+                        Log.i("Vauchi", "Exchange: contact saved")
                     } else {
                         finalizationError = localizationManager.t("exchange.save_failed")
-                        Log.e("Exchange", "Finalization returned null")
+                        Log.e("Vauchi", "Exchange: finalization returned null")
                     }
                     graceCompleted = true
                 }
@@ -258,21 +258,21 @@ fun MultiStageExchangeScreen(
             // The QR loop continues in the background so the peer can still scan.
             if (state is MobileProtocolState.Finalized && !graceCompleted) {
                 val elapsed = System.currentTimeMillis() - startMs
-                Log.i("Exchange", "Finalized at cycle=$cycleCount t=${elapsed}ms — saving contact")
+                Log.i("Vauchi", "Exchange: finalized at cycle=$cycleCount t=${elapsed}ms")
                 val result = viewModel.finalizeMultiStageExchange()
                 if (result != null) {
                     finalizationResult = result.contactName
-                    Log.i("Exchange", "Contact saved: ${result.contactId}")
+                    Log.i("Vauchi", "Exchange: contact saved")
                 } else {
                     finalizationError = localizationManager.t("exchange.save_failed")
-                    Log.e("Exchange", "Finalization returned null")
+                    Log.e("Vauchi", "Exchange: finalization returned null")
                 }
                 graceCompleted = true
                 // Don't break — keep showing RDYY QR so peer can finalize too
             }
             if (state is MobileProtocolState.Failed) {
                 val elapsed = System.currentTimeMillis() - startMs
-                Log.w("Exchange", "FAILED at cycle=$cycleCount t=${elapsed}ms state=$state")
+                Log.w("Vauchi", "Exchange: FAILED at cycle=$cycleCount t=${elapsed}ms")
                 break
             }
         }
@@ -919,7 +919,7 @@ fun FaceToFaceCameraPreview(
                                 .build()
                         camera.cameraControl.startFocusAndMetering(action)
                     } catch (e: Exception) {
-                        Log.e("FaceToFace", "Camera binding failed", e)
+                        Log.e("Vauchi", "Exchange: camera binding failed", e)
                     }
                 }, ContextCompat.getMainExecutor(ctx))
             }
