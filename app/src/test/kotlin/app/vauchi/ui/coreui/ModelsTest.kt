@@ -317,6 +317,21 @@ class ModelsTest {
         assertEquals("""{"GroupViewSelected":{"group_name":"Family"}}""", serialized)
     }
 
+    @Test
+    fun `serialize UndoPressed`() {
+        val action = UserAction.UndoPressed(actionId = "undo_delete_field:f1")
+        val serialized = json.encodeToString(UserAction.serializer(), action)
+        assertEquals("""{"UndoPressed":{"action_id":"undo_delete_field:f1"}}""", serialized)
+    }
+
+    @Test
+    fun `deserialize UndoPressed`() {
+        val input = """{"UndoPressed":{"action_id":"undo_delete_field:f1"}}"""
+        val result = json.decodeFromString<UserAction>(input)
+        assertTrue(result is UserAction.UndoPressed)
+        assertEquals("undo_delete_field:f1", (result as UserAction.UndoPressed).actionId)
+    }
+
     // ── ActionResult ────────────────────────────────────────────────
 
     @Test
