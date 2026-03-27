@@ -294,6 +294,7 @@ fun SettingsScreen(
                                     is SyncState.Syncing -> localizationManager.t("sync.syncing")
                                     is SyncState.Success -> "Sync complete"
                                     is SyncState.Error -> "Sync failed"
+                                    is SyncState.RateLimited -> "Please wait"
                                 },
                             style = MaterialTheme.typography.bodyMedium,
                             color =

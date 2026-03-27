@@ -34,6 +34,7 @@ import uniffi.vauchi_platform.MobileDeletionState
 import uniffi.vauchi_platform.MobileDemoContact
 import uniffi.vauchi_platform.MobileDemoContactState
 import uniffi.vauchi_platform.MobileDeviceLinkInitiator
+import uniffi.vauchi_platform.MobileException
 import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileFieldValidation
 import uniffi.vauchi_platform.MobileGdprExport
@@ -375,7 +376,7 @@ class MainViewModel(
                         }
                     }
                 showMessage(msg)
-            } catch (e: MobileError.RateLimited) {
+            } catch (e: MobileException.RateLimited) {
                 _syncState.value = SyncState.RateLimited(e.retryAfterSecs.toLong())
                 showMessage("Please wait ${e.retryAfterSecs}s before syncing again")
             } catch (e: Exception) {
