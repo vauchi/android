@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +38,17 @@ class OnboardingViewModel : ViewModel() {
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val _toastMessage = MutableStateFlow<String?>(null)
+    val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
+
+    private val _toastUndoActionId = MutableStateFlow<String?>(null)
+    val toastUndoActionId: StateFlow<String?> = _toastUndoActionId.asStateFlow()
+
+    fun dismissToast() {
+        _toastMessage.value = null
+        _toastUndoActionId.value = null
+    }
 
     init {
         loadCurrentScreen()
@@ -126,6 +138,15 @@ class OnboardingViewModel : ViewModel() {
                 _isComplete.value = true
             }
 
+            is ActionResult.ShowToast -> {
+                _toastMessage.value = result.message
+                _toastUndoActionId.value = result.undoActionId
+                viewModelScope.launch {
+                    delay(TOAST_DURATION_MS)
+                    dismissToast()
+                }
+            }
+
             is ActionResult.StartDeviceLink,
             is ActionResult.StartBackupImport,
             is ActionResult.OpenContact,
@@ -133,7 +154,6 @@ class OnboardingViewModel : ViewModel() {
             is ActionResult.OpenUrl,
             is ActionResult.ShowAlert,
             is ActionResult.OpenEntryDetail,
-            is ActionResult.ShowToast,
             is ActionResult.RequestCamera,
             is ActionResult.WipeComplete,
             is ActionResult.ExchangeCommands,
@@ -147,5 +167,6 @@ class OnboardingViewModel : ViewModel() {
 
     companion object {
         private const val TAG = "OnboardingViewModel"
+        private const val TOAST_DURATION_MS = 5000L
     }
 }

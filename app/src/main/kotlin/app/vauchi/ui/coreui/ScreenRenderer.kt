@@ -4,6 +4,7 @@
 
 package app.vauchi.ui.coreui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +20,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -37,6 +39,7 @@ import app.vauchi.ui.coreui.components.SettingsGroupComponent
 import app.vauchi.ui.coreui.components.StatusIndicatorComponent
 import app.vauchi.ui.coreui.components.TextComponent
 import app.vauchi.ui.coreui.components.TextInputComponent
+import app.vauchi.ui.coreui.components.ToastOverlay
 import app.vauchi.ui.coreui.components.ToggleListComponent
 
 /**
@@ -53,68 +56,86 @@ fun ScreenRenderer(
     screen: ScreenModel,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
+    toastMessage: String? = null,
+    toastUndoActionId: String? = null,
+    onToastDismiss: () -> Unit = {},
 ) {
-    Column(
-        modifier =
-            modifier
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-    ) {
-        // Progress indicator
-        screen.progress?.let { progress ->
-            LinearProgressIndicator(
-                progress = {
-                    if (progress.totalSteps > 0) {
-                        progress.currentStep.toFloat() / progress.totalSteps.toFloat()
-                    } else {
-                        0f
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
+    Box(modifier = modifier) {
+        Column(
+            modifier =
+                Modifier
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+        ) {
+            // Progress indicator
+            screen.progress?.let { progress ->
+                LinearProgressIndicator(
+                    progress = {
+                        if (progress.totalSteps > 0) {
+                            progress.currentStep.toFloat() / progress.totalSteps.toFloat()
+                        } else {
+                            0f
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                progress.label?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Title
+            Text(
+                text = screen.title,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.semantics { heading() },
             )
-            progress.label?.let {
+
+            // Subtitle
+            screen.subtitle?.let {
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
                 )
             }
+
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Components
+            screen.components.forEach { component ->
+                ComponentRenderer(component = component, onAction = onAction)
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Action buttons
+            screen.actions.forEach { action ->
+                ActionButton(action = action, onAction = onAction)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
 
-        // Title
-        Text(
-            text = screen.title,
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.semantics { heading() },
+        // Toast overlay (top-aligned, above scroll content)
+        ToastOverlay(
+            message = toastMessage ?: "",
+            visible = toastMessage != null,
+            undoLabel = if (toastUndoActionId != null) "Undo" else null,
+            onUndo =
+                toastUndoActionId?.let { actionId ->
+                    { onAction(UserAction.UndoPressed(actionId = actionId)) }
+                },
+            onDismiss = onToastDismiss,
+            modifier = Modifier.align(Alignment.TopCenter),
         )
-
-        // Subtitle
-        screen.subtitle?.let {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = it,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Components
-        screen.components.forEach { component ->
-            ComponentRenderer(component = component, onAction = onAction)
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Action buttons
-        screen.actions.forEach { action ->
-            ActionButton(action = action, onAction = onAction)
-            Spacer(modifier = Modifier.height(8.dp))
-        }
     }
 }
 

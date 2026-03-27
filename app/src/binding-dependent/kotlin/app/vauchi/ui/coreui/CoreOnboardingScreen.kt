@@ -47,6 +47,8 @@ fun CoreOnboardingScreen(
     val screen by viewModel.screen.collectAsState()
     val isComplete by viewModel.isComplete.collectAsState()
     val error by viewModel.error.collectAsState()
+    val toastMessage by viewModel.toastMessage.collectAsState()
+    val toastUndoActionId by viewModel.toastUndoActionId.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Navigate away when onboarding completes
@@ -95,6 +97,9 @@ fun CoreOnboardingScreen(
                     screen = targetScreen,
                     onAction = viewModel::handleAction,
                     modifier = Modifier.fillMaxSize(),
+                    toastMessage = toastMessage,
+                    toastUndoActionId = toastUndoActionId,
+                    onToastDismiss = viewModel::dismissToast,
                 )
             }
         }

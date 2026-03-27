@@ -1016,6 +1016,10 @@ sealed class UserAction {
         val componentId: String,
         val itemId: String,
     ) : UserAction()
+
+    data class UndoPressed(
+        val actionId: String,
+    ) : UserAction()
 }
 
 internal object UserActionSerializer : KSerializer<UserAction> {
@@ -1147,6 +1151,17 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                         ),
                     )
                 }
+
+                is UserAction.UndoPressed -> {
+                    JsonObject(
+                        mapOf(
+                            "UndoPressed" to
+                                JsonObject(
+                                    mapOf("action_id" to JsonPrimitive(value.actionId)),
+                                ),
+                        ),
+                    )
+                }
             }
         jsonEncoder.encodeJsonElement(element)
     }
@@ -1215,6 +1230,13 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                 UserAction.SettingsToggled(
                     componentId = obj["component_id"]!!.jsonPrimitive.content,
                     itemId = obj["item_id"]!!.jsonPrimitive.content,
+                )
+            }
+
+            "UndoPressed" in element -> {
+                val obj = element["UndoPressed"] as JsonObject
+                UserAction.UndoPressed(
+                    actionId = obj["action_id"]!!.jsonPrimitive.content,
                 )
             }
 
