@@ -267,7 +267,7 @@ class MainViewModel(
                         try {
                             repository.addField(MobileFieldType.PHONE, "Phone", it)
                         } catch (e: Exception) {
-                            android.util.Log.w("MainViewModel", "Skipping phone field: ${e.message}")
+                            android.util.Log.w("Vauchi", "Onboarding: skipping phone field: ${e.message}")
                         }
                     }
 
@@ -276,7 +276,7 @@ class MainViewModel(
                         try {
                             repository.addField(MobileFieldType.EMAIL, "Email", it)
                         } catch (e: Exception) {
-                            android.util.Log.w("MainViewModel", "Skipping email field: ${e.message}")
+                            android.util.Log.w("Vauchi", "Onboarding: skipping email field: ${e.message}")
                         }
                     }
 
@@ -457,9 +457,9 @@ class MainViewModel(
         try {
             multiStageSession = repository.createMultistageSession()
             _multiStageState.value = MobileProtocolState.Advertising
-            Log.d("Exchange", "Multi-stage session started with real card data")
+            Log.d("Vauchi", "Exchange: session started")
         } catch (e: Exception) {
-            Log.e("Exchange", "Failed to create multi-stage session", e)
+            Log.e("Vauchi", "Exchange: failed to create session", e)
             _multiStageState.value =
                 MobileProtocolState.Failed(
                     e.message ?: "Failed to create exchange session",
@@ -508,10 +508,10 @@ class MainViewModel(
         val session = multiStageSession ?: return null
         return try {
             val result = repository.finalizeMultistageExchange(session)
-            Log.i("Exchange", "Contact finalized: ${result.contactId} (${result.contactName})")
+            Log.i("Vauchi", "Exchange: contact finalized")
             result
         } catch (e: Exception) {
-            Log.e("Exchange", "Failed to finalize multi-stage exchange", e)
+            Log.e("Vauchi", "Exchange: finalization failed", e)
             null
         }
     }
@@ -523,7 +523,7 @@ class MainViewModel(
         multiStageSession?.cancel()
         multiStageSession = null
         _multiStageState.value = MobileProtocolState.Idle
-        Log.d("Exchange", "Multi-stage session cancelled")
+        Log.d("Vauchi", "Exchange: session cancelled")
     }
 
     suspend fun listContacts(): List<MobileContact> =

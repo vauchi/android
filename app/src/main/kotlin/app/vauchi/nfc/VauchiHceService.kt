@@ -182,7 +182,7 @@ class VauchiHceService : HostApduService() {
         data: ByteArray,
     ): ByteArray {
         val result = session.processEncryptedCard(data)
-        Log.d(TAG, "Exchange complete: ${result.remoteDisplayName}")
+        Log.d(TAG, "Exchange complete")
         return SW_OK
     }
 }

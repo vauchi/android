@@ -97,7 +97,7 @@ class NfcReaderService {
 
             // Step 5: Confirm send success
             val result = session.confirmSendSuccess()
-            Log.d(TAG, "Exchange complete: ${result.remoteDisplayName}")
+            Log.d(TAG, "Exchange complete")
             return NfcExchangeOutcome.Success(result)
         } catch (e: Exception) {
             Log.e(TAG, "NFC exchange failed: ${e.message}")
