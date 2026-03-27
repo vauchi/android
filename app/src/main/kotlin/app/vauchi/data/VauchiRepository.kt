@@ -4,10 +4,6 @@
 
 package app.vauchi.data
 
-// DONE: Field validation - validateField(), getFieldValidationStatus(),
-// revokeFieldValidation(), listMyValidations(), hasValidatedField(),
-// getFieldValidationCount() methods implemented.
-//
 // DONE: Content updates - isContentUpdatesSupported(), checkContentUpdates(),
 // applyContentUpdates(), reloadSocialNetworks() methods implemented.
 //
@@ -377,56 +373,6 @@ class VauchiRepository(
      * Get suggested label names
      */
     fun getSuggestedLabels(): List<String> = platform().getSuggestedLabels()
-
-    // Field Validation operations
-    // Based on: features/field_validation.feature
-
-    /**
-     * Validate a contact's field
-     */
-    fun validateField(
-        contactId: String,
-        fieldId: String,
-        fieldValue: String,
-    ) = platform().validateField(contactId, fieldId, fieldValue)
-
-    /**
-     * Get validation status for a contact's field
-     */
-    fun getFieldValidationStatus(
-        contactId: String,
-        fieldId: String,
-        fieldValue: String,
-    ) = platform().getFieldValidationStatus(contactId, fieldId, fieldValue)
-
-    /**
-     * Revoke your validation of a contact's field
-     */
-    fun revokeFieldValidation(
-        contactId: String,
-        fieldId: String,
-    ): Boolean = platform().revokeFieldValidation(contactId, fieldId)
-
-    /**
-     * List all validations you have made
-     */
-    fun listMyValidations() = platform().listMyValidations()
-
-    /**
-     * Check if you have validated a specific field
-     */
-    fun hasValidatedField(
-        contactId: String,
-        fieldId: String,
-    ): Boolean = platform().hasValidatedField(contactId, fieldId)
-
-    /**
-     * Get the validation count for a field
-     */
-    fun getFieldValidationCount(
-        contactId: String,
-        fieldId: String,
-    ): UInt = platform().getFieldValidationCount(contactId, fieldId)
 
     // Backup operations
     fun exportBackup(password: String): String = platform().exportBackup(password)

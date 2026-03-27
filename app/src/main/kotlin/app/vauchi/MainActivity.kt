@@ -428,15 +428,6 @@ fun MainScreen(
                             onGetOwnFingerprint = { viewModel.getOwnFingerprint() },
                             onTrustForRecovery = { viewModel.trustContactForRecovery(it) },
                             onUntrustForRecovery = { viewModel.untrustContactForRecovery(it) },
-                            onGetValidationStatus = { cId, fId, fVal ->
-                                viewModel.getFieldValidationStatus(cId, fId, fVal)
-                            },
-                            onValidateField = { cId, fId, fVal ->
-                                viewModel.validateField(cId, fId, fVal)
-                            },
-                            onRevokeValidation = { cId, fId ->
-                                viewModel.revokeFieldValidation(cId, fId)
-                            },
                         )
                     }
                 }
