@@ -141,9 +141,12 @@ class OnboardingViewModel : ViewModel() {
             is ActionResult.ShowToast -> {
                 _toastMessage.value = result.message
                 _toastUndoActionId.value = result.undoActionId
+                val message = result.message
                 viewModelScope.launch {
                     delay(TOAST_DURATION_MS)
-                    dismissToast()
+                    if (_toastMessage.value == message) {
+                        dismissToast()
+                    }
                 }
             }
 

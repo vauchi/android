@@ -286,7 +286,8 @@ fun ComponentRenderer(
         }
 
         is Component.ShowToast -> {
-            // Toast rendering is handled at the screen level (SnackbarHost), not inline
+            // Core never emits Component.ShowToast (only ActionResult.ShowToast).
+            // If core adds this variant, wire it to ToastOverlay here.
         }
 
         is Component.InlineConfirm -> {

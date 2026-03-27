@@ -56,11 +56,15 @@ fun ToastOverlay(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .semantics { liveRegion = LiveRegionMode.Polite },
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier =
+                    Modifier
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .semantics(mergeDescendants = true) {
+                            liveRegion = LiveRegionMode.Polite
+                        },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
