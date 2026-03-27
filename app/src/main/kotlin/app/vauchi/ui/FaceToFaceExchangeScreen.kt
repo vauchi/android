@@ -238,7 +238,7 @@ fun MultiStageExchangeScreen(
                 val state = viewModel.getMultiStageState()
                 val elapsed = System.currentTimeMillis() - startMs
                 Log.w("Exchange", "null QR at cycle=$cycleCount t=${elapsed}ms state=$state")
-                if (state is MobileProtocolState.Finalized) {
+                if (state is MobileProtocolState.Finalized && !graceCompleted) {
                     // Finalize: save the received contact to storage
                     val result = viewModel.finalizeMultiStageExchange()
                     if (result != null) {
