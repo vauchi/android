@@ -26,12 +26,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
 import app.vauchi.data.ExchangeData
 import app.vauchi.ui.components.ProximityVerification
 import app.vauchi.ui.components.ProximityVerificationResult
 import app.vauchi.util.LocalizationManager
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 import kotlinx.coroutines.delay
 
 // / Legacy exchange flow state — kept for screenshot/accessibility tests.
@@ -139,7 +139,7 @@ fun ExchangeScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Completing exchange...",
+                        text = "Keep pointing at other phone...",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
