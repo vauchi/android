@@ -557,8 +557,8 @@ fun MainScreen(
                                     context.startActivity(Intent.createChooser(intent, "Export Data"))
                                 }
                             },
-                            onScheduleDeletion = { viewModel.scheduleAccountDeletion() },
-                            onCancelDeletion = { viewModel.cancelAccountDeletion() },
+                            onScheduleDeletion = { viewModel.scheduleIdentityDeletion() },
+                            onCancelDeletion = { viewModel.cancelIdentityDeletion() },
                             deletionState = deletionState,
                             consentRecords = consentRecords,
                             onGrantConsent = { viewModel.grantConsent(it) },

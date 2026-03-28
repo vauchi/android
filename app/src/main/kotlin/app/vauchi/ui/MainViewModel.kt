@@ -1590,12 +1590,12 @@ class MainViewModel(
         }
 
     /** Schedule account deletion with 7-day grace period. */
-    fun scheduleAccountDeletion() {
+    fun scheduleIdentityDeletion() {
         viewModelScope.launch {
             try {
                 val info =
                     withContext(Dispatchers.IO) {
-                        repository.scheduleAccountDeletion()
+                        repository.scheduleIdentityDeletion()
                     }
                 _deletionState.value = info
             } catch (e: Exception) {
@@ -1605,11 +1605,11 @@ class MainViewModel(
     }
 
     /** Cancel a scheduled account deletion. */
-    fun cancelAccountDeletion() {
+    fun cancelIdentityDeletion() {
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    repository.cancelAccountDeletion()
+                    repository.cancelIdentityDeletion()
                 }
                 _deletionState.value =
                     withContext(Dispatchers.IO) {

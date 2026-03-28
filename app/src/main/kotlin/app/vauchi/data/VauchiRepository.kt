@@ -762,12 +762,12 @@ class VauchiRepository(
      *
      * @return Deletion info with state and timing
      */
-    fun scheduleAccountDeletion() = platform().scheduleAccountDeletion()
+    fun scheduleIdentityDeletion() = platform().scheduleIdentityDeletion()
 
     /**
      * Cancel a scheduled account deletion.
      */
-    fun cancelAccountDeletion() = platform().cancelAccountDeletion()
+    fun cancelIdentityDeletion() = platform().cancelIdentityDeletion()
 
     /**
      * Get current deletion state.
