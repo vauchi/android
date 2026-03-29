@@ -140,6 +140,9 @@ auto-tag:version:
 
       echo "Tag ${TAG} does not exist — creating it..."
 
+      # NOTE: GITLAB_USER_EMAIL is safe here — auto-tag runs on same-repo
+      # push (user's own email is verified). Cross-repo triggers use the
+      # API-discovered bot email in update:bindings-version instead.
       git config user.name "${GITLAB_USER_NAME}"
       git config user.email "${GITLAB_USER_EMAIL}"
 
