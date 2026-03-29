@@ -196,6 +196,9 @@ sealed class Component {
     ) : Component()
 
     data object Divider : Component()
+
+    /** Unknown component from a newer core version — render as empty space. */
+    data object Unknown : Component()
 }
 
 // Helper data classes for deserialization of struct variant inner content.
@@ -340,9 +343,8 @@ internal object ComponentSerializer : KSerializer<Component> {
                 when (element.content) {
                     "Divider" -> Component.Divider
 
-                    else -> throw IllegalArgumentException(
-                        "Unknown Component variant: ${element.content}",
-                    )
+                    // Unknown unit variant — core is newer than this shell
+                    else -> Component.Unknown
                 }
             }
 
@@ -502,18 +504,16 @@ internal object ComponentSerializer : KSerializer<Component> {
                         )
                     }
 
+                    // Unknown struct variant — core is newer than this shell
                     else -> {
-                        throw IllegalArgumentException(
-                            "Unknown Component variant: $element",
-                        )
+                        Component.Unknown
                     }
                 }
             }
 
+            // Unexpected JSON structure — degrade gracefully
             else -> {
-                throw IllegalArgumentException(
-                    "Unexpected JSON element for Component: $element",
-                )
+                Component.Unknown
             }
         }
     }
@@ -693,6 +693,11 @@ internal object ComponentSerializer : KSerializer<Component> {
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("EditableText" to inner)))
+            }
+
+            is Component.Unknown -> {
+                // Unknown components should not be serialized back to core
+                jsonEncoder.encodeJsonElement(JsonPrimitive("Unknown"))
             }
         }
     }

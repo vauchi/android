@@ -319,6 +319,11 @@ fun ComponentRenderer(
                 modifier = modifier.padding(vertical = 8.dp),
             )
         }
+
+        is Component.Unknown -> {
+            // Core sent a component this shell doesn't know about.
+            // Render nothing — screen still works, just missing one component.
+        }
     }
 }
 
