@@ -777,25 +777,25 @@ internal object UiFieldVisibilitySerializer : KSerializer<UiFieldVisibility> {
 
                     "Hidden" -> UiFieldVisibility.Hidden
 
-                    else -> throw IllegalArgumentException(
-                        "Unknown UiFieldVisibility variant: ${element.content}",
-                    )
+                    // Unknown visibility variant — default to Shown
+                    else -> UiFieldVisibility.Shown
                 }
             }
 
             is JsonObject -> {
                 val groups =
                     element["Groups"]?.jsonArray?.map { it.jsonPrimitive.content }
-                        ?: throw IllegalArgumentException(
-                            "Expected Groups key in UiFieldVisibility object: $element",
-                        )
-                UiFieldVisibility.Groups(groups)
+                if (groups != null) {
+                    UiFieldVisibility.Groups(groups)
+                } else {
+                    // Unknown object variant — default to Shown
+                    UiFieldVisibility.Shown
+                }
             }
 
+            // Unknown JSON structure — default to Shown
             else -> {
-                throw IllegalArgumentException(
-                    "Unexpected JSON element for UiFieldVisibility: $element",
-                )
+                UiFieldVisibility.Shown
             }
         }
     }
@@ -877,6 +877,9 @@ sealed class SettingsItemKind {
     data class Destructive(
         val label: String,
     ) : SettingsItemKind()
+
+    /** Unknown settings kind from a newer core version. */
+    data object Unknown : SettingsItemKind()
 }
 
 internal object SettingsItemKindSerializer : KSerializer<SettingsItemKind> {
@@ -906,8 +909,9 @@ internal object SettingsItemKindSerializer : KSerializer<SettingsItemKind> {
                 SettingsItemKind.Destructive(label = obj["label"]!!.jsonPrimitive.content)
             }
 
+            // Unknown settings kind — degrade gracefully
             else -> {
-                throw IllegalArgumentException("Unknown SettingsItemKind: $element")
+                SettingsItemKind.Unknown
             }
         }
     }
@@ -943,6 +947,10 @@ internal object SettingsItemKindSerializer : KSerializer<SettingsItemKind> {
 
                 is SettingsItemKind.Destructive -> {
                     JsonObject(mapOf("Destructive" to JsonObject(mapOf("label" to JsonPrimitive(value.label)))))
+                }
+
+                is SettingsItemKind.Unknown -> {
+                    JsonPrimitive("Unknown")
                 }
             }
         jsonEncoder.encodeJsonElement(element)

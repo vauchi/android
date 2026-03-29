@@ -175,5 +175,9 @@ private fun SettingsItemRow(
                 )
             }
         }
+
+        is SettingsItemKind.Unknown -> {
+            // Unknown settings kind from newer core — render nothing
+        }
     }
 }
