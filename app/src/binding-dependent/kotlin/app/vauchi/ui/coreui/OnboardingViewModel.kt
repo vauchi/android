@@ -163,7 +163,7 @@ class OnboardingViewModel : ViewModel() {
             is ActionResult.Unknown,
             -> {
                 // These results are not expected during onboarding.
-                Log.w(TAG, "Unexpected ActionResult during onboarding: $result")
+                Log.w(TAG, "Unexpected ActionResult during onboarding: ${result::class.simpleName}")
             }
         }
     }

@@ -1638,7 +1638,10 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                 val inner =
                     buildMap<String, JsonElement> {
                         put("message", JsonPrimitive(value.message))
-                        put("undo_action_id", JsonPrimitive(value.undoActionId))
+                        put(
+                            "undo_action_id",
+                            if (value.undoActionId != null) JsonPrimitive(value.undoActionId) else JsonNull,
+                        )
                     }
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("ShowToast" to JsonObject(inner))))
             }
