@@ -29,15 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 /**
- * Core-driven onboarding screen that replaces the hardcoded step views.
+ * Core-driven onboarding screen.
  *
  * Uses [OnboardingViewModel] to get [ScreenModel] state from the core
  * [MobileOnboardingWorkflow] and renders it via [ScreenRenderer].
- *
- * This composable lives in the `binding-dependent` source set because it
- * depends on [OnboardingViewModel] which requires UniFFI bindings.
- * Once bindings are published to Maven, the app can switch from the old
- * [app.vauchi.ui.onboarding.OnboardingScreen] to this one.
  */
 @Composable
 fun CoreOnboardingScreen(

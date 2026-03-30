@@ -253,48 +253,6 @@ class MainViewModel(
         }
     }
 
-    fun completeOnboarding(
-        displayName: String,
-        phone: String?,
-        email: String?,
-    ) {
-        viewModelScope.launch {
-            try {
-                _uiState.value = UiState.Loading
-                withContext(Dispatchers.IO) {
-                    // Create identity
-                    repository.createIdentity(displayName)
-
-                    // Add phone if provided (non-fatal — validation errors skip the field)
-                    phone?.let {
-                        try {
-                            repository.addField(MobileFieldType.PHONE, "Phone", it)
-                        } catch (e: Exception) {
-                            android.util.Log.w("Vauchi", "Onboarding: skipping phone field: ${e.message}")
-                        }
-                    }
-
-                    // Add email if provided (non-fatal — validation errors skip the field)
-                    email?.let {
-                        try {
-                            repository.addField(MobileFieldType.EMAIL, "Email", it)
-                        } catch (e: Exception) {
-                            android.util.Log.w("Vauchi", "Onboarding: skipping email field: ${e.message}")
-                        }
-                    }
-
-                    // Mark onboarding complete
-                    repository.setOnboardingCompleted(true)
-                }
-                loadUserData()
-                // Initialize demo contact for new users
-                initDemoContactIfNeeded()
-            } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "Failed to create identity")
-            }
-        }
-    }
-
     /** Called when core-driven onboarding completes (identity already created by core). */
     fun onCoreOnboardingComplete() {
         viewModelScope.launch {

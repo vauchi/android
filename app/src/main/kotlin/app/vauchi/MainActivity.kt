@@ -64,7 +64,6 @@ import app.vauchi.ui.model.ContentApplyResult
 import app.vauchi.ui.model.ContentUpdateStatus
 import app.vauchi.ui.model.ContentUpdateType
 import app.vauchi.ui.model.PasswordStrengthResult
-import app.vauchi.ui.onboarding.OnboardingScreen
 import app.vauchi.ui.theme.VauchiTheme
 import kotlinx.coroutines.launch
 import uniffi.vauchi_platform.MobileApplyResult
