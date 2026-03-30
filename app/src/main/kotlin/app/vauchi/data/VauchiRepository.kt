@@ -289,6 +289,8 @@ class VauchiRepository(
 
     fun removeContact(id: String) = platform().removeContact(id)
 
+    fun importContactsFromVcf(data: ByteArray) = platform().importContactsFromVcf(data)
+
     // Visibility operations
     fun hideFieldFromContact(
         contactId: String,

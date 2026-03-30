@@ -4,6 +4,8 @@
 
 package app.vauchi.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -15,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Visibility
@@ -54,6 +57,7 @@ fun ContactsScreen(
     onListHiddenContacts: suspend () -> List<MobileContact> = { emptyList() },
     onHideContact: suspend (String) -> Unit = {},
     onUnhideContact: suspend (String) -> Unit = {},
+    onImportVcf: (ByteArray) -> Unit = {},
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -65,6 +69,21 @@ fun ContactsScreen(
     var searchQuery by remember { mutableStateOf("") }
     var retryTrigger by remember { mutableStateOf(0) }
     var showHiddenContacts by remember { mutableStateOf(false) }
+
+    val vcfPickerLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            uri?.let {
+                try {
+                    val bytes = context.contentResolver.openInputStream(it)?.readBytes()
+                    if (bytes != null) {
+                        onImportVcf(bytes)
+                        retryTrigger++ // Refresh contacts list
+                    }
+                } catch (_: Exception) {
+                    // Error handled by ViewModel via showMessage
+                }
+            }
+        }
 
     val isRefreshing = syncState is SyncState.Syncing
 
@@ -151,6 +170,13 @@ fun ContactsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { vcfPickerLauncher.launch(arrayOf("text/vcard", "text/x-vcard", "*/*")) },
+                    ) {
+                        Icon(Icons.Default.PersonAdd, contentDescription = "Import contacts")
                     }
                 },
                 colors =

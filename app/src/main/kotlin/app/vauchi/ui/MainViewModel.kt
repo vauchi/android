@@ -593,6 +593,23 @@ class MainViewModel(
         }
     }
 
+    fun importContactsFromVcf(data: ByteArray) {
+        viewModelScope.launch {
+            try {
+                val result =
+                    withContext(Dispatchers.IO) {
+                        repository.importContactsFromVcf(data)
+                    }
+                loadUserData()
+                val msg = "${result.imported} contact(s) imported"
+                val extra = if (result.skipped > 0u) ", ${result.skipped} skipped" else ""
+                showMessage(msg + extra)
+            } catch (e: Exception) {
+                showMessage("Import failed: ${e.message}")
+            }
+        }
+    }
+
     suspend fun getContact(id: String): MobileContact? =
         try {
             withContext(Dispatchers.IO) {

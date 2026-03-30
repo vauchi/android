@@ -422,6 +422,7 @@ fun MainScreen(
                         onSync = { viewModel.sync() },
                         demoContact = demoContact,
                         onDismissDemo = { viewModel.dismissDemoContact() },
+                        onImportVcf = { data -> viewModel.importContactsFromVcf(data) },
                     )
                 }
 
