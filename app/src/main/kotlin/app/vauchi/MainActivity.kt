@@ -80,6 +80,9 @@ class MainActivity : FragmentActivity() {
     /** Mutable state for deep link URI, observed by Compose. */
     private val _deepLinkUri = mutableStateOf<Uri?>(null)
 
+    /** Set by --reset-for-testing intent extra (DEBUG only). */
+    private var _resetForTesting = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -117,6 +120,7 @@ class MainActivity : FragmentActivity() {
                         onDeepLinkConsumed = { _deepLinkUri.value = null },
                         navigateTo = navigateTo,
                         onNavigateConsumed = { _navigateTo.value = null },
+                        resetForTesting = _resetForTesting,
                     )
                 }
             }
@@ -140,6 +144,11 @@ class MainActivity : FragmentActivity() {
         if (BuildConfig.DEBUG) {
             intent?.getStringExtra("navigate")?.let { target ->
                 _navigateTo.value = target
+            }
+            // --reset-for-testing: create test identity so app skips onboarding.
+            // Usage: adb shell am start -n app.vauchi/.MainActivity --ez reset_for_testing true
+            if (intent?.getBooleanExtra("reset_for_testing", false) == true) {
+                _resetForTesting = true
             }
         }
     }
@@ -169,6 +178,7 @@ fun MainScreen(
     onDeepLinkConsumed: () -> Unit = {},
     navigateTo: String? = null,
     onNavigateConsumed: () -> Unit = {},
+    resetForTesting: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
@@ -188,6 +198,13 @@ fun MainScreen(
     val deepLinkHandler = remember { app.vauchi.deeplink.DeepLinkHandler() }
     var showDeepLinkConsent by remember { mutableStateOf(false) }
     var deepLinkPayload by remember { mutableStateOf<String?>(null) }
+
+    // --reset-for-testing: create test identity so app skips onboarding (DEBUG only)
+    LaunchedEffect(resetForTesting, uiState) {
+        if (resetForTesting && uiState is UiState.Ready) {
+            viewModel.seedTestIdentityIfNeeded()
+        }
+    }
 
     // Handle programmatic navigation (device testing: --es navigate exchange)
     // Must wait for UiState.Ready — auth must complete before navigating.

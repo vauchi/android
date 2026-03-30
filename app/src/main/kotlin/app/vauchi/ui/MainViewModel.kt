@@ -295,6 +295,16 @@ class MainViewModel(
         }
     }
 
+    /** Create test identity for --reset-for-testing (DEBUG only). */
+    fun seedTestIdentityIfNeeded() {
+        if (!repository.hasIdentity()) {
+            Log.i("Vauchi", "--reset-for-testing: creating test identity")
+            createIdentity("Test User")
+        } else {
+            Log.i("Vauchi", "--reset-for-testing: identity already exists")
+        }
+    }
+
     fun createIdentity(displayName: String) {
         viewModelScope.launch {
             try {
