@@ -489,4 +489,78 @@ class ModelsTest {
         assertEquals(1, screen.progress!!.currentStep)
         assertNull(screen.progress!!.label)
     }
+
+    // ── Resilient decoding (unknown variants) ──────────────────────
+
+    @Test
+    fun `unknown primitive Component decodes as Unknown`() {
+        val input = """"FutureWidget""""
+        val component = json.decodeFromString<Component>(input)
+        assertTrue(component is Component.Unknown)
+    }
+
+    @Test
+    fun `unknown object Component decodes as Unknown`() {
+        val input = """{"Chart": {"id": "c1", "data": [1, 2, 3]}}"""
+        val component = json.decodeFromString<Component>(input)
+        assertTrue(component is Component.Unknown)
+    }
+
+    @Test
+    fun `ScreenModel with unknown component decodes gracefully`() {
+        val input =
+            """
+            {
+                "screen_id": "test",
+                "title": "Test",
+                "components": [
+                    {"Text": {"id": "t1", "content": "Hello", "style": "Body"}},
+                    {"FutureWidget": {"id": "fw1"}},
+                    "Divider"
+                ],
+                "actions": []
+            }
+            """.trimIndent()
+
+        val screen = json.decodeFromString<ScreenModel>(input)
+        assertEquals(3, screen.components.size)
+        assertTrue(screen.components[0] is Component.Text)
+        assertTrue(screen.components[1] is Component.Unknown)
+        assertTrue(screen.components[2] is Component.Divider)
+    }
+
+    @Test
+    fun `unknown UiFieldVisibility defaults to Shown`() {
+        val input = """"Redacted""""
+        val vis = json.decodeFromString<UiFieldVisibility>(input)
+        assertTrue(vis is UiFieldVisibility.Shown)
+    }
+
+    @Test
+    fun `unknown object UiFieldVisibility defaults to Shown`() {
+        val input = """{"Conditional": {"rule": "age > 18"}}"""
+        val vis = json.decodeFromString<UiFieldVisibility>(input)
+        assertTrue(vis is UiFieldVisibility.Shown)
+    }
+
+    @Test
+    fun `unknown SettingsItemKind decodes as Unknown`() {
+        val input = """{"Slider": {"min": 0, "max": 100}}"""
+        val kind = json.decodeFromString<SettingsItemKind>(input)
+        assertTrue(kind is SettingsItemKind.Unknown)
+    }
+
+    @Test
+    fun `unknown UserAction variant decodes as Unknown`() {
+        val input = """{"FutureAction": {"widget_id": "x"}}"""
+        val action = json.decodeFromString<UserAction>(input)
+        assertTrue(action is UserAction.Unknown)
+    }
+
+    @Test
+    fun `unknown ActionResult variant decodes as Unknown`() {
+        val input = """{"FutureResult": {"data": "x"}}"""
+        val result = json.decodeFromString<ActionResult>(input)
+        assertTrue(result is ActionResult.Unknown)
+    }
 }

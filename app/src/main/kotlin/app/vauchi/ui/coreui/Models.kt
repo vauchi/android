@@ -1033,6 +1033,9 @@ sealed class UserAction {
     data class UndoPressed(
         val actionId: String,
     ) : UserAction()
+
+    /** Unknown action variant from deserialization — should not be sent to core. */
+    data object Unknown : UserAction()
 }
 
 internal object UserActionSerializer : KSerializer<UserAction> {
@@ -1175,6 +1178,11 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                         ),
                     )
                 }
+
+                is UserAction.Unknown -> {
+                    // Unknown actions should not be serialized back to core
+                    JsonObject(emptyMap())
+                }
             }
         jsonEncoder.encodeJsonElement(element)
     }
@@ -1254,7 +1262,7 @@ internal object UserActionSerializer : KSerializer<UserAction> {
             }
 
             else -> {
-                throw IllegalArgumentException("Unknown UserAction variant: $element")
+                UserAction.Unknown
             }
         }
     }
