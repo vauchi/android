@@ -544,15 +544,29 @@ class ModelsTest {
     }
 
     @Test
-    fun `unknown SettingsItemKind decodes as Unknown`() {
+    fun `unknown SettingsItemKind object decodes as Unknown`() {
         val input = """{"Slider": {"min": 0, "max": 100}}"""
         val kind = json.decodeFromString<SettingsItemKind>(input)
         assertTrue(kind is SettingsItemKind.Unknown)
     }
 
     @Test
-    fun `unknown UserAction variant decodes as Unknown`() {
+    fun `unknown SettingsItemKind primitive decodes as Unknown`() {
+        val input = """"Separator""""
+        val kind = json.decodeFromString<SettingsItemKind>(input)
+        assertTrue(kind is SettingsItemKind.Unknown)
+    }
+
+    @Test
+    fun `unknown UserAction object decodes as Unknown`() {
         val input = """{"FutureAction": {"widget_id": "x"}}"""
+        val action = json.decodeFromString<UserAction>(input)
+        assertTrue(action is UserAction.Unknown)
+    }
+
+    @Test
+    fun `unknown UserAction primitive decodes as Unknown`() {
+        val input = """"Heartbeat""""
         val action = json.decodeFromString<UserAction>(input)
         assertTrue(action is UserAction.Unknown)
     }

@@ -887,29 +887,36 @@ internal object SettingsItemKindSerializer : KSerializer<SettingsItemKind> {
 
     override fun deserialize(decoder: Decoder): SettingsItemKind {
         val jsonDecoder = decoder as JsonDecoder
-        val element = jsonDecoder.decodeJsonElement() as JsonObject
-        return when {
-            "Toggle" in element -> {
-                val obj = element["Toggle"] as JsonObject
-                SettingsItemKind.Toggle(enabled = obj["enabled"]!!.jsonPrimitive.content.toBooleanStrict())
+        return when (val element = jsonDecoder.decodeJsonElement()) {
+            is JsonObject -> {
+                when {
+                    "Toggle" in element -> {
+                        val obj = element["Toggle"] as JsonObject
+                        SettingsItemKind.Toggle(enabled = obj["enabled"]!!.jsonPrimitive.content.toBooleanStrict())
+                    }
+
+                    "Value" in element -> {
+                        val obj = element["Value"] as JsonObject
+                        SettingsItemKind.Value(value = obj["value"]!!.jsonPrimitive.content)
+                    }
+
+                    "Link" in element -> {
+                        val obj = element["Link"] as JsonObject
+                        SettingsItemKind.Link(detail = obj["detail"]?.jsonPrimitive?.contentOrNull)
+                    }
+
+                    "Destructive" in element -> {
+                        val obj = element["Destructive"] as JsonObject
+                        SettingsItemKind.Destructive(label = obj["label"]!!.jsonPrimitive.content)
+                    }
+
+                    else -> {
+                        SettingsItemKind.Unknown
+                    }
+                }
             }
 
-            "Value" in element -> {
-                val obj = element["Value"] as JsonObject
-                SettingsItemKind.Value(value = obj["value"]!!.jsonPrimitive.content)
-            }
-
-            "Link" in element -> {
-                val obj = element["Link"] as JsonObject
-                SettingsItemKind.Link(detail = obj["detail"]?.jsonPrimitive?.contentOrNull)
-            }
-
-            "Destructive" in element -> {
-                val obj = element["Destructive"] as JsonObject
-                SettingsItemKind.Destructive(label = obj["label"]!!.jsonPrimitive.content)
-            }
-
-            // Unknown settings kind — degrade gracefully
+            // Future unit variants (e.g., "Separator") — degrade gracefully
             else -> {
                 SettingsItemKind.Unknown
             }
@@ -1189,78 +1196,86 @@ internal object UserActionSerializer : KSerializer<UserAction> {
 
     override fun deserialize(decoder: Decoder): UserAction {
         val jsonDecoder = decoder as JsonDecoder
-        val element = jsonDecoder.decodeJsonElement() as JsonObject
-        return when {
-            "TextChanged" in element -> {
-                val obj = element["TextChanged"] as JsonObject
-                UserAction.TextChanged(
-                    componentId = obj["component_id"]!!.jsonPrimitive.content,
-                    value = obj["value"]!!.jsonPrimitive.content,
-                )
+        return when (val element = jsonDecoder.decodeJsonElement()) {
+            is JsonObject -> {
+                when {
+                    "TextChanged" in element -> {
+                        val obj = element["TextChanged"] as JsonObject
+                        UserAction.TextChanged(
+                            componentId = obj["component_id"]!!.jsonPrimitive.content,
+                            value = obj["value"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "ItemToggled" in element -> {
+                        val obj = element["ItemToggled"] as JsonObject
+                        UserAction.ItemToggled(
+                            componentId = obj["component_id"]!!.jsonPrimitive.content,
+                            itemId = obj["item_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "ActionPressed" in element -> {
+                        val obj = element["ActionPressed"] as JsonObject
+                        UserAction.ActionPressed(
+                            actionId = obj["action_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "FieldVisibilityChanged" in element -> {
+                        val obj = element["FieldVisibilityChanged"] as JsonObject
+                        UserAction.FieldVisibilityChanged(
+                            fieldId = obj["field_id"]!!.jsonPrimitive.content,
+                            groupId = obj["group_id"]?.jsonPrimitive?.contentOrNull,
+                            visible = obj["visible"]!!.jsonPrimitive.content.toBooleanStrict(),
+                        )
+                    }
+
+                    "GroupViewSelected" in element -> {
+                        val obj = element["GroupViewSelected"] as JsonObject
+                        UserAction.GroupViewSelected(
+                            groupName = obj["group_name"]?.jsonPrimitive?.contentOrNull,
+                        )
+                    }
+
+                    "SearchChanged" in element -> {
+                        val obj = element["SearchChanged"] as JsonObject
+                        UserAction.SearchChanged(
+                            componentId = obj["component_id"]!!.jsonPrimitive.content,
+                            query = obj["query"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "ListItemSelected" in element -> {
+                        val obj = element["ListItemSelected"] as JsonObject
+                        UserAction.ListItemSelected(
+                            componentId = obj["component_id"]!!.jsonPrimitive.content,
+                            itemId = obj["item_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "SettingsToggled" in element -> {
+                        val obj = element["SettingsToggled"] as JsonObject
+                        UserAction.SettingsToggled(
+                            componentId = obj["component_id"]!!.jsonPrimitive.content,
+                            itemId = obj["item_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "UndoPressed" in element -> {
+                        val obj = element["UndoPressed"] as JsonObject
+                        UserAction.UndoPressed(
+                            actionId = obj["action_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    else -> {
+                        UserAction.Unknown
+                    }
+                }
             }
 
-            "ItemToggled" in element -> {
-                val obj = element["ItemToggled"] as JsonObject
-                UserAction.ItemToggled(
-                    componentId = obj["component_id"]!!.jsonPrimitive.content,
-                    itemId = obj["item_id"]!!.jsonPrimitive.content,
-                )
-            }
-
-            "ActionPressed" in element -> {
-                val obj = element["ActionPressed"] as JsonObject
-                UserAction.ActionPressed(
-                    actionId = obj["action_id"]!!.jsonPrimitive.content,
-                )
-            }
-
-            "FieldVisibilityChanged" in element -> {
-                val obj = element["FieldVisibilityChanged"] as JsonObject
-                UserAction.FieldVisibilityChanged(
-                    fieldId = obj["field_id"]!!.jsonPrimitive.content,
-                    groupId = obj["group_id"]?.jsonPrimitive?.contentOrNull,
-                    visible = obj["visible"]!!.jsonPrimitive.content.toBooleanStrict(),
-                )
-            }
-
-            "GroupViewSelected" in element -> {
-                val obj = element["GroupViewSelected"] as JsonObject
-                UserAction.GroupViewSelected(
-                    groupName = obj["group_name"]?.jsonPrimitive?.contentOrNull,
-                )
-            }
-
-            "SearchChanged" in element -> {
-                val obj = element["SearchChanged"] as JsonObject
-                UserAction.SearchChanged(
-                    componentId = obj["component_id"]!!.jsonPrimitive.content,
-                    query = obj["query"]!!.jsonPrimitive.content,
-                )
-            }
-
-            "ListItemSelected" in element -> {
-                val obj = element["ListItemSelected"] as JsonObject
-                UserAction.ListItemSelected(
-                    componentId = obj["component_id"]!!.jsonPrimitive.content,
-                    itemId = obj["item_id"]!!.jsonPrimitive.content,
-                )
-            }
-
-            "SettingsToggled" in element -> {
-                val obj = element["SettingsToggled"] as JsonObject
-                UserAction.SettingsToggled(
-                    componentId = obj["component_id"]!!.jsonPrimitive.content,
-                    itemId = obj["item_id"]!!.jsonPrimitive.content,
-                )
-            }
-
-            "UndoPressed" in element -> {
-                val obj = element["UndoPressed"] as JsonObject
-                UserAction.UndoPressed(
-                    actionId = obj["action_id"]!!.jsonPrimitive.content,
-                )
-            }
-
+            // Future unit variants (e.g., "Heartbeat") — degrade gracefully
             else -> {
                 UserAction.Unknown
             }
