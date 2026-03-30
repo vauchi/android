@@ -59,6 +59,7 @@ import app.vauchi.ui.SettingsScreen
 import app.vauchi.ui.SyncState
 import app.vauchi.ui.ThemeSettingsScreen
 import app.vauchi.ui.UiState
+import app.vauchi.ui.coreui.CoreOnboardingScreen
 import app.vauchi.ui.model.ContentApplyResult
 import app.vauchi.ui.model.ContentUpdateStatus
 import app.vauchi.ui.model.ContentUpdateType
@@ -333,11 +334,8 @@ fun MainScreen(
                         }
 
                         is UiState.Onboarding -> {
-                            OnboardingScreen(
-                                onComplete = { displayName, phone, email ->
-                                    viewModel.completeOnboarding(displayName, phone, email)
-                                },
-                                onRestore = { showRestoreDialog = true },
+                            CoreOnboardingScreen(
+                                onComplete = viewModel::onCoreOnboardingComplete,
                             )
 
                             if (showRestoreDialog) {

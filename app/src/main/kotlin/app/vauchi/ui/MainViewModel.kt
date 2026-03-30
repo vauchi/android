@@ -295,6 +295,17 @@ class MainViewModel(
         }
     }
 
+    /** Called when core-driven onboarding completes (identity already created by core). */
+    fun onCoreOnboardingComplete() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                repository.setOnboardingCompleted(true)
+            }
+            loadUserData()
+            initDemoContactIfNeeded()
+        }
+    }
+
     /** Create test identity for --reset-for-testing (DEBUG only). */
     fun seedTestIdentityIfNeeded() {
         if (!repository.hasIdentity()) {
