@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "screen_id": "link_choice",
+  "title": "Restore your identity",
+  "subtitle": "Choose how to restore your existing identity.",
+  "components": [
+    {
+      "InfoPanel": {
+        "id": "link_choice_info",
+        "icon": null,
+        "title": "",
+        "items": [
+          {
+            "icon": "link",
+            "title": "Link from another device",
+            "detail": "Scan a QR code on your other device to link this one."
+          },
+          {
+            "icon": "backup",
+            "title": "Restore from backup",
+            "detail": "Import your identity from a backup file."
+          }
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "link_device",
+      "label": "Link from another device",
+      "style": "Primary",
+      "enabled": true
+    },
+    {
+      "id": "restore_backup",
+      "label": "Restore from backup",
+      "style": "Secondary",
+      "enabled": true
+    },
+    {
+      "id": "back",
+      "label": "Back",
+      "style": "Secondary",
+      "enabled": true
+    }
+  ],
+  "progress": null,
+  "tokens": {
+    "spacing": {
+      "xs": 4,
+      "sm": 8,
+      "md": 16,
+      "lg": 24,
+      "xl": 32
+    },
+    "spacing_direction": {
+      "content_start": 16,
+      "content_end": 16,
+      "list_item_start": 8,
+      "list_item_end": 8
+    },
+    "typography": {
+      "title_size": 24,
+      "subtitle_size": 18,
+      "body_size": 16,
+      "caption_size": 14
+    },
+    "border_radius": {
+      "sm": 4,
+      "md": 8,
+      "md_lg": 12,
+      "lg": 16
+    },
+    "touch_target": {
+      "minimum": 44
+    },
+    "motion": {
+      "enter_duration_ms": 200,
+      "exit_duration_ms": 150,
+      "emphasis_duration_ms": 300
+    }
+  }
+}
