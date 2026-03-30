@@ -256,11 +256,15 @@ class MainViewModel(
     /** Called when core-driven onboarding completes (identity already created by core). */
     fun onCoreOnboardingComplete() {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                repository.setOnboardingCompleted(true)
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.setOnboardingCompleted(true)
+                }
+                loadUserData()
+                initDemoContactIfNeeded()
+            } catch (e: Exception) {
+                _uiState.value = UiState.Error(e.message ?: "Failed to complete onboarding")
             }
-            loadUserData()
-            initDemoContactIfNeeded()
         }
     }
 
