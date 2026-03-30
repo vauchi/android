@@ -422,6 +422,7 @@ fun MainScreen(
                         demoContact = demoContact,
                         onDismissDemo = { viewModel.dismissDemoContact() },
                         onImportVcf = { data -> viewModel.importContactsFromVcf(data) },
+                        onImportError = { msg -> viewModel.showMessage(msg) },
                     )
                 }
 

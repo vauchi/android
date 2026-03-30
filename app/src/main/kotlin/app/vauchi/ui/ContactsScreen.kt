@@ -58,6 +58,7 @@ fun ContactsScreen(
     onHideContact: suspend (String) -> Unit = {},
     onUnhideContact: suspend (String) -> Unit = {},
     onImportVcf: (ByteArray) -> Unit = {},
+    onImportError: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -79,8 +80,8 @@ fun ContactsScreen(
                         onImportVcf(bytes)
                         retryTrigger++ // Refresh contacts list
                     }
-                } catch (_: Exception) {
-                    // Error handled by ViewModel via showMessage
+                } catch (e: Exception) {
+                    onImportError("Could not read file: ${e.message}")
                 }
             }
         }

@@ -164,7 +164,7 @@ class MainViewModel(
         _snackbarMessage.value = null
     }
 
-    private fun showMessage(message: String) {
+    fun showMessage(message: String) {
         _snackbarMessage.value = message
     }
 
