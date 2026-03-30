@@ -200,6 +200,14 @@ update:bindings-version:
         exit 0
       fi
 
+      # Check if already at target version
+      OLD_VERSION=$(grep -oE 'app\.vauchi:vauchi-platform:[^"]+' "$BUILD_FILE" | head -1 | cut -d: -f3)
+      echo "Old version: $OLD_VERSION → New version: $BINDINGS_VERSION"
+      if [ "$OLD_VERSION" = "$BINDINGS_VERSION" ]; then
+        echo "Already at $BINDINGS_VERSION — nothing to do"
+        exit 0
+      fi
+
       # Create branch and update version (-B force-creates if stale
       # local branch exists from a previous failed pipeline retry)
       git checkout -B "$BRANCH"
