@@ -3,12 +3,13 @@
 
 > **Mirror:** This repo is a read-only mirror of [gitlab.com/vauchi/android](https://gitlab.com/vauchi/android). Please open issues and merge requests there.
 
-[![Pipeline](https://vauchi.gitlab.io/android/badges/pipeline.svg)](https://gitlab.com/vauchi/android/-/pipelines)
-[![Coverage](https://vauchi.gitlab.io/android/badges/coverage.svg)](https://gitlab.com/vauchi/android/-/pipelines)
+[![Pipeline](https://img.shields.io/endpoint?url=https://vauchi.gitlab.io/android/badges/pipeline.json&label=pipeline)](https://gitlab.com/vauchi/android/-/pipelines)
+[![Coverage](https://img.shields.io/endpoint?url=https://vauchi.gitlab.io/android/badges/coverage.json&label=coverage)](https://gitlab.com/vauchi/android/-/pipelines)
 [![REUSE](https://api.reuse.software/badge/gitlab.com/vauchi/android)](https://api.reuse.software/info/gitlab.com/vauchi/android)
 
 > [!WARNING]
-> **Pre-Alpha Software** - This project is under heavy development and not ready for production use.
+> **Pre-Alpha Software** - This project is under heavy development
+> and not ready for production use.
 > APIs may change without notice. Use at your own risk.
 
 # Vauchi Android
@@ -47,7 +48,7 @@ Native Android app for privacy-focused contact card exchange.
 
 ## Project Structure
 
-```
+```text
 app/src/main/kotlin/com/vauchi/
 ├── MainActivity.kt      # Entry point
 ├── VauchiApp.kt        # Application class
