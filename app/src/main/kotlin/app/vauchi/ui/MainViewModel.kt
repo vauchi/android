@@ -71,8 +71,6 @@ sealed class SyncState {
 sealed class UiState {
     object Loading : UiState()
 
-    object Setup : UiState()
-
     object Onboarding : UiState()
 
     /** Device needs biometric/PIN authentication to access KeyStore keys. */

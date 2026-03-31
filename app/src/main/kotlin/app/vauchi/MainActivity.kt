@@ -328,10 +328,6 @@ fun MainScreen(
                             LoadingScreen()
                         }
 
-                        is UiState.Setup -> {
-                            SetupScreen(onCreateIdentity = viewModel::createIdentity)
-                        }
-
                         is UiState.Onboarding -> {
                             CoreOnboardingScreen(
                                 onComplete = viewModel::onCoreOnboardingComplete,
@@ -753,47 +749,6 @@ fun LoadingScreen() {
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(16.dp))
             Text("Loading...")
-        }
-    }
-}
-
-@Composable
-fun SetupScreen(onCreateIdentity: (String) -> Unit) {
-    var name by remember { mutableStateOf("") }
-
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = "Welcome to Vauchi",
-            style = MaterialTheme.typography.headlineLarge,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Privacy-focused contact exchange",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(48.dp))
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Your name") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(
-            onClick = { onCreateIdentity(name) },
-            enabled = name.isNotBlank(),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Create Identity")
         }
     }
 }
