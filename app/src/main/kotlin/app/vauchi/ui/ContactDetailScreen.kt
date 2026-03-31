@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileContactField
+import uniffi.vauchi_platform.MobileContactTrustLevel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -203,6 +204,101 @@ fun ContactDetailScreen(
                                     ) {
                                         Text("Verify")
                                     }
+                                }
+                            }
+                        }
+                    }
+
+                    // Trust level (from core — ADR-021/034)
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        val trustColor =
+                            when (c.trustLevel) {
+                                MobileContactTrustLevel.CAUTIOUS -> {
+                                    MaterialTheme.colorScheme.errorContainer
+                                }
+
+                                MobileContactTrustLevel.HIGH -> {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                }
+
+                                MobileContactTrustLevel.VERIFIED -> {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                }
+
+                                else -> {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                }
+                            }
+                        val trustTextColor =
+                            when (c.trustLevel) {
+                                MobileContactTrustLevel.CAUTIOUS -> {
+                                    MaterialTheme.colorScheme.onErrorContainer
+                                }
+
+                                MobileContactTrustLevel.HIGH -> {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                }
+
+                                MobileContactTrustLevel.VERIFIED -> {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                }
+
+                                else -> {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            }
+                        val trustLabel =
+                            when (c.trustLevel) {
+                                MobileContactTrustLevel.CAUTIOUS -> "Needs Re-verification"
+                                MobileContactTrustLevel.HIGH -> "High Trust"
+                                MobileContactTrustLevel.VERIFIED -> "Verified"
+                                else -> "Standard"
+                            }
+                        val trustDescription =
+                            when (c.trustLevel) {
+                                MobileContactTrustLevel.CAUTIOUS -> {
+                                    "This contact recovered their identity. Verify them again before trusting sensitive information."
+                                }
+
+                                MobileContactTrustLevel.HIGH -> {
+                                    "Verified via proximity (NFC or Bluetooth)"
+                                }
+
+                                MobileContactTrustLevel.VERIFIED -> {
+                                    "Identity verified in person"
+                                }
+
+                                else -> {
+                                    "Exchanged via QR code"
+                                }
+                            }
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor = trustColor,
+                                ),
+                        ) {
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = trustLabel,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = trustTextColor,
+                                    )
+                                    Text(
+                                        text = trustDescription,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = trustTextColor.copy(alpha = 0.8f),
+                                    )
                                 }
                             }
                         }
