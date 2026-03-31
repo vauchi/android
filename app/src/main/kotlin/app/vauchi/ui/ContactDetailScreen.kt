@@ -141,167 +141,21 @@ fun ContactDetailScreen(
                         }
                     }
 
-                    // Verification status
+                    // Trust level (derived from core — ADR-021/034)
                     item {
                         Spacer(modifier = Modifier.height(8.dp))
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors =
-                                CardDefaults.cardColors(
-                                    containerColor =
-                                        if (c.isVerified) {
-                                            MaterialTheme.colorScheme.primaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.surfaceVariant
-                                        },
-                                ),
-                        ) {
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column {
-                                    Text(
-                                        text =
-                                            if (c.isVerified) {
-                                                localizationManager.t(
-                                                    "contacts.verified",
-                                                )
-                                            } else {
-                                                localizationManager.t("contacts.not_verified")
-                                            },
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color =
-                                            if (c.isVerified) {
-                                                MaterialTheme.colorScheme.onPrimaryContainer
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                            },
-                                    )
-                                    Text(
-                                        text =
-                                            if (c.isVerified) {
-                                                "You have verified this contact's identity"
-                                            } else {
-                                                "Verify fingerprints in person"
-                                            },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color =
-                                            if (c.isVerified) {
-                                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                                            },
-                                    )
-                                }
-                                if (!c.isVerified) {
-                                    Button(
-                                        onClick = { showVerification = true },
-                                    ) {
-                                        Text("Verify")
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Trust level (from core — ADR-021/034)
-                    item {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        val trustColor =
-                            when (c.trustLevel) {
-                                MobileContactTrustLevel.CAUTIOUS -> {
-                                    MaterialTheme.colorScheme.errorContainer
-                                }
-
-                                MobileContactTrustLevel.HIGH -> {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                }
-
-                                MobileContactTrustLevel.VERIFIED -> {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                }
-
-                                else -> {
-                                    MaterialTheme.colorScheme.surfaceVariant
-                                }
-                            }
-                        val trustTextColor =
-                            when (c.trustLevel) {
-                                MobileContactTrustLevel.CAUTIOUS -> {
-                                    MaterialTheme.colorScheme.onErrorContainer
-                                }
-
-                                MobileContactTrustLevel.HIGH -> {
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                }
-
-                                MobileContactTrustLevel.VERIFIED -> {
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                }
-
-                                else -> {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                }
-                            }
-                        val trustLabel =
-                            when (c.trustLevel) {
-                                MobileContactTrustLevel.CAUTIOUS -> "Needs Re-verification"
-                                MobileContactTrustLevel.HIGH -> "High Trust"
-                                MobileContactTrustLevel.VERIFIED -> "Verified"
-                                else -> "Standard"
-                            }
-                        val trustDescription =
-                            when (c.trustLevel) {
-                                MobileContactTrustLevel.CAUTIOUS -> {
-                                    "This contact recovered their identity. Verify them again before trusting sensitive information."
-                                }
-
-                                MobileContactTrustLevel.HIGH -> {
-                                    "Verified via proximity (NFC or Bluetooth)"
-                                }
-
-                                MobileContactTrustLevel.VERIFIED -> {
-                                    "Identity verified in person"
-                                }
-
-                                else -> {
-                                    "Exchanged via QR code"
-                                }
-                            }
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors =
-                                CardDefaults.cardColors(
-                                    containerColor = trustColor,
-                                ),
-                        ) {
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = trustLabel,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = trustTextColor,
-                                    )
-                                    Text(
-                                        text = trustDescription,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = trustTextColor.copy(alpha = 0.8f),
-                                    )
-                                }
-                            }
-                        }
+                        TrustLevelCard(
+                            trustLevel = c.trustLevel,
+                            onVerify =
+                                if (c.trustLevel == MobileContactTrustLevel.STANDARD ||
+                                    c.trustLevel == MobileContactTrustLevel.HIGH
+                                ) {
+                                    { showVerification = true }
+                                } else {
+                                    null
+                                },
+                            localizationManager = localizationManager,
+                        )
                     }
 
                     // Recovery trust status
@@ -642,6 +496,95 @@ fun VisibilityToggleItem(
                 checked = isVisible,
                 onCheckedChange = onToggle,
             )
+        }
+    }
+}
+
+@Composable
+fun TrustLevelCard(
+    trustLevel: MobileContactTrustLevel,
+    onVerify: (() -> Unit)?,
+    localizationManager: LocalizationManager,
+) {
+    val (containerColor, contentColor) =
+        when (trustLevel) {
+            MobileContactTrustLevel.CAUTIOUS -> {
+                MaterialTheme.colorScheme.errorContainer to
+                    MaterialTheme.colorScheme.onErrorContainer
+            }
+
+            MobileContactTrustLevel.STANDARD -> {
+                MaterialTheme.colorScheme.surfaceVariant to
+                    MaterialTheme.colorScheme.onSurfaceVariant
+            }
+
+            MobileContactTrustLevel.HIGH -> {
+                MaterialTheme.colorScheme.primaryContainer to
+                    MaterialTheme.colorScheme.onPrimaryContainer
+            }
+
+            MobileContactTrustLevel.VERIFIED -> {
+                MaterialTheme.colorScheme.primaryContainer to
+                    MaterialTheme.colorScheme.onPrimaryContainer
+            }
+        }
+
+    val title =
+        when (trustLevel) {
+            MobileContactTrustLevel.CAUTIOUS -> "Needs Re-verification"
+            MobileContactTrustLevel.STANDARD -> localizationManager.t("contacts.not_verified")
+            MobileContactTrustLevel.HIGH -> "High Trust"
+            MobileContactTrustLevel.VERIFIED -> localizationManager.t("contacts.verified")
+        }
+
+    val subtitle =
+        when (trustLevel) {
+            MobileContactTrustLevel.CAUTIOUS -> {
+                "This contact's identity was recovered — re-verify in person"
+            }
+
+            MobileContactTrustLevel.STANDARD -> {
+                "Verify fingerprints in person"
+            }
+
+            MobileContactTrustLevel.HIGH -> {
+                "Exchanged via close-range transport"
+            }
+
+            MobileContactTrustLevel.VERIFIED -> {
+                "You have verified this contact's identity"
+            }
+        }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = contentColor,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor.copy(alpha = 0.8f),
+                )
+            }
+            if (onVerify != null) {
+                Button(onClick = onVerify) {
+                    Text("Verify")
+                }
+            }
         }
     }
 }

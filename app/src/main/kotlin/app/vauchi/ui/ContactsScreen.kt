@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import app.vauchi.util.LocalizationManager
 import kotlinx.coroutines.launch
 import uniffi.vauchi_platform.MobileContact
+import uniffi.vauchi_platform.MobileContactTrustLevel
 import uniffi.vauchi_platform.MobileDemoContact
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -356,7 +357,13 @@ fun ContactCard(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showHideDialog by remember { mutableStateOf(false) }
     var showUnhideDialog by remember { mutableStateOf(false) }
-    val verificationStatus = if (contact.isVerified) "verified" else "not verified"
+    val verificationStatus =
+        when (contact.trustLevel) {
+            MobileContactTrustLevel.CAUTIOUS -> "needs re-verification"
+            MobileContactTrustLevel.STANDARD -> "not verified"
+            MobileContactTrustLevel.HIGH -> "high trust"
+            MobileContactTrustLevel.VERIFIED -> "verified"
+        }
 
     Card(
         modifier =

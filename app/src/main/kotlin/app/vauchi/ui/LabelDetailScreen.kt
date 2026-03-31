@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import app.vauchi.util.LocalizationManager
 import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactField
+import uniffi.vauchi_platform.MobileContactTrustLevel
 import uniffi.vauchi_platform.MobileVisibilityLabelDetail
 
 /**
@@ -232,7 +234,7 @@ fun LabelDetailScreen(
                             val contact = contacts.find { it.id == contactId }
                             ContactChip(
                                 displayName = contact?.displayName ?: contactId,
-                                isVerified = contact?.isVerified ?: false,
+                                trustLevel = contact?.trustLevel ?: MobileContactTrustLevel.STANDARD,
                             )
                         }
                     }
@@ -393,12 +395,19 @@ private fun FieldVisibilityToggle(
 @Composable
 private fun ContactChip(
     displayName: String,
-    isVerified: Boolean,
+    trustLevel: MobileContactTrustLevel,
 ) {
+    val trustLabel =
+        when (trustLevel) {
+            MobileContactTrustLevel.CAUTIOUS -> ", needs re-verification"
+            MobileContactTrustLevel.STANDARD -> ""
+            MobileContactTrustLevel.HIGH -> ", high trust"
+            MobileContactTrustLevel.VERIFIED -> ", verified"
+        }
     Card(
         modifier =
             Modifier.fillMaxWidth().semantics {
-                contentDescription = "$displayName${if (isVerified) ", verified" else ""}"
+                contentDescription = "$displayName$trustLabel"
             },
         colors =
             CardDefaults.cardColors(
@@ -415,7 +424,7 @@ private fun ContactChip(
         ) {
             Icon(
                 Icons.Default.People,
-                contentDescription = null, // Described by parent card semantics
+                contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
@@ -423,13 +432,26 @@ private fun ContactChip(
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f),
             )
-            if (isVerified) {
-                Icon(
-                    Icons.Default.Verified,
-                    contentDescription = "Verified",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp),
-                )
+            when (trustLevel) {
+                MobileContactTrustLevel.CAUTIOUS -> {
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = "Needs re-verification",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+
+                MobileContactTrustLevel.VERIFIED -> {
+                    Icon(
+                        Icons.Default.Verified,
+                        contentDescription = "Verified",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+
+                else -> {}
             }
         }
     }
