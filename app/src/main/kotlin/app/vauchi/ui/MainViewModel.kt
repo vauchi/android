@@ -15,6 +15,7 @@ import app.vauchi.data.VauchiRepository
 import app.vauchi.ui.components.ProximityVerificationResult
 import app.vauchi.ui.model.PasswordStrengthLevel
 import app.vauchi.ui.model.PasswordStrengthResult
+import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NetworkMonitor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -95,6 +96,7 @@ class MainViewModel(
         VauchiRepository(application)
     }
 
+    private val localizationManager = LocalizationManager.getInstance(application)
     private val networkMonitor = NetworkMonitor(application)
 
     // Multi-stage exchange session (chunked QR protocol)
@@ -346,13 +348,27 @@ class MainViewModel(
                 loadUserData()
                 val msg =
                     if (result.updatedContactNames.isNotEmpty()) {
-                        "Updated: ${result.updatedContactNames.joinToString(", ")}"
-                    } else {
-                        buildString {
-                            append("Sync complete")
-                            if (result.contactsAdded > 0u) append(" - ${result.contactsAdded} new contacts")
-                            if (result.cardsUpdated > 0u) append(" - ${result.cardsUpdated} cards updated")
+                        if (result.updatedContactNames.size == 1) {
+                            localizationManager.t(
+                                "sync.updated_single",
+                                mapOf("name" to result.updatedContactNames.first()),
+                            )
+                        } else {
+                            localizationManager.t(
+                                "sync.updated_contacts",
+                                mapOf("names" to result.updatedContactNames.joinToString(", ")),
+                            )
                         }
+                    } else if (result.contactsAdded > 0u || result.cardsUpdated > 0u) {
+                        localizationManager.t(
+                            "sync.message_format",
+                            mapOf(
+                                "cards_updated" to result.cardsUpdated.toString(),
+                                "updates_sent" to result.contactsAdded.toString(),
+                            ),
+                        )
+                    } else {
+                        localizationManager.t("sync.no_changes")
                     }
                 showMessage(msg)
             } catch (e: MobileException.RateLimited) {
