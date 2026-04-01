@@ -284,31 +284,31 @@ fun MainScreen(
             if (isTopLevel && uiState is UiState.Ready) {
                 NavigationBar {
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                        icon = { Icon(Icons.Default.Person, contentDescription = "My Card") },
                         label = { Text("My Card") },
                         selected = currentScreen == Screen.Home,
                         onClick = { currentScreen = Screen.Home },
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.People, contentDescription = null) },
+                        icon = { Icon(Icons.Default.People, contentDescription = "Contacts") },
                         label = { Text("Contacts") },
                         selected = currentScreen == Screen.Contacts,
                         onClick = { currentScreen = Screen.Contacts },
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.QrCode, contentDescription = null) },
+                        icon = { Icon(Icons.Default.QrCode, contentDescription = "Exchange") },
                         label = { Text("Exchange") },
                         selected = currentScreen == Screen.MultiStageExchange,
                         onClick = { currentScreen = Screen.MultiStageExchange },
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.Group, contentDescription = null) },
+                        icon = { Icon(Icons.Default.Group, contentDescription = "Groups") },
                         label = { Text("Groups") },
                         selected = currentScreen == Screen.Labels,
                         onClick = { currentScreen = Screen.Labels },
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.MoreHoriz, contentDescription = null) },
+                        icon = { Icon(Icons.Default.MoreHoriz, contentDescription = "More") },
                         label = { Text("More") },
                         selected = currentScreen == Screen.More,
                         onClick = { currentScreen = Screen.More },
@@ -712,7 +712,7 @@ fun DeepLinkConsentDialog(
         icon = {
             Icon(
                 Icons.Default.Warning,
-                contentDescription = null,
+                contentDescription = "Warning",
                 tint = MaterialTheme.colorScheme.primary,
             )
         },
@@ -952,7 +952,7 @@ fun ReadyScreen(
                             onClick = onExchange,
                             modifier = Modifier.weight(1f).testTag("home.exchange"),
                         ) {
-                            Icon(Icons.Default.Share, contentDescription = null)
+                            Icon(Icons.Default.Share, contentDescription = "Exchange")
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Exchange")
                         }
@@ -960,7 +960,7 @@ fun ReadyScreen(
                             onClick = onContacts,
                             modifier = Modifier.weight(1f).testTag("home.contacts"),
                         ) {
-                            Icon(Icons.Default.Person, contentDescription = null)
+                            Icon(Icons.Default.Person, contentDescription = "Contacts")
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Contacts")
                         }
@@ -1226,7 +1226,7 @@ fun ErrorScreen(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
                 Icons.Default.Warning,
-                contentDescription = null,
+                contentDescription = "Error",
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.error,
             )
@@ -1281,14 +1281,14 @@ fun ErrorScreen(
                     onClick = onRetry,
                     modifier = Modifier.fillMaxWidth().testTag("error.retry"),
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Icon(Icons.Default.Refresh, contentDescription = "Retry")
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Retry")
                 }
             } else {
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(onClick = onRetry, modifier = Modifier.testTag("error.retry")) {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Icon(Icons.Default.Refresh, contentDescription = "Retry")
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Retry")
                 }
@@ -1309,7 +1309,7 @@ fun OfflineBanner() {
     ) {
         Icon(
             Icons.Default.Warning,
-            contentDescription = null,
+            contentDescription = "Offline",
             modifier = Modifier.size(16.dp),
             tint = MaterialTheme.colorScheme.onErrorContainer,
         )
