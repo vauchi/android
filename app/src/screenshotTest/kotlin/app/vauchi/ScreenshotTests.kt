@@ -13,144 +13,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.android.tools.screenshot.PreviewTest
+import app.vauchi.ui.ContactsScreen
 import app.vauchi.ui.DeliveryStatusScreen
 import app.vauchi.ui.ExchangeScreen
-import app.vauchi.ui.ContactsScreen
 import app.vauchi.ui.LabelsScreen
 import app.vauchi.ui.SettingsScreen
 import app.vauchi.ui.SyncState
-import app.vauchi.ui.onboarding.AddFieldsStep
-import app.vauchi.ui.onboarding.CreateIdentityStep
-import app.vauchi.ui.onboarding.OnboardingData
-import app.vauchi.ui.onboarding.PreviewStep
-import app.vauchi.ui.onboarding.ReadyStep
-import app.vauchi.ui.onboarding.SecurityStep
-import app.vauchi.ui.onboarding.WelcomeStep
 import app.vauchi.ui.theme.VauchiTheme
-import uniffi.vauchi_platform.MobileDeliveryRecord
-import uniffi.vauchi_platform.MobileDeliveryStatus
-import uniffi.vauchi_platform.MobileRetryEntry
-import uniffi.vauchi_platform.MobileVisibilityLabel
+import com.android.tools.screenshot.PreviewTest
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileContactField
+import uniffi.vauchi_platform.MobileDeliveryRecord
+import uniffi.vauchi_platform.MobileDeliveryStatus
 import uniffi.vauchi_platform.MobileFieldType
+import uniffi.vauchi_platform.MobileRetryEntry
+import uniffi.vauchi_platform.MobileVisibilityLabel
 import java.util.Locale
 
 // VRT device spec: 360dp wide, 800dp tall, xhdpi (2x) = 720×1600 px.
 // Large enough to catch layout issues, small enough to keep baselines under 60 KB each.
 // Using xhdpi (320dpi/2x) instead of default xxhdpi (480dpi/3x) reduces file size by ~55%.
 private const val VRT_DEVICE = "spec:width=360dp,height=800dp,dpi=320"
-
-// =============================================================
-// Onboarding Steps - Light Theme
-// =============================================================
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun WelcomeStepScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        WelcomeStep(onContinue = {}, onRestore = {})
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun CreateIdentityStepEmptyScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        CreateIdentityStep(
-            displayName = "",
-            onDisplayNameChange = {},
-            onContinue = {},
-            onBack = {}
-        )
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun CreateIdentityStepFilledScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        CreateIdentityStep(
-            displayName = "Alice",
-            onDisplayNameChange = {},
-            onContinue = {},
-            onBack = {}
-        )
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun AddFieldsStepScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        AddFieldsStep(
-            phone = "",
-            email = "",
-            onPhoneChange = {},
-            onEmailChange = {},
-            onContinue = {},
-            onBack = {},
-            onSkip = {}
-        )
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun AddFieldsStepFilledScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        AddFieldsStep(
-            phone = "+41 79 123 45 67",
-            email = "alice@example.com",
-            onPhoneChange = {},
-            onEmailChange = {},
-            onContinue = {},
-            onBack = {},
-            onSkip = {}
-        )
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun PreviewStepScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        PreviewStep(
-            data = OnboardingData(
-                displayName = "Alice",
-                phone = "+41 79 123 45 67",
-                email = "alice@example.com"
-            ),
-            onContinue = {},
-            onBack = {}
-        )
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun SecurityStepScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        SecurityStep(onContinue = {}, onBack = {})
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun ReadyStepScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        ReadyStep()
-    }
-}
 
 // =============================================================
 // Main Screens - Light Theme
@@ -165,7 +48,7 @@ fun SettingsScreenScreenshot() {
             displayName = "Alice",
             onBack = {},
             onExportBackup = { "" },
-            onImportBackup = { _, _ -> false }
+            onImportBackup = { _, _ -> false },
         )
     }
 }
@@ -180,7 +63,7 @@ fun ContactsScreenEmptyScreenshot() {
             onListContacts = { emptyList() },
             onRemoveContact = {},
             onContactClick = {},
-            syncState = SyncState.Idle
+            syncState = SyncState.Idle,
         )
     }
 }
@@ -197,7 +80,7 @@ fun ContactsScreenWithContactsScreenshot() {
             onListContacts = { emptyList() },
             onRemoveContact = {},
             onContactClick = {},
-            syncState = SyncState.Idle
+            syncState = SyncState.Idle,
         )
     }
 }
@@ -210,7 +93,7 @@ fun ExchangeScreenScreenshot() {
         ExchangeScreen(
             onBack = {},
             onGenerateQr = { null },
-            onScanQr = {}
+            onScanQr = {},
         )
     }
 }
@@ -227,7 +110,7 @@ fun DeliveryStatusEmptyScreenshot() {
             isLoading = false,
             onBack = {},
             onRetry = {},
-            onRefresh = {}
+            onRefresh = {},
         )
     }
 }
@@ -238,42 +121,44 @@ fun DeliveryStatusEmptyScreenshot() {
 fun DeliveryStatusWithRecordsScreenshot() {
     VauchiTheme(dynamicColor = false) {
         DeliveryStatusScreen(
-            deliveryRecords = listOf(
-                MobileDeliveryRecord(
-                    messageId = "msg-1",
-                    recipientId = "recipient-1",
-                    status = MobileDeliveryStatus.DELIVERED,
-                    errorReason = null,
-                    createdAt = 1706745600UL,
-                    updatedAt = 1706745700UL,
-                    expiresAt = null
+            deliveryRecords =
+                listOf(
+                    MobileDeliveryRecord(
+                        messageId = "msg-1",
+                        recipientId = "recipient-1",
+                        status = MobileDeliveryStatus.DELIVERED,
+                        errorReason = null,
+                        createdAt = 1706745600UL,
+                        updatedAt = 1706745700UL,
+                        expiresAt = null,
+                    ),
+                    MobileDeliveryRecord(
+                        messageId = "msg-2",
+                        recipientId = "recipient-2",
+                        status = MobileDeliveryStatus.FAILED,
+                        errorReason = "Recipient offline",
+                        createdAt = 1706745500UL,
+                        updatedAt = 1706745600UL,
+                        expiresAt = null,
+                    ),
                 ),
-                MobileDeliveryRecord(
-                    messageId = "msg-2",
-                    recipientId = "recipient-2",
-                    status = MobileDeliveryStatus.FAILED,
-                    errorReason = "Recipient offline",
-                    createdAt = 1706745500UL,
-                    updatedAt = 1706745600UL,
-                    expiresAt = null
-                )
-            ),
-            retryEntries = listOf(
-                MobileRetryEntry(
-                    messageId = "msg-2",
-                    recipientId = "recipient-2",
-                    attempt = 2U,
-                    nextRetry = 1706746000UL,
-                    createdAt = 1706745500UL,
-                    maxAttempts = 5U,
-                    isMaxExceeded = false
-                )
-            ),
+            retryEntries =
+                listOf(
+                    MobileRetryEntry(
+                        messageId = "msg-2",
+                        recipientId = "recipient-2",
+                        attempt = 2U,
+                        nextRetry = 1706746000UL,
+                        createdAt = 1706745500UL,
+                        maxAttempts = 5U,
+                        isMaxExceeded = false,
+                    ),
+                ),
             failedCount = 1,
             isLoading = false,
             onBack = {},
             onRetry = {},
-            onRefresh = {}
+            onRefresh = {},
         )
     }
 }
@@ -290,7 +175,7 @@ fun LabelsScreenEmptyScreenshot() {
             onLabelClick = {},
             onCreateLabel = {},
             onDeleteLabel = {},
-            onRefresh = {}
+            onRefresh = {},
         )
     }
 }
@@ -301,38 +186,39 @@ fun LabelsScreenEmptyScreenshot() {
 fun LabelsScreenWithLabelsScreenshot() {
     VauchiTheme(dynamicColor = false) {
         LabelsScreen(
-            labels = listOf(
-                MobileVisibilityLabel(
-                    id = "label-1",
-                    name = "Work",
-                    contactCount = 5U,
-                    visibleFieldCount = 3U,
-                    createdAt = 1706745600UL,
-                    modifiedAt = 1706745600UL
+            labels =
+                listOf(
+                    MobileVisibilityLabel(
+                        id = "label-1",
+                        name = "Work",
+                        contactCount = 5U,
+                        visibleFieldCount = 3U,
+                        createdAt = 1706745600UL,
+                        modifiedAt = 1706745600UL,
+                    ),
+                    MobileVisibilityLabel(
+                        id = "label-2",
+                        name = "Family",
+                        contactCount = 12U,
+                        visibleFieldCount = 5U,
+                        createdAt = 1706745500UL,
+                        modifiedAt = 1706745700UL,
+                    ),
+                    MobileVisibilityLabel(
+                        id = "label-3",
+                        name = "Friends",
+                        contactCount = 8U,
+                        visibleFieldCount = 4U,
+                        createdAt = 1706745400UL,
+                        modifiedAt = 1706745800UL,
+                    ),
                 ),
-                MobileVisibilityLabel(
-                    id = "label-2",
-                    name = "Family",
-                    contactCount = 12U,
-                    visibleFieldCount = 5U,
-                    createdAt = 1706745500UL,
-                    modifiedAt = 1706745700UL
-                ),
-                MobileVisibilityLabel(
-                    id = "label-3",
-                    name = "Friends",
-                    contactCount = 8U,
-                    visibleFieldCount = 4U,
-                    createdAt = 1706745400UL,
-                    modifiedAt = 1706745800UL
-                )
-            ),
             suggestedLabels = emptyList(),
             onBack = {},
             onLabelClick = {},
             onCreateLabel = {},
             onDeleteLabel = {},
-            onRefresh = {}
+            onRefresh = {},
         )
     }
 }
@@ -349,16 +235,17 @@ fun HomeScreenEmptyCardScreenshot() {
         ReadyScreen(
             displayName = "Alice",
             publicId = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-            card = MobileContactCard(
-                displayName = "Alice",
-                fields = emptyList()
-            ),
+            card =
+                MobileContactCard(
+                    displayName = "Alice",
+                    fields = emptyList(),
+                ),
             contactCount = 0U,
             onAddField = { _, _, _ -> },
             onRemoveField = {},
             onExchange = {},
             onContacts = {},
-            onSettings = {}
+            onSettings = {},
         )
     }
 }
@@ -371,35 +258,40 @@ fun HomeScreenWithFieldsScreenshot() {
         ReadyScreen(
             displayName = "Alice",
             publicId = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-            card = MobileContactCard(
-                displayName = "Alice",
-                fields = listOf(
-                    MobileContactField(
-                        id = "field-1",
-                        label = "Email",
-                        value = "alice@example.com",
-                        fieldType = MobileFieldType.EMAIL
-                    ),
-                    MobileContactField(
-                        id = "field-2",
-                        label = "Phone",
-                        value = "+41 79 123 45 67",
-                        fieldType = MobileFieldType.PHONE
-                    ),
-                    MobileContactField(
-                        id = "field-3",
-                        label = "GitHub",
-                        value = "alice",
-                        fieldType = MobileFieldType.SOCIAL
-                    )
-                )
-            ),
+            card =
+                MobileContactCard(
+                    displayName = "Alice",
+                    fields =
+                        listOf(
+                            MobileContactField(
+                                id = "field-1",
+                                label = "Email",
+                                value = "alice@example.com",
+                                fieldType = MobileFieldType.EMAIL,
+                                note = null,
+                            ),
+                            MobileContactField(
+                                id = "field-2",
+                                label = "Phone",
+                                value = "+41 79 123 45 67",
+                                fieldType = MobileFieldType.PHONE,
+                                note = null,
+                            ),
+                            MobileContactField(
+                                id = "field-3",
+                                label = "GitHub",
+                                value = "alice",
+                                fieldType = MobileFieldType.SOCIAL,
+                                note = null,
+                            ),
+                        ),
+                ),
             contactCount = 5U,
             onAddField = { _, _, _ -> },
             onRemoveField = {},
             onExchange = {},
             onContacts = {},
-            onSettings = {}
+            onSettings = {},
         )
     }
 }
@@ -412,17 +304,20 @@ fun HomeScreenSyncingScreenshot() {
         ReadyScreen(
             displayName = "Alice",
             publicId = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-            card = MobileContactCard(
-                displayName = "Alice",
-                fields = listOf(
-                    MobileContactField(
-                        id = "field-1",
-                        label = "Email",
-                        value = "alice@example.com",
-                        fieldType = MobileFieldType.EMAIL
-                    )
-                )
-            ),
+            card =
+                MobileContactCard(
+                    displayName = "Alice",
+                    fields =
+                        listOf(
+                            MobileContactField(
+                                id = "field-1",
+                                label = "Email",
+                                value = "alice@example.com",
+                                fieldType = MobileFieldType.EMAIL,
+                                note = null,
+                            ),
+                        ),
+                ),
             contactCount = 3U,
             onAddField = { _, _, _ -> },
             onRemoveField = {},
@@ -430,7 +325,7 @@ fun HomeScreenSyncingScreenshot() {
             onContacts = {},
             onSettings = {},
             syncState = SyncState.Syncing,
-            isOnline = true
+            isOnline = true,
         )
     }
 }
@@ -443,17 +338,20 @@ fun HomeScreenOfflineScreenshot() {
         ReadyScreen(
             displayName = "Alice",
             publicId = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-            card = MobileContactCard(
-                displayName = "Alice",
-                fields = listOf(
-                    MobileContactField(
-                        id = "field-1",
-                        label = "Email",
-                        value = "alice@example.com",
-                        fieldType = MobileFieldType.EMAIL
-                    )
-                )
-            ),
+            card =
+                MobileContactCard(
+                    displayName = "Alice",
+                    fields =
+                        listOf(
+                            MobileContactField(
+                                id = "field-1",
+                                label = "Email",
+                                value = "alice@example.com",
+                                fieldType = MobileFieldType.EMAIL,
+                                note = null,
+                            ),
+                        ),
+                ),
             contactCount = 3U,
             onAddField = { _, _, _ -> },
             onRemoveField = {},
@@ -461,7 +359,7 @@ fun HomeScreenOfflineScreenshot() {
             onContacts = {},
             onSettings = {},
             syncState = SyncState.Idle,
-            isOnline = false
+            isOnline = false,
         )
     }
 }
@@ -480,30 +378,36 @@ fun ContactFieldItemScreenshot() {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)) {
                 app.vauchi.ui.ContactFieldItem(
-                    field = MobileContactField(
-                        id = "field-1",
-                        label = "Email",
-                        value = "bob@example.com",
-                        fieldType = MobileFieldType.EMAIL
-                    )
+                    field =
+                        MobileContactField(
+                            id = "field-1",
+                            label = "Email",
+                            value = "bob@example.com",
+                            fieldType = MobileFieldType.EMAIL,
+                            note = null,
+                        ),
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 app.vauchi.ui.ContactFieldItem(
-                    field = MobileContactField(
-                        id = "field-2",
-                        label = "Phone",
-                        value = "+41 79 987 65 43",
-                        fieldType = MobileFieldType.PHONE
-                    )
+                    field =
+                        MobileContactField(
+                            id = "field-2",
+                            label = "Phone",
+                            value = "+41 79 987 65 43",
+                            fieldType = MobileFieldType.PHONE,
+                            note = null,
+                        ),
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 app.vauchi.ui.ContactFieldItem(
-                    field = MobileContactField(
-                        id = "field-3",
-                        label = "Twitter",
-                        value = "@bobsmith",
-                        fieldType = MobileFieldType.SOCIAL
-                    )
+                    field =
+                        MobileContactField(
+                            id = "field-3",
+                            label = "Twitter",
+                            value = "@bobsmith",
+                            fieldType = MobileFieldType.SOCIAL,
+                            note = null,
+                        ),
                 )
             }
         }
@@ -518,25 +422,29 @@ fun VisibilityToggleItemScreenshot() {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)) {
                 app.vauchi.ui.VisibilityToggleItem(
-                    field = MobileContactField(
-                        id = "field-1",
-                        label = "Email",
-                        value = "alice@example.com",
-                        fieldType = MobileFieldType.EMAIL
-                    ),
+                    field =
+                        MobileContactField(
+                            id = "field-1",
+                            label = "Email",
+                            value = "alice@example.com",
+                            fieldType = MobileFieldType.EMAIL,
+                            note = null,
+                        ),
                     isVisible = true,
-                    onToggle = {}
+                    onToggle = {},
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 app.vauchi.ui.VisibilityToggleItem(
-                    field = MobileContactField(
-                        id = "field-2",
-                        label = "Phone",
-                        value = "+41 79 123 45 67",
-                        fieldType = MobileFieldType.PHONE
-                    ),
+                    field =
+                        MobileContactField(
+                            id = "field-2",
+                            label = "Phone",
+                            value = "+41 79 123 45 67",
+                            fieldType = MobileFieldType.PHONE,
+                            note = null,
+                        ),
                     isVisible = false,
-                    onToggle = {}
+                    onToggle = {},
                 )
             }
         }
@@ -559,30 +467,30 @@ fun RecoveryStepComponentScreenshot() {
                 Text(
                     "Recovery Steps",
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 16.dp),
                 )
                 app.vauchi.ui.RecoveryStep(
                     number = 1,
                     title = "Create New Identity",
-                    description = "First, create a new identity on your new device."
+                    description = "First, create a new identity on your new device.",
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 app.vauchi.ui.RecoveryStep(
                     number = 2,
                     title = "Generate Recovery Claim",
-                    description = "Create a claim using your OLD public key from your lost identity."
+                    description = "Create a claim using your OLD public key from your lost identity.",
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 app.vauchi.ui.RecoveryStep(
                     number = 3,
                     title = "Collect Vouchers",
-                    description = "Meet with 3+ trusted contacts in person. Have them vouch for your recovery."
+                    description = "Meet with 3+ trusted contacts in person. Have them vouch for your recovery.",
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 app.vauchi.ui.RecoveryStep(
                     number = 4,
                     title = "Share Recovery Proof",
-                    description = "Once you have enough vouchers, share your recovery proof with all contacts."
+                    description = "Once you have enough vouchers, share your recovery proof with all contacts.",
                 )
             }
         }
@@ -596,88 +504,13 @@ fun RecoveryStepComponentScreenshot() {
 @PreviewTest
 @Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
-fun WelcomeStepDarkScreenshot() {
-    VauchiTheme(darkTheme = true, dynamicColor = false) {
-        WelcomeStep(onContinue = {}, onRestore = {})
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun CreateIdentityStepFilledDarkScreenshot() {
-    VauchiTheme(darkTheme = true, dynamicColor = false) {
-        CreateIdentityStep(
-            displayName = "Alice",
-            onDisplayNameChange = {},
-            onContinue = {},
-            onBack = {}
-        )
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun AddFieldsStepDarkScreenshot() {
-    VauchiTheme(darkTheme = true, dynamicColor = false) {
-        AddFieldsStep(
-            phone = "+41 79 123 45 67",
-            email = "alice@example.com",
-            onPhoneChange = {},
-            onEmailChange = {},
-            onContinue = {},
-            onBack = {},
-            onSkip = {}
-        )
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun PreviewStepDarkScreenshot() {
-    VauchiTheme(darkTheme = true, dynamicColor = false) {
-        PreviewStep(
-            data = OnboardingData(
-                displayName = "Alice",
-                phone = "+41 79 123 45 67",
-                email = "alice@example.com"
-            ),
-            onContinue = {},
-            onBack = {}
-        )
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun SecurityStepDarkScreenshot() {
-    VauchiTheme(darkTheme = true, dynamicColor = false) {
-        SecurityStep(onContinue = {}, onBack = {})
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun ReadyStepDarkScreenshot() {
-    VauchiTheme(darkTheme = true, dynamicColor = false) {
-        ReadyStep()
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
 fun SettingsScreenDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
         SettingsScreen(
             displayName = "Alice",
             onBack = {},
             onExportBackup = { "" },
-            onImportBackup = { _, _ -> false }
+            onImportBackup = { _, _ -> false },
         )
     }
 }
@@ -692,7 +525,7 @@ fun ContactsScreenDarkScreenshot() {
             onListContacts = { emptyList() },
             onRemoveContact = {},
             onContactClick = {},
-            syncState = SyncState.Idle
+            syncState = SyncState.Idle,
         )
     }
 }
@@ -705,7 +538,7 @@ fun ExchangeScreenDarkScreenshot() {
         ExchangeScreen(
             onBack = {},
             onGenerateQr = { null },
-            onScanQr = {}
+            onScanQr = {},
         )
     }
 }
@@ -716,42 +549,44 @@ fun ExchangeScreenDarkScreenshot() {
 fun DeliveryStatusWithRecordsDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
         DeliveryStatusScreen(
-            deliveryRecords = listOf(
-                MobileDeliveryRecord(
-                    messageId = "msg-1",
-                    recipientId = "recipient-1",
-                    status = MobileDeliveryStatus.DELIVERED,
-                    errorReason = null,
-                    createdAt = 1706745600UL,
-                    updatedAt = 1706745700UL,
-                    expiresAt = null
+            deliveryRecords =
+                listOf(
+                    MobileDeliveryRecord(
+                        messageId = "msg-1",
+                        recipientId = "recipient-1",
+                        status = MobileDeliveryStatus.DELIVERED,
+                        errorReason = null,
+                        createdAt = 1706745600UL,
+                        updatedAt = 1706745700UL,
+                        expiresAt = null,
+                    ),
+                    MobileDeliveryRecord(
+                        messageId = "msg-2",
+                        recipientId = "recipient-2",
+                        status = MobileDeliveryStatus.FAILED,
+                        errorReason = "Recipient offline",
+                        createdAt = 1706745500UL,
+                        updatedAt = 1706745600UL,
+                        expiresAt = null,
+                    ),
                 ),
-                MobileDeliveryRecord(
-                    messageId = "msg-2",
-                    recipientId = "recipient-2",
-                    status = MobileDeliveryStatus.FAILED,
-                    errorReason = "Recipient offline",
-                    createdAt = 1706745500UL,
-                    updatedAt = 1706745600UL,
-                    expiresAt = null
-                )
-            ),
-            retryEntries = listOf(
-                MobileRetryEntry(
-                    messageId = "msg-2",
-                    recipientId = "recipient-2",
-                    attempt = 2U,
-                    nextRetry = 1706746000UL,
-                    createdAt = 1706745500UL,
-                    maxAttempts = 5U,
-                    isMaxExceeded = false
-                )
-            ),
+            retryEntries =
+                listOf(
+                    MobileRetryEntry(
+                        messageId = "msg-2",
+                        recipientId = "recipient-2",
+                        attempt = 2U,
+                        nextRetry = 1706746000UL,
+                        createdAt = 1706745500UL,
+                        maxAttempts = 5U,
+                        isMaxExceeded = false,
+                    ),
+                ),
             failedCount = 1,
             isLoading = false,
             onBack = {},
             onRetry = {},
-            onRefresh = {}
+            onRefresh = {},
         )
     }
 }
@@ -762,30 +597,31 @@ fun DeliveryStatusWithRecordsDarkScreenshot() {
 fun LabelsScreenWithLabelsDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
         LabelsScreen(
-            labels = listOf(
-                MobileVisibilityLabel(
-                    id = "label-1",
-                    name = "Work",
-                    contactCount = 5U,
-                    visibleFieldCount = 3U,
-                    createdAt = 1706745600UL,
-                    modifiedAt = 1706745600UL
+            labels =
+                listOf(
+                    MobileVisibilityLabel(
+                        id = "label-1",
+                        name = "Work",
+                        contactCount = 5U,
+                        visibleFieldCount = 3U,
+                        createdAt = 1706745600UL,
+                        modifiedAt = 1706745600UL,
+                    ),
+                    MobileVisibilityLabel(
+                        id = "label-2",
+                        name = "Family",
+                        contactCount = 12U,
+                        visibleFieldCount = 5U,
+                        createdAt = 1706745500UL,
+                        modifiedAt = 1706745700UL,
+                    ),
                 ),
-                MobileVisibilityLabel(
-                    id = "label-2",
-                    name = "Family",
-                    contactCount = 12U,
-                    visibleFieldCount = 5U,
-                    createdAt = 1706745500UL,
-                    modifiedAt = 1706745700UL
-                )
-            ),
             suggestedLabels = emptyList(),
             onBack = {},
             onLabelClick = {},
             onCreateLabel = {},
             onDeleteLabel = {},
-            onRefresh = {}
+            onRefresh = {},
         )
     }
 }
@@ -798,29 +634,33 @@ fun HomeScreenWithFieldsDarkScreenshot() {
         ReadyScreen(
             displayName = "Alice",
             publicId = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-            card = MobileContactCard(
-                displayName = "Alice",
-                fields = listOf(
-                    MobileContactField(
-                        id = "field-1",
-                        label = "Email",
-                        value = "alice@example.com",
-                        fieldType = MobileFieldType.EMAIL
-                    ),
-                    MobileContactField(
-                        id = "field-2",
-                        label = "Phone",
-                        value = "+41 79 123 45 67",
-                        fieldType = MobileFieldType.PHONE
-                    )
-                )
-            ),
+            card =
+                MobileContactCard(
+                    displayName = "Alice",
+                    fields =
+                        listOf(
+                            MobileContactField(
+                                id = "field-1",
+                                label = "Email",
+                                value = "alice@example.com",
+                                fieldType = MobileFieldType.EMAIL,
+                                note = null,
+                            ),
+                            MobileContactField(
+                                id = "field-2",
+                                label = "Phone",
+                                value = "+41 79 123 45 67",
+                                fieldType = MobileFieldType.PHONE,
+                                note = null,
+                            ),
+                        ),
+                ),
             contactCount = 5U,
             onAddField = { _, _, _ -> },
             onRemoveField = {},
             onExchange = {},
             onContacts = {},
-            onSettings = {}
+            onSettings = {},
         )
     }
 }
@@ -833,21 +673,25 @@ fun ContactFieldItemDarkScreenshot() {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)) {
                 app.vauchi.ui.ContactFieldItem(
-                    field = MobileContactField(
-                        id = "field-1",
-                        label = "Email",
-                        value = "bob@example.com",
-                        fieldType = MobileFieldType.EMAIL
-                    )
+                    field =
+                        MobileContactField(
+                            id = "field-1",
+                            label = "Email",
+                            value = "bob@example.com",
+                            fieldType = MobileFieldType.EMAIL,
+                            note = null,
+                        ),
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 app.vauchi.ui.ContactFieldItem(
-                    field = MobileContactField(
-                        id = "field-2",
-                        label = "Phone",
-                        value = "+41 79 987 65 43",
-                        fieldType = MobileFieldType.PHONE
-                    )
+                    field =
+                        MobileContactField(
+                            id = "field-2",
+                            label = "Phone",
+                            value = "+41 79 987 65 43",
+                            fieldType = MobileFieldType.PHONE,
+                            note = null,
+                        ),
                 )
             }
         }
@@ -864,18 +708,18 @@ fun RecoveryStepComponentDarkScreenshot() {
                 Text(
                     "Recovery Steps",
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 16.dp),
                 )
                 app.vauchi.ui.RecoveryStep(
                     number = 1,
                     title = "Create New Identity",
-                    description = "First, create a new identity on your new device."
+                    description = "First, create a new identity on your new device.",
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 app.vauchi.ui.RecoveryStep(
                     number = 2,
                     title = "Generate Recovery Claim",
-                    description = "Create a claim using your OLD public key."
+                    description = "Create a claim using your OLD public key.",
                 )
             }
         }
@@ -896,87 +740,12 @@ fun RecoveryStepComponentDarkScreenshot() {
  */
 @Composable
 private fun GermanLocaleWrapper(content: @Composable () -> Unit) {
-    val germanConfig = Configuration().apply {
-        setLocale(Locale.GERMAN)
-    }
+    val germanConfig =
+        Configuration().apply {
+            setLocale(Locale.GERMAN)
+        }
     CompositionLocalProvider(LocalConfiguration provides germanConfig) {
         content()
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
-@Composable
-fun WelcomeStepGermanScreenshot() {
-    GermanLocaleWrapper {
-        VauchiTheme(dynamicColor = false) {
-            WelcomeStep(onContinue = {}, onRestore = {})
-        }
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
-@Composable
-fun CreateIdentityStepGermanScreenshot() {
-    GermanLocaleWrapper {
-        VauchiTheme(dynamicColor = false) {
-            CreateIdentityStep(
-                displayName = "Anna",
-                onDisplayNameChange = {},
-                onContinue = {},
-                onBack = {}
-            )
-        }
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
-@Composable
-fun AddFieldsStepGermanScreenshot() {
-    GermanLocaleWrapper {
-        VauchiTheme(dynamicColor = false) {
-            AddFieldsStep(
-                phone = "+49 170 123 4567",
-                email = "anna@beispiel.de",
-                onPhoneChange = {},
-                onEmailChange = {},
-                onContinue = {},
-                onBack = {},
-                onSkip = {}
-            )
-        }
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
-@Composable
-fun PreviewStepGermanScreenshot() {
-    GermanLocaleWrapper {
-        VauchiTheme(dynamicColor = false) {
-            PreviewStep(
-                data = OnboardingData(
-                    displayName = "Anna",
-                    phone = "+49 170 123 4567",
-                    email = "anna@beispiel.de"
-                ),
-                onContinue = {},
-                onBack = {}
-            )
-        }
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
-@Composable
-fun SecurityStepGermanScreenshot() {
-    GermanLocaleWrapper {
-        VauchiTheme(dynamicColor = false) {
-            SecurityStep(onContinue = {}, onBack = {})
-        }
     }
 }
 
@@ -990,7 +759,7 @@ fun SettingsScreenGermanScreenshot() {
                 displayName = "Anna",
                 onBack = {},
                 onExportBackup = { "" },
-                onImportBackup = { _, _ -> false }
+                onImportBackup = { _, _ -> false },
             )
         }
     }
@@ -1007,7 +776,7 @@ fun ContactsScreenGermanScreenshot() {
                 onListContacts = { emptyList() },
                 onRemoveContact = {},
                 onContactClick = {},
-                syncState = SyncState.Idle
+                syncState = SyncState.Idle,
             )
         }
     }
@@ -1022,7 +791,7 @@ fun ExchangeScreenGermanScreenshot() {
             ExchangeScreen(
                 onBack = {},
                 onGenerateQr = { null },
-                onScanQr = {}
+                onScanQr = {},
             )
         }
     }
@@ -1037,29 +806,33 @@ fun HomeScreenGermanScreenshot() {
             ReadyScreen(
                 displayName = "Anna",
                 publicId = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-                card = MobileContactCard(
-                    displayName = "Anna",
-                    fields = listOf(
-                        MobileContactField(
-                            id = "field-1",
-                            label = "E-Mail",
-                            value = "anna@beispiel.de",
-                            fieldType = MobileFieldType.EMAIL
-                        ),
-                        MobileContactField(
-                            id = "field-2",
-                            label = "Telefon",
-                            value = "+49 170 123 4567",
-                            fieldType = MobileFieldType.PHONE
-                        )
-                    )
-                ),
+                card =
+                    MobileContactCard(
+                        displayName = "Anna",
+                        fields =
+                            listOf(
+                                MobileContactField(
+                                    id = "field-1",
+                                    label = "E-Mail",
+                                    value = "anna@beispiel.de",
+                                    fieldType = MobileFieldType.EMAIL,
+                                    note = null,
+                                ),
+                                MobileContactField(
+                                    id = "field-2",
+                                    label = "Telefon",
+                                    value = "+49 170 123 4567",
+                                    fieldType = MobileFieldType.PHONE,
+                                    note = null,
+                                ),
+                            ),
+                    ),
                 contactCount = 3U,
                 onAddField = { _, _, _ -> },
                 onRemoveField = {},
                 onExchange = {},
                 onContacts = {},
-                onSettings = {}
+                onSettings = {},
             )
         }
     }
@@ -1072,30 +845,31 @@ fun LabelsScreenGermanScreenshot() {
     GermanLocaleWrapper {
         VauchiTheme(dynamicColor = false) {
             LabelsScreen(
-                labels = listOf(
-                    MobileVisibilityLabel(
-                        id = "label-1",
-                        name = "Arbeit",
-                        contactCount = 5U,
-                        visibleFieldCount = 3U,
-                        createdAt = 1706745600UL,
-                        modifiedAt = 1706745600UL
+                labels =
+                    listOf(
+                        MobileVisibilityLabel(
+                            id = "label-1",
+                            name = "Arbeit",
+                            contactCount = 5U,
+                            visibleFieldCount = 3U,
+                            createdAt = 1706745600UL,
+                            modifiedAt = 1706745600UL,
+                        ),
+                        MobileVisibilityLabel(
+                            id = "label-2",
+                            name = "Familie",
+                            contactCount = 12U,
+                            visibleFieldCount = 5U,
+                            createdAt = 1706745500UL,
+                            modifiedAt = 1706745700UL,
+                        ),
                     ),
-                    MobileVisibilityLabel(
-                        id = "label-2",
-                        name = "Familie",
-                        contactCount = 12U,
-                        visibleFieldCount = 5U,
-                        createdAt = 1706745500UL,
-                        modifiedAt = 1706745700UL
-                    )
-                ),
                 suggestedLabels = listOf("Arbeit", "Familie", "Freunde"),
                 onBack = {},
                 onLabelClick = {},
                 onCreateLabel = {},
                 onDeleteLabel = {},
-                onRefresh = {}
+                onRefresh = {},
             )
         }
     }
@@ -1108,17 +882,6 @@ fun LabelsScreenGermanScreenshot() {
 @PreviewTest
 @Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
 @Composable
-fun WelcomeStepGermanDarkScreenshot() {
-    GermanLocaleWrapper {
-        VauchiTheme(darkTheme = true, dynamicColor = false) {
-            WelcomeStep(onContinue = {}, onRestore = {})
-        }
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
-@Composable
 fun SettingsScreenGermanDarkScreenshot() {
     GermanLocaleWrapper {
         VauchiTheme(darkTheme = true, dynamicColor = false) {
@@ -1126,7 +889,7 @@ fun SettingsScreenGermanDarkScreenshot() {
                 displayName = "Anna",
                 onBack = {},
                 onExportBackup = { "" },
-                onImportBackup = { _, _ -> false }
+                onImportBackup = { _, _ -> false },
             )
         }
     }
@@ -1141,23 +904,26 @@ fun HomeScreenGermanDarkScreenshot() {
             ReadyScreen(
                 displayName = "Anna",
                 publicId = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-                card = MobileContactCard(
-                    displayName = "Anna",
-                    fields = listOf(
-                        MobileContactField(
-                            id = "field-1",
-                            label = "E-Mail",
-                            value = "anna@beispiel.de",
-                            fieldType = MobileFieldType.EMAIL
-                        )
-                    )
-                ),
+                card =
+                    MobileContactCard(
+                        displayName = "Anna",
+                        fields =
+                            listOf(
+                                MobileContactField(
+                                    id = "field-1",
+                                    label = "E-Mail",
+                                    value = "anna@beispiel.de",
+                                    fieldType = MobileFieldType.EMAIL,
+                                    note = null,
+                                ),
+                            ),
+                    ),
                 contactCount = 3U,
                 onAddField = { _, _, _ -> },
                 onRemoveField = {},
                 onExchange = {},
                 onContacts = {},
-                onSettings = {}
+                onSettings = {},
             )
         }
     }
