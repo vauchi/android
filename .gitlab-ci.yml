@@ -503,7 +503,7 @@ test:snapshots:record:
     - git config user.email "ci@vauchi.app"
     - PUSH_URL="https://vauchi-gitlab-runner:${PROJECT_ACCESS_TOKEN}@gitlab.com/${CI_PROJECT_PATH}.git"
     - git fetch "$PUSH_URL" "${CI_COMMIT_REF_NAME}"
-    - git checkout "${CI_COMMIT_REF_NAME}"
+    - git checkout -B "${CI_COMMIT_REF_NAME}" FETCH_HEAD
     # Restore recorded baselines (git checkout above resets working directory)
     - cp -r /tmp/screenshot-reference/ app/src/screenshotTestDebug/reference/
     # Commit and push baselines (skip if unchanged)
