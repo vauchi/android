@@ -106,6 +106,14 @@ class ExchangeCommandHandler(
             is MobileExchangeCommand.NfcDeactivate -> {
                 // No-op
             }
+
+            // ── Tier 0 commands (active after bindings bump) ────────
+            // AccelerometerStart, AccelerometerStop, RelayEscrowDeposit,
+            // RelayEscrowCheck, RelayEscrowRetrieve, ShowShareSheet
+            // are handled via the else branch until UniFFI regeneration.
+            else -> {
+                Log.d(TAG, "Unhandled command: $command (pending bindings bump)")
+            }
         }
     }
 
@@ -133,6 +141,45 @@ class ExchangeCommandHandler(
         } catch (e: Exception) {
             reportError("Audio", e.message ?: "listen failed")
         }
+    }
+
+    // ── Relay Escrow ────────────────────────────────────────────────
+
+    private fun depositToEscrow(
+        gateHash: List<UByte>,
+        slotHash: List<UByte>,
+        blob: List<UByte>,
+        ttl: UInt,
+    ) {
+        // TODO: POST to relay OHTTP endpoint with EscrowMessage::Put
+        // On success: no event needed (fire-and-forget deposit)
+        // On failure: report RelayEscrowFailed
+        reportError("RelayEscrow", "not yet implemented")
+    }
+
+    private fun checkEscrow(gateHash: List<UByte>) {
+        // TODO: POST to relay OHTTP endpoint with EscrowMessage::Count
+        // When count >= 2: report RelayEscrowReady
+        // Otherwise: schedule retry after delay
+        reportError("RelayEscrow", "not yet implemented")
+    }
+
+    private fun retrieveFromEscrow(
+        gateHash: List<UByte>,
+        slotHash: List<UByte>,
+    ) {
+        // TODO: POST to relay OHTTP endpoint with EscrowMessage::Get
+        // On Blob response: pass blob back to core for decryption
+        // On error: report RelayEscrowFailed
+        reportError("RelayEscrow", "not yet implemented")
+    }
+
+    // ── Share Sheet ────────────────────────────────────────────────
+
+    private fun showShareSheet(url: String) {
+        // TODO: Create Intent.ACTION_SEND with the exchange URL
+        // On completion: report LinkShared event via session.applyHardwareEvent
+        Log.d(TAG, "ShareSheet requested for URL: ${url.take(30)}...")
     }
 
     // ── Feedback ────────────────────────────────────────────────────
