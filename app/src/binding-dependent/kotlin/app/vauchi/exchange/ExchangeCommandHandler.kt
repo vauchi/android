@@ -179,7 +179,7 @@ class ExchangeCommandHandler(
     private fun showShareSheet(url: String) {
         // TODO: Create Intent.ACTION_SEND with the exchange URL
         // On completion: report LinkShared event via session.applyHardwareEvent
-        Log.d(TAG, "ShareSheet requested for URL: ${url.take(30)}...")
+        Log.d(TAG, "ShareSheet command received")
     }
 
     // ── Feedback ────────────────────────────────────────────────────
