@@ -11,5 +11,10 @@ PN = "PN"
 extend-glob = []
 check-file = false
 
+# Screenshot baselines are binary PNGs — random bytes trigger false positives
+[type.png]
+extend-glob = ["*.png"]
+check-file = false
+
 [files]
 extend-exclude = ["**/assets/locales/*.json"]

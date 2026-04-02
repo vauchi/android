@@ -389,10 +389,8 @@ test:screenshots:
   extends: [.android-job, .timeout-standard]
   stage: test
   needs: []
-  # allow_failure until core tags align with published AAR version.
-  # The host .so is built from the core tag matching the AAR version;
-  # if no matching tag exists, falls back to main (may have symbol mismatches).
-  allow_failure: true
+  # Host .so built from core tag matching AAR version (v0.12.2).
+  # Falls back to main if tag missing — verify tags exist before bumping AAR.
   variables:
     VRT_PLATFORM: android
     VRT_SCREENSHOT_DIR: app/src/screenshotTestDebug/reference/app/vauchi/ScreenshotTestsKt
