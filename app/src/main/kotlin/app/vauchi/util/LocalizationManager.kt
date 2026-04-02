@@ -68,7 +68,11 @@ class LocalizationManager(
 
         // Skip extraction if already done for this app version
         if (versionFile.exists() && versionFile.readText().trim() == currentVersion) {
-            initLocales(localesDir.absolutePath)
+            try {
+                initLocales(localesDir.absolutePath)
+            } catch (e: UnsatisfiedLinkError) {
+                Log.e(TAG, "Failed to initialize locales: native library not found", e)
+            }
             return
         }
 
@@ -85,7 +89,11 @@ class LocalizationManager(
                 }
             }
             versionFile.writeText(currentVersion)
-            initLocales(localesDir.absolutePath)
+            try {
+                initLocales(localesDir.absolutePath)
+            } catch (e: UnsatisfiedLinkError) {
+                Log.e(TAG, "Failed to initialize locales: native library not found", e)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to extract locales: ${e.message}")
         }
@@ -100,7 +108,13 @@ class LocalizationManager(
         }
 
     private fun loadLocales() {
-        availableLocales = getAvailableLocales()
+        availableLocales =
+            try {
+                getAvailableLocales()
+            } catch (e: UnsatisfiedLinkError) {
+                Log.e(TAG, "Failed to get available locales: native library not found", e)
+                emptyList()
+            }
         applySelectedLocale()
     }
 
@@ -109,12 +123,17 @@ class LocalizationManager(
      */
     fun applySelectedLocale() {
         currentLocale =
-            if (!followSystem && selectedLocaleCode != null) {
-                parseLocaleCode(selectedLocaleCode!!) ?: MobileLocale.ENGLISH
-            } else {
-                // Use system language
-                val systemLanguage = Locale.getDefault().language
-                parseLocaleCode(systemLanguage) ?: MobileLocale.ENGLISH
+            try {
+                if (!followSystem && selectedLocaleCode != null) {
+                    parseLocaleCode(selectedLocaleCode!!) ?: MobileLocale.ENGLISH
+                } else {
+                    // Use system language
+                    val systemLanguage = Locale.getDefault().language
+                    parseLocaleCode(systemLanguage) ?: MobileLocale.ENGLISH
+                }
+            } catch (e: UnsatisfiedLinkError) {
+                Log.e(TAG, "Failed to apply selected locale: native library not found", e)
+                MobileLocale.ENGLISH
             }
     }
 
@@ -132,7 +151,13 @@ class LocalizationManager(
      * Select a locale directly.
      */
     fun selectLocale(locale: MobileLocale) {
-        val info = getLocaleInfo(locale)
+        val info =
+            try {
+                getLocaleInfo(locale)
+            } catch (e: UnsatisfiedLinkError) {
+                Log.e(TAG, "Failed to get locale info: native library not found", e)
+                MobileLocaleInfo(code = "en", name = "English", englishName = "English", isRtl = false)
+            }
         selectLocale(info.code)
     }
 
@@ -149,7 +174,13 @@ class LocalizationManager(
     /**
      * Get a localized string by key.
      */
-    fun t(key: String): String = getString(currentLocale, key)
+    fun t(key: String): String =
+        try {
+            getString(currentLocale, key)
+        } catch (e: UnsatisfiedLinkError) {
+            Log.e(TAG, "Failed to get string: native library not found", e)
+            key
+        }
 
     /**
      * Get a localized string with arguments.
@@ -157,11 +188,23 @@ class LocalizationManager(
     fun t(
         key: String,
         args: Map<String, String>,
-    ): String = getStringWithArgs(currentLocale, key, args)
+    ): String =
+        try {
+            getStringWithArgs(currentLocale, key, args)
+        } catch (e: UnsatisfiedLinkError) {
+            Log.e(TAG, "Failed to get string with args: native library not found", e)
+            key
+        }
 
     /** Get info for the current locale */
     val currentLocaleInfo: MobileLocaleInfo
-        get() = getLocaleInfo(currentLocale)
+        get() =
+            try {
+                getLocaleInfo(currentLocale)
+            } catch (e: UnsatisfiedLinkError) {
+                Log.e(TAG, "Failed to get current locale info: native library not found", e)
+                MobileLocaleInfo(code = "en", name = "English", englishName = "English", isRtl = false)
+            }
 
     /** Check if current locale is RTL */
     val isRightToLeft: Boolean

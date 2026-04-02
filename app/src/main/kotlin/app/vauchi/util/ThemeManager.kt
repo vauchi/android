@@ -49,8 +49,12 @@ class ThemeManager(context: Context) {
     }
 
     private fun loadThemes() {
-        availableThemes = getAvailableThemes()
-        applySelectedTheme(isDarkMode = false) // Will be updated when composable reads system setting
+        try {
+            availableThemes = getAvailableThemes()
+            applySelectedTheme(isDarkMode = false) // Will be updated when composable reads system setting
+        } catch (e: UnsatisfiedLinkError) {
+            availableThemes = emptyList()
+        }
     }
 
     /**
@@ -58,11 +62,15 @@ class ThemeManager(context: Context) {
      * @param isDarkMode Current system dark mode setting
      */
     fun applySelectedTheme(isDarkMode: Boolean) {
-        currentTheme = if (!followSystem && selectedThemeId != null) {
-            getTheme(selectedThemeId!!)
-        } else {
-            val defaultId = getDefaultThemeId(isDarkMode)
-            getTheme(defaultId)
+        try {
+            currentTheme = if (!followSystem && selectedThemeId != null) {
+                getTheme(selectedThemeId!!)
+            } else {
+                val defaultId = getDefaultThemeId(isDarkMode)
+                getTheme(defaultId)
+            }
+        } catch (e: UnsatisfiedLinkError) {
+            currentTheme = null
         }
     }
 

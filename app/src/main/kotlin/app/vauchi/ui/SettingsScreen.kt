@@ -942,9 +942,15 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-                    val versionName = packageInfo.versionName ?: "1.0.0"
-                    val versionCode = PackageInfoCompat.getLongVersionCode(packageInfo)
+                    val packageInfo =
+                        try {
+                            context.packageManager.getPackageInfo(context.packageName, 0)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    val versionName = packageInfo?.versionName ?: "1.0.0"
+                    val versionCode =
+                        packageInfo?.let { PackageInfoCompat.getLongVersionCode(it) } ?: 0L
                     Text(
                         text = "Version $versionName (build $versionCode)",
                         style = MaterialTheme.typography.bodySmall,
