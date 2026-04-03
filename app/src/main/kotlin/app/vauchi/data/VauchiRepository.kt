@@ -478,6 +478,18 @@ class VauchiRepository(
     fun authenticate(password: String): uniffi.vauchi_platform.MobileAuthMode = platform().authenticate(password)
 
     /**
+     * Set up app password (prerequisite for duress PIN).
+     */
+    fun setupAppPassword(password: String) {
+        platform().setupAppPassword(password)
+    }
+
+    /**
+     * Check if app password is configured.
+     */
+    fun isPasswordEnabled(): Boolean = platform().isPasswordEnabled()
+
+    /**
      * Check if duress PIN is enabled
      */
     fun isDuressEnabled(): Boolean = platform().isDuressEnabled()
@@ -494,6 +506,19 @@ class VauchiRepository(
      */
     fun disableDuress() {
         platform().disableDuress()
+    }
+
+    // Decoy contact management (duress mode profile)
+
+    fun addDecoyContact(
+        name: String,
+        cardJson: String,
+    ): String = platform().addDecoyContact(name, cardJson)
+
+    fun listDecoyContacts(): List<uniffi.vauchi_platform.MobileDecoyContact> = platform().listDecoyContacts()
+
+    fun deleteDecoyContact(id: String) {
+        platform().deleteDecoyContact(id)
     }
 
     fun hideContact(contactId: String) {
