@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.components.ActionListComponent
+import app.vauchi.ui.coreui.components.BannerComponent
 import app.vauchi.ui.coreui.components.CardPreviewComponent
 import app.vauchi.ui.coreui.components.ConfirmationDialogComponent
 import app.vauchi.ui.coreui.components.ContactListComponent
@@ -309,6 +310,16 @@ fun ComponentRenderer(
                 value = component.value,
                 editing = component.editing,
                 validationError = component.validationError,
+                onAction = onAction,
+                modifier = modifier,
+            )
+        }
+
+        is Component.Banner -> {
+            BannerComponent(
+                text = component.text,
+                actionLabel = component.actionLabel,
+                actionId = component.actionId,
                 onAction = onAction,
                 modifier = modifier,
             )

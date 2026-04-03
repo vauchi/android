@@ -195,6 +195,12 @@ sealed class Component {
         val validationError: String? = null,
     ) : Component()
 
+    data class Banner(
+        val text: String,
+        val actionLabel: String,
+        val actionId: String,
+    ) : Component()
+
     data object Divider : Component()
 
     /** Unknown component from a newer core version — render as empty space. */
@@ -330,6 +336,13 @@ private data class EditableTextContent(
     val value: String,
     val editing: Boolean,
     @SerialName("validation_error") val validationError: String? = null,
+)
+
+@Serializable
+private data class BannerContent(
+    val text: String,
+    @SerialName("action_label") val actionLabel: String,
+    @SerialName("action_id") val actionId: String,
 )
 
 internal object ComponentSerializer : KSerializer<Component> {
@@ -501,6 +514,16 @@ internal object ComponentSerializer : KSerializer<Component> {
                             value = c.value,
                             editing = c.editing,
                             validationError = c.validationError,
+                        )
+                    }
+
+                    "Banner" in element -> {
+                        val c: BannerContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["Banner"]!!)
+                        Component.Banner(
+                            text = c.text,
+                            actionLabel = c.actionLabel,
+                            actionId = c.actionId,
                         )
                     }
 
@@ -693,6 +716,19 @@ internal object ComponentSerializer : KSerializer<Component> {
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("EditableText" to inner)))
+            }
+
+            is Component.Banner -> {
+                val content =
+                    BannerContent(
+                        text = value.text,
+                        actionLabel = value.actionLabel,
+                        actionId = value.actionId,
+                    )
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(
+                    JsonObject(mapOf("Banner" to inner)),
+                )
             }
 
             is Component.Unknown -> {
