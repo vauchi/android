@@ -214,6 +214,16 @@ dependencies {
     // Screenshot testing (Compose Preview Screenshot Testing)
     screenshotTestImplementation("com.android.tools.screenshot:screenshot-validation-api:0.0.1-alpha13")
     screenshotTestImplementation("androidx.compose.ui:ui-tooling")
+    if (useLocalBindings) {
+        screenshotTestImplementation("net.java.dev.jna:jna:5.14.0@aar")
+    } else {
+        screenshotTestImplementation("app.vauchi:vauchi-platform:0.13.0")
+    }
+    screenshotTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
+    screenshotTestImplementation("androidx.compose.ui:ui")
+    screenshotTestImplementation("androidx.compose.ui:ui-graphics")
+    screenshotTestImplementation("androidx.compose.ui:ui-tooling-preview")
+    screenshotTestImplementation("androidx.compose.material3:material3")
 }
 
 apply(from = rootProject.file("test-coverage.gradle"))
