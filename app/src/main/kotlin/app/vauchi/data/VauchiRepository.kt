@@ -472,6 +472,12 @@ class VauchiRepository(
     // Duress PIN operations
 
     /**
+     * Authenticate with app password. Returns the auth mode (Normal or Duress).
+     * Core sets internal auth_mode which controls contact visibility (decoy vs real).
+     */
+    fun authenticate(password: String): uniffi.vauchi_platform.MobileAuthMode = platform().authenticate(password)
+
+    /**
      * Check if duress PIN is enabled
      */
     fun isDuressEnabled(): Boolean = platform().isDuressEnabled()

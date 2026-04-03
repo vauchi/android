@@ -43,6 +43,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.ContactDetailScreen
 import app.vauchi.ui.ContactsScreen
 import app.vauchi.ui.DevicesScreen
@@ -374,6 +375,21 @@ fun MainScreen(
                                 onError = { msg ->
                                     viewModel.setError(msg)
                                 },
+                            )
+                        }
+
+                        is UiState.AppPasswordRequired -> {
+                            var authError by remember {
+                                mutableStateOf<String?>(null)
+                            }
+                            AppPasswordScreen(
+                                onAuthenticate = { pin ->
+                                    authError = null
+                                    viewModel.authenticateAppPassword(
+                                        pin,
+                                    ) { msg -> authError = msg }
+                                },
+                                errorMessage = authError,
                             )
                         }
 

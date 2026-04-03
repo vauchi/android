@@ -77,6 +77,9 @@ sealed class UiState {
     /** Device needs biometric/PIN authentication to access KeyStore keys. */
     object AuthRequired : UiState()
 
+    /** Biometric OK but duress is enabled — show app password screen. */
+    object AppPasswordRequired : UiState()
+
     data class Ready(
         val displayName: String,
         val publicId: String,
@@ -328,7 +331,40 @@ class MainViewModel(
 
     /** Re-run full initialization (identity check + load). Use after biometric auth. */
     fun retryInit() {
-        checkIdentity()
+        viewModelScope.launch {
+            val duressEnabled =
+                try {
+                    withContext(Dispatchers.IO) { repository.isDuressEnabled() }
+                } catch (_: Exception) {
+                    false
+                }
+            if (duressEnabled) {
+                _uiState.value = UiState.AppPasswordRequired
+            } else {
+                checkIdentity()
+            }
+        }
+    }
+
+    /**
+     * Called from AppPasswordScreen after user enters their app PIN.
+     * Routes through core.authenticate() which sets auth_mode
+     * (Normal or Duress) based on which PIN was entered.
+     */
+    fun authenticateAppPassword(
+        pin: String,
+        onError: (String) -> Unit,
+    ) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    repository.authenticate(pin)
+                }
+                checkIdentity()
+            } catch (e: Exception) {
+                onError("Incorrect password")
+            }
+        }
     }
 
     fun setError(message: String) {
