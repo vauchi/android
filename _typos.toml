@@ -17,4 +17,7 @@ extend-glob = ["*.png"]
 check-file = false
 
 [files]
-extend-exclude = ["**/assets/locales/*.json"]
+extend-exclude = [
+    "**/assets/locales/*.json",
+    "**/local-bindings/**",
+]
