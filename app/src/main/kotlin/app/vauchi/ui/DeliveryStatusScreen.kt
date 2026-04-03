@@ -510,6 +510,7 @@ private fun statusColor(status: MobileDeliveryStatus): Color =
 
 private fun formatTimestamp(timestamp: ULong): String {
     val date = Date(timestamp.toLong() * 1000)
-    val format = SimpleDateFormat("MMM d, HH:mm", Locale.getDefault())
+    val format = SimpleDateFormat("MMM d, HH:mm", Locale.US)
+    format.timeZone = TimeZone.getTimeZone("UTC")
     return format.format(date)
 }
