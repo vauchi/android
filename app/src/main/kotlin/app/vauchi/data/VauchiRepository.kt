@@ -207,6 +207,16 @@ class VauchiRepository(
 
     fun sync(): MobileSyncResult = platform().sync()
 
+    // Privacy toggles
+
+    fun isDeliveryReceiptsEnabled(): Boolean = platform().isDeliveryReceiptsEnabled()
+
+    fun setDeliveryReceiptsEnabled(enabled: Boolean) = platform().setDeliveryReceiptsEnabled(enabled)
+
+    fun isSuppressPresenceEnabled(): Boolean = platform().isSuppressPresenceEnabled()
+
+    fun setSuppressPresenceEnabled(enabled: Boolean) = platform().setSuppressPresenceEnabled(enabled)
+
     fun hasIdentity(): Boolean = platform().hasIdentity()
 
     fun createIdentity(displayName: String) {
