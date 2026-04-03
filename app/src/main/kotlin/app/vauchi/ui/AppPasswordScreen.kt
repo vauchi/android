@@ -21,7 +21,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,12 +31,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import app.vauchi.util.LocalizationManager
 
 /**
@@ -44,10 +49,16 @@ import app.vauchi.util.LocalizationManager
  *
  * Visually identical regardless of which PIN is entered — the
  * observer cannot distinguish normal from duress authentication.
+ *
+ * Note on PIN zeroization: JVM String is immutable — we can't
+ * guarantee heap scrubbing. We clear the variable immediately
+ * after use and on lifecycle pause. Rust core zeroizes the
+ * password after hashing (ZeroizeOnDrop).
  */
 @Composable
 fun AppPasswordScreen(
     onAuthenticate: (String) -> Unit,
+    onCancel: () -> Unit,
     errorMessage: String? = null,
 ) {
     val context = LocalContext.current
@@ -57,6 +68,19 @@ fun AppPasswordScreen(
         }
 
     var pin by remember { mutableStateOf("") }
+
+    // Clear PIN when app goes to background
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_PAUSE) {
+                    pin = ""
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Column(
         modifier =
@@ -112,8 +136,9 @@ fun AppPasswordScreen(
                 KeyboardActions(
                     onDone = {
                         if (pin.length == 6) {
-                            onAuthenticate(pin)
+                            val entered = pin
                             pin = ""
+                            onAuthenticate(entered)
                         }
                     },
                 ),
@@ -127,7 +152,8 @@ fun AppPasswordScreen(
                 Modifier
                     .fillMaxWidth()
                     .semantics {
-                        contentDescription = "App password input"
+                        contentDescription =
+                            "App password input, masked"
                     },
         )
 
@@ -135,8 +161,9 @@ fun AppPasswordScreen(
 
         Button(
             onClick = {
-                onAuthenticate(pin)
+                val entered = pin
                 pin = ""
+                onAuthenticate(entered)
             },
             enabled = pin.length == 6,
             modifier =
@@ -147,6 +174,17 @@ fun AppPasswordScreen(
                     },
         ) {
             Text(localizationManager.t("action.unlock"))
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        TextButton(
+            onClick = {
+                pin = ""
+                onCancel()
+            },
+        ) {
+            Text(localizationManager.t("action.cancel"))
         }
     }
 }

@@ -389,6 +389,9 @@ fun MainScreen(
                                         pin,
                                     ) { msg -> authError = msg }
                                 },
+                                onCancel = {
+                                    viewModel.cancelAppPassword()
+                                },
                                 errorMessage = authError,
                             )
                         }

@@ -332,18 +332,30 @@ class MainViewModel(
     /** Re-run full initialization (identity check + load). Use after biometric auth. */
     fun retryInit() {
         viewModelScope.launch {
+            // Constant-time delay after biometric: prevents timing
+            // side-channel that could reveal whether duress is enabled.
+            val start = System.currentTimeMillis()
             val duressEnabled =
                 try {
                     withContext(Dispatchers.IO) { repository.isDuressEnabled() }
                 } catch (_: Exception) {
                     false
                 }
+            val elapsed = System.currentTimeMillis() - start
+            val pad = (300L - elapsed).coerceAtLeast(0)
+            if (pad > 0) kotlinx.coroutines.delay(pad)
+
             if (duressEnabled) {
                 _uiState.value = UiState.AppPasswordRequired
             } else {
                 checkIdentity()
             }
         }
+    }
+
+    /** Return to biometric screen (cancel app password entry). */
+    fun cancelAppPassword() {
+        _uiState.value = UiState.AuthRequired
     }
 
     /**
