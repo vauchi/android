@@ -570,6 +570,38 @@ class VauchiRepository(
 
     fun getDuressSettings(): uniffi.vauchi_platform.MobileDuressSettings? = platform().getDuressSettings()
 
+    // Contact notes
+
+    fun setContactNote(
+        contactId: String,
+        note: String,
+    ) {
+        platform().setContactNote(contactId, note)
+    }
+
+    fun getContactNote(contactId: String): String? = platform().getContactNote(contactId)
+
+    fun deleteContactNote(contactId: String) {
+        platform().deleteContactNote(contactId)
+    }
+
+    fun setContactFieldNote(
+        contactId: String,
+        fieldId: String,
+        note: String,
+    ) {
+        platform().setContactFieldNote(contactId, fieldId, note)
+    }
+
+    fun getContactFieldNotes(contactId: String): List<uniffi.vauchi_platform.MobileFieldNote> = platform().getContactFieldNotes(contactId)
+
+    fun deleteContactFieldNote(
+        contactId: String,
+        fieldId: String,
+    ) {
+        platform().deleteContactFieldNote(contactId, fieldId)
+    }
+
     // Panic Shred operations
 
     /**
