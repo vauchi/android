@@ -569,6 +569,23 @@ class MainViewModel(
         }
     }
 
+    suspend fun listHiddenContacts(): List<MobileContact> =
+        withContext(Dispatchers.IO) {
+            repository.listHiddenContacts()
+        }
+
+    suspend fun hideContact(id: String) {
+        withContext(Dispatchers.IO) {
+            repository.hideContact(id)
+        }
+    }
+
+    suspend fun unhideContact(id: String) {
+        withContext(Dispatchers.IO) {
+            repository.unhideContact(id)
+        }
+    }
+
     fun importContactsFromVcf(data: ByteArray) {
         viewModelScope.launch {
             try {

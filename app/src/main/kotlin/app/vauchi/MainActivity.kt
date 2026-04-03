@@ -417,6 +417,9 @@ fun MainScreen(
                         onSync = { viewModel.sync() },
                         demoContact = demoContact,
                         onDismissDemo = { viewModel.dismissDemoContact() },
+                        onListHiddenContacts = { viewModel.listHiddenContacts() },
+                        onHideContact = { id -> viewModel.hideContact(id) },
+                        onUnhideContact = { id -> viewModel.unhideContact(id) },
                         onImportVcf = { data -> viewModel.importContactsFromVcf(data) },
                         onImportError = { msg -> viewModel.showMessage(msg) },
                     )
