@@ -81,6 +81,13 @@ fun SettingsScreen(
     isDuressEnabled: Boolean = false,
     onSetupDuressPin: (String) -> Unit = {},
     onDisableDuress: () -> Unit = {},
+    // Decoy Contacts
+    decoyContacts: List<uniffi.vauchi_platform.MobileDecoyContact> = emptyList(),
+    onAddDecoyContact: (String) -> Unit = {},
+    onDeleteDecoyContact: (String) -> Unit = {},
+    // App Password
+    isPasswordEnabled: Boolean = false,
+    onSetupAppPassword: (String) -> Unit = {},
     // Emergency Broadcast
     isEmergencyConfigured: Boolean = false,
     onConfigureEmergency: (List<String>, String, Boolean) -> Unit = { _, _, _ -> },
@@ -685,6 +692,23 @@ fun SettingsScreen(
                     isDuressEnabled = isDuressEnabled,
                     onSetupDuressPin = onSetupDuressPin,
                     onDisableDuress = onDisableDuress,
+                )
+            }
+
+            if (FeatureFlags.DURESS_PIN && isDuressEnabled) {
+                Spacer(modifier = Modifier.height(8.dp))
+                DecoyContactsSection(
+                    decoyContacts = decoyContacts,
+                    onAdd = onAddDecoyContact,
+                    onDelete = onDeleteDecoyContact,
+                )
+            }
+
+            if (FeatureFlags.DURESS_PIN && !isPasswordEnabled) {
+                Spacer(modifier = Modifier.height(8.dp))
+                AppPasswordSetupSection(
+                    onSetupPassword = onSetupAppPassword,
+                    onCheckStrength = onCheckPasswordStrength,
                 )
             }
 
