@@ -217,6 +217,10 @@ class VauchiRepository(
 
     fun setSuppressPresenceEnabled(enabled: Boolean) = platform().setSuppressPresenceEnabled(enabled)
 
+    fun getSyncStatus(): uniffi.vauchi_platform.MobileSyncStatus = platform().getSyncStatus()
+
+    fun pendingUpdateCount(): UInt = platform().pendingUpdateCount()
+
     fun hasIdentity(): Boolean = platform().hasIdentity()
 
     fun createIdentity(displayName: String) {
@@ -224,6 +228,8 @@ class VauchiRepository(
     }
 
     fun getDisplayName(): String = platform().getDisplayName()
+
+    fun setDisplayName(name: String) = platform().setDisplayName(name)
 
     fun getPublicId(): String = platform().getPublicId()
 
@@ -298,6 +304,20 @@ class VauchiRepository(
     fun getContact(id: String) = platform().getContact(id)
 
     fun removeContact(id: String) = platform().removeContact(id)
+
+    // Contact lifecycle (reversible deletion + archival)
+
+    fun softDeleteImportedContact(id: String) = platform().softDeleteImportedContact(id)
+
+    fun undoDeleteImportedContact(id: String) = platform().undoDeleteImportedContact(id)
+
+    fun hardDeleteImportedContact(id: String) = platform().hardDeleteImportedContact(id)
+
+    fun archiveContact(id: String) = platform().archiveContact(id)
+
+    fun unarchiveContact(id: String) = platform().unarchiveContact(id)
+
+    fun listArchivedContacts() = platform().listArchivedContacts()
 
     fun importContactsFromVcf(data: ByteArray) = platform().importContactsFromVcf(data)
 
@@ -761,6 +781,11 @@ class VauchiRepository(
      */
     fun startDeviceLink() = platform().startDeviceLink()
 
+    fun startDeviceJoin(
+        qrData: String,
+        deviceName: String,
+    ) = platform().startDeviceJoin(qrData, deviceName)
+
     /**
      * Listen for an incoming device link request via the relay.
      */
@@ -847,4 +872,6 @@ class VauchiRepository(
      * @return List of all consent records
      */
     fun getConsentRecords() = platform().getConsentRecords()
+
+    fun getConsentStatus(consentType: uniffi.vauchi_platform.MobileConsentType) = platform().getConsentStatus(consentType)
 }
