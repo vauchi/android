@@ -494,8 +494,8 @@ test:snapshots:record:
         exit 1
       fi
       echo "✅ Screenshot recording completed"
-    # Preserve recorded baselines across git checkout
-    - cp -r app/src/screenshotTestDebug/reference/ /tmp/screenshot-reference/
+    # Preserve recorded baselines across git checkout (copy CONTENTS, not directory)
+    - mkdir -p /tmp/screenshot-reference && cp -a app/src/screenshotTestDebug/reference/. /tmp/screenshot-reference/
     # Configure git for push — bypass credential helpers and insteadOf rewrites
     - git config --global --unset-all url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf 2>/dev/null || true
     - git config --global --unset-all credential.helper 2>/dev/null || true
@@ -505,7 +505,7 @@ test:snapshots:record:
     - git fetch "$PUSH_URL" "+refs/heads/${CI_COMMIT_REF_NAME}:refs/heads/${CI_COMMIT_REF_NAME}"
     - git checkout -B "${CI_COMMIT_REF_NAME}" FETCH_HEAD
     # Restore recorded baselines (git checkout above resets working directory)
-    - cp -r /tmp/screenshot-reference/ app/src/screenshotTestDebug/reference/
+    - mkdir -p app/src/screenshotTestDebug/reference && cp -a /tmp/screenshot-reference/. app/src/screenshotTestDebug/reference/
     # Commit and push baselines (skip if unchanged)
     - |
       git add app/src/screenshotTestDebug/reference/
