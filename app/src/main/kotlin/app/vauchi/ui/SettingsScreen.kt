@@ -120,6 +120,11 @@ fun SettingsScreen(
     onGrantConsent: (MobileConsentType) -> Unit = {},
     onRevokeConsent: (MobileConsentType) -> Unit = {},
     onPanicShred: () -> Unit = {},
+    // Scheduled Shred
+    shredStatus: uniffi.vauchi_platform.MobileShredStatus = uniffi.vauchi_platform.MobileShredStatus.None,
+    onScheduleShred: () -> Unit = {},
+    onCancelShred: () -> Unit = {},
+    onExecuteShred: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val activity = context as? FragmentActivity
@@ -605,6 +610,16 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Scheduled Shred (grace period)
+            ScheduledShredSection(
+                shredStatus = shredStatus,
+                onSchedule = onScheduleShred,
+                onCancel = onCancelShred,
+                onExecute = onExecuteShred,
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 

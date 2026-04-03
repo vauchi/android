@@ -481,6 +481,7 @@ fun MainScreen(
                     val torBridges by viewModel.torBridges.collectAsState()
                     val decoyContacts by viewModel.decoyContacts.collectAsState()
                     val isPasswordEnabled by viewModel.isPasswordEnabled.collectAsState()
+                    val shredStatus by viewModel.shredStatus.collectAsState()
                     if (state is UiState.Ready) {
                         LaunchedEffect(Unit) {
                             viewModel.loadDeletionState()
@@ -490,6 +491,7 @@ fun MainScreen(
                             viewModel.loadTorConfig()
                             viewModel.loadDecoyContacts()
                             viewModel.loadPasswordState()
+                            viewModel.loadShredStatus()
                         }
                         SettingsScreen(
                             displayName = state.displayName,
@@ -609,6 +611,11 @@ fun MainScreen(
                             onGrantConsent = { viewModel.grantConsent(it) },
                             onRevokeConsent = { viewModel.revokeConsent(it) },
                             onPanicShred = { viewModel.panicShred() },
+                            // Scheduled Shred
+                            shredStatus = shredStatus,
+                            onScheduleShred = { viewModel.scheduleSoftShred() },
+                            onCancelShred = { viewModel.cancelScheduledShred() },
+                            onExecuteShred = { viewModel.executeHardShred() },
                         )
                     }
                 }

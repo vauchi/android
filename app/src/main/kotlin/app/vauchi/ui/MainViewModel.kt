@@ -45,6 +45,8 @@ import uniffi.vauchi_platform.MobileQrPayload
 import uniffi.vauchi_platform.MobileRecoveryClaim
 import uniffi.vauchi_platform.MobileRecoveryProgress
 import uniffi.vauchi_platform.MobileRecoveryVoucher
+import uniffi.vauchi_platform.MobileShredStatus
+import uniffi.vauchi_platform.MobileShredToken
 import uniffi.vauchi_platform.MobileSocialNetwork
 import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.MobileUpdateStatus
@@ -998,7 +1000,62 @@ class MainViewModel(
         }
     }
 
-    // Panic Shred operations
+    // Shred operations
+    private val _shredStatus = MutableStateFlow<MobileShredStatus>(MobileShredStatus.None)
+    val shredStatus: StateFlow<MobileShredStatus> = _shredStatus.asStateFlow()
+    private var shredToken: MobileShredToken? = null
+
+    fun loadShredStatus() {
+        viewModelScope.launch {
+            _shredStatus.value =
+                try {
+                    withContext(Dispatchers.IO) { repository.shredStatus() }
+                } catch (_: Exception) {
+                    MobileShredStatus.None
+                }
+        }
+    }
+
+    fun scheduleSoftShred() {
+        viewModelScope.launch {
+            try {
+                val token = withContext(Dispatchers.IO) { repository.softShred() }
+                shredToken = token
+                loadShredStatus()
+                showMessage("Shred scheduled — 7-day grace period started")
+            } catch (e: Exception) {
+                showMessage("Failed to schedule shred: ${e.message}")
+            }
+        }
+    }
+
+    fun cancelScheduledShred() {
+        viewModelScope.launch {
+            val token = shredToken ?: return@launch
+            try {
+                withContext(Dispatchers.IO) { repository.cancelShred(token) }
+                shredToken = null
+                loadShredStatus()
+                showMessage("Shred cancelled")
+            } catch (e: Exception) {
+                showMessage("Failed to cancel shred: ${e.message}")
+            }
+        }
+    }
+
+    fun executeHardShred() {
+        viewModelScope.launch {
+            val token = shredToken ?: return@launch
+            try {
+                withContext(Dispatchers.IO) { repository.hardShred(token) }
+                shredToken = null
+                showMessage("Hard shred complete. All data destroyed.")
+            } catch (e: Exception) {
+                showMessage("Failed to execute shred: ${e.message}")
+            }
+        }
+    }
+
     fun panicShred() {
         viewModelScope.launch {
             try {

@@ -577,6 +577,16 @@ class VauchiRepository(
      */
     fun panicShred() = platform().panicShred()
 
+    fun softShred(): uniffi.vauchi_platform.MobileShredToken = platform().softShred()
+
+    fun cancelShred(token: uniffi.vauchi_platform.MobileShredToken) {
+        platform().cancelShred(token)
+    }
+
+    fun hardShred(token: uniffi.vauchi_platform.MobileShredToken): uniffi.vauchi_platform.MobileShredReport = platform().hardShred(token)
+
+    fun shredStatus(): uniffi.vauchi_platform.MobileShredStatus = platform().shredStatus()
+
     // Emergency Broadcast operations
 
     /**
