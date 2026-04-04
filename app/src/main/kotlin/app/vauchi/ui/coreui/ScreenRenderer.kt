@@ -30,6 +30,7 @@ import app.vauchi.ui.coreui.components.BannerComponent
 import app.vauchi.ui.coreui.components.CardPreviewComponent
 import app.vauchi.ui.coreui.components.ConfirmationDialogComponent
 import app.vauchi.ui.coreui.components.ContactListComponent
+import app.vauchi.ui.coreui.components.DividerComponent
 import app.vauchi.ui.coreui.components.EditableTextComponent
 import app.vauchi.ui.coreui.components.FieldListComponent
 import app.vauchi.ui.coreui.components.InfoPanelComponent
@@ -326,9 +327,7 @@ fun ComponentRenderer(
         }
 
         is Component.Divider -> {
-            androidx.compose.material3.HorizontalDivider(
-                modifier = modifier.padding(vertical = 8.dp),
-            )
+            DividerComponent(modifier = modifier)
         }
 
         is Component.Unknown -> {
