@@ -19,7 +19,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import app.vauchi.ui.coreui.components.ToastOverlay
 
 /**
  * Generic composable that renders any core-driven screen via [CoreAppViewModel].
@@ -64,12 +63,6 @@ fun CoreScreenView(
                 toastMessage = toastMessage,
                 toastUndoActionId = toastUndoActionId,
                 onToastDismiss = { viewModel.dismissToast() },
-                onToastUndo = { actionId ->
-                    viewModel.handleAction(
-                        UserAction.UndoPressed(actionId),
-                    )
-                    viewModel.dismissToast()
-                },
             )
         } else {
             CircularProgressIndicator(
