@@ -35,6 +35,7 @@ import uniffi.vauchi_platform.MobileExchangeSession
 import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileMultiStageSession
 import uniffi.vauchi_platform.MobileSyncResult
+import uniffi.vauchi_platform.PlatformAppEngine
 import uniffi.vauchi_platform.VauchiPlatform
 
 /**
@@ -81,6 +82,7 @@ class VauchiRepository(
     private val keyStoreHelper: StorageKeyProvider = KeyStoreHelper(),
 ) {
     private lateinit var _vauchi: VauchiPlatform
+    private lateinit var _appEngine: PlatformAppEngine
     private var initialized = false
     private val prefs: SharedPreferences
     private val preferences: VauchiPreferences
@@ -137,10 +139,23 @@ class VauchiRepository(
             val relayUrl = preferences.getRelayUrl()
             val storageKeyBytes = getOrCreateStorageKey(dataDir)
             _vauchi = VauchiPlatform.newWithSecureKey(dataDir, relayUrl, storageKeyBytes)
+            _appEngine = PlatformAppEngine(dataDir, relayUrl, storageKeyBytes)
             initialized = true
         }
         return _vauchi
     }
+
+    /**
+     * Shared PlatformAppEngine for core-driven screen rendering.
+     * Created alongside VauchiPlatform using the same credentials —
+     * single DB connection, shared cache across all screens.
+     * Call [platform] first to ensure initialization.
+     */
+    val appEngine: PlatformAppEngine
+        get() {
+            platform() // ensure initialized
+            return _appEngine
+        }
 
     /**
      * Get or create storage key from Android KeyStore.
