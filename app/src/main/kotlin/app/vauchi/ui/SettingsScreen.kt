@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.fragment.app.FragmentActivity
 import app.vauchi.BuildConfig
-import app.vauchi.FeatureFlags
 import app.vauchi.ui.model.*
 import app.vauchi.util.BiometricHelper
 import app.vauchi.util.ClipboardUtils
@@ -93,11 +92,6 @@ fun SettingsScreen(
     onConfigureEmergency: (List<String>, String, Boolean) -> Unit = { _, _, _ -> },
     onSendEmergency: () -> Unit = {},
     onDisableEmergency: () -> Unit = {},
-    // Tor Mode
-    isTorEnabled: Boolean = false,
-    torPreferOnion: Boolean = true,
-    torBridges: List<String> = emptyList(),
-    onSaveTorConfig: (Boolean, List<String>, Boolean) -> Unit = { _, _, _ -> },
     // Appearance
     onThemeSettings: () -> Unit = {},
     onLanguageSettings: () -> Unit = {},
@@ -450,22 +444,20 @@ fun SettingsScreen(
                 modifier = Modifier.semantics { heading() },
             )
 
-            if (FeatureFlags.VISIBILITY_LABELS) {
-                OutlinedButton(
-                    onClick = onLabels,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(localizationManager.t("visibility.title"))
-                }
-
-                Text(
-                    text = "Organize contacts into groups and control what they can see",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onLabels,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(localizationManager.t("visibility.title"))
             }
+
+            Text(
+                text = "Organize contacts into groups and control what they can see",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // GDPR Export
             OutlinedButton(
@@ -701,16 +693,14 @@ fun SettingsScreen(
                 onSetCertificate = onSetPinnedCertificate,
             )
 
-            if (FeatureFlags.DURESS_PIN) {
-                // Duress PIN Section
-                DuressPinSection(
-                    isDuressEnabled = isDuressEnabled,
-                    onSetupDuressPin = onSetupDuressPin,
-                    onDisableDuress = onDisableDuress,
-                )
-            }
+            // Duress PIN Section
+            DuressPinSection(
+                isDuressEnabled = isDuressEnabled,
+                onSetupDuressPin = onSetupDuressPin,
+                onDisableDuress = onDisableDuress,
+            )
 
-            if (FeatureFlags.DURESS_PIN && isDuressEnabled) {
+            if (isDuressEnabled) {
                 Spacer(modifier = Modifier.height(8.dp))
                 DecoyContactsSection(
                     decoyContacts = decoyContacts,
@@ -719,7 +709,7 @@ fun SettingsScreen(
                 )
             }
 
-            if (FeatureFlags.DURESS_PIN && !isPasswordEnabled) {
+            if (!isPasswordEnabled) {
                 Spacer(modifier = Modifier.height(8.dp))
                 AppPasswordSetupSection(
                     onSetupPassword = onSetupAppPassword,
@@ -727,25 +717,13 @@ fun SettingsScreen(
                 )
             }
 
-            if (FeatureFlags.EMERGENCY_BROADCAST) {
-                // Emergency Broadcast Section
-                EmergencyBroadcastSection(
-                    isConfigured = isEmergencyConfigured,
-                    onConfigure = onConfigureEmergency,
-                    onSend = onSendEmergency,
-                    onDisable = onDisableEmergency,
-                )
-            }
-
-            if (FeatureFlags.TOR_MODE) {
-                Spacer(modifier = Modifier.height(16.dp))
-                TorSettingsSection(
-                    isTorEnabled = isTorEnabled,
-                    torPreferOnion = torPreferOnion,
-                    torBridges = torBridges,
-                    onSaveTorConfig = onSaveTorConfig,
-                )
-            }
+            // Emergency Broadcast Section
+            EmergencyBroadcastSection(
+                isConfigured = isEmergencyConfigured,
+                onConfigure = onConfigureEmergency,
+                onSend = onSendEmergency,
+                onDisable = onDisableEmergency,
+            )
 
             // Content Updates Section (only if supported)
             if (isContentUpdatesSupported) {
@@ -2217,126 +2195,4 @@ fun SetCertificateDialog(
             }
         },
     )
-}
-
-@Composable
-fun TorSettingsSection(
-    isTorEnabled: Boolean,
-    torPreferOnion: Boolean,
-    torBridges: List<String>,
-    onSaveTorConfig: (Boolean, List<String>, Boolean) -> Unit,
-) {
-    var showBridgeDialog by remember { mutableStateOf(false) }
-    var bridgeText by remember { mutableStateOf(torBridges.joinToString("\n")) }
-    var message by remember { mutableStateOf("") }
-
-    Text(
-        text = "Tor Mode",
-        style = MaterialTheme.typography.titleMedium,
-        modifier =
-            Modifier
-                .padding(vertical = 8.dp)
-                .semantics { heading() },
-    )
-    Text(
-        text = "Route all relay traffic through Tor for enhanced anonymity.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("Enable Tor")
-        Switch(
-            checked = isTorEnabled,
-            onCheckedChange = { newValue ->
-                val bridges = bridgeText.split("\n").filter { it.isNotBlank() }
-                onSaveTorConfig(newValue, bridges, torPreferOnion)
-            },
-        )
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("Prefer .onion Addresses")
-        Switch(
-            checked = torPreferOnion,
-            onCheckedChange = { newValue ->
-                val bridges = bridgeText.split("\n").filter { it.isNotBlank() }
-                onSaveTorConfig(isTorEnabled, bridges, newValue)
-            },
-        )
-    }
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("Bridges: ${torBridges.size} configured")
-        TextButton(onClick = {
-            message = ""
-            bridgeText = torBridges.joinToString("\n")
-            showBridgeDialog = true
-        }) {
-            Text("Manage")
-        }
-    }
-
-    if (message.isNotEmpty()) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(vertical = 4.dp),
-        )
-    }
-
-    if (showBridgeDialog) {
-        AlertDialog(
-            onDismissRequest = { showBridgeDialog = false },
-            title = { Text("Manage Bridges") },
-            text = {
-                Column {
-                    Text(
-                        "Add obfs4 bridge addresses for censored networks. One per line.",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = bridgeText,
-                        onValueChange = { bridgeText = it },
-                        label = { Text("Bridge Addresses") },
-                        modifier = Modifier.fillMaxWidth().height(150.dp),
-                        maxLines = 10,
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val bridges = bridgeText.split("\n").filter { it.isNotBlank() }.map { it.trim() }
-                    onSaveTorConfig(isTorEnabled, bridges, torPreferOnion)
-                    showBridgeDialog = false
-                    message = "${bridges.size} bridge(s) saved"
-                }) {
-                    Text("Save")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showBridgeDialog = false }) {
-                    Text("Cancel")
-                }
-            },
-        )
-    }
 }

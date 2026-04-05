@@ -664,23 +664,6 @@ class VauchiRepository(
         platform().disableEmergencyBroadcast()
     }
 
-    // Tor Mode Operations — stubs until core implements R4 Tor Mode
-    // Based on: features/tor_mode.feature
-    // TODO: wire up when vauchi-platform exports loadTorConfig/enableTor/disableTor
-
-    fun isTorEnabled(): Boolean = false
-
-    fun getTorConfig(): Triple<Boolean, List<String>, Boolean> = Triple(false, emptyList(), false)
-
-    @Suppress("UNUSED_PARAMETER")
-    fun saveTorConfig(
-        enabled: Boolean,
-        bridges: List<String>,
-        preferOnion: Boolean,
-    ) {
-        // No-op until core exports Tor configuration API
-    }
-
     // Verification operations
     fun verifyContact(id: String) = platform().verifyContact(id)
 
