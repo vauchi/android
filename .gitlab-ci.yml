@@ -454,7 +454,6 @@ test:screenshots:
           - "app/build.gradle*"
           - "gradle.properties"
           - ".gitlab-ci.yml"
-      when: manual
 
 # Manual job: record screenshot baselines on CI and commit them to the branch.
 # CI is the single source of truth for baselines — never record locally.
