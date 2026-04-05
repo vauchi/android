@@ -27,6 +27,7 @@ import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileContactField
 import uniffi.vauchi_platform.MobileContactTrustLevel
+import uniffi.vauchi_platform.MobileReciprocity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -156,6 +157,16 @@ fun ContactDetailScreen(
                                 },
                             localizationManager = localizationManager,
                         )
+                    }
+
+                    // Exchange status (reciprocity)
+                    if (c.reciprocity == MobileReciprocity.PENDING ||
+                        c.reciprocity == MobileReciprocity.UNRECIPROCATED
+                    ) {
+                        item {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ExchangeStatusCard(reciprocity = c.reciprocity)
+                        }
                     }
 
                     // Recovery trust status
@@ -585,6 +596,57 @@ fun TrustLevelCard(
                     Text("Verify")
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun ExchangeStatusCard(reciprocity: MobileReciprocity) {
+    val title: String
+    val subtitle: String
+    val containerColor: androidx.compose.ui.graphics.Color
+    val contentColor: androidx.compose.ui.graphics.Color
+
+    when (reciprocity) {
+        MobileReciprocity.PENDING -> {
+            title = "Awaiting confirmation"
+            subtitle = "Verifying that both sides completed the exchange"
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        }
+
+        MobileReciprocity.UNRECIPROCATED -> {
+            title = "May not have your card"
+            subtitle = "The other party may not have completed the exchange"
+            containerColor = MaterialTheme.colorScheme.errorContainer
+            contentColor = MaterialTheme.colorScheme.onErrorContainer
+        }
+
+        else -> {
+            return
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = contentColor,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.8f),
+            )
         }
     }
 }
