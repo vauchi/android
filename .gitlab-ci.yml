@@ -494,15 +494,21 @@ test:snapshots:record:
         exit 1
       fi
       echo "✅ Screenshot recording completed"
+    # Fix double-nesting: AGP updateDebugScreenshotTest writes to reference/reference/
+    # instead of reference/ — flatten the output to match the expected structure.
+    - |
+      NESTED="app/src/screenshotTestDebug/reference/reference"
+      if [ -d "$NESTED" ]; then
+        echo "📂 Flattening double-nested reference directory..."
+        cp -a "$NESTED"/. app/src/screenshotTestDebug/reference/
+        rm -rf "$NESTED"
+      fi
     # Preserve recorded baselines across git checkout (copy CONTENTS, not directory)
     - mkdir -p /tmp/screenshot-reference && cp -a app/src/screenshotTestDebug/reference/. /tmp/screenshot-reference/
-    # Configure git for push — bypass credential helpers and insteadOf rewrites
-    - git config --global --unset-all url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf 2>/dev/null || true
-    - git config --global --unset-all credential.helper 2>/dev/null || true
-    - git config user.name "vauchi-ci-bot"
-    - git config user.email "ci@vauchi.app"
-    - PUSH_URL="https://vauchi-gitlab-runner:${PROJECT_ACCESS_TOKEN}@gitlab.com/${CI_PROJECT_PATH}.git"
-    - git fetch "$PUSH_URL" "+refs/heads/${CI_COMMIT_REF_NAME}:refs/heads/${CI_COMMIT_REF_NAME}"
+    # Configure git for push via CI_JOB_TOKEN (requires ci_push_repository_for_job_token_allowed)
+    - git config user.name "${GITLAB_USER_NAME}"
+    - git config user.email "${GITLAB_USER_EMAIL}"
+    - git fetch origin "+refs/heads/${CI_COMMIT_REF_NAME}:refs/heads/${CI_COMMIT_REF_NAME}"
     - git checkout -B "${CI_COMMIT_REF_NAME}" FETCH_HEAD
     # Restore recorded baselines (git checkout above resets working directory)
     - mkdir -p app/src/screenshotTestDebug/reference && cp -a /tmp/screenshot-reference/. app/src/screenshotTestDebug/reference/
@@ -519,7 +525,7 @@ test:snapshots:record:
       ${CHANGED}
 
       Co-Authored-By: vauchi-ci-bot <ci@vauchi.app>"
-      git push "$PUSH_URL" HEAD:${CI_COMMIT_REF_NAME}
+      git push origin HEAD:${CI_COMMIT_REF_NAME}
       echo "✅ Baselines committed and pushed — validation pipeline will trigger"
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
