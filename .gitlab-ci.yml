@@ -466,18 +466,19 @@ test:snapshots:record:
   script:
     - echo "📸 Recording screenshot baselines..."
     # Build host-platform native library (same as test:screenshots)
+    # Uses isolated CARGO_HOME to avoid corrupt shared registry state on the runner.
     - |
       NATIVE_LIB="app/native-host-libs/libvauchi_platform.so"
       if [ ! -f "$NATIVE_LIB" ]; then
         AAR_VERSION=$(grep 'vauchi-platform:' app/build.gradle.kts | sed -n 's/.*vauchi-platform:\([0-9.]*\).*/\1/p')
         CORE_REF="v${AAR_VERSION:-main}"
         CORE_DIR="${CI_PROJECT_DIR}/../core"
-        if [ ! -d "$CORE_DIR" ]; then
-          git clone --depth=1 --branch="${CORE_REF}" \
-            "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR" \
-            || git clone --depth=1 --branch=main \
-              "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
-        fi
+        rm -rf "$CORE_DIR"
+        git clone --depth=1 --branch="${CORE_REF}" \
+          "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR" \
+          || git clone --depth=1 --branch=main \
+            "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
+        export CARGO_HOME="${CI_PROJECT_DIR}/.cargo-record"
         cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
         mkdir -p app/native-host-libs
         cp "$CORE_DIR/target/release/libvauchi_platform.so" "$NATIVE_LIB"
