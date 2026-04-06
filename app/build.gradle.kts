@@ -217,7 +217,7 @@ dependencies {
     if (useLocalBindings) {
         screenshotTestImplementation("net.java.dev.jna:jna:5.14.0@aar")
     } else {
-        screenshotTestImplementation("app.vauchi:vauchi-platform:0.18.3")
+        screenshotTestImplementation("app.vauchi:vauchi-platform:0.18.4")
     }
     screenshotTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
     screenshotTestImplementation("androidx.compose.ui:ui")
