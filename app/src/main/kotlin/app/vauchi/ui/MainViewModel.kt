@@ -1659,7 +1659,10 @@ class MainViewModel(
 
         data class WaitingForRequest(
             val qrData: String,
+            val expiresAt: ULong,
         ) : DeviceLinkState()
+
+        object Expired : DeviceLinkState()
 
         data class ConfirmingDevice(
             val deviceName: String,
@@ -1694,13 +1697,15 @@ class MainViewModel(
     suspend fun startDeviceLinkInitiator(): String? {
         _deviceLinkState.value = DeviceLinkState.GeneratingQR
         return try {
-            val (initiator, qrData) =
+            val initiator =
                 withContext(Dispatchers.IO) {
-                    val init = repository.startDeviceLink()
-                    Pair(init, init.qrData())
+                    repository.startDeviceLink()
                 }
+            val qrData = initiator.qrData()
+            // TODO: use initiator.expiresAt() once core 0.18.5 bindings are published
+            val expiresAt = (System.currentTimeMillis() / 1000).toULong() + 300u
             currentInitiator = initiator
-            _deviceLinkState.value = DeviceLinkState.WaitingForRequest(qrData)
+            _deviceLinkState.value = DeviceLinkState.WaitingForRequest(qrData, expiresAt)
             qrData
         } catch (e: Exception) {
             _deviceLinkState.value = DeviceLinkState.Failed(e.message ?: "Failed to generate QR")
@@ -1797,6 +1802,13 @@ class MainViewModel(
         _deviceLinkState.value = DeviceLinkState.Idle
         currentInitiator = null
         currentSenderToken = null
+    }
+
+    /**
+     * Transition to expired state when the QR code times out.
+     */
+    fun setDeviceLinkExpired() {
+        _deviceLinkState.value = DeviceLinkState.Expired
     }
 
     // MARK: - GDPR Operations

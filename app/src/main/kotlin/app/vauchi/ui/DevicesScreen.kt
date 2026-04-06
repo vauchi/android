@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tablet
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
@@ -36,10 +37,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
+import app.vauchi.ui.components.QRCountdownContent
 import app.vauchi.util.ClipboardUtils
 import app.vauchi.util.LocalizationManager
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import uniffi.vauchi_platform.MobileDeviceInfo
@@ -354,6 +356,8 @@ fun DeviceLinkDialog(
                             is MainViewModel.DeviceLinkState.Success -> "Device Linked"
 
                             is MainViewModel.DeviceLinkState.Failed -> "Link Failed"
+
+                            is MainViewModel.DeviceLinkState.Expired -> "QR Expired"
                         }
                     }
                 },
@@ -446,75 +450,51 @@ fun DeviceLinkDialog(
                             }
 
                             is MainViewModel.DeviceLinkState.WaitingForRequest -> {
-                                Text(
-                                    text = "Scan this QR code on your new device",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-
-                                // QR Code
-                                val qrBitmap =
-                                    remember(state.qrData) {
-                                        generateQRBitmap(state.qrData, 250)
-                                    }
-                                if (qrBitmap != null) {
-                                    Card(
-                                        colors =
-                                            CardDefaults.cardColors(
-                                                containerColor = Color.White,
-                                            ),
-                                    ) {
-                                        Image(
-                                            bitmap = qrBitmap.asImageBitmap(),
-                                            contentDescription = "Device Link QR Code",
-                                            modifier =
-                                                Modifier
-                                                    .size(250.dp)
-                                                    .padding(8.dp),
+                                QRCountdownContent(
+                                    qrData = state.qrData,
+                                    expiresAt = state.expiresAt,
+                                    localizationManager = localizationManager,
+                                    onCopy = {
+                                        ClipboardUtils.copyWithAutoClear(
+                                            context,
+                                            coroutineScope,
+                                            state.qrData,
+                                            "Device Link",
                                         )
-                                    }
-                                }
+                                    },
+                                    onExpired = {
+                                        viewModel.setDeviceLinkExpired()
+                                    },
+                                )
+                            }
 
-                                // Waiting indicator
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        strokeWidth = 2.dp,
-                                    )
-                                    Text(
-                                        text = "Waiting for new device to connect...",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-
-                                // Copy button
-                                TextButton(onClick = {
-                                    ClipboardUtils.copyWithAutoClear(
-                                        context,
-                                        coroutineScope,
-                                        state.qrData,
-                                        "Device Link",
-                                    )
-                                }) {
-                                    Icon(
-                                        Icons.Default.Share,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Copy Link")
-                                }
-
+                            is MainViewModel.DeviceLinkState.Expired -> {
+                                Icon(
+                                    Icons.Filled.Warning,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
                                 Text(
-                                    text =
-                                        "Open Vauchi on your new device and select " +
-                                            "\"Join Existing Identity\" to scan this code.",
+                                    text = "QR Code Expired",
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                Text(
+                                    text = "The device link QR code has expired for security reasons. Generate a new one to continue.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
+                                Button(
+                                    onClick = {
+                                        viewModel.cancelDeviceLink()
+                                        coroutineScope.launch {
+                                            viewModel.startDeviceLinkInitiator()
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text("Generate New QR")
+                                }
                             }
 
                             is MainViewModel.DeviceLinkState.ConfirmingDevice -> {
