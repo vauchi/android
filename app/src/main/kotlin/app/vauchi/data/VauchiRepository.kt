@@ -618,6 +618,15 @@ class VauchiRepository(
         platform().deleteContactFieldNote(contactId, fieldId)
     }
 
+    // Proposal trust
+
+    fun setProposalTrusted(
+        contactId: String,
+        trusted: Boolean,
+    ) {
+        platform().setProposalTrusted(contactId, trusted)
+    }
+
     // Panic Shred operations
 
     /**
