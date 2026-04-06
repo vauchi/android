@@ -412,9 +412,10 @@ test:screenshots:
             || git clone --depth=1 --branch=main \
               "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
         fi
+        export CARGO_TARGET_DIR="${CI_PROJECT_DIR}/.cargo-target"
         cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
         mkdir -p app/native-host-libs
-        cp "$CORE_DIR/target/release/libvauchi_platform.so" "$NATIVE_LIB"
+        cp "$CARGO_TARGET_DIR/release/libvauchi_platform.so" "$NATIVE_LIB"
         echo "✅ Native library built from ${CORE_REF}: $(ls -lh "$NATIVE_LIB" | awk '{print $5}')"
       else
         echo "✅ Native library cached: $NATIVE_LIB"
@@ -479,9 +480,10 @@ test:snapshots:record:
           || git clone --depth=1 --branch=main \
             "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
         export CARGO_HOME="${CI_PROJECT_DIR}/.cargo-record"
+        export CARGO_TARGET_DIR="${CI_PROJECT_DIR}/.cargo-target"
         cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
         mkdir -p app/native-host-libs
-        cp "$CORE_DIR/target/release/libvauchi_platform.so" "$NATIVE_LIB"
+        cp "$CARGO_TARGET_DIR/release/libvauchi_platform.so" "$NATIVE_LIB"
       fi
     - |
       set +e
