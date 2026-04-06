@@ -139,6 +139,7 @@ class VauchiRepository(
             val relayUrl = preferences.getRelayUrl()
             val storageKeyBytes = getOrCreateStorageKey(dataDir)
             _vauchi = VauchiPlatform.newWithSecureKey(dataDir, relayUrl, storageKeyBytes)
+            _vauchi.setPlatformKeychain(PlatformKeychainBridge(context))
             _appEngine = PlatformAppEngine(dataDir, relayUrl, storageKeyBytes)
             initialized = true
         }
