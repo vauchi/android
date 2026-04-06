@@ -768,6 +768,68 @@ class MainViewModel(
             true // Default to visible on error
         }
 
+    // Contact Notes & Proposal Trust
+
+    suspend fun setContactNote(
+        contactId: String,
+        note: String,
+    ) {
+        withContext(Dispatchers.IO) {
+            repository.setContactNote(contactId, note)
+        }
+    }
+
+    suspend fun getContactNote(contactId: String): String? =
+        try {
+            withContext(Dispatchers.IO) {
+                repository.getContactNote(contactId)
+            }
+        } catch (e: Exception) {
+            null
+        }
+
+    suspend fun setContactFieldNote(
+        contactId: String,
+        fieldId: String,
+        note: String,
+    ) {
+        withContext(Dispatchers.IO) {
+            repository.setContactFieldNote(contactId, fieldId, note)
+        }
+    }
+
+    suspend fun getContactFieldNotes(contactId: String): List<uniffi.vauchi_platform.MobileFieldNote> =
+        try {
+            withContext(Dispatchers.IO) {
+                repository.getContactFieldNotes(contactId)
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+    suspend fun deleteContactFieldNote(
+        contactId: String,
+        fieldId: String,
+    ) {
+        withContext(Dispatchers.IO) {
+            repository.deleteContactFieldNote(contactId, fieldId)
+        }
+    }
+
+    suspend fun setProposalTrusted(
+        contactId: String,
+        trusted: Boolean,
+    ): Boolean =
+        try {
+            withContext(Dispatchers.IO) {
+                repository.setProposalTrusted(contactId, trusted)
+            }
+            true
+        } catch (e: Exception) {
+            showMessage("Failed to update proposal trust: ${e.message}")
+            false
+        }
+
     suspend fun exportBackup(password: String): String? =
         try {
             withContext(Dispatchers.IO) {

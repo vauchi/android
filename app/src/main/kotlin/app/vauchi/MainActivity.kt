@@ -462,6 +462,12 @@ fun MainScreen(
                             onGetOwnFingerprint = { viewModel.getOwnFingerprint() },
                             onTrustForRecovery = { viewModel.trustContactForRecovery(it) },
                             onUntrustForRecovery = { viewModel.untrustContactForRecovery(it) },
+                            onGetContactNote = { viewModel.getContactNote(it) },
+                            onSetContactNote = { cId, note -> viewModel.setContactNote(cId, note) },
+                            onGetContactFieldNotes = { viewModel.getContactFieldNotes(it) },
+                            onSetContactFieldNote = { cId, fId, note -> viewModel.setContactFieldNote(cId, fId, note) },
+                            onDeleteContactFieldNote = { cId, fId -> viewModel.deleteContactFieldNote(cId, fId) },
+                            onSetProposalTrusted = { cId, trusted -> viewModel.setProposalTrusted(cId, trusted) },
                         )
                     }
                 }

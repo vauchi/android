@@ -27,6 +27,7 @@ import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileContactField
 import uniffi.vauchi_platform.MobileContactTrustLevel
+import uniffi.vauchi_platform.MobileFieldNote
 import uniffi.vauchi_platform.MobileReciprocity
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,6 +44,12 @@ fun ContactDetailScreen(
     onGetOwnFingerprint: (suspend () -> String?)? = null,
     onTrustForRecovery: (suspend (String) -> Boolean)? = null,
     onUntrustForRecovery: (suspend (String) -> Boolean)? = null,
+    onGetContactNote: (suspend (String) -> String?)? = null,
+    onSetContactNote: (suspend (String, String) -> Unit)? = null,
+    onGetContactFieldNotes: (suspend (String) -> List<MobileFieldNote>)? = null,
+    onSetContactFieldNote: (suspend (String, String, String) -> Unit)? = null,
+    onDeleteContactFieldNote: (suspend (String, String) -> Unit)? = null,
+    onSetProposalTrusted: (suspend (String, Boolean) -> Boolean)? = null,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -56,6 +63,12 @@ fun ContactDetailScreen(
     var showVerification by remember { mutableStateOf(false) }
     var isVerifying by remember { mutableStateOf(false) }
     var isTogglingTrust by remember { mutableStateOf(false) }
+    var personalNote by remember { mutableStateOf("") }
+    var isEditingNote by remember { mutableStateOf(false) }
+    var noteEditText by remember { mutableStateOf("") }
+    var fieldNotes by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var proposalTrusted by remember { mutableStateOf(false) }
+    var isTogglingProposalTrust by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(contactId) {
@@ -72,6 +85,13 @@ fun ContactDetailScreen(
             }
             fieldVisibility = visibilityMap
         }
+
+        // Load notes and proposal trust
+        personalNote = onGetContactNote?.invoke(contactId) ?: ""
+        val notes = onGetContactFieldNotes?.invoke(contactId) ?: emptyList()
+        fieldNotes = notes.associate { it.fieldId to it.note }
+        proposalTrusted = contact?.proposalTrusted ?: false
+
         isLoading = false
     }
 
@@ -138,8 +158,46 @@ fun ContactDetailScreen(
                         }
                     } else {
                         items(c.card.fields) { field ->
-                            ContactFieldItem(field = field)
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                ContactFieldItem(field = field)
+                                ContactFieldNoteItem(
+                                    note = fieldNotes[field.id] ?: "",
+                                    onSave = { newNote ->
+                                        scope.launch {
+                                            if (newNote.isEmpty()) {
+                                                onDeleteContactFieldNote?.invoke(contactId, field.id)
+                                            } else {
+                                                onSetContactFieldNote?.invoke(contactId, field.id, newNote)
+                                            }
+                                            fieldNotes = fieldNotes + (field.id to newNote)
+                                        }
+                                    },
+                                )
+                            }
                         }
+                    }
+
+                    // Personal note
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        PersonalNoteCard(
+                            note = personalNote,
+                            isEditing = isEditingNote,
+                            editText = noteEditText,
+                            onEditTextChange = { noteEditText = it },
+                            onStartEdit = {
+                                noteEditText = personalNote
+                                isEditingNote = true
+                            },
+                            onSave = {
+                                scope.launch {
+                                    onSetContactNote?.invoke(contactId, noteEditText)
+                                    personalNote = noteEditText
+                                    isEditingNote = false
+                                }
+                            },
+                            onCancel = { isEditingNote = false },
+                        )
                     }
 
                     // Trust level (derived from core — ADR-021/034)
@@ -245,6 +303,71 @@ fun ContactDetailScreen(
                                 ) {
                                     Text(if (c.isRecoveryTrusted) "Remove" else "Trust")
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // Proposal trust
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            CardDefaults.cardColors(
+                                containerColor =
+                                    if (proposalTrusted) {
+                                        MaterialTheme.colorScheme.secondaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    },
+                            ),
+                    ) {
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (proposalTrusted) "Proposal Trusted" else "Not Proposal Trusted",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text =
+                                        if (proposalTrusted) {
+                                            "This contact can propose new contacts to you"
+                                        } else {
+                                            "Allow this contact to propose new contacts"
+                                        },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        isTogglingProposalTrust = true
+                                        val newValue = !proposalTrusted
+                                        val success = onSetProposalTrusted?.invoke(contactId, newValue) ?: false
+                                        if (success) {
+                                            proposalTrusted = newValue
+                                        }
+                                        isTogglingProposalTrust = false
+                                    }
+                                },
+                                enabled = !isTogglingProposalTrust,
+                                colors =
+                                    if (proposalTrusted) {
+                                        ButtonDefaults.outlinedButtonColors()
+                                    } else {
+                                        ButtonDefaults.buttonColors()
+                                    },
+                            ) {
+                                Text(if (proposalTrusted) "Remove" else "Trust")
                             }
                         }
                     }
@@ -648,5 +771,142 @@ fun ExchangeStatusCard(reciprocity: MobileReciprocity) {
                 color = contentColor.copy(alpha = 0.8f),
             )
         }
+    }
+}
+
+@Composable
+fun PersonalNoteCard(
+    note: String,
+    isEditing: Boolean,
+    editText: String,
+    onEditTextChange: (String) -> Unit,
+    onStartEdit: () -> Unit,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Private Note",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.semantics { heading() },
+            )
+            if (isEditing) {
+                OutlinedTextField(
+                    value = editText,
+                    onValueChange = onEditTextChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Add a private note...") },
+                    minLines = 2,
+                    maxLines = 4,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onCancel) {
+                        Text("Cancel")
+                    }
+                    TextButton(onClick = onSave) {
+                        Text("Save")
+                    }
+                }
+            } else {
+                Text(
+                    text = note.ifEmpty { "Add a private note..." },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color =
+                        if (note.isEmpty()) {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onStartEdit() },
+                    maxLines = 3,
+                )
+            }
+            Text(
+                text = "Only visible to you — never shared with this contact.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            )
+        }
+    }
+}
+
+@Composable
+fun ContactFieldNoteItem(
+    note: String,
+    onSave: (String) -> Unit,
+) {
+    var isEditing by remember { mutableStateOf(false) }
+    var editText by remember { mutableStateOf(note) }
+
+    if (isEditing) {
+        Row(
+            modifier = Modifier.padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = editText,
+                onValueChange = { editText = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Private note...") },
+                textStyle = MaterialTheme.typography.bodySmall,
+                singleLine = true,
+            )
+            TextButton(onClick = {
+                onSave(editText)
+                isEditing = false
+            }) {
+                Text("Save", style = MaterialTheme.typography.labelSmall)
+            }
+            TextButton(onClick = { isEditing = false }) {
+                Text("Cancel", style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    } else if (note.isNotEmpty()) {
+        Text(
+            text = note,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier =
+                Modifier
+                    .padding(horizontal = 4.dp)
+                    .clickable {
+                        editText = note
+                        isEditing = true
+                    },
+            maxLines = 2,
+        )
+    } else {
+        Text(
+            text = "Add note",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            modifier =
+                Modifier
+                    .padding(horizontal = 4.dp)
+                    .clickable {
+                        editText = ""
+                        isEditing = true
+                    },
+        )
     }
 }
