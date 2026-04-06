@@ -421,6 +421,7 @@ test:screenshots:
             "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/themes.git" "$THEMES_DIR"
           python3 "$THEMES_DIR/scripts/generate.py"
         fi
+        export CARGO_HOME="${CI_PROJECT_DIR}/.cargo-screenshots"
         export CARGO_TARGET_DIR="${CI_PROJECT_DIR}/.cargo-target"
         cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
         mkdir -p app/native-host-libs
