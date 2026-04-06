@@ -211,7 +211,7 @@ update:bindings-version:
       # Create branch and update version (-B force-creates if stale
       # local branch exists from a previous failed pipeline retry)
       git checkout -B "$BRANCH"
-      sed -i "s/implementation(\"app.vauchi:vauchi-platform:[^\"]*\")/implementation(\"app.vauchi:vauchi-platform:${BINDINGS_VERSION}\")/" "$BUILD_FILE"
+      sed -i "s|app\.vauchi:vauchi-platform:[^\"]*|app.vauchi:vauchi-platform:${BINDINGS_VERSION}|g" "$BUILD_FILE"
 
       # Verify the change was made
       if ! grep -q "app.vauchi:vauchi-platform:${BINDINGS_VERSION}" "$BUILD_FILE"; then
