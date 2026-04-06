@@ -414,6 +414,13 @@ test:screenshots:
           "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR" \
           || git clone --depth=1 --branch=main \
             "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
+        # Clone themes repo and generate themes.json — required by include_bytes! in vauchi-platform
+        THEMES_DIR="${CI_PROJECT_DIR}/themes"
+        if [ ! -d "$THEMES_DIR" ]; then
+          git clone --depth=1 --branch=main \
+            "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/themes.git" "$THEMES_DIR"
+          python3 "$THEMES_DIR/scripts/generate.py"
+        fi
         export CARGO_TARGET_DIR="${CI_PROJECT_DIR}/.cargo-target"
         cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
         mkdir -p app/native-host-libs
@@ -482,6 +489,13 @@ test:snapshots:record:
           "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR" \
           || git clone --depth=1 --branch=main \
             "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
+        # Clone themes repo and generate themes.json — required by include_bytes! in vauchi-platform
+        THEMES_DIR="${CI_PROJECT_DIR}/themes"
+        if [ ! -d "$THEMES_DIR" ]; then
+          git clone --depth=1 --branch=main \
+            "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/themes.git" "$THEMES_DIR"
+          python3 "$THEMES_DIR/scripts/generate.py"
+        fi
         export CARGO_HOME="${CI_PROJECT_DIR}/.cargo-record"
         export CARGO_TARGET_DIR="${CI_PROJECT_DIR}/.cargo-target"
         cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
