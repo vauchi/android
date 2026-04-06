@@ -43,6 +43,7 @@ class AndroidBleDelegate(
     ) {
         if (!hasBluetoothConnect()) {
             Log.e("Vauchi", "[BLE] BLUETOOTH_CONNECT not granted, cannot send data")
+            onFailed.invoke("BLE permission denied")
             return
         }
         val uuid = UUID.fromString(characteristicUuid)
@@ -68,6 +69,7 @@ class AndroidBleDelegate(
     override fun subscribeNotify(characteristicUuid: String) {
         if (!hasBluetoothConnect()) {
             Log.e("Vauchi", "[BLE] BLUETOOTH_CONNECT not granted, cannot subscribe")
+            onFailed.invoke("BLE permission denied")
             return
         }
         val uuid = UUID.fromString(characteristicUuid)
