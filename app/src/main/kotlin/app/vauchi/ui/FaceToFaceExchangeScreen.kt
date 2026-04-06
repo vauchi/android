@@ -9,6 +9,7 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.util.Log
+import android.view.WindowManager
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
@@ -122,20 +123,21 @@ fun MultiStageExchangeScreen(
         }
     }
 
-    // Set moderate brightness during exchange (65%).
-    // Counter-intuitive: max brightness causes camera overexposure on the
-    // scanning device, washing out QR module contrast. 65% gives the peer's
-    // camera better dynamic range for reliable QR detection.
+    // Keep screen on during exchange — prevent dimming/lock mid-scan.
+    // Also set moderate brightness (65%): max brightness causes camera
+    // overexposure on the scanning device, washing out QR module contrast.
     DisposableEffect(Unit) {
         val activity = context as? Activity
         val previousBrightness = activity?.window?.attributes?.screenBrightness ?: -1.0f
         activity?.window?.let { window ->
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             val params = window.attributes
             params.screenBrightness = 0.65f
             window.attributes = params
         }
         onDispose {
             activity?.window?.let { window ->
+                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 val params = window.attributes
                 params.screenBrightness = previousBrightness
                 window.attributes = params
