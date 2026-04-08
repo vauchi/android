@@ -9,6 +9,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
@@ -41,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vauchi.ui.AppPasswordScreen
@@ -134,12 +137,64 @@ class MainActivity : FragmentActivity() {
         handleIncomingIntent(intent)
     }
 
+    override fun onStop() {
+        super.onStop()
+        // Trigger auto-lock if enabled when app goes to background (C1)
+        try {
+            val viewModel = ViewModelProvider(this)[MainViewModel::class.java]
+            viewModel.handleAppBackgrounded()
+        } catch (e: Exception) {
+            // viewModel might not be available or initialization failed
+        }
+    }
+
     private val _navigateTo = mutableStateOf<String?>(null)
 
     private fun handleIncomingIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_VIEW) {
             _deepLinkUri.value = intent.data
         }
+
+        // Poll for notifications on every resume (E)
+        try {
+            val viewModel = ViewModelProvider(this)[MainViewModel::class.java]
+            val notifications = viewModel.pollNotifications()
+            if (notifications.isNotEmpty()) {
+                val notificationManager = NotificationManagerCompat.from(this)
+                
+                // Create notification channel for Android O+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    val channel = android.app.NotificationChannel(
+                        "vauchi_sync",
+                        "Vauchi Sync",
+                        android.app.NotificationManager.IMPORTANCE_DEFAULT
+                    ).apply {
+                        description = "Vauchi contact updates and exchanges"
+                    }
+                    notificationManager.createNotificationChannel(channel)
+                }
+
+                for (notification in notifications) {
+                    val builder = NotificationCompat.Builder(this, "vauchi_sync")
+                        .setSmallIcon(android.R.drawable.stat_notify_sync) // Placeholder icon
+                        .setContentTitle(notification.title)
+                        .setContentText(notification.body)
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                        .setAutoCancel(true)
+
+                    // Deliver the notification
+                    // We use the notification's internal eventKey hash for the notification ID
+                    try {
+                        notificationManager.notify(notification.eventKey.hashCode(), builder.build())
+                    } catch (e: SecurityException) {
+                        Log.e("MainActivity", "Notification permission missing", e)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "pollAndShowNotifications failed", e)
+        }
+
         // Support direct navigation via: am start -n app.vauchi/.MainActivity --es navigate exchange
         // Used by device testing automation to open exchange screen programmatically.
         if (BuildConfig.DEBUG) {

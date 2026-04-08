@@ -1909,6 +1909,18 @@ class MainViewModel(
             }
         }
     }
+
+    /**
+     * Handle app backgrounded event (C1 auto-lock).
+     */
+    fun handleAppBackgrounded() {
+        repository.handleAppBackgrounded()
+    }
+
+    /**
+     * Poll for and return OS notifications (E).
+     */
+    fun pollNotifications() = repository.pollNotifications()
 }
 
 private data class Tuple4<A, B, C, D>(

@@ -29,6 +29,7 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
+import android.util.Log
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileExchangeResult
 import uniffi.vauchi_platform.MobileExchangeSession
@@ -924,4 +925,28 @@ class VauchiRepository(
     fun getConsentRecords() = platform().getConsentRecords()
 
     fun getConsentStatus(consentType: uniffi.vauchi_platform.MobileConsentType) = platform().getConsentStatus(consentType)
+
+    /**
+     * Handle app backgrounded event (C1 auto-lock).
+     */
+    fun handleAppBackgrounded(): String? {
+        return try {
+            appEngine.handleAppBackgrounded()
+        } catch (e: Exception) {
+            Log.e("VauchiRepository", "handleAppBackgrounded failed", e)
+            null
+        }
+    }
+
+    /**
+     * Poll for OS notifications produced by the app engine (E).
+     */
+    fun pollNotifications(): List<uniffi.vauchi_platform.MobilePendingNotification> {
+        return try {
+            appEngine.pollNotifications()
+        } catch (e: Exception) {
+            Log.e("VauchiRepository", "pollNotifications failed", e)
+            emptyList()
+        }
+    }
 }
