@@ -159,37 +159,8 @@ class MainActivity : FragmentActivity() {
         try {
             val viewModel = ViewModelProvider(this)[MainViewModel::class.java]
             val notifications = viewModel.pollNotifications()
-            if (notifications.isNotEmpty()) {
-                val notificationManager = NotificationManagerCompat.from(this)
-                
-                // Create notification channel for Android O+
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    val channel = android.app.NotificationChannel(
-                        "vauchi_sync",
-                        "Vauchi Sync",
-                        android.app.NotificationManager.IMPORTANCE_DEFAULT
-                    ).apply {
-                        description = "Vauchi contact updates and exchanges"
-                    }
-                    notificationManager.createNotificationChannel(channel)
-                }
-
-                for (notification in notifications) {
-                    val builder = NotificationCompat.Builder(this, "vauchi_sync")
-                        .setSmallIcon(android.R.drawable.stat_notify_sync) // Placeholder icon
-                        .setContentTitle(notification.title)
-                        .setContentText(notification.body)
-                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                        .setAutoCancel(true)
-
-                    // Deliver the notification
-                    // We use the notification's internal eventKey hash for the notification ID
-                    try {
-                        notificationManager.notify(notification.eventKey.hashCode(), builder.build())
-                    } catch (e: SecurityException) {
-                        Log.e("MainActivity", "Notification permission missing", e)
-                    }
-                }
+            for (notification in notifications) {
+                app.vauchi.util.NotificationHelper.showNotification(this, notification)
             }
         } catch (e: Exception) {
             Log.e("MainActivity", "pollAndShowNotifications failed", e)

@@ -34,6 +34,13 @@ class SyncWorker(
 
             val result = repository.sync()
             Log.d(TAG, "Sync complete: ${result.contactsAdded} contacts added, ${result.cardsUpdated} cards updated")
+            
+            // Poll for pending notifications (E)
+            val notifications = repository.pollNotifications()
+            for (notification in notifications) {
+                app.vauchi.util.NotificationHelper.showNotification(applicationContext, notification)
+            }
+            
             Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "Sync failed: ${e.message}", e)
