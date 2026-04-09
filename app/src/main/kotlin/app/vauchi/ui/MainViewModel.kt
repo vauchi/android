@@ -1914,7 +1914,11 @@ class MainViewModel(
      * Handle app backgrounded event (C1 auto-lock).
      */
     fun handleAppBackgrounded() {
-        repository.handleAppBackgrounded()
+        val screenJson = repository.handleAppBackgrounded()
+        if (screenJson != null) {
+            // Core navigated to Lock screen — require re-authentication
+            _uiState.value = UiState.AuthRequired
+        }
     }
 
     /**
