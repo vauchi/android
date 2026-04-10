@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import app.vauchi.data.AuthenticationRequiredException
 import app.vauchi.data.DeviceNotSecureException
 import app.vauchi.data.VauchiRepository
+import app.vauchi.proximity.AudioMobileProximityHandler
 import app.vauchi.proximity.AudioProximityService
 import app.vauchi.ui.components.ProximityVerificationResult
 import app.vauchi.ui.model.PasswordStrengthLevel
@@ -590,15 +591,10 @@ class MainViewModel(
         val audioService = AudioProximityService.getInstance(context)
         if (audioService.checkCapability() == "none") return
 
-        val verifier = MobileProximityVerifier.new(audioService)
+        val handler = AudioMobileProximityHandler(MobileProximityVerifier(audioService))
         val challenge = ByteArray(16).also { java.security.SecureRandom().nextBytes(it) }
-        val emitResult = verifier.emitChallenge(challenge)
-        if (!emitResult.success) {
-            Log.e("Vauchi", "Exchange: audio proximity emit failed")
-            return
-        }
-        val response = verifier.listenForResponse(5000u)
-        if (response.isNotEmpty()) {
+        val result = handler.verifyProximity(challenge, 5000u)
+        if (result.isEmpty()) {
             Log.i("Vauchi", "Exchange: audio proximity verified")
         }
     }
