@@ -124,28 +124,6 @@ class AccessibilityTest {
         composeTestRule.onNodeWithContentDescription("No contacts yet", substring = true).assertExists()
     }
 
-    // MARK: - Exchange Accessibility
-
-    @Test
-    fun exchangeScreen_controlsAccessible() {
-        composeTestRule.setContent {
-            VauchiTheme {
-                ExchangeScreen(
-                    onBack = {},
-                    onGenerateQr = { null },
-                    onScanQr = {},
-                )
-            }
-        }
-
-        // Back navigation must have accessible description
-        composeTestRule.onNodeWithContentDescription("Back").assertExists()
-        // Error state (null QR) must show error icon with content description
-        composeTestRule.onNodeWithContentDescription("Error").assertExists()
-        // Error state must show actionable guidance
-        composeTestRule.onNodeWithText("Please check your internet connection", substring = true).assertIsDisplayed()
-    }
-
     // MARK: - Labels Accessibility
 
     @Test

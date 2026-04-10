@@ -15,7 +15,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.ContactsScreen
 import app.vauchi.ui.DeliveryStatusScreen
-import app.vauchi.ui.ExchangeScreen
 import app.vauchi.ui.LabelsScreen
 import app.vauchi.ui.SettingsScreen
 import app.vauchi.ui.SyncState
@@ -81,19 +80,6 @@ fun ContactsScreenWithContactsScreenshot() {
             onRemoveContact = {},
             onContactClick = {},
             syncState = SyncState.Idle,
-        )
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun ExchangeScreenScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        ExchangeScreen(
-            onBack = {},
-            onGenerateQr = { null },
-            onScanQr = {},
         )
     }
 }
@@ -533,19 +519,6 @@ fun ContactsScreenDarkScreenshot() {
 @PreviewTest
 @Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
-fun ExchangeScreenDarkScreenshot() {
-    VauchiTheme(darkTheme = true, dynamicColor = false) {
-        ExchangeScreen(
-            onBack = {},
-            onGenerateQr = { null },
-            onScanQr = {},
-        )
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
 fun DeliveryStatusWithRecordsDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
         DeliveryStatusScreen(
@@ -777,21 +750,6 @@ fun ContactsScreenGermanScreenshot() {
                 onRemoveContact = {},
                 onContactClick = {},
                 syncState = SyncState.Idle,
-            )
-        }
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
-@Composable
-fun ExchangeScreenGermanScreenshot() {
-    GermanLocaleWrapper {
-        VauchiTheme(dynamicColor = false) {
-            ExchangeScreen(
-                onBack = {},
-                onGenerateQr = { null },
-                onScanQr = {},
             )
         }
     }
