@@ -9,8 +9,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
@@ -40,6 +38,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -50,6 +50,8 @@ import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.ContactDetailScreen
 import app.vauchi.ui.ContactsScreen
 import app.vauchi.ui.DevicesScreen
+import app.vauchi.ui.ExchangeMode
+import app.vauchi.ui.ExchangeModePicker
 import app.vauchi.ui.HelpScreen
 import app.vauchi.ui.LabelDetailScreen
 import app.vauchi.ui.LabelsScreen
@@ -160,7 +162,8 @@ class MainActivity : FragmentActivity() {
             val viewModel = ViewModelProvider(this)[MainViewModel::class.java]
             val notifications = viewModel.pollNotifications()
             for (notification in notifications) {
-                app.vauchi.util.NotificationHelper.showNotification(this, notification)
+                app.vauchi.util.NotificationHelper
+                    .showNotification(this, notification)
             }
         } catch (e: Exception) {
             Log.e("MainActivity", "pollAndShowNotifications failed", e)
@@ -183,6 +186,7 @@ class MainActivity : FragmentActivity() {
 
 enum class Screen {
     Home,
+    ExchangeModePicker,
     MultiStageExchange,
     Contacts,
     ContactDetail,
@@ -238,7 +242,7 @@ fun MainScreen(
     LaunchedEffect(navigateTo, uiState) {
         if (navigateTo != null && uiState is UiState.Ready) {
             when (navigateTo) {
-                "exchange" -> currentScreen = Screen.MultiStageExchange
+                "exchange" -> currentScreen = Screen.ExchangeModePicker
                 "contacts" -> currentScreen = Screen.Contacts
                 "settings" -> currentScreen = Screen.Settings
                 "home" -> currentScreen = Screen.Home
@@ -301,7 +305,7 @@ fun MainScreen(
             setOf(
                 Screen.Home,
                 Screen.Contacts,
-                Screen.MultiStageExchange,
+                Screen.ExchangeModePicker,
                 Screen.Labels,
                 Screen.More,
             )
@@ -325,8 +329,8 @@ fun MainScreen(
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.QrCode, contentDescription = "Exchange") },
                         label = { Text("Exchange") },
-                        selected = currentScreen == Screen.MultiStageExchange,
-                        onClick = { currentScreen = Screen.MultiStageExchange },
+                        selected = currentScreen in setOf(Screen.ExchangeModePicker, Screen.MultiStageExchange),
+                        onClick = { currentScreen = Screen.ExchangeModePicker },
                     )
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Group, contentDescription = "Groups") },
@@ -431,12 +435,36 @@ fun MainScreen(
                     }
                 }
 
+                Screen.ExchangeModePicker -> {
+                    ExchangeModePicker(
+                        onModeSelected = { mode ->
+                            when (mode) {
+                                ExchangeMode.QR -> {
+                                    currentScreen = Screen.MultiStageExchange
+                                }
+
+                                ExchangeMode.NFC -> {
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("NFC exchange coming soon")
+                                    }
+                                }
+
+                                ExchangeMode.BLE -> {
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("Bluetooth exchange coming soon")
+                                    }
+                                }
+                            }
+                        },
+                    )
+                }
+
                 Screen.MultiStageExchange -> {
                     MultiStageExchangeScreen(
                         viewModel = viewModel,
                         onBack = {
                             viewModel.cancelMultiStageExchange()
-                            currentScreen = Screen.Home
+                            currentScreen = Screen.ExchangeModePicker
                         },
                         onDone = {
                             viewModel.cancelMultiStageExchange()
