@@ -13,6 +13,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
@@ -38,12 +43,21 @@ fun TextInputComponent(
     modifier: Modifier = Modifier,
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
+    var localValue by remember { mutableStateOf(value) }
+
+    // Sync from core when the authoritative value changes (e.g. screen navigation)
+    LaunchedEffect(value) {
+        if (value != localValue) {
+            localValue = value
+        }
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
-            value = value,
+            value = localValue,
             onValueChange = { newValue ->
                 val bounded = if (maxLength != null) newValue.take(maxLength) else newValue
+                localValue = bounded
                 onAction(UserAction.TextChanged(componentId = componentId, value = bounded))
             },
             label = { Text(label) },
@@ -79,7 +93,7 @@ fun TextInputComponent(
 
         if (maxLength != null) {
             Text(
-                text = "${value.length}/$maxLength",
+                text = "${localValue.length}/$maxLength",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier =
