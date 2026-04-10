@@ -580,6 +580,24 @@ class MainViewModel(
         }
     }
 
+    // --- NFC exchange ---
+
+    /**
+     * Create an NFC initiator (reader) handshake session.
+     *
+     * Called from [NfcExchangeScreen] before enabling reader mode.
+     * Throws if no identity is available.
+     */
+    fun createNfcInitiator(): uniffi.vauchi_platform.MobileNfcHandshake = repository.createNfcInitiator()
+
+    /**
+     * Create an NFC responder (HCE) handshake session.
+     *
+     * Called from [NfcExchangeScreen] to pre-arm [VauchiHceService].
+     * Throws if no identity is available.
+     */
+    fun createNfcResponder(): uniffi.vauchi_platform.MobileNfcHandshake = repository.createNfcResponder()
+
     /**
      * Run audio proximity verification as a non-blocking best-effort trust boost
      * after the multi-stage QR exchange completes.

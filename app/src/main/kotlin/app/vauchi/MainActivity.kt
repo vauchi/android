@@ -59,6 +59,7 @@ import app.vauchi.ui.LanguageSettingsScreen
 import app.vauchi.ui.MainViewModel
 import app.vauchi.ui.MoreScreen
 import app.vauchi.ui.MultiStageExchangeScreen
+import app.vauchi.ui.NfcExchangeScreen
 import app.vauchi.ui.QrDiagnosticScreen
 import app.vauchi.ui.RecoveryScreen
 import app.vauchi.ui.SettingsScreen
@@ -188,6 +189,7 @@ enum class Screen {
     Home,
     ExchangeModePicker,
     MultiStageExchange,
+    NfcExchange,
     Contacts,
     ContactDetail,
     Settings,
@@ -329,7 +331,7 @@ fun MainScreen(
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.QrCode, contentDescription = "Exchange") },
                         label = { Text("Exchange") },
-                        selected = currentScreen in setOf(Screen.ExchangeModePicker, Screen.MultiStageExchange),
+                        selected = currentScreen in setOf(Screen.ExchangeModePicker, Screen.MultiStageExchange, Screen.NfcExchange),
                         onClick = { currentScreen = Screen.ExchangeModePicker },
                     )
                     NavigationBarItem(
@@ -444,9 +446,7 @@ fun MainScreen(
                                 }
 
                                 ExchangeMode.NFC -> {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("NFC exchange coming soon")
-                                    }
+                                    currentScreen = Screen.NfcExchange
                                 }
 
                                 ExchangeMode.BLE -> {
@@ -468,6 +468,17 @@ fun MainScreen(
                         },
                         onDone = {
                             viewModel.cancelMultiStageExchange()
+                            viewModel.refresh()
+                            currentScreen = Screen.Contacts
+                        },
+                    )
+                }
+
+                Screen.NfcExchange -> {
+                    NfcExchangeScreen(
+                        viewModel = viewModel,
+                        onBack = { currentScreen = Screen.ExchangeModePicker },
+                        onDone = {
                             viewModel.refresh()
                             currentScreen = Screen.Contacts
                         },
