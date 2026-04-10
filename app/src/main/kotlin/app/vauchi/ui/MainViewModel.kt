@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import app.vauchi.data.AuthenticationRequiredException
 import app.vauchi.data.DeviceNotSecureException
 import app.vauchi.data.VauchiRepository
+import app.vauchi.proximity.AudioProximityService
 import app.vauchi.ui.components.ProximityVerificationResult
 import app.vauchi.ui.model.PasswordStrengthLevel
 import app.vauchi.ui.model.PasswordStrengthResult
@@ -41,6 +42,7 @@ import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileGdprExport
 import uniffi.vauchi_platform.MobileMultiStageSession
 import uniffi.vauchi_platform.MobileProtocolState
+import uniffi.vauchi_platform.MobileProximityVerifier
 import uniffi.vauchi_platform.MobileQrPayload
 import uniffi.vauchi_platform.MobileRecoveryClaim
 import uniffi.vauchi_platform.MobileRecoveryProgress
@@ -567,10 +569,37 @@ class MainViewModel(
         return try {
             val result = repository.finalizeMultistageExchange(session)
             Log.i("Vauchi", "Exchange: contact finalized")
+            viewModelScope.launch(Dispatchers.IO) {
+                runAudioProximity()
+            }
             result
         } catch (e: Exception) {
             Log.e("Vauchi", "Exchange: finalization failed", e)
             null
+        }
+    }
+
+    /**
+     * Run audio proximity verification as a non-blocking best-effort trust boost
+     * after the multi-stage QR exchange completes.
+     *
+     * If audio is unsupported or fails, the exchange result is unaffected.
+     */
+    private fun runAudioProximity() {
+        val context = getApplication<Application>().applicationContext
+        val audioService = AudioProximityService.getInstance(context)
+        if (audioService.checkCapability() == "none") return
+
+        val verifier = MobileProximityVerifier.new(audioService)
+        val challenge = ByteArray(16).also { java.security.SecureRandom().nextBytes(it) }
+        val emitResult = verifier.emitChallenge(challenge)
+        if (!emitResult.success) {
+            Log.e("Vauchi", "Exchange: audio proximity emit failed")
+            return
+        }
+        val response = verifier.listenForResponse(5000u)
+        if (response.isNotEmpty()) {
+            Log.i("Vauchi", "Exchange: audio proximity verified")
         }
     }
 
