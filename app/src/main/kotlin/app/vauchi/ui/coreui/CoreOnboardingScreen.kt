@@ -36,11 +36,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
  */
 @Composable
 fun CoreOnboardingScreen(
-    onComplete: () -> Unit,
+    onComplete: (displayName: String?) -> Unit,
     viewModel: OnboardingViewModel = viewModel(),
 ) {
     val screen by viewModel.screen.collectAsState()
     val isComplete by viewModel.isComplete.collectAsState()
+    val displayName by viewModel.displayName.collectAsState()
     val error by viewModel.error.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
     val toastUndoActionId by viewModel.toastUndoActionId.collectAsState()
@@ -49,7 +50,7 @@ fun CoreOnboardingScreen(
     // Navigate away when onboarding completes
     LaunchedEffect(isComplete) {
         if (isComplete) {
-            onComplete()
+            onComplete(displayName)
         }
     }
 

@@ -36,6 +36,9 @@ class OnboardingViewModel : ViewModel() {
     private val _isComplete = MutableStateFlow(false)
     val isComplete: StateFlow<Boolean> = _isComplete.asStateFlow()
 
+    private val _displayName = MutableStateFlow<String?>(null)
+    val displayName: StateFlow<String?> = _displayName.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -135,7 +138,18 @@ class OnboardingViewModel : ViewModel() {
             }
 
             is ActionResult.Complete -> {
-                _isComplete.value = true
+                viewModelScope.launch {
+                    val dataJson = getOnboardingDataJson()
+                    if (dataJson != null) {
+                        try {
+                            val data = json.decodeFromString<OnboardingData>(dataJson)
+                            _displayName.value = data.displayName
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to parse onboarding data", e)
+                        }
+                    }
+                    _isComplete.value = true
+                }
             }
 
             is ActionResult.ShowToast -> {

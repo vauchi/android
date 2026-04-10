@@ -367,7 +367,7 @@ fun MainScreen(
 
                         is UiState.Onboarding -> {
                             CoreOnboardingScreen(
-                                onComplete = viewModel::onCoreOnboardingComplete,
+                                onComplete = { displayName -> viewModel.onCoreOnboardingComplete(displayName) },
                             )
 
                             if (showRestoreDialog) {

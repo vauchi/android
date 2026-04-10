@@ -1799,3 +1799,10 @@ internal object ExchangeCommandDTOSerializer : KSerializer<ExchangeCommandDTO> {
         jsonEncoder.encodeJsonElement(JsonPrimitive("ExchangeCommandDTO"))
     }
 }
+
+// ── OnboardingData ──────────────────────────────────────────────────
+
+@Serializable
+data class OnboardingData(
+    @SerialName("display_name") val displayName: String,
+)

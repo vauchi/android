@@ -263,11 +263,13 @@ class MainViewModel(
         }
     }
 
-    /** Called when core-driven onboarding completes (identity already created by core). */
-    fun onCoreOnboardingComplete() {
+    /** Called when core-driven onboarding completes — creates the identity from collected data. */
+    fun onCoreOnboardingComplete(displayName: String?) {
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
+                    val name = displayName ?: "User"
+                    repository.createIdentity(name)
                     repository.setOnboardingCompleted(true)
                 }
                 loadUserData()
