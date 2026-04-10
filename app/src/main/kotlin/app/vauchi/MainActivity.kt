@@ -47,6 +47,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vauchi.ui.AppPasswordScreen
+import app.vauchi.ui.BleExchangeScreen
 import app.vauchi.ui.ContactDetailScreen
 import app.vauchi.ui.ContactsScreen
 import app.vauchi.ui.DevicesScreen
@@ -190,6 +191,7 @@ enum class Screen {
     ExchangeModePicker,
     MultiStageExchange,
     NfcExchange,
+    BleExchange,
     Contacts,
     ContactDetail,
     Settings,
@@ -331,7 +333,9 @@ fun MainScreen(
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.QrCode, contentDescription = "Exchange") },
                         label = { Text("Exchange") },
-                        selected = currentScreen in setOf(Screen.ExchangeModePicker, Screen.MultiStageExchange, Screen.NfcExchange),
+                        selected =
+                            currentScreen in
+                                setOf(Screen.ExchangeModePicker, Screen.MultiStageExchange, Screen.NfcExchange, Screen.BleExchange),
                         onClick = { currentScreen = Screen.ExchangeModePicker },
                     )
                     NavigationBarItem(
@@ -450,9 +454,7 @@ fun MainScreen(
                                 }
 
                                 ExchangeMode.BLE -> {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Bluetooth exchange coming soon")
-                                    }
+                                    currentScreen = Screen.BleExchange
                                 }
                             }
                         },
@@ -476,6 +478,17 @@ fun MainScreen(
 
                 Screen.NfcExchange -> {
                     NfcExchangeScreen(
+                        viewModel = viewModel,
+                        onBack = { currentScreen = Screen.ExchangeModePicker },
+                        onDone = {
+                            viewModel.refresh()
+                            currentScreen = Screen.Contacts
+                        },
+                    )
+                }
+
+                Screen.BleExchange -> {
+                    BleExchangeScreen(
                         viewModel = viewModel,
                         onBack = { currentScreen = Screen.ExchangeModePicker },
                         onDone = {
