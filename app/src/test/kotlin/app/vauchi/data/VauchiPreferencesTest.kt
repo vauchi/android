@@ -15,14 +15,15 @@ import org.robolectric.RuntimeEnvironment
 
 @RunWith(RobolectricTestRunner::class)
 class VauchiPreferencesTest {
-
     private lateinit var prefs: SharedPreferences
     private lateinit var vauchiPrefs: VauchiPreferences
 
     @Before
     fun setUp() {
-        prefs = RuntimeEnvironment.getApplication()
-            .getSharedPreferences(VauchiPreferences.PREFS_NAME, Context.MODE_PRIVATE)
+        prefs =
+            RuntimeEnvironment
+                .getApplication()
+                .getSharedPreferences(VauchiPreferences.PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().clear().commit()
         vauchiPrefs = VauchiPreferences(prefs)
     }
@@ -36,15 +37,15 @@ class VauchiPreferencesTest {
 
     @Test
     fun `setRelayUrl persists value`() {
-        vauchiPrefs.setRelayUrl("wss://custom.relay")
-        assertEquals("wss://custom.relay", vauchiPrefs.getRelayUrl())
+        vauchiPrefs.setRelayUrl("https://custom.relay")
+        assertEquals("https://custom.relay", vauchiPrefs.getRelayUrl())
     }
 
     @Test
     fun `setRelayUrl overwrites previous value`() {
-        vauchiPrefs.setRelayUrl("wss://first")
-        vauchiPrefs.setRelayUrl("wss://second")
-        assertEquals("wss://second", vauchiPrefs.getRelayUrl())
+        vauchiPrefs.setRelayUrl("https://first")
+        vauchiPrefs.setRelayUrl("https://second")
+        assertEquals("https://second", vauchiPrefs.getRelayUrl())
     }
 
     // --- Onboarding ---
@@ -95,13 +96,13 @@ class VauchiPreferencesTest {
 
     @Test
     fun `resetOnboarding does not affect other settings`() {
-        vauchiPrefs.setRelayUrl("wss://custom.relay")
+        vauchiPrefs.setRelayUrl("https://custom.relay")
         vauchiPrefs.setReduceMotion(true)
         vauchiPrefs.setOnboardingCompleted(true)
 
         vauchiPrefs.resetOnboarding()
 
-        assertEquals("wss://custom.relay", vauchiPrefs.getRelayUrl())
+        assertEquals("https://custom.relay", vauchiPrefs.getRelayUrl())
         assertTrue(vauchiPrefs.getReduceMotion())
     }
 
