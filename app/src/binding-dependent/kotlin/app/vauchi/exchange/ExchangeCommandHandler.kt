@@ -6,9 +6,11 @@ package app.vauchi.exchange
 import android.content.Context
 import android.util.Log
 import app.vauchi.ble.BleExchangeService
+import app.vauchi.proximity.AudioProximityService
 import uniffi.vauchi_platform.MobileExchangeCommand
 import uniffi.vauchi_platform.MobileExchangeHardwareEvent
 import uniffi.vauchi_platform.MobileExchangeSession
+import uniffi.vauchi_platform.MobileProximityVerifier
 
 /**
  * Dispatches ADR-031 exchange commands from core to Android platform services.
@@ -19,7 +21,7 @@ import uniffi.vauchi_platform.MobileExchangeSession
  */
 class ExchangeCommandHandler(
     private val session: MobileExchangeSession,
-    context: Context,
+    private val context: Context,
 ) {
     private val bleService =
         BleExchangeService(context) { event ->
@@ -120,27 +122,34 @@ class ExchangeCommandHandler(
     // ── Audio ───────────────────────────────────────────────────────
 
     private fun emitAudioChallenge(data: List<UByte>) {
-        try {
-            val samples = data.map { it.toFloat() / 255f }
-            // AudioProximityService handles emission via AudioTrack
-            Log.d(TAG, "Emitting audio challenge (${data.size} bytes)")
-            // TODO: Wire to AudioProximityService.emitSignal() when
-            // the service supports the raw sample API
-        } catch (e: Exception) {
-            reportError("Audio", e.message ?: "emit failed")
+        val verifier =
+            MobileProximityVerifier.new(
+                AudioProximityService.getInstance(context),
+            )
+        val result = verifier.emitChallenge(data.map { it.toByte() }.toByteArray())
+        if (!result.success) {
+            reportError("Audio", result.error)
         }
     }
 
     private fun listenForAudioResponse(timeoutMs: ULong) {
-        try {
-            Log.d(TAG, "Listening for audio response (timeout=${timeoutMs}ms)")
-            // TODO: Wire to AudioProximityService.receiveSignal() when
-            // the service supports the raw sample API.
-            // On success: session.applyHardwareEvent(AudioResponseReceived(data))
-            // On failure: reportError("Audio", error)
-        } catch (e: Exception) {
-            reportError("Audio", e.message ?: "listen failed")
-        }
+        Thread {
+            val verifier =
+                MobileProximityVerifier.new(
+                    AudioProximityService.getInstance(context),
+                )
+            val received = verifier.listenForResponse(timeoutMs)
+            try {
+                session.applyHardwareEvent(
+                    MobileExchangeHardwareEvent.AudioResponseReceived(
+                        received.map { it.toUByte() },
+                    ),
+                )
+                drainAndDispatch()
+            } catch (e: Exception) {
+                reportError("Audio", e.message ?: "listen failed")
+            }
+        }.start()
     }
 
     // ── Relay Escrow ────────────────────────────────────────────────
