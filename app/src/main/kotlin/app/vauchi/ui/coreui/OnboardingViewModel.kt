@@ -174,6 +174,8 @@ class OnboardingViewModel : ViewModel() {
             is ActionResult.RequestCamera,
             is ActionResult.WipeComplete,
             is ActionResult.ExchangeCommands,
+            is ActionResult.ShowFormDialog,
+            is ActionResult.PreviewAs,
             is ActionResult.Unknown,
             -> {
                 // These results are not expected during onboarding.

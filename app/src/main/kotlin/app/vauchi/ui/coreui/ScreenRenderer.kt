@@ -31,6 +31,7 @@ import app.vauchi.ui.coreui.components.CardPreviewComponent
 import app.vauchi.ui.coreui.components.ConfirmationDialogComponent
 import app.vauchi.ui.coreui.components.ContactListComponent
 import app.vauchi.ui.coreui.components.DividerComponent
+import app.vauchi.ui.coreui.components.DropdownComponent
 import app.vauchi.ui.coreui.components.EditableTextComponent
 import app.vauchi.ui.coreui.components.FieldListComponent
 import app.vauchi.ui.coreui.components.InfoPanelComponent
@@ -321,6 +322,17 @@ fun ComponentRenderer(
                 text = component.text,
                 actionLabel = component.actionLabel,
                 actionId = component.actionId,
+                onAction = onAction,
+                modifier = modifier,
+            )
+        }
+
+        is Component.Dropdown -> {
+            DropdownComponent(
+                componentId = component.id,
+                label = component.label,
+                selected = component.selected,
+                options = component.options,
                 onAction = onAction,
                 modifier = modifier,
             )

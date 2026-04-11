@@ -201,6 +201,13 @@ sealed class Component {
         val actionId: String,
     ) : Component()
 
+    data class Dropdown(
+        val id: String,
+        val label: String,
+        val selected: String?,
+        val options: List<DropdownOption>,
+    ) : Component()
+
     data object Divider : Component()
 
     /** Unknown component from a newer core version — render as empty space. */
@@ -343,6 +350,14 @@ private data class BannerContent(
     val text: String,
     @SerialName("action_label") val actionLabel: String,
     @SerialName("action_id") val actionId: String,
+)
+
+@Serializable
+private data class DropdownContent(
+    val id: String,
+    val label: String,
+    val selected: String? = null,
+    val options: List<DropdownOption>,
 )
 
 internal object ComponentSerializer : KSerializer<Component> {
@@ -525,6 +540,12 @@ internal object ComponentSerializer : KSerializer<Component> {
                             actionLabel = c.actionLabel,
                             actionId = c.actionId,
                         )
+                    }
+
+                    "Dropdown" in element -> {
+                        val c: DropdownContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["Dropdown"]!!)
+                        Component.Dropdown(id = c.id, label = c.label, selected = c.selected, options = c.options)
                     }
 
                     // Unknown struct variant — core is newer than this shell
@@ -731,6 +752,18 @@ internal object ComponentSerializer : KSerializer<Component> {
                 )
             }
 
+            is Component.Dropdown -> {
+                val content =
+                    DropdownContent(
+                        id = value.id,
+                        label = value.label,
+                        selected = value.selected,
+                        options = value.options,
+                    )
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("Dropdown" to inner)))
+            }
+
             is Component.Unknown -> {
                 // Unknown components should not be serialized back to core
                 jsonEncoder.encodeJsonElement(JsonPrimitive("Unknown"))
@@ -769,6 +802,12 @@ data class ToggleItem(
     val label: String,
     val selected: Boolean,
     val subtitle: String? = null,
+)
+
+@Serializable
+data class DropdownOption(
+    val id: String,
+    val label: String,
 )
 
 @Serializable
@@ -1386,6 +1425,15 @@ sealed class ActionResult {
         val commands: List<ExchangeCommandDTO>,
     ) : ActionResult()
 
+    data class ShowFormDialog(
+        val dialogType: String,
+        val contextId: String?,
+    ) : ActionResult()
+
+    data class PreviewAs(
+        val contactId: String,
+    ) : ActionResult()
+
     data object Unknown : ActionResult()
 }
 
@@ -1538,6 +1586,21 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                         ActionResult.ExchangeCommands(commands = cmds)
                     }
 
+                    "ShowFormDialog" in element -> {
+                        val obj = element["ShowFormDialog"] as JsonObject
+                        ActionResult.ShowFormDialog(
+                            dialogType = obj["dialog_type"]!!.jsonPrimitive.content,
+                            contextId = obj["context_id"]?.jsonPrimitive?.contentOrNull,
+                        )
+                    }
+
+                    "PreviewAs" in element -> {
+                        val obj = element["PreviewAs"] as JsonObject
+                        ActionResult.PreviewAs(
+                            contactId = obj["contact_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
                     else -> {
                         ActionResult.Unknown
                     }
@@ -1685,6 +1748,28 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
             is ActionResult.ExchangeCommands -> {
                 // Serialization not needed for incoming-only variant
                 jsonEncoder.encodeJsonElement(JsonPrimitive("ExchangeCommands"))
+            }
+
+            is ActionResult.ShowFormDialog -> {
+                val inner =
+                    buildMap<String, JsonElement> {
+                        put("dialog_type", JsonPrimitive(value.dialogType))
+                        put("context_id", if (value.contextId != null) JsonPrimitive(value.contextId) else JsonNull)
+                    }
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("ShowFormDialog" to JsonObject(inner))))
+            }
+
+            is ActionResult.PreviewAs -> {
+                val obj =
+                    JsonObject(
+                        mapOf(
+                            "PreviewAs" to
+                                JsonObject(
+                                    mapOf("contact_id" to JsonPrimitive(value.contactId)),
+                                ),
+                        ),
+                    )
+                jsonEncoder.encodeJsonElement(obj)
             }
 
             is ActionResult.Unknown -> {

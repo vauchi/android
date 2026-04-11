@@ -198,6 +198,14 @@ class CoreAppViewModel(
                 // ADR-031: hardware exchange commands handled by exchange session
             }
 
+            is ActionResult.ShowFormDialog -> {
+                // Dialog presentation handled by NavigateTo — no separate action needed
+            }
+
+            is ActionResult.PreviewAs -> {
+                // Card preview handled by NavigateTo — no separate action needed
+            }
+
             is ActionResult.StartDeviceLink, is ActionResult.StartBackupImport -> {
                 // Handled by native Android flows
             }
