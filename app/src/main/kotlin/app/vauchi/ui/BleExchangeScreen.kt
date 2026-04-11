@@ -124,13 +124,12 @@ fun BleExchangeScreen(
     val cameraPermissionGranted = cameraPermState.isGranted
 
     LaunchedEffect(cameraPermissionGranted) { if (!cameraPermissionGranted) cameraPermState.request() }
-    // Report camera permission denial to core when handler is ready and camera still denied.
-    // cameraPermissionGranted is reactive — if the user grants later, this won't fire.
+    // Report camera permission denial to core when handler is ready and camera
+    // is still denied. Both keys are reactive — re-evaluates when permission
+    // state changes or when the command handler becomes available.
     var cameraPermDeniedReported by remember { mutableStateOf(false) }
-    LaunchedEffect(commandHandler) {
+    LaunchedEffect(commandHandler, cameraPermissionGranted) {
         val handler = commandHandler ?: return@LaunchedEffect
-        // Wait briefly for the permission dialog to resolve
-        delay(500L)
         if (!cameraPermissionGranted && !cameraPermDeniedReported) {
             cameraPermDeniedReported = true
             handler.reportPermissionDenied("camera")
