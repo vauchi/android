@@ -18,6 +18,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.ActionListItem
 import app.vauchi.ui.coreui.UserAction
@@ -46,12 +49,16 @@ fun ActionListComponent(
                                     itemId = item.id,
                                 ),
                             )
-                        }.padding(vertical = 12.dp, horizontal = 4.dp),
+                        }.padding(vertical = 12.dp, horizontal = 4.dp)
+                        .semantics {
+                            contentDescription = item.a11y?.label ?: item.label
+                            item.a11y?.hint?.let { stateDescription = it }
+                        },
             ) {
                 item.icon?.let {
                     Icon(
                         imageVector = resolveIcon(it),
-                        contentDescription = null,
+                        contentDescription = item.a11y?.label ?: item.label,
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.primary,
                     )

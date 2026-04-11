@@ -20,7 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import app.vauchi.ui.coreui.A11y
 import app.vauchi.ui.coreui.Status
 
 /**
@@ -33,16 +37,24 @@ fun StatusIndicatorComponent(
     title: String,
     detail: String?,
     status: Status,
+    a11y: A11y? = null,
     modifier: Modifier = Modifier,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .semantics {
+                    contentDescription = a11y?.label ?: title
+                    a11y?.hint?.let { stateDescription = it }
+                },
     ) {
         icon?.let {
             Icon(
                 imageVector = resolveIcon(it),
-                contentDescription = null,
+                contentDescription = a11y?.label ?: title,
                 modifier = Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )

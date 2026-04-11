@@ -249,6 +249,7 @@ fun ComponentRenderer(
                 title = component.title,
                 detail = component.detail,
                 status = component.status,
+                a11y = component.a11y,
                 modifier = modifier,
             )
         }
