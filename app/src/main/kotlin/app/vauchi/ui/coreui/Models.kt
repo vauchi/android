@@ -95,6 +95,7 @@ sealed class Component {
         val maxLength: Int? = null,
         val validationError: String? = null,
         val inputType: InputType,
+        val a11y: A11y? = null,
     ) : Component()
 
     data class ToggleList(
@@ -147,6 +148,7 @@ sealed class Component {
         val title: String,
         val detail: String? = null,
         val status: Status,
+        val a11y: A11y? = null,
     ) : Component()
 
     data class PinInput(
@@ -155,6 +157,7 @@ sealed class Component {
         val length: Int,
         val masked: Boolean,
         val validationError: String? = null,
+        val a11y: A11y? = null,
     ) : Component()
 
     data class QrCode(
@@ -162,6 +165,7 @@ sealed class Component {
         val data: String,
         val mode: QrMode,
         val label: String? = null,
+        val a11y: A11y? = null,
     ) : Component()
 
     data class ConfirmationDialog(
@@ -185,6 +189,7 @@ sealed class Component {
         val confirmText: String,
         val cancelText: String,
         val destructive: Boolean,
+        val a11y: A11y? = null,
     ) : Component()
 
     data class EditableText(
@@ -193,6 +198,7 @@ sealed class Component {
         val value: String,
         val editing: Boolean,
         val validationError: String? = null,
+        val a11y: A11y? = null,
     ) : Component()
 
     data class Banner(
@@ -206,6 +212,7 @@ sealed class Component {
         val label: String,
         val selected: String?,
         val options: List<DropdownOption>,
+        val a11y: A11y? = null,
     ) : Component()
 
     data object Divider : Component()
@@ -231,6 +238,7 @@ private data class TextInputContent(
     @SerialName("max_length") val maxLength: Int? = null,
     @SerialName("validation_error") val validationError: String? = null,
     @SerialName("input_type") val inputType: InputType,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -291,6 +299,7 @@ private data class StatusIndicatorContent(
     val title: String,
     val detail: String? = null,
     val status: Status,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -300,6 +309,7 @@ private data class PinInputContent(
     val length: Int,
     val masked: Boolean,
     @SerialName("validation_error") val validationError: String? = null,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -308,6 +318,7 @@ private data class QrCodeContent(
     val data: String,
     val mode: QrMode,
     val label: String? = null,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -334,6 +345,7 @@ private data class InlineConfirmContent(
     @SerialName("confirm_text") val confirmText: String,
     @SerialName("cancel_text") val cancelText: String,
     val destructive: Boolean,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -343,6 +355,7 @@ private data class EditableTextContent(
     val value: String,
     val editing: Boolean,
     @SerialName("validation_error") val validationError: String? = null,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -358,6 +371,7 @@ private data class DropdownContent(
     val label: String,
     val selected: String? = null,
     val options: List<DropdownOption>,
+    val a11y: A11y? = null,
 )
 
 internal object ComponentSerializer : KSerializer<Component> {
@@ -395,6 +409,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                             maxLength = c.maxLength,
                             validationError = c.validationError,
                             inputType = c.inputType,
+                            a11y = c.a11y,
                         )
                     }
 
@@ -464,6 +479,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                             title = c.title,
                             detail = c.detail,
                             status = c.status,
+                            a11y = c.a11y,
                         )
                     }
 
@@ -476,13 +492,14 @@ internal object ComponentSerializer : KSerializer<Component> {
                             length = c.length,
                             masked = c.masked,
                             validationError = c.validationError,
+                            a11y = c.a11y,
                         )
                     }
 
                     "QrCode" in element -> {
                         val c: QrCodeContent =
                             jsonDecoder.json.decodeFromJsonElement(element["QrCode"]!!)
-                        Component.QrCode(id = c.id, data = c.data, mode = c.mode, label = c.label)
+                        Component.QrCode(id = c.id, data = c.data, mode = c.mode, label = c.label, a11y = c.a11y)
                     }
 
                     "ConfirmationDialog" in element -> {
@@ -517,6 +534,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                             confirmText = c.confirmText,
                             cancelText = c.cancelText,
                             destructive = c.destructive,
+                            a11y = c.a11y,
                         )
                     }
 
@@ -529,6 +547,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                             value = c.value,
                             editing = c.editing,
                             validationError = c.validationError,
+                            a11y = c.a11y,
                         )
                     }
 
@@ -545,7 +564,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                     "Dropdown" in element -> {
                         val c: DropdownContent =
                             jsonDecoder.json.decodeFromJsonElement(element["Dropdown"]!!)
-                        Component.Dropdown(id = c.id, label = c.label, selected = c.selected, options = c.options)
+                        Component.Dropdown(id = c.id, label = c.label, selected = c.selected, options = c.options, a11y = c.a11y)
                     }
 
                     // Unknown struct variant — core is newer than this shell
@@ -588,6 +607,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                         maxLength = value.maxLength,
                         validationError = value.validationError,
                         inputType = value.inputType,
+                        a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("TextInput" to inner)))
@@ -663,6 +683,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                         title = value.title,
                         detail = value.detail,
                         status = value.status,
+                        a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("StatusIndicator" to inner)))
@@ -676,6 +697,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                         length = value.length,
                         masked = value.masked,
                         validationError = value.validationError,
+                        a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("PinInput" to inner)))
@@ -683,7 +705,7 @@ internal object ComponentSerializer : KSerializer<Component> {
 
             is Component.QrCode -> {
                 val content =
-                    QrCodeContent(id = value.id, data = value.data, mode = value.mode, label = value.label)
+                    QrCodeContent(id = value.id, data = value.data, mode = value.mode, label = value.label, a11y = value.a11y)
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("QrCode" to inner)))
             }
@@ -721,6 +743,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                         confirmText = value.confirmText,
                         cancelText = value.cancelText,
                         destructive = value.destructive,
+                        a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("InlineConfirm" to inner)))
@@ -734,6 +757,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                         value = value.value,
                         editing = value.editing,
                         validationError = value.validationError,
+                        a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("EditableText" to inner)))
@@ -759,6 +783,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                         label = value.label,
                         selected = value.selected,
                         options = value.options,
+                        a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("Dropdown" to inner)))
@@ -808,6 +833,12 @@ data class ToggleItem(
 data class DropdownOption(
     val id: String,
     val label: String,
+)
+
+@Serializable
+data class A11y(
+    val label: String? = null,
+    val hint: String? = null,
 )
 
 @Serializable
@@ -926,6 +957,7 @@ data class ContactItem(
     val subtitle: String? = null,
     @SerialName("avatar_initials") val avatarInitials: String,
     val status: String? = null,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -933,6 +965,7 @@ data class SettingsItem(
     val id: String,
     val label: String,
     val kind: SettingsItemKind,
+    val a11y: A11y? = null,
 )
 
 @Serializable(with = SettingsItemKindSerializer::class)
@@ -1045,6 +1078,7 @@ data class ActionListItem(
     val label: String,
     val icon: String? = null,
     val detail: String? = null,
+    val a11y: A11y? = null,
 )
 
 @Serializable
