@@ -48,6 +48,13 @@ class CoreAppViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _openUrlEvent = MutableStateFlow<String?>(null)
+    val openUrlEvent: StateFlow<String?> = _openUrlEvent.asStateFlow()
+
+    fun consumeOpenUrlEvent() {
+        _openUrlEvent.value = null
+    }
+
     init {
         loadAvailableScreens()
         loadScreen()
@@ -191,7 +198,7 @@ class CoreAppViewModel(
             }
 
             is ActionResult.OpenUrl -> {
-                // Handled by caller — emit via a channel if needed
+                _openUrlEvent.value = result.url
             }
 
             is ActionResult.ExchangeCommands -> {

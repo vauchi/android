@@ -56,6 +56,7 @@ import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.MobileUpdateStatus
 import uniffi.vauchi_platform.MobileVisibilityLabel
 import uniffi.vauchi_platform.MobileVisibilityLabelDetail
+import uniffi.vauchi_platform.PlatformAppEngine
 import java.time.Instant
 
 sealed class SyncState {
@@ -105,6 +106,9 @@ class MainViewModel(
     private val repository: VauchiRepository by lazy {
         VauchiRepository(application)
     }
+
+    val appEngine: PlatformAppEngine
+        get() = repository.appEngine
 
     private val localizationManager = LocalizationManager.getInstance(application)
     private val networkMonitor = NetworkMonitor(application)

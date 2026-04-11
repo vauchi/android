@@ -54,8 +54,6 @@ import app.vauchi.ui.DevicesScreen
 import app.vauchi.ui.ExchangeMode
 import app.vauchi.ui.ExchangeModePicker
 import app.vauchi.ui.HelpScreen
-import app.vauchi.ui.LabelDetailScreen
-import app.vauchi.ui.LabelsScreen
 import app.vauchi.ui.LanguageSettingsScreen
 import app.vauchi.ui.MainViewModel
 import app.vauchi.ui.MoreScreen
@@ -63,11 +61,12 @@ import app.vauchi.ui.MultiStageExchangeScreen
 import app.vauchi.ui.NfcExchangeScreen
 import app.vauchi.ui.QrDiagnosticScreen
 import app.vauchi.ui.RecoveryScreen
-import app.vauchi.ui.SettingsScreen
 import app.vauchi.ui.SyncState
 import app.vauchi.ui.ThemeSettingsScreen
 import app.vauchi.ui.UiState
+import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.CoreOnboardingScreen
+import app.vauchi.ui.coreui.CoreScreenView
 import app.vauchi.ui.model.ContentApplyResult
 import app.vauchi.ui.model.ContentUpdateStatus
 import app.vauchi.ui.model.ContentUpdateType
@@ -228,6 +227,22 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
+
+    // Core-driven screen renderer (SP-19)
+    val coreAppViewModel =
+        remember(viewModel) {
+            CoreAppViewModel(viewModel.appEngine)
+        }
+
+    // Handle OpenUrl events from core-driven screens
+    val openUrlEvent by coreAppViewModel.openUrlEvent.collectAsState()
+    LaunchedEffect(openUrlEvent) {
+        openUrlEvent?.let { url ->
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            context.startActivity(intent)
+            coreAppViewModel.consumeOpenUrlEvent()
+        }
+    }
 
     // Deep link consent gate (SP-9)
     val deepLinkHandler = remember { app.vauchi.deeplink.DeepLinkHandler() }
@@ -551,146 +566,11 @@ fun MainScreen(
                 }
 
                 Screen.Settings -> {
-                    val state = uiState
-                    val reduceMotion by viewModel.reduceMotion.collectAsState()
-                    val highContrast by viewModel.highContrast.collectAsState()
-                    val largeTouchTargets by viewModel.largeTouchTargets.collectAsState()
-                    val demoContactState by viewModel.demoContactState.collectAsState()
-                    val deletionState by viewModel.deletionState.collectAsState()
-                    val consentRecords by viewModel.consentRecords.collectAsState()
-                    val isDuressEnabled by viewModel.isDuressEnabled.collectAsState()
-                    val isEmergencyConfigured by viewModel.emergencyConfigured.collectAsState()
-                    val decoyContacts by viewModel.decoyContacts.collectAsState()
-                    val isPasswordEnabled by viewModel.isPasswordEnabled.collectAsState()
-                    val shredStatus by viewModel.shredStatus.collectAsState()
-                    if (state is UiState.Ready) {
-                        LaunchedEffect(Unit) {
-                            viewModel.loadDeletionState()
-                            viewModel.loadConsentRecords()
-                            viewModel.loadDuressStatus()
-                            viewModel.loadEmergencyConfig()
-                            viewModel.loadDecoyContacts()
-                            viewModel.loadPasswordState()
-                            viewModel.loadShredStatus()
-                        }
-                        SettingsScreen(
-                            displayName = state.displayName,
-                            onBack = { currentScreen = Screen.More },
-                            onExportBackup = { password -> viewModel.exportBackup(password) },
-                            onImportBackup = { data, password -> viewModel.importBackup(data, password) },
-                            relayUrl = viewModel.getRelayUrl(),
-                            onRelayUrlChange = { viewModel.setRelayUrl(it) },
-                            syncState = syncState,
-                            onSync = { viewModel.sync() },
-                            onDevices = { currentScreen = Screen.Devices },
-                            onRecovery = { currentScreen = Screen.Recovery },
-                            onLabels = { currentScreen = Screen.Labels },
-                            onCheckPasswordStrength = { viewModel.checkPasswordStrength(it) },
-                            showRestoreDemoOption = demoContactState?.let { !it.isActive } ?: false,
-                            onRestoreDemo = { viewModel.restoreDemoContact() },
-                            // Aha moments (tips)
-                            ahaMomentsProgress = viewModel.ahaMomentsProgress(),
-                            onResetAhaMoments = { viewModel.resetAhaMoments() },
-                            reduceMotion = reduceMotion,
-                            onReduceMotionChange = { viewModel.setReduceMotion(it) },
-                            highContrast = highContrast,
-                            onHighContrastChange = { viewModel.setHighContrast(it) },
-                            largeTouchTargets = largeTouchTargets,
-                            onLargeTouchTargetsChange = { viewModel.setLargeTouchTargets(it) },
-                            // Content Updates
-                            isContentUpdatesSupported = viewModel.isContentUpdatesSupported(),
-                            onCheckContentUpdates = {
-                                viewModel.checkContentUpdates()?.let { status ->
-                                    mapMobileUpdateStatus(status)
-                                }
-                            },
-                            onApplyContentUpdates = {
-                                viewModel.applyContentUpdates()?.let { result ->
-                                    mapMobileApplyResult(result)
-                                }
-                            },
-                            // Certificate Pinning
-                            isCertificatePinningEnabled = viewModel.isCertificatePinningEnabled(),
-                            onSetPinnedCertificate = { certPem -> viewModel.setPinnedCertificate(certPem) },
-                            // Duress PIN
-                            isDuressEnabled = isDuressEnabled,
-                            onSetupDuressPin = { pin -> viewModel.setupDuressPassword(pin) },
-                            onDisableDuress = { viewModel.disableDuress() },
-                            // Decoy Contacts
-                            decoyContacts = decoyContacts,
-                            onAddDecoyContact = { name -> viewModel.addDecoyContact(name) },
-                            onDeleteDecoyContact = { id -> viewModel.deleteDecoyContact(id) },
-                            // App Password
-                            isPasswordEnabled = isPasswordEnabled,
-                            onSetupAppPassword = { password -> viewModel.setupAppPassword(password) },
-                            // Emergency Broadcast
-                            isEmergencyConfigured = isEmergencyConfigured,
-                            onConfigureEmergency = { ids, msg, loc -> viewModel.configureEmergencyBroadcast(ids, msg, loc) },
-                            onSendEmergency = { viewModel.sendEmergencyBroadcast() },
-                            onDisableEmergency = { viewModel.disableEmergencyBroadcast() },
-                            // Appearance
-                            onThemeSettings = { currentScreen = Screen.ThemeSettings },
-                            onLanguageSettings = { currentScreen = Screen.LanguageSettings },
-                            currentThemeName =
-                                app.vauchi.util.ThemeManager
-                                    .getInstance(context)
-                                    .currentTheme
-                                    ?.name ?: "System",
-                            currentLanguageName =
-                                app.vauchi.util.LocalizationManager
-                                    .getInstance(context)
-                                    .currentLocaleInfo.name,
-                            // Help
-                            onHelp = { currentScreen = Screen.Help },
-                            onQrDiagnostic = { currentScreen = Screen.QrDiagnostic },
-                            onBleDiagnostic = {
-                                context.startActivity(
-                                    Intent(context, app.vauchi.diagnostic.BleDiagnosticActivity::class.java),
-                                )
-                            },
-                            onUltrasonicDiagnostic = {
-                                context.startActivity(
-                                    Intent(context, app.vauchi.diagnostic.DiagnosticActivity::class.java),
-                                )
-                            },
-                            onNfcDiagnostic = {
-                                context.startActivity(
-                                    Intent(context, app.vauchi.diagnostic.NfcDiagnosticActivity::class.java),
-                                )
-                            },
-                            onNfcTest = {
-                                context.startActivity(
-                                    Intent(context, app.vauchi.nfc.NfcTestActivity::class.java),
-                                )
-                            },
-                            // GDPR
-                            onExportGdprData = {
-                                val export = viewModel.exportGdprData()
-                                if (export != null) {
-                                    // Share JSON data
-                                    val intent =
-                                        Intent(Intent.ACTION_SEND).apply {
-                                            type = "application/json"
-                                            putExtra(Intent.EXTRA_TEXT, export.jsonData)
-                                            putExtra(Intent.EXTRA_SUBJECT, "Vauchi GDPR Export")
-                                        }
-                                    context.startActivity(Intent.createChooser(intent, "Export Data"))
-                                }
-                            },
-                            onScheduleDeletion = { viewModel.scheduleIdentityDeletion() },
-                            onCancelDeletion = { viewModel.cancelIdentityDeletion() },
-                            deletionState = deletionState,
-                            consentRecords = consentRecords,
-                            onGrantConsent = { viewModel.grantConsent(it) },
-                            onRevokeConsent = { viewModel.revokeConsent(it) },
-                            onPanicShred = { viewModel.panicShred() },
-                            // Scheduled Shred
-                            shredStatus = shredStatus,
-                            onScheduleShred = { viewModel.scheduleSoftShred() },
-                            onCancelShred = { viewModel.cancelScheduledShred() },
-                            onExecuteShred = { viewModel.executeHardShred() },
-                        )
-                    }
+                    CoreScreenView(
+                        viewModel = coreAppViewModel,
+                        screenName = "Settings",
+                        modifier = Modifier.fillMaxSize(),
+                    )
                 }
 
                 Screen.Devices -> {
@@ -712,42 +592,20 @@ fun MainScreen(
                 }
 
                 Screen.Labels -> {
-                    val labels by viewModel.visibilityLabels.collectAsState()
-                    val suggestedLabels by viewModel.suggestedLabels.collectAsState()
-                    LabelsScreen(
-                        labels = labels,
-                        suggestedLabels = suggestedLabels,
-                        onBack = { currentScreen = Screen.Home },
-                        onLabelClick = { labelId ->
-                            selectedLabelId = labelId
-                            currentScreen = Screen.LabelDetail
-                        },
-                        onCreateLabel = { name -> viewModel.createLabel(name) },
-                        onDeleteLabel = { labelId -> viewModel.deleteLabel(labelId) },
-                        onRefresh = { viewModel.loadLabels() },
+                    CoreScreenView(
+                        viewModel = coreAppViewModel,
+                        screenName = "Groups",
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
 
                 Screen.LabelDetail -> {
-                    val state = uiState
                     selectedLabelId?.let { labelId ->
-                        if (state is UiState.Ready) {
-                            LabelDetailScreen(
-                                labelId = labelId,
-                                onBack = { currentScreen = Screen.Labels },
-                                onGetLabel = { viewModel.getLabel(it) },
-                                onRenameLabel = { id, newName -> viewModel.renameLabel(id, newName) },
-                                onDeleteLabel = { id ->
-                                    viewModel.deleteLabel(id)
-                                    currentScreen = Screen.Labels
-                                },
-                                onSetFieldVisibility = { lid, fid, visible ->
-                                    viewModel.setLabelFieldVisibility(lid, fid, visible)
-                                },
-                                ownCardFields = state.card.fields,
-                                contacts = emptyList(), // Would need to pass contacts from ViewModel
-                            )
-                        }
+                        CoreScreenView(
+                            viewModel = coreAppViewModel,
+                            screenName = "GroupDetail",
+                            modifier = Modifier.fillMaxSize(),
+                        )
                     }
                 }
 
