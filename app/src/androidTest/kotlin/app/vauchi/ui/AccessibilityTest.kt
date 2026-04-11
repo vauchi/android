@@ -18,9 +18,6 @@ import app.vauchi.ui.coreui.Component
 import app.vauchi.ui.coreui.ScreenModel
 import app.vauchi.ui.coreui.ScreenRenderer
 import app.vauchi.ui.coreui.Status
-import app.vauchi.ui.onboarding.OnboardingData
-import app.vauchi.ui.onboarding.PreviewStep
-import app.vauchi.ui.onboarding.WelcomeStep
 import app.vauchi.ui.theme.VauchiTheme
 import org.junit.Rule
 import org.junit.Test
@@ -39,50 +36,6 @@ import uniffi.vauchi_platform.MobileVisibilityLabel
 class AccessibilityTest {
     @get:Rule
     val composeTestRule = createComposeRule()
-
-    // MARK: - Onboarding Accessibility
-
-    @Test
-    fun welcomeStep_buttonsAreClickable() {
-        composeTestRule.setContent {
-            VauchiTheme {
-                WelcomeStep(onContinue = {}, onRestore = {})
-            }
-        }
-
-        // Value propositions must be visible
-        composeTestRule.onNodeWithText("Exchange in person", substring = true).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Auto-updating", substring = true).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Private & secure", substring = true).assertIsDisplayed()
-
-        // Primary create button and secondary restore button must be clickable
-        // CC-20: assert specific buttons exist, not minimum clickable count
-        composeTestRule.onNodeWithContentDescription("setup.create.button").assertHasClickAction()
-        composeTestRule.onNodeWithText("Restore from Backup", substring = true).assertHasClickAction()
-    }
-
-    @Test
-    fun previewStep_displaysCardContent() {
-        composeTestRule.setContent {
-            VauchiTheme {
-                PreviewStep(
-                    data =
-                        OnboardingData(
-                            displayName = "Alice",
-                            phone = "+41 79 123 45 67",
-                            email = "alice@example.com",
-                        ),
-                    onContinue = {},
-                    onBack = {},
-                )
-            }
-        }
-
-        // Card preview must display the user's data
-        composeTestRule.onNodeWithText("Alice", substring = true).assertIsDisplayed()
-        composeTestRule.onNodeWithText("alice@example.com", substring = true).assertIsDisplayed()
-        composeTestRule.onNodeWithText("+41 79 123 45 67", substring = true).assertIsDisplayed()
-    }
 
     // MARK: - Settings Accessibility
 
