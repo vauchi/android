@@ -217,4 +217,15 @@ class ExchangeCommandHandler(
             Log.e(TAG, "Failed to report error: $e")
         }
     }
+
+    fun reportPermissionDenied(transport: String) {
+        try {
+            session.applyHardwareEvent(
+                MobileExchangeHardwareEvent.PermissionDenied(transport),
+            )
+            drainAndDispatch()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to report permission denied: $e")
+        }
+    }
 }

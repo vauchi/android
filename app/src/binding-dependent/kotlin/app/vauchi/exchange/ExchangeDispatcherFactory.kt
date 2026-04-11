@@ -18,6 +18,8 @@ object ExchangeDispatcherRegistrar {
             val handler = ExchangeCommandHandler(session, context)
             object : ExchangeDispatcher {
                 override fun drainAndDispatch() = handler.drainAndDispatch()
+
+                override fun reportPermissionDenied(transport: String) = handler.reportPermissionDenied(transport)
             }
         }
     }

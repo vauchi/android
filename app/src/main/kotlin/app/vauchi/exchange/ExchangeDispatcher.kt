@@ -18,6 +18,8 @@ import uniffi.vauchi_platform.MobileExchangeSession
  */
 interface ExchangeDispatcher {
     fun drainAndDispatch()
+
+    fun reportPermissionDenied(transport: String)
 }
 
 /**
@@ -31,6 +33,10 @@ object ExchangeDispatcherFactory {
         object : ExchangeDispatcher {
             override fun drainAndDispatch() {
                 // No-op: BLE command dispatch requires local bindings
+            }
+
+            override fun reportPermissionDenied(transport: String) {
+                // No-op: requires local bindings
             }
         }
     }

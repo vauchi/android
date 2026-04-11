@@ -124,6 +124,18 @@ fun BleExchangeScreen(
     val cameraPermissionGranted = cameraPermState.isGranted
 
     LaunchedEffect(cameraPermissionGranted) { if (!cameraPermissionGranted) cameraPermState.request() }
+    // Report camera permission denial to core when handler is ready and camera still denied.
+    // cameraPermissionGranted is reactive — if the user grants later, this won't fire.
+    var cameraPermDeniedReported by remember { mutableStateOf(false) }
+    LaunchedEffect(commandHandler) {
+        val handler = commandHandler ?: return@LaunchedEffect
+        // Wait briefly for the permission dialog to resolve
+        delay(500L)
+        if (!cameraPermissionGranted && !cameraPermDeniedReported) {
+            cameraPermDeniedReported = true
+            handler.reportPermissionDenied("camera")
+        }
+    }
     PermissionRationaleDialog(cameraPermState)
 
     // Initialize session on screen entry
