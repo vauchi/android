@@ -577,4 +577,60 @@ class ModelsTest {
         val result = json.decodeFromString<ActionResult>(input)
         assertTrue(result is ActionResult.Unknown)
     }
+
+    // ── Dropdown ────────────────────────────────────────────────────
+
+    @Test
+    fun `deserialize Dropdown component with selection`() {
+        val input = """{"Dropdown":{"id":"theme","label":"Theme","selected":"dark","options":[{"id":"dark","label":"Dark"},{"id":"light","label":"Light"}]}}"""
+        val component = json.decodeFromString<Component>(input)
+        assertTrue(component is Component.Dropdown)
+        val dropdown = component as Component.Dropdown
+        assertEquals("theme", dropdown.id)
+        assertEquals("Theme", dropdown.label)
+        assertEquals("dark", dropdown.selected)
+        assertEquals(2, dropdown.options.size)
+        assertEquals("dark", dropdown.options[0].id)
+        assertEquals("Dark", dropdown.options[0].label)
+        assertEquals("light", dropdown.options[1].id)
+    }
+
+    @Test
+    fun `deserialize Dropdown component without selection`() {
+        val input = """{"Dropdown":{"id":"lang","label":"Language","selected":null,"options":[{"id":"en","label":"English"}]}}"""
+        val component = json.decodeFromString<Component>(input)
+        assertTrue(component is Component.Dropdown)
+        val dropdown = component as Component.Dropdown
+        assertEquals("lang", dropdown.id)
+        assertNull(dropdown.selected)
+        assertEquals(1, dropdown.options.size)
+    }
+
+    // ── ShowFormDialog / PreviewAs ──────────────────────────────────
+
+    @Test
+    fun `deserialize ShowFormDialog result`() {
+        val input = """{"ShowFormDialog":{"dialog_type":"create_group","context_id":"grp-1"}}"""
+        val result = json.decodeFromString<ActionResult>(input)
+        assertTrue(result is ActionResult.ShowFormDialog)
+        val dialog = result as ActionResult.ShowFormDialog
+        assertEquals("create_group", dialog.dialogType)
+        assertEquals("grp-1", dialog.contextId)
+    }
+
+    @Test
+    fun `deserialize ShowFormDialog result with null contextId`() {
+        val input = """{"ShowFormDialog":{"dialog_type":"create_group","context_id":null}}"""
+        val result = json.decodeFromString<ActionResult>(input)
+        assertTrue(result is ActionResult.ShowFormDialog)
+        assertNull((result as ActionResult.ShowFormDialog).contextId)
+    }
+
+    @Test
+    fun `deserialize PreviewAs result`() {
+        val input = """{"PreviewAs":{"contact_id":"c42"}}"""
+        val result = json.decodeFromString<ActionResult>(input)
+        assertTrue(result is ActionResult.PreviewAs)
+        assertEquals("c42", (result as ActionResult.PreviewAs).contactId)
+    }
 }
