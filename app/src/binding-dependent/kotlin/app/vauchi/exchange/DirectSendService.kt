@@ -3,6 +3,9 @@
 
 package app.vauchi.exchange
 
+import android.content.Context
+import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -39,6 +42,54 @@ class DirectSendService {
 
     private var serverSocket: ServerSocket? = null
     private var job: Job? = null
+    private var nsdManager: NsdManager? = null
+    private var registrationListener: NsdManager.RegistrationListener? = null
+
+    fun setContext(context: Context) {
+        nsdManager = context.getSystemService(Context.NSD_SERVICE) as? NsdManager
+    }
+
+    private fun registerService() {
+        val serviceInfo =
+            NsdServiceInfo().apply {
+                serviceName = "Vauchi Exchange"
+                serviceType = "_vauchi-exchange._tcp."
+                port = DEFAULT_PORT
+            }
+
+        registrationListener =
+            object : NsdManager.RegistrationListener {
+                override fun onServiceRegistered(info: NsdServiceInfo) {
+                    // Service advertised successfully
+                }
+
+                override fun onRegistrationFailed(
+                    info: NsdServiceInfo,
+                    errorCode: Int,
+                ) {
+                    // Non-fatal — exchange still works with manual IP
+                }
+
+                override fun onServiceUnregistered(info: NsdServiceInfo) {}
+
+                override fun onUnregistrationFailed(
+                    info: NsdServiceInfo,
+                    errorCode: Int,
+                ) {}
+            }
+
+        nsdManager?.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
+    }
+
+    private fun unregisterService() {
+        registrationListener?.let { listener ->
+            try {
+                nsdManager?.unregisterService(listener)
+            } catch (_: Exception) {
+            }
+        }
+        registrationListener = null
+    }
 
     fun exchange(
         payload: ByteArray,
@@ -69,9 +120,11 @@ class DirectSendService {
     fun cancel() {
         job?.cancel()
         serverSocket?.close()
+        unregisterService()
     }
 
     private fun listenAndExchange(ourPayload: ByteArray): ByteArray {
+        registerService()
         val server = ServerSocket(DEFAULT_PORT).also { serverSocket = it }
         server.soTimeout = TIMEOUT_MS
         val socket = server.accept()
@@ -86,6 +139,7 @@ class DirectSendService {
         } finally {
             socket.close()
             server.close()
+            unregisterService()
         }
     }
 

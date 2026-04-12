@@ -112,6 +112,9 @@ class ExchangeCommandHandler(
             // ── USB cable (DirectSend) ───────────────────────────────
             is MobileExchangeCommand.DirectSend -> {
                 val service = DirectSendService()
+                if (!command.isInitiator) {
+                    service.setContext(context)
+                }
                 service.exchange(
                     payload = command.payload,
                     isInitiator = command.isInitiator,
