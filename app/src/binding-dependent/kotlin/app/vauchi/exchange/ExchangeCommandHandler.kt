@@ -109,6 +109,34 @@ class ExchangeCommandHandler(
                 // No-op
             }
 
+            // ── USB cable (DirectSend) ───────────────────────────────
+            is MobileExchangeCommand.DirectSend -> {
+                val service = DirectSendService()
+                service.exchange(
+                    payload = command.payload,
+                    isInitiator = command.isInitiator,
+                    callback =
+                        object : DirectSendService.Callback {
+                            override fun onPayloadReceived(data: ByteArray) {
+                                try {
+                                    session.applyHardwareEvent(
+                                        MobileExchangeHardwareEvent.DirectPayloadReceived(
+                                            data = data,
+                                        ),
+                                    )
+                                    drainAndDispatch()
+                                } catch (e: Exception) {
+                                    reportError("USB", e.message ?: "apply event failed")
+                                }
+                            }
+
+                            override fun onError(error: String) {
+                                reportError("USB", error)
+                            }
+                        },
+                )
+            }
+
             // ── Tier 0 commands (active after bindings bump) ────────
             // AccelerometerStart, AccelerometerStop, RelayEscrowDeposit,
             // RelayEscrowCheck, RelayEscrowRetrieve, ShowShareSheet
