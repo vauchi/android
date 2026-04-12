@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PersonAdd
@@ -60,6 +61,7 @@ fun ContactsScreen(
     onUnhideContact: suspend (String) -> Unit = {},
     onImportVcf: (ByteArray) -> Unit = {},
     onImportError: (String) -> Unit = {},
+    onArchivedContacts: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -175,6 +177,11 @@ fun ContactsScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = onArchivedContacts,
+                    ) {
+                        Icon(Icons.Default.Archive, contentDescription = "Archived contacts")
+                    }
                     IconButton(
                         onClick = { vcfPickerLauncher.launch(arrayOf("text/vcard", "text/x-vcard", "*/*")) },
                     ) {
