@@ -18,7 +18,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.vauchi.ui.coreui.A11y
 import app.vauchi.ui.coreui.ToggleItem
 import app.vauchi.ui.coreui.UserAction
 
@@ -32,8 +35,14 @@ fun ToggleListComponent(
     items: List<ToggleItem>,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
+    a11y: A11y? = null,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = a11y?.label ?: label },
+    ) {
         Text(
             text = label,
             style = MaterialTheme.typography.titleSmall,
@@ -46,7 +55,11 @@ fun ToggleListComponent(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .clickable(role = Role.Checkbox) {
+                        .semantics {
+                            contentDescription =
+                                item.a11y?.label
+                                    ?: "${item.label}, ${if (item.selected) "selected" else "not selected"}"
+                        }.clickable(role = Role.Checkbox) {
                             onAction(
                                 UserAction.ItemToggled(
                                     componentId = componentId,

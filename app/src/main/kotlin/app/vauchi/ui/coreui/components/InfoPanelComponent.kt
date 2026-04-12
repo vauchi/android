@@ -39,9 +39,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.vauchi.ui.coreui.A11y
 import app.vauchi.ui.coreui.InfoItem
 
 /**
@@ -53,9 +55,13 @@ fun InfoPanelComponent(
     title: String,
     items: List<InfoItem>,
     modifier: Modifier = Modifier,
+    a11y: A11y? = null,
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = a11y?.label ?: title },
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
     ) {

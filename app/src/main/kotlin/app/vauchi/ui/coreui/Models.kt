@@ -102,6 +102,7 @@ sealed class Component {
         val id: String,
         val label: String,
         val items: List<ToggleItem>,
+        val a11y: A11y? = null,
     ) : Component()
 
     data class FieldList(
@@ -109,6 +110,7 @@ sealed class Component {
         val fields: List<FieldDisplay>,
         val visibilityMode: VisibilityMode,
         val availableGroups: List<String>,
+        val a11y: A11y? = null,
     ) : Component()
 
     data class CardPreview(
@@ -116,6 +118,7 @@ sealed class Component {
         val fields: List<FieldDisplay>,
         val groupViews: List<GroupCardView>,
         val selectedGroup: String? = null,
+        val a11y: A11y? = null,
     ) : Component()
 
     data class InfoPanel(
@@ -123,6 +126,7 @@ sealed class Component {
         val icon: String? = null,
         val title: String,
         val items: List<InfoItem>,
+        val a11y: A11y? = null,
     ) : Component()
 
     data class ContactList(
@@ -205,6 +209,7 @@ sealed class Component {
         val text: String,
         val actionLabel: String,
         val actionId: String,
+        val a11y: A11y? = null,
     ) : Component()
 
     data class Dropdown(
@@ -246,6 +251,7 @@ private data class ToggleListContent(
     val id: String,
     val label: String,
     val items: List<ToggleItem>,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -254,6 +260,7 @@ private data class FieldListContent(
     val fields: List<FieldDisplay>,
     @SerialName("visibility_mode") val visibilityMode: VisibilityMode,
     @SerialName("available_groups") val availableGroups: List<String>,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -262,6 +269,7 @@ private data class CardPreviewContent(
     val fields: List<FieldDisplay>,
     @SerialName("group_views") val groupViews: List<GroupCardView>,
     @SerialName("selected_group") val selectedGroup: String? = null,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -270,6 +278,7 @@ private data class InfoPanelContent(
     val icon: String? = null,
     val title: String,
     val items: List<InfoItem>,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -363,6 +372,7 @@ private data class BannerContent(
     val text: String,
     @SerialName("action_label") val actionLabel: String,
     @SerialName("action_id") val actionId: String,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -416,7 +426,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                     "ToggleList" in element -> {
                         val c: ToggleListContent =
                             jsonDecoder.json.decodeFromJsonElement(element["ToggleList"]!!)
-                        Component.ToggleList(id = c.id, label = c.label, items = c.items)
+                        Component.ToggleList(id = c.id, label = c.label, items = c.items, a11y = c.a11y)
                     }
 
                     "FieldList" in element -> {
@@ -427,6 +437,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                             fields = c.fields,
                             visibilityMode = c.visibilityMode,
                             availableGroups = c.availableGroups,
+                            a11y = c.a11y,
                         )
                     }
 
@@ -438,6 +449,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                             fields = c.fields,
                             groupViews = c.groupViews,
                             selectedGroup = c.selectedGroup,
+                            a11y = c.a11y,
                         )
                     }
 
@@ -449,6 +461,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                             icon = c.icon,
                             title = c.title,
                             items = c.items,
+                            a11y = c.a11y,
                         )
                     }
 
@@ -558,6 +571,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                             text = c.text,
                             actionLabel = c.actionLabel,
                             actionId = c.actionId,
+                            a11y = c.a11y,
                         )
                     }
 
@@ -614,7 +628,7 @@ internal object ComponentSerializer : KSerializer<Component> {
             }
 
             is Component.ToggleList -> {
-                val content = ToggleListContent(id = value.id, label = value.label, items = value.items)
+                val content = ToggleListContent(id = value.id, label = value.label, items = value.items, a11y = value.a11y)
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("ToggleList" to inner)))
             }
@@ -626,6 +640,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                         fields = value.fields,
                         visibilityMode = value.visibilityMode,
                         availableGroups = value.availableGroups,
+                        a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("FieldList" to inner)))
@@ -638,6 +653,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                         fields = value.fields,
                         groupViews = value.groupViews,
                         selectedGroup = value.selectedGroup,
+                        a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("CardPreview" to inner)))
@@ -650,6 +666,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                         icon = value.icon,
                         title = value.title,
                         items = value.items,
+                        a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("InfoPanel" to inner)))
@@ -769,6 +786,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                         text = value.text,
                         actionLabel = value.actionLabel,
                         actionId = value.actionId,
+                        a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(
@@ -827,6 +845,7 @@ data class ToggleItem(
     val label: String,
     val selected: Boolean,
     val subtitle: String? = null,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -848,6 +867,7 @@ data class FieldDisplay(
     val label: String,
     val value: String,
     val visibility: UiFieldVisibility,
+    val a11y: A11y? = null,
 )
 
 /**

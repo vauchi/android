@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.vauchi.ui.coreui.A11y
 import app.vauchi.ui.coreui.UserAction
 
 /**
@@ -36,9 +37,13 @@ fun BannerComponent(
     actionId: String,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
+    a11y: A11y? = null,
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = a11y?.label ?: text },
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.primaryContainer,
     ) {

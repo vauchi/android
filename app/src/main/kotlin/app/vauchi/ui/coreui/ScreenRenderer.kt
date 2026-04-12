@@ -181,6 +181,7 @@ fun ComponentRenderer(
                 items = component.items,
                 onAction = onAction,
                 modifier = modifier,
+                a11y = component.a11y,
             )
         }
 
@@ -191,6 +192,7 @@ fun ComponentRenderer(
                 availableGroups = component.availableGroups,
                 onAction = onAction,
                 modifier = modifier,
+                a11y = component.a11y,
             )
         }
 
@@ -202,6 +204,7 @@ fun ComponentRenderer(
                 selectedGroup = component.selectedGroup,
                 onAction = onAction,
                 modifier = modifier,
+                a11y = component.a11y,
             )
         }
 
@@ -211,6 +214,7 @@ fun ComponentRenderer(
                 title = component.title,
                 items = component.items,
                 modifier = modifier,
+                a11y = component.a11y,
             )
         }
 
@@ -325,6 +329,7 @@ fun ComponentRenderer(
                 actionId = component.actionId,
                 onAction = onAction,
                 modifier = modifier,
+                a11y = component.a11y,
             )
         }
 

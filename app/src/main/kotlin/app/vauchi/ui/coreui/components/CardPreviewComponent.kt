@@ -28,9 +28,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.vauchi.ui.coreui.A11y
 import app.vauchi.ui.coreui.FieldDisplay
 import app.vauchi.ui.coreui.GroupCardView
 import app.vauchi.ui.coreui.UserAction
@@ -48,6 +50,7 @@ fun CardPreviewComponent(
     selectedGroup: String?,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
+    a11y: A11y? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         // Group view selector chips
@@ -93,7 +96,10 @@ fun CardPreviewComponent(
             }
 
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = a11y?.label ?: "Card preview: $displayName" },
             shape = RoundedCornerShape(16.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         ) {
