@@ -124,7 +124,7 @@ fun RecoverIdentityContent(
             ) {
                 Icon(
                     Icons.Default.Lock,
-                    contentDescription = null,
+                    contentDescription = "Identity recovery",
                     modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
@@ -414,7 +414,7 @@ fun HelpOthersContent(
             ) {
                 Icon(
                     Icons.Default.CheckCircle,
-                    contentDescription = null,
+                    contentDescription = "Help others recover",
                     modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 )

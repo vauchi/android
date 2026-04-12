@@ -415,7 +415,7 @@ fun DeviceLinkDialog(
                         // Offline stub
                         Icon(
                             Icons.Default.QrCode,
-                            contentDescription = null,
+                            contentDescription = "Offline linking",
                             modifier = Modifier.size(48.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -471,7 +471,7 @@ fun DeviceLinkDialog(
                             is MainViewModel.DeviceLinkState.Expired -> {
                                 Icon(
                                     Icons.Filled.Warning,
-                                    contentDescription = null,
+                                    contentDescription = "QR code expired",
                                     modifier = Modifier.size(48.dp),
                                     tint = MaterialTheme.colorScheme.error,
                                 )

@@ -243,7 +243,7 @@ fun ContactsScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
                                 Icons.Default.Warning,
-                                contentDescription = null,
+                                contentDescription = "Error loading contacts",
                                 modifier = Modifier.size(64.dp),
                                 tint = MaterialTheme.colorScheme.error,
                             )

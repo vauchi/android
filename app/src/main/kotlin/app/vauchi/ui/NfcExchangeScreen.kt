@@ -284,7 +284,7 @@ private fun NfcWaitingContent(localizationManager: LocalizationManager) {
     ) {
         Icon(
             Icons.Default.Nfc,
-            contentDescription = null,
+            contentDescription = "NFC ready",
             modifier = Modifier.size(96.dp),
             tint = NfcIconColor,
         )
@@ -432,7 +432,7 @@ private fun NfcRelayFallbackContent(
     ) {
         Icon(
             Icons.Default.Nfc,
-            contentDescription = null,
+            contentDescription = "NFC relay fallback",
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.primary,
         )

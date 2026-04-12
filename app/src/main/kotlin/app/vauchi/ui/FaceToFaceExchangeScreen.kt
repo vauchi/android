@@ -418,7 +418,7 @@ private fun ExchangeActiveContent(
             ) {
                 Icon(
                     Icons.Default.CameraAlt,
-                    contentDescription = null,
+                    contentDescription = "Camera permission required",
                     modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
