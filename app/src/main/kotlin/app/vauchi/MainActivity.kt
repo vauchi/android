@@ -50,6 +50,7 @@ import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.ArchivedContactsScreen
 import app.vauchi.ui.BleExchangeScreen
 import app.vauchi.ui.ContactDetailScreen
+import app.vauchi.ui.ContactMergeScreen
 import app.vauchi.ui.ContactsScreen
 import app.vauchi.ui.DevicesScreen
 import app.vauchi.ui.ExchangeMode
@@ -205,6 +206,7 @@ enum class Screen {
     QrDiagnostic,
     More,
     ArchivedContacts,
+    ContactMerge,
 }
 
 @Composable
@@ -572,14 +574,6 @@ fun MainScreen(
                     }
                 }
 
-                Screen.ArchivedContacts -> {
-                    ArchivedContactsScreen(
-                        onBack = { currentScreen = Screen.Contacts },
-                        onListArchived = { viewModel.listArchivedContacts() },
-                        onUnarchive = { id -> viewModel.unarchiveContact(id) },
-                    )
-                }
-
                 Screen.Settings -> {
                     CoreScreenView(
                         viewModel = coreAppViewModel,
@@ -654,6 +648,22 @@ fun MainScreen(
                         onHelp = { currentScreen = Screen.Help },
                         onDevices = { currentScreen = Screen.Devices },
                         onRecovery = { currentScreen = Screen.Recovery },
+                        onArchivedContacts = { currentScreen = Screen.ArchivedContacts },
+                        onMergeContacts = { currentScreen = Screen.ContactMerge },
+                    )
+                }
+
+                Screen.ArchivedContacts -> {
+                    ArchivedContactsScreen(
+                        onBack = { currentScreen = Screen.More },
+                        onListArchivedContacts = { viewModel.listArchivedContacts() },
+                        onUnarchiveContact = { id -> viewModel.unarchiveContact(id) },
+                    )
+                }
+
+                Screen.ContactMerge -> {
+                    ContactMergeScreen(
+                        onBack = { currentScreen = Screen.More },
                     )
                 }
             }

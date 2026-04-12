@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.MergeType
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
@@ -33,6 +35,8 @@ fun MoreScreen(
     onHelp: () -> Unit,
     onDevices: () -> Unit,
     onRecovery: () -> Unit,
+    onArchivedContacts: () -> Unit = {},
+    onMergeContacts: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -76,6 +80,22 @@ fun MoreScreen(
                     label = "Backup & Recovery",
                     testTag = "more_recovery",
                     onClick = onRecovery,
+                )
+            }
+            item {
+                MoreMenuItem(
+                    icon = Icons.Default.Archive,
+                    label = "Archived Contacts",
+                    testTag = "more_archived_contacts",
+                    onClick = onArchivedContacts,
+                )
+            }
+            item {
+                MoreMenuItem(
+                    icon = Icons.AutoMirrored.Filled.MergeType,
+                    label = "Merge Contacts",
+                    testTag = "more_merge_contacts",
+                    onClick = onMergeContacts,
                 )
             }
         }
