@@ -713,6 +713,35 @@ class MainViewModel(
         }
     }
 
+    suspend fun archiveContact(id: String) {
+        withContext(Dispatchers.IO) {
+            repository.archiveContact(id)
+        }
+    }
+
+    suspend fun unarchiveContact(id: String) {
+        withContext(Dispatchers.IO) {
+            repository.unarchiveContact(id)
+        }
+    }
+
+    suspend fun softDeleteImportedContact(id: String) {
+        withContext(Dispatchers.IO) {
+            repository.softDeleteImportedContact(id)
+        }
+    }
+
+    suspend fun undoDeleteImportedContact(id: String) {
+        withContext(Dispatchers.IO) {
+            repository.undoDeleteImportedContact(id)
+        }
+    }
+
+    suspend fun listArchivedContacts(): List<MobileContact> =
+        withContext(Dispatchers.IO) {
+            repository.listArchivedContacts()
+        }
+
     fun importContactsFromVcf(data: ByteArray) {
         viewModelScope.launch {
             try {

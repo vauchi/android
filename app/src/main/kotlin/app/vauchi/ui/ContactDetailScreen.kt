@@ -50,6 +50,10 @@ fun ContactDetailScreen(
     onSetContactFieldNote: (suspend (String, String, String) -> Unit)? = null,
     onDeleteContactFieldNote: (suspend (String, String) -> Unit)? = null,
     onSetProposalTrusted: (suspend (String, Boolean) -> Boolean)? = null,
+    onArchiveContact: (suspend (String) -> Unit)? = null,
+    onUnarchiveContact: (suspend (String) -> Unit)? = null,
+    onSoftDeleteContact: (suspend (String) -> Unit)? = null,
+    onUndoSoftDeleteContact: (suspend (String) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -69,6 +73,7 @@ fun ContactDetailScreen(
     var fieldNotes by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var proposalTrusted by remember { mutableStateOf(false) }
     var isTogglingProposalTrust by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(contactId) {
@@ -106,6 +111,7 @@ fun ContactDetailScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         if (isLoading) {
             Box(
@@ -415,6 +421,83 @@ fun ContactDetailScreen(
                                     onSetFieldVisibility(contactId, field.label, visible)
                                 },
                             )
+                        }
+                    }
+                }
+
+                // Archive / Delete button
+                contact?.let { c ->
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider()
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        if (c.isImported) {
+                            // Imported contacts: soft-delete with undo
+                            OutlinedButton(
+                                onClick = {
+                                    scope.launch {
+                                        onSoftDeleteContact?.invoke(contactId)
+                                        val result =
+                                            snackbarHostState.showSnackbar(
+                                                message = localizationManager.t("contacts.toast_deleted"),
+                                                actionLabel = localizationManager.t("action.undo"),
+                                                duration = SnackbarDuration.Short,
+                                            )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            onUndoSoftDeleteContact?.invoke(contactId)
+                                            contact = onGetContact(contactId)
+                                        } else {
+                                            onBack()
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors =
+                                    ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error,
+                                    ),
+                                border =
+                                    androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.error,
+                                    ),
+                            ) {
+                                Text(localizationManager.t("contacts.action_delete"))
+                            }
+                        } else {
+                            // Exchanged contacts: archive with undo
+                            OutlinedButton(
+                                onClick = {
+                                    scope.launch {
+                                        onArchiveContact?.invoke(contactId)
+                                        val result =
+                                            snackbarHostState.showSnackbar(
+                                                message = localizationManager.t("contacts.toast_archived"),
+                                                actionLabel = localizationManager.t("action.undo"),
+                                                duration = SnackbarDuration.Short,
+                                            )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            onUnarchiveContact?.invoke(contactId)
+                                            contact = onGetContact(contactId)
+                                        } else {
+                                            onBack()
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors =
+                                    ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.tertiary,
+                                    ),
+                                border =
+                                    androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.tertiary,
+                                    ),
+                            ) {
+                                Text(localizationManager.t("contacts.action_archive"))
+                            }
                         }
                     }
                 }

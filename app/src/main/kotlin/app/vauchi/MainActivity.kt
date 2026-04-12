@@ -47,6 +47,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vauchi.ui.AppPasswordScreen
+import app.vauchi.ui.ArchivedContactsScreen
 import app.vauchi.ui.BleExchangeScreen
 import app.vauchi.ui.ContactDetailScreen
 import app.vauchi.ui.ContactsScreen
@@ -203,6 +204,7 @@ enum class Screen {
     Help,
     QrDiagnostic,
     More,
+    ArchivedContacts,
 }
 
 @Composable
@@ -534,6 +536,7 @@ fun MainScreen(
                         onUnhideContact = { id -> viewModel.unhideContact(id) },
                         onImportVcf = { data -> viewModel.importContactsFromVcf(data) },
                         onImportError = { msg -> viewModel.showMessage(msg) },
+                        onArchivedContacts = { currentScreen = Screen.ArchivedContacts },
                     )
                 }
 
@@ -561,8 +564,20 @@ fun MainScreen(
                             onSetContactFieldNote = { cId, fId, note -> viewModel.setContactFieldNote(cId, fId, note) },
                             onDeleteContactFieldNote = { cId, fId -> viewModel.deleteContactFieldNote(cId, fId) },
                             onSetProposalTrusted = { cId, trusted -> viewModel.setProposalTrusted(cId, trusted) },
+                            onArchiveContact = { id -> viewModel.archiveContact(id) },
+                            onUnarchiveContact = { id -> viewModel.unarchiveContact(id) },
+                            onSoftDeleteContact = { id -> viewModel.softDeleteImportedContact(id) },
+                            onUndoSoftDeleteContact = { id -> viewModel.undoDeleteImportedContact(id) },
                         )
                     }
+                }
+
+                Screen.ArchivedContacts -> {
+                    ArchivedContactsScreen(
+                        onBack = { currentScreen = Screen.Contacts },
+                        onListArchived = { viewModel.listArchivedContacts() },
+                        onUnarchive = { id -> viewModel.unarchiveContact(id) },
+                    )
                 }
 
                 Screen.Settings -> {
