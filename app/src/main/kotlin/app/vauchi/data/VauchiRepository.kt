@@ -338,6 +338,19 @@ class VauchiRepository(
 
     fun importContactsFromVcf(data: ByteArray) = platform().importContactsFromVcf(data)
 
+    // Duplicate detection & merge
+    fun findDuplicates() = platform().findDuplicates()
+
+    fun mergeContacts(
+        primaryId: String,
+        secondaryId: String,
+    ) = platform().mergeContacts(primaryId, secondaryId)
+
+    fun dismissDuplicate(
+        id1: String,
+        id2: String,
+    ) = platform().dismissDuplicate(id1, id2)
+
     // Visibility operations
     fun hideFieldFromContact(
         contactId: String,
@@ -929,24 +942,22 @@ class VauchiRepository(
     /**
      * Handle app backgrounded event (C1 auto-lock).
      */
-    fun handleAppBackgrounded(): String? {
-        return try {
+    fun handleAppBackgrounded(): String? =
+        try {
             appEngine.handleAppBackgrounded()
         } catch (e: Exception) {
             Log.e("VauchiRepository", "handleAppBackgrounded failed", e)
             null
         }
-    }
 
     /**
      * Poll for OS notifications produced by the app engine (E).
      */
-    fun pollNotifications(): List<uniffi.vauchi_platform.MobilePendingNotification> {
-        return try {
+    fun pollNotifications(): List<uniffi.vauchi_platform.MobilePendingNotification> =
+        try {
             appEngine.pollNotifications()
         } catch (e: Exception) {
             Log.e("VauchiRepository", "pollNotifications failed", e)
             emptyList()
         }
-    }
 }

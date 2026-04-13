@@ -39,6 +39,7 @@ import uniffi.vauchi_platform.MobileDeletionState
 import uniffi.vauchi_platform.MobileDemoContact
 import uniffi.vauchi_platform.MobileDemoContactState
 import uniffi.vauchi_platform.MobileDeviceLinkInitiator
+import uniffi.vauchi_platform.MobileDuplicatePair
 import uniffi.vauchi_platform.MobileException
 import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileGdprExport
@@ -741,6 +742,32 @@ class MainViewModel(
         withContext(Dispatchers.IO) {
             repository.listArchivedContacts()
         }
+
+    suspend fun findDuplicates(): List<MobileDuplicatePair> =
+        try {
+            withContext(Dispatchers.IO) {
+                repository.findDuplicates()
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+    suspend fun mergeContacts(
+        primaryId: String,
+        secondaryId: String,
+    ): MobileContact =
+        withContext(Dispatchers.IO) {
+            repository.mergeContacts(primaryId, secondaryId)
+        }
+
+    suspend fun dismissDuplicate(
+        id1: String,
+        id2: String,
+    ) {
+        withContext(Dispatchers.IO) {
+            repository.dismissDuplicate(id1, id2)
+        }
+    }
 
     fun importContactsFromVcf(data: ByteArray) {
         viewModelScope.launch {

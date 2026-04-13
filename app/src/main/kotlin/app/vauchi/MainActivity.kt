@@ -664,6 +664,15 @@ fun MainScreen(
                 Screen.ContactMerge -> {
                     ContactMergeScreen(
                         onBack = { currentScreen = Screen.More },
+                        onFindDuplicates = { viewModel.findDuplicates() },
+                        onGetContact = { id -> viewModel.getContact(id) },
+                        onMergeContacts = { primaryId, secondaryId ->
+                            viewModel.mergeContacts(primaryId, secondaryId)
+                        },
+                        onDismissDuplicate = { id1, id2 ->
+                            viewModel.dismissDuplicate(id1, id2)
+                        },
+                        onShowMessage = { viewModel.showMessage(it) },
                     )
                 }
             }
