@@ -672,6 +672,9 @@ fun MainScreen(
                         onDismissDuplicate = { id1, id2 ->
                             viewModel.dismissDuplicate(id1, id2)
                         },
+                        onSoftDeleteImported = { id ->
+                            viewModel.softDeleteImportedContact(id)
+                        },
                         onShowMessage = { viewModel.showMessage(it) },
                     )
                 }

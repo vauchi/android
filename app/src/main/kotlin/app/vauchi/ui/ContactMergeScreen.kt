@@ -32,6 +32,7 @@ fun ContactMergeScreen(
     onGetContact: suspend (String) -> MobileContact?,
     onMergeContacts: suspend (String, String) -> MobileContact,
     onDismissDuplicate: suspend (String, String) -> Unit,
+    onSoftDeleteImported: suspend (String) -> Unit,
     onShowMessage: (String) -> Unit,
 ) {
     val context = LocalContext.current
@@ -136,47 +137,47 @@ fun ContactMergeScreen(
         val c2 = contactCache[pair.id2]
         val name1 = c1?.displayName ?: pair.id1
         val name2 = c2?.displayName ?: pair.id2
-        val exchangedLocked =
-            c1 != null && c2 != null &&
-                ((!c1.isImported && c2.isImported) || (c1.isImported && !c2.isImported))
+        val crossKind =
+            c1 != null && c2 != null && c1.isImported != c2.isImported
 
-        AlertDialog(
-            onDismissRequest = { confirmingPair = null },
-            title = { Text(localizationManager.t("contacts.merge_confirm")) },
-            text = {
-                Column {
-                    Text(localizationManager.t("contacts.merge_title"))
-                    if (exchangedLocked) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            localizationManager.t("contacts.merge_exchanged_primary"),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Column {
-                    if (exchangedLocked) {
-                        val primaryId = if (c1?.isImported == false) pair.id1 else pair.id2
-                        val secondaryId = if (primaryId == pair.id1) pair.id2 else pair.id1
-                        val primaryName = if (primaryId == pair.id1) name1 else name2
-                        TextButton(onClick = {
-                            confirmingPair = null
-                            scope.launch {
-                                try {
-                                    onMergeContacts(primaryId, secondaryId)
-                                    onShowMessage(localizationManager.t("contacts.toast_merged"))
-                                    refreshTrigger++
-                                } catch (e: Exception) {
-                                    onShowMessage("Merge failed: ${e.message}")
-                                }
+        if (crossKind) {
+            // Cross-kind: offer delete-imported, not merge (core rejects cross-kind merges)
+            val importedId = if (c1?.isImported == true) pair.id1 else pair.id2
+            val importedName = if (c1?.isImported == true) name1 else name2
+            AlertDialog(
+                onDismissRequest = { confirmingPair = null },
+                title = { Text(localizationManager.t("contacts.merge_delete_imported")) },
+                text = { Text(localizationManager.t("contacts.merge_cross_kind_hint")) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmingPair = null
+                        scope.launch {
+                            try {
+                                onSoftDeleteImported(importedId)
+                                onShowMessage(localizationManager.t("contacts.toast_deleted"))
+                                refreshTrigger++
+                            } catch (e: Exception) {
+                                onShowMessage(localizationManager.t("contacts.merge_error"))
                             }
-                        }) {
-                            Text("$primaryName (${localizationManager.t("contacts.merge_keep_primary")})")
                         }
-                    } else {
+                    }) {
+                        Text(localizationManager.t("contacts.merge_delete_imported"))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmingPair = null }) {
+                        Text(localizationManager.t("action.cancel"))
+                    }
+                },
+            )
+        } else {
+            // Same-kind: pick primary
+            AlertDialog(
+                onDismissRequest = { confirmingPair = null },
+                title = { Text(localizationManager.t("contacts.merge_confirm")) },
+                text = { Text(localizationManager.t("contacts.merge_title")) },
+                confirmButton = {
+                    Column {
                         TextButton(onClick = {
                             val p = pair
                             confirmingPair = null
@@ -186,7 +187,7 @@ fun ContactMergeScreen(
                                     onShowMessage(localizationManager.t("contacts.toast_merged"))
                                     refreshTrigger++
                                 } catch (e: Exception) {
-                                    onShowMessage("Merge failed: ${e.message}")
+                                    onShowMessage(localizationManager.t("contacts.merge_error"))
                                 }
                             }
                         }) {
@@ -201,21 +202,21 @@ fun ContactMergeScreen(
                                     onShowMessage(localizationManager.t("contacts.toast_merged"))
                                     refreshTrigger++
                                 } catch (e: Exception) {
-                                    onShowMessage("Merge failed: ${e.message}")
+                                    onShowMessage(localizationManager.t("contacts.merge_error"))
                                 }
                             }
                         }) {
                             Text("$name2 (${localizationManager.t("contacts.merge_keep_primary")})")
                         }
                     }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmingPair = null }) {
-                    Text(localizationManager.t("action.cancel"))
-                }
-            },
-        )
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmingPair = null }) {
+                        Text(localizationManager.t("action.cancel"))
+                    }
+                },
+            )
+        }
     }
 }
 
