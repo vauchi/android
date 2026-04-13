@@ -336,20 +336,19 @@ class VauchiRepository(
 
     fun listArchivedContacts() = platform().listArchivedContacts()
 
-    fun importContactsFromVcf(data: ByteArray) = platform().importContactsFromVcf(data)
-
-    // Duplicate detection & merge
     fun findDuplicates() = platform().findDuplicates()
 
     fun mergeContacts(
         primaryId: String,
         secondaryId: String,
-    ) = platform().mergeContacts(primaryId, secondaryId)
+    ) = platform().mergeContacts(primaryId = primaryId, secondaryId = secondaryId)
 
     fun dismissDuplicate(
         id1: String,
         id2: String,
-    ) = platform().dismissDuplicate(id1, id2)
+    ) = platform().dismissDuplicate(id1 = id1, id2 = id2)
+
+    fun importContactsFromVcf(data: ByteArray) = platform().importContactsFromVcf(data)
 
     // Visibility operations
     fun hideFieldFromContact(

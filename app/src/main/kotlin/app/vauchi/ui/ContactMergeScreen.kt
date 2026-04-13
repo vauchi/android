@@ -132,44 +132,81 @@ fun ContactMergeScreen(
     // Merge confirmation dialog (irrevocable action per ADR-022)
     if (confirmingPair != null) {
         val pair = confirmingPair!!
-        val name1 = contactCache[pair.id1]?.displayName ?: pair.id1
-        val name2 = contactCache[pair.id2]?.displayName ?: pair.id2
+        val c1 = contactCache[pair.id1]
+        val c2 = contactCache[pair.id2]
+        val name1 = c1?.displayName ?: pair.id1
+        val name2 = c2?.displayName ?: pair.id2
+        val exchangedLocked =
+            c1 != null && c2 != null &&
+                ((!c1.isImported && c2.isImported) || (c1.isImported && !c2.isImported))
 
         AlertDialog(
             onDismissRequest = { confirmingPair = null },
             title = { Text(localizationManager.t("contacts.merge_confirm")) },
-            text = { Text(localizationManager.t("contacts.merge_title")) },
+            text = {
+                Column {
+                    Text(localizationManager.t("contacts.merge_title"))
+                    if (exchangedLocked) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            localizationManager.t("contacts.merge_exchanged_primary"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 Column {
-                    TextButton(onClick = {
-                        val p = pair
-                        confirmingPair = null
-                        scope.launch {
-                            try {
-                                onMergeContacts(p.id1, p.id2)
-                                onShowMessage(localizationManager.t("contacts.toast_merged"))
-                                refreshTrigger++
-                            } catch (e: Exception) {
-                                onShowMessage("Merge failed: ${e.message}")
+                    if (exchangedLocked) {
+                        val primaryId = if (c1?.isImported == false) pair.id1 else pair.id2
+                        val secondaryId = if (primaryId == pair.id1) pair.id2 else pair.id1
+                        val primaryName = if (primaryId == pair.id1) name1 else name2
+                        TextButton(onClick = {
+                            confirmingPair = null
+                            scope.launch {
+                                try {
+                                    onMergeContacts(primaryId, secondaryId)
+                                    onShowMessage(localizationManager.t("contacts.toast_merged"))
+                                    refreshTrigger++
+                                } catch (e: Exception) {
+                                    onShowMessage("Merge failed: ${e.message}")
+                                }
                             }
+                        }) {
+                            Text("$primaryName (${localizationManager.t("contacts.merge_keep_primary")})")
                         }
-                    }) {
-                        Text("$name1 (${localizationManager.t("contacts.merge_keep_primary")})")
-                    }
-                    TextButton(onClick = {
-                        val p = pair
-                        confirmingPair = null
-                        scope.launch {
-                            try {
-                                onMergeContacts(p.id2, p.id1)
-                                onShowMessage(localizationManager.t("contacts.toast_merged"))
-                                refreshTrigger++
-                            } catch (e: Exception) {
-                                onShowMessage("Merge failed: ${e.message}")
+                    } else {
+                        TextButton(onClick = {
+                            val p = pair
+                            confirmingPair = null
+                            scope.launch {
+                                try {
+                                    onMergeContacts(p.id1, p.id2)
+                                    onShowMessage(localizationManager.t("contacts.toast_merged"))
+                                    refreshTrigger++
+                                } catch (e: Exception) {
+                                    onShowMessage("Merge failed: ${e.message}")
+                                }
                             }
+                        }) {
+                            Text("$name1 (${localizationManager.t("contacts.merge_keep_primary")})")
                         }
-                    }) {
-                        Text("$name2 (${localizationManager.t("contacts.merge_keep_primary")})")
+                        TextButton(onClick = {
+                            val p = pair
+                            confirmingPair = null
+                            scope.launch {
+                                try {
+                                    onMergeContacts(p.id2, p.id1)
+                                    onShowMessage(localizationManager.t("contacts.toast_merged"))
+                                    refreshTrigger++
+                                } catch (e: Exception) {
+                                    onShowMessage("Merge failed: ${e.message}")
+                                }
+                            }
+                        }) {
+                            Text("$name2 (${localizationManager.t("contacts.merge_keep_primary")})")
+                        }
                     }
                 }
             },
