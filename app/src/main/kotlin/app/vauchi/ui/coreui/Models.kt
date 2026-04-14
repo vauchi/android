@@ -21,6 +21,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.float
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
@@ -118,6 +119,7 @@ sealed class Component {
         val fields: List<FieldDisplay>,
         val groupViews: List<GroupCardView>,
         val selectedGroup: String? = null,
+        val avatarData: List<Int>? = null,
         val a11y: A11y? = null,
     ) : Component()
 
@@ -220,6 +222,28 @@ sealed class Component {
         val a11y: A11y? = null,
     ) : Component()
 
+    data class AvatarPreview(
+        val id: String,
+        val imageData: List<Int>?,
+        val initials: String,
+        val bgColor: List<Int>?,
+        val brightness: Float,
+        val editable: Boolean,
+        val a11y: A11y? = null,
+    ) : Component()
+
+    data class Slider(
+        val id: String,
+        val label: String,
+        val value: Float,
+        val min: Float,
+        val max: Float,
+        val step: Float,
+        val minIcon: String?,
+        val maxIcon: String?,
+        val a11y: A11y? = null,
+    ) : Component()
+
     data object Divider : Component()
 
     /** Unknown component from a newer core version — render as empty space. */
@@ -269,6 +293,7 @@ private data class CardPreviewContent(
     val fields: List<FieldDisplay>,
     @SerialName("group_views") val groupViews: List<GroupCardView>,
     @SerialName("selected_group") val selectedGroup: String? = null,
+    @SerialName("avatar_data") val avatarData: List<Int>? = null,
     val a11y: A11y? = null,
 )
 
@@ -384,6 +409,30 @@ private data class DropdownContent(
     val a11y: A11y? = null,
 )
 
+@Serializable
+private data class AvatarPreviewContent(
+    val id: String,
+    @SerialName("image_data") val imageData: List<Int>? = null,
+    val initials: String,
+    @SerialName("bg_color") val bgColor: List<Int>? = null,
+    val brightness: Float,
+    val editable: Boolean,
+    val a11y: A11y? = null,
+)
+
+@Serializable
+private data class SliderContent(
+    val id: String,
+    val label: String,
+    val value: Float,
+    val min: Float,
+    val max: Float,
+    val step: Float,
+    @SerialName("min_icon") val minIcon: String? = null,
+    @SerialName("max_icon") val maxIcon: String? = null,
+    val a11y: A11y? = null,
+)
+
 internal object ComponentSerializer : KSerializer<Component> {
     override val descriptor: SerialDescriptor =
         buildClassSerialDescriptor("Component")
@@ -449,6 +498,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                             fields = c.fields,
                             groupViews = c.groupViews,
                             selectedGroup = c.selectedGroup,
+                            avatarData = c.avatarData,
                             a11y = c.a11y,
                         )
                     }
@@ -581,6 +631,36 @@ internal object ComponentSerializer : KSerializer<Component> {
                         Component.Dropdown(id = c.id, label = c.label, selected = c.selected, options = c.options, a11y = c.a11y)
                     }
 
+                    "AvatarPreview" in element -> {
+                        val c: AvatarPreviewContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["AvatarPreview"]!!)
+                        Component.AvatarPreview(
+                            id = c.id,
+                            imageData = c.imageData,
+                            initials = c.initials,
+                            bgColor = c.bgColor,
+                            brightness = c.brightness,
+                            editable = c.editable,
+                            a11y = c.a11y,
+                        )
+                    }
+
+                    "Slider" in element -> {
+                        val c: SliderContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["Slider"]!!)
+                        Component.Slider(
+                            id = c.id,
+                            label = c.label,
+                            value = c.value,
+                            min = c.min,
+                            max = c.max,
+                            step = c.step,
+                            minIcon = c.minIcon,
+                            maxIcon = c.maxIcon,
+                            a11y = c.a11y,
+                        )
+                    }
+
                     // Unknown struct variant — core is newer than this shell
                     else -> {
                         Component.Unknown
@@ -653,6 +733,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                         fields = value.fields,
                         groupViews = value.groupViews,
                         selectedGroup = value.selectedGroup,
+                        avatarData = value.avatarData,
                         a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
@@ -805,6 +886,38 @@ internal object ComponentSerializer : KSerializer<Component> {
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("Dropdown" to inner)))
+            }
+
+            is Component.AvatarPreview -> {
+                val content =
+                    AvatarPreviewContent(
+                        id = value.id,
+                        imageData = value.imageData,
+                        initials = value.initials,
+                        bgColor = value.bgColor,
+                        brightness = value.brightness,
+                        editable = value.editable,
+                        a11y = value.a11y,
+                    )
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("AvatarPreview" to inner)))
+            }
+
+            is Component.Slider -> {
+                val content =
+                    SliderContent(
+                        id = value.id,
+                        label = value.label,
+                        value = value.value,
+                        min = value.min,
+                        max = value.max,
+                        step = value.step,
+                        minIcon = value.minIcon,
+                        maxIcon = value.maxIcon,
+                        a11y = value.a11y,
+                    )
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("Slider" to inner)))
             }
 
             is Component.Unknown -> {
@@ -1170,6 +1283,11 @@ sealed class UserAction {
         val actionId: String,
     ) : UserAction()
 
+    data class SliderChanged(
+        val componentId: String,
+        val valueMilli: Int,
+    ) : UserAction()
+
     /** Unknown action variant from deserialization — should not be sent to core. */
     data object Unknown : UserAction()
 }
@@ -1315,6 +1433,20 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                     )
                 }
 
+                is UserAction.SliderChanged -> {
+                    JsonObject(
+                        mapOf(
+                            "SliderChanged" to
+                                JsonObject(
+                                    mapOf(
+                                        "component_id" to JsonPrimitive(value.componentId),
+                                        "value_milli" to JsonPrimitive(value.valueMilli),
+                                    ),
+                                ),
+                        ),
+                    )
+                }
+
                 is UserAction.Unknown -> {
                     // Unknown actions should not be serialized back to core
                     JsonObject(emptyMap())
@@ -1395,6 +1527,14 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                         val obj = element["UndoPressed"] as JsonObject
                         UserAction.UndoPressed(
                             actionId = obj["action_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "SliderChanged" in element -> {
+                        val obj = element["SliderChanged"] as JsonObject
+                        UserAction.SliderChanged(
+                            componentId = obj["component_id"]!!.jsonPrimitive.content,
+                            valueMilli = obj["value_milli"]!!.jsonPrimitive.int,
                         )
                     }
 
@@ -1540,6 +1680,12 @@ sealed class ExchangeCommandDTO {
     ) : ExchangeCommandDTO()
 
     data object AudioStop : ExchangeCommandDTO()
+
+    data object ImagePickFromLibrary : ExchangeCommandDTO()
+
+    data object ImageCaptureFromCamera : ExchangeCommandDTO()
+
+    data object ImagePickFromFile : ExchangeCommandDTO()
 
     data object Unknown : ExchangeCommandDTO()
 }
@@ -1846,6 +1992,9 @@ internal object ExchangeCommandDTOSerializer : KSerializer<ExchangeCommandDTO> {
                     "BleDisconnect" -> ExchangeCommandDTO.BleDisconnect
                     "NfcDeactivate" -> ExchangeCommandDTO.NfcDeactivate
                     "AudioStop" -> ExchangeCommandDTO.AudioStop
+                    "ImagePickFromLibrary" -> ExchangeCommandDTO.ImagePickFromLibrary
+                    "ImageCaptureFromCamera" -> ExchangeCommandDTO.ImageCaptureFromCamera
+                    "ImagePickFromFile" -> ExchangeCommandDTO.ImagePickFromFile
                     else -> ExchangeCommandDTO.Unknown
                 }
             }
