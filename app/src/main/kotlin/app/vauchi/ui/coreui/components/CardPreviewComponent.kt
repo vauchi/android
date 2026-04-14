@@ -4,11 +4,14 @@
 
 package app.vauchi.ui.coreui.components
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,11 +26,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -50,6 +56,7 @@ fun CardPreviewComponent(
     selectedGroup: String?,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
+    avatarData: List<Int>? = null,
     a11y: A11y? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -108,6 +115,14 @@ fun CardPreviewComponent(
                 modifier = Modifier.padding(24.dp),
             ) {
                 // Avatar
+                val avatarBitmap =
+                    remember(avatarData) {
+                        avatarData?.let { data ->
+                            val bytes = ByteArray(data.size) { data[it].toByte() }
+                            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        }
+                    }
+
                 Box(
                     modifier =
                         Modifier
@@ -124,11 +139,23 @@ fun CardPreviewComponent(
                             ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        displayName.take(1).uppercase(),
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = Color.White,
-                    )
+                    if (avatarBitmap != null) {
+                        Image(
+                            bitmap = avatarBitmap.asImageBitmap(),
+                            contentDescription = "Avatar for $displayName",
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                            contentScale = ContentScale.Crop,
+                        )
+                    } else {
+                        Text(
+                            displayName.take(1).uppercase(),
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = Color.White,
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.components.ActionListComponent
+import app.vauchi.ui.coreui.components.AvatarPreviewComponent
 import app.vauchi.ui.coreui.components.BannerComponent
 import app.vauchi.ui.coreui.components.CardPreviewComponent
 import app.vauchi.ui.coreui.components.ConfirmationDialogComponent
@@ -39,6 +40,7 @@ import app.vauchi.ui.coreui.components.InlineConfirmComponent
 import app.vauchi.ui.coreui.components.PinInputComponent
 import app.vauchi.ui.coreui.components.QrCodeComponent
 import app.vauchi.ui.coreui.components.SettingsGroupComponent
+import app.vauchi.ui.coreui.components.SliderComponent
 import app.vauchi.ui.coreui.components.StatusIndicatorComponent
 import app.vauchi.ui.coreui.components.TextComponent
 import app.vauchi.ui.coreui.components.TextInputComponent
@@ -204,6 +206,7 @@ fun ComponentRenderer(
                 selectedGroup = component.selectedGroup,
                 onAction = onAction,
                 modifier = modifier,
+                avatarData = component.avatarData,
                 a11y = component.a11y,
             )
         }
@@ -341,6 +344,36 @@ fun ComponentRenderer(
                 options = component.options,
                 onAction = onAction,
                 modifier = modifier,
+            )
+        }
+
+        is Component.AvatarPreview -> {
+            AvatarPreviewComponent(
+                id = component.id,
+                imageData = component.imageData,
+                initials = component.initials,
+                bgColor = component.bgColor,
+                brightness = component.brightness,
+                editable = component.editable,
+                onAction = onAction,
+                modifier = modifier,
+                a11y = component.a11y,
+            )
+        }
+
+        is Component.Slider -> {
+            SliderComponent(
+                componentId = component.id,
+                label = component.label,
+                value = component.value,
+                min = component.min,
+                max = component.max,
+                step = component.step,
+                minIcon = component.minIcon,
+                maxIcon = component.maxIcon,
+                onAction = onAction,
+                modifier = modifier,
+                a11y = component.a11y,
             )
         }
 
