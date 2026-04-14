@@ -154,7 +154,7 @@ class ExchangeCommandHandler(
 
     private fun emitAudioChallenge(data: List<UByte>) {
         val verifier =
-            MobileProximityVerifier.new(
+            MobileProximityVerifier(
                 AudioProximityService.getInstance(context),
             )
         val result = verifier.emitChallenge(data.map { it.toByte() }.toByteArray())
@@ -166,14 +166,14 @@ class ExchangeCommandHandler(
     private fun listenForAudioResponse(timeoutMs: ULong) {
         Thread {
             val verifier =
-                MobileProximityVerifier.new(
+                MobileProximityVerifier(
                     AudioProximityService.getInstance(context),
                 )
             val received = verifier.listenForResponse(timeoutMs)
             try {
                 session.applyHardwareEvent(
                     MobileExchangeHardwareEvent.AudioResponseReceived(
-                        received.map { it.toUByte() },
+                        data = received,
                     ),
                 )
                 drainAndDispatch()
