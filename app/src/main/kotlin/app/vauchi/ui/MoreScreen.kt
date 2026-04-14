@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.MergeType
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -37,6 +38,7 @@ fun MoreScreen(
     onRecovery: () -> Unit,
     onArchivedContacts: () -> Unit = {},
     onMergeContacts: () -> Unit = {},
+    onDeviceReplacement: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -72,6 +74,14 @@ fun MoreScreen(
                     label = "Linked Devices",
                     testTag = "more_devices",
                     onClick = onDevices,
+                )
+            }
+            item {
+                MoreMenuItem(
+                    icon = Icons.Default.PhoneAndroid,
+                    label = "Replace Device",
+                    testTag = "more_device_replacement",
+                    onClick = onDeviceReplacement,
                 )
             }
             item {

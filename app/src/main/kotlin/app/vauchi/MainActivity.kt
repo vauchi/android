@@ -207,6 +207,7 @@ enum class Screen {
     More,
     ArchivedContacts,
     ContactMerge,
+    DeviceReplacement,
 }
 
 @Composable
@@ -650,6 +651,7 @@ fun MainScreen(
                         onRecovery = { currentScreen = Screen.Recovery },
                         onArchivedContacts = { currentScreen = Screen.ArchivedContacts },
                         onMergeContacts = { currentScreen = Screen.ContactMerge },
+                        onDeviceReplacement = { currentScreen = Screen.DeviceReplacement },
                     )
                 }
 
@@ -676,6 +678,14 @@ fun MainScreen(
                             viewModel.softDeleteImportedContact(id)
                         },
                         onShowMessage = { viewModel.showMessage(it) },
+                    )
+                }
+
+                Screen.DeviceReplacement -> {
+                    CoreScreenView(
+                        viewModel = coreAppViewModel,
+                        screenName = "DeviceReplacement",
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
             }
