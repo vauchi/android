@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import uniffi.vauchi_platform.MobileExchangeHardwareEvent
 import uniffi.vauchi_platform.PlatformAppEngine
 
 /**
@@ -53,6 +54,49 @@ class CoreAppViewModel(
 
     fun consumeOpenUrlEvent() {
         _openUrlEvent.value = null
+    }
+
+    /**
+     * Image picking events emitted by core via ExchangeCommands.
+     * Values: "library", "camera", null (consumed).
+     */
+    private val _imagePickEvent = MutableStateFlow<String?>(null)
+    val imagePickEvent: StateFlow<String?> = _imagePickEvent.asStateFlow()
+
+    fun consumeImagePickEvent() {
+        _imagePickEvent.value = null
+    }
+
+    /**
+     * Called by the Activity/Composable when the user picks or captures an image.
+     * Sends the image bytes back to core as an ImageReceived hardware event.
+     */
+    fun handleImageReceived(imageBytes: ByteArray) {
+        sendHardwareEvent(MobileExchangeHardwareEvent.ImageReceived(data = imageBytes))
+    }
+
+    /**
+     * Called when the user cancels the image picker.
+     */
+    fun handleImagePickCancelled() {
+        sendHardwareEvent(MobileExchangeHardwareEvent.ImagePickCancelled)
+    }
+
+    private fun sendHardwareEvent(event: MobileExchangeHardwareEvent) {
+        viewModelScope.launch {
+            try {
+                val resultJson =
+                    withContext(Dispatchers.IO) {
+                        appEngine.handleHardwareEvent(event = event)
+                    }
+                if (resultJson != null) {
+                    val result = json.decodeFromString<ActionResult>(resultJson)
+                    applyResult(result)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send hardware event", e)
+            }
+        }
     }
 
     init {
@@ -202,7 +246,30 @@ class CoreAppViewModel(
             }
 
             is ActionResult.ExchangeCommands -> {
-                // ADR-031: hardware exchange commands handled by exchange session
+                // ADR-031: hardware exchange commands handled by exchange session.
+                // Image picking commands are dispatched to the UI layer.
+                for (cmd in result.commands) {
+                    when (cmd) {
+                        is ExchangeCommandDTO.ImagePickFromLibrary -> {
+                            _imagePickEvent.value = "library"
+                        }
+
+                        is ExchangeCommandDTO.ImageCaptureFromCamera -> {
+                            _imagePickEvent.value = "camera"
+                        }
+
+                        is ExchangeCommandDTO.ImagePickFromFile -> {
+                            // File picking not supported on Android — report unavailable
+                            sendHardwareEvent(
+                                MobileExchangeHardwareEvent.HardwareUnavailable("ImagePickFromFile"),
+                            )
+                        }
+
+                        else -> {
+                            // Other exchange commands handled by exchange session
+                        }
+                    }
+                }
             }
 
             is ActionResult.ShowFormDialog -> {
