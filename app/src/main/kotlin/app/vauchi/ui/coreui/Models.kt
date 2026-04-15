@@ -35,6 +35,78 @@ import kotlinx.serialization.json.long
  * layer is documented in `vauchi-platform/src/mobile_ui.rs`.
  */
 
+// ── Design Tokens ──────────────────────────────────────────────────
+
+/** Layout tokens for consistent cross-platform rendering. */
+@Serializable
+data class DesignTokens(
+    val spacing: SpacingTokens,
+    @SerialName("spacing_direction") val spacingDirection: SpacingDirectionTokens,
+    val typography: TypographyTokens,
+    @SerialName("border_radius") val borderRadius: BorderRadiusTokens,
+    @SerialName("touch_target") val touchTarget: TouchTargetTokens,
+    val motion: MotionTokens,
+) {
+    companion object {
+        val DEFAULT =
+            DesignTokens(
+                spacing = SpacingTokens(xs = 4, sm = 8, md = 16, lg = 24, xl = 32),
+                spacingDirection = SpacingDirectionTokens(contentStart = 16, contentEnd = 16, listItemStart = 8, listItemEnd = 8),
+                typography = TypographyTokens(titleSize = 24, subtitleSize = 18, bodySize = 16, captionSize = 14),
+                borderRadius = BorderRadiusTokens(sm = 4, md = 8, mdLg = 12, lg = 16),
+                touchTarget = TouchTargetTokens(minimum = 44),
+                motion = MotionTokens(enterDurationMs = 200, exitDurationMs = 150, emphasisDurationMs = 300),
+            )
+    }
+}
+
+@Serializable
+data class SpacingTokens(
+    val xs: Int,
+    val sm: Int,
+    val md: Int,
+    val lg: Int,
+    val xl: Int,
+)
+
+@Serializable
+data class SpacingDirectionTokens(
+    @SerialName("content_start") val contentStart: Int,
+    @SerialName("content_end") val contentEnd: Int,
+    @SerialName("list_item_start") val listItemStart: Int,
+    @SerialName("list_item_end") val listItemEnd: Int,
+    @SerialName("list_item_inline_start") val listItemInlineStart: Int = 12,
+    @SerialName("list_item_inline_end") val listItemInlineEnd: Int = 12,
+)
+
+@Serializable
+data class TypographyTokens(
+    @SerialName("title_size") val titleSize: Int,
+    @SerialName("subtitle_size") val subtitleSize: Int,
+    @SerialName("body_size") val bodySize: Int,
+    @SerialName("caption_size") val captionSize: Int,
+)
+
+@Serializable
+data class BorderRadiusTokens(
+    val sm: Int,
+    val md: Int,
+    @SerialName("md_lg") val mdLg: Int,
+    val lg: Int,
+)
+
+@Serializable
+data class TouchTargetTokens(
+    val minimum: Int,
+)
+
+@Serializable
+data class MotionTokens(
+    @SerialName("enter_duration_ms") val enterDurationMs: Int,
+    @SerialName("exit_duration_ms") val exitDurationMs: Int,
+    @SerialName("emphasis_duration_ms") val emphasisDurationMs: Int,
+)
+
 // ── ScreenModel ─────────────────────────────────────────────────────
 
 @Serializable
@@ -45,6 +117,7 @@ data class ScreenModel(
     val components: List<Component>,
     val actions: List<ScreenAction>,
     val progress: Progress? = null,
+    val tokens: DesignTokens = DesignTokens.DEFAULT,
 )
 
 @Serializable
