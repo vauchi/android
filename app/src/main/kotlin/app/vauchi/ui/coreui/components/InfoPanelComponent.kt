@@ -44,6 +44,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.A11y
+import app.vauchi.ui.coreui.DesignTokens
 import app.vauchi.ui.coreui.InfoItem
 
 /**
@@ -102,7 +103,7 @@ private fun InfoItemRow(item: InfoItem) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 6.dp),
+                .padding(vertical = DesignTokens.DEFAULT.spacing.xs.dp),
     ) {
         item.icon?.let {
             Icon(

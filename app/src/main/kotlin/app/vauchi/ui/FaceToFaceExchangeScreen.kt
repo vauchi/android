@@ -52,6 +52,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.vauchi.ui.components.PermissionRationaleDialog
 import app.vauchi.ui.components.rememberPermissionState
+import app.vauchi.ui.coreui.DesignTokens
 import app.vauchi.util.LocalizationManager
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
@@ -667,7 +668,7 @@ private fun MultiStageStatusIndicator(
         -> {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(14.dp), color = StatusTextColor, strokeWidth = 2.dp)
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(DesignTokens.DEFAULT.spacing.xs.dp))
                 Text(localizationManager.t("exchange.waiting_peer"), style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
             }
         }
@@ -675,7 +676,7 @@ private fun MultiStageStatusIndicator(
         is MobileProtocolState.Discovered -> {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(14.dp), color = StatusTextColor, strokeWidth = 2.dp)
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(DesignTokens.DEFAULT.spacing.xs.dp))
                 Text(localizationManager.t("exchange.peer_found"), style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
             }
         }
@@ -685,7 +686,7 @@ private fun MultiStageStatusIndicator(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(modifier = Modifier.size(14.dp), color = StatusTextColor, strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(DesignTokens.DEFAULT.spacing.xs.dp))
                     Text(
                         localizationManager.t("exchange.transferring"),
                         style = MaterialTheme.typography.bodySmall,
@@ -718,7 +719,7 @@ private fun MultiStageStatusIndicator(
         -> {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(14.dp), color = StatusTextColor, strokeWidth = 2.dp)
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(DesignTokens.DEFAULT.spacing.xs.dp))
                 Text(localizationManager.t("exchange.verifying"), style = MaterialTheme.typography.bodySmall, color = StatusTextColor)
             }
         }

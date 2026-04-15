@@ -32,6 +32,7 @@ import app.vauchi.exchange.ExchangeDispatcher
 import app.vauchi.exchange.ExchangeDispatcherFactory
 import app.vauchi.ui.components.PermissionRationaleDialog
 import app.vauchi.ui.components.rememberPermissionState
+import app.vauchi.ui.coreui.DesignTokens
 import app.vauchi.util.LocalizationManager
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
@@ -429,7 +430,7 @@ private fun BleStateIndicator(
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (showProgress) {
             CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(DesignTokens.DEFAULT.spacing.xs.dp))
         }
         Text(
             label,

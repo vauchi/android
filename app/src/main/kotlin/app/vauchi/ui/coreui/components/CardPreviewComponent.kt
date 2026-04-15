@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.A11y
+import app.vauchi.ui.coreui.DesignTokens
 import app.vauchi.ui.coreui.FieldDisplay
 import app.vauchi.ui.coreui.GroupCardView
 import app.vauchi.ui.coreui.UserAction
@@ -187,7 +188,7 @@ private fun CardFieldRow(field: FieldDisplay) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 6.dp),
+                .padding(vertical = DesignTokens.DEFAULT.spacing.xs.dp),
     ) {
         Column {
             Text(
