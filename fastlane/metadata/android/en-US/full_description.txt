@@ -1,0 +1,16 @@
+Exchange contact cards in person via QR code. Update your info anytime —
+contacts stay current automatically.
+
+Features:
+• End-to-end encrypted — only you and your contacts can read card data
+• Decentralized — no central server owns your contacts
+• Updatable — change your phone number or email and contacts get the update
+• In-person exchange — scan a QR code face-to-face, no phone numbers needed
+• Multi-device — sync across phone, tablet, and desktop
+• No account required — your identity lives on your device
+
+Vauchi works without Google Play Services. Sync uses background pull,
+not push notifications. Fully functional on de-Googled Android
+(GrapheneOS, CalyxOS, LineageOS, /e/OS).
+
+Source code: https://gitlab.com/vauchi
