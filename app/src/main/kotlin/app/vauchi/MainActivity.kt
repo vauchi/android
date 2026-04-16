@@ -395,7 +395,7 @@ fun MainScreen(
                                     onDismiss = { showRestoreDialog = false },
                                     onRestore = { backupData, password ->
                                         coroutineScope.launch {
-                                            val success = viewModel.importBackup(backupData, password)
+                                            val success = viewModel.importFullBackup(backupData, password)
                                             if (success) {
                                                 showRestoreDialog = false
                                             }

@@ -985,6 +985,29 @@ class MainViewModel(
             false
         }
 
+    suspend fun exportFullBackup(password: String): String? =
+        try {
+            withContext(Dispatchers.IO) {
+                repository.exportFullBackup(password)
+            }
+        } catch (e: Exception) {
+            null
+        }
+
+    suspend fun importFullBackup(
+        backupData: String,
+        password: String,
+    ): Boolean =
+        try {
+            withContext(Dispatchers.IO) {
+                repository.importFullBackup(backupData, password)
+            }
+            loadUserData()
+            true
+        } catch (e: Exception) {
+            false
+        }
+
     fun checkPasswordStrength(password: String): PasswordStrengthResult =
         try {
             val check = repository.checkPasswordStrength(password)

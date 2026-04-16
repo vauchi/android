@@ -397,7 +397,7 @@ fun SettingsScreen(
             )
 
             Text(
-                text = "Back up your identity to restore it on another device or after reinstalling.",
+                text = "Back up your identity, contacts, and labels to restore on another device or after reinstalling.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
