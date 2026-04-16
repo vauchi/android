@@ -166,16 +166,20 @@ class MainActivity : FragmentActivity() {
             _deepLinkUri.value = intent.data
         }
 
-        // Poll for notifications on every resume (E)
-        try {
-            val viewModel = ViewModelProvider(this)[MainViewModel::class.java]
-            val notifications = viewModel.pollNotifications()
-            for (notification in notifications) {
-                app.vauchi.util.NotificationHelper
-                    .showNotification(this, notification)
+        // Poll for notifications off the main thread (E).
+        // This triggers the native library load via pollNotifications() →
+        // repository.platform(), so it must not block the first frame.
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val viewModel = ViewModelProvider(this@MainActivity)[MainViewModel::class.java]
+                val notifications = viewModel.pollNotifications()
+                for (notification in notifications) {
+                    app.vauchi.util.NotificationHelper
+                        .showNotification(this@MainActivity, notification)
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "pollAndShowNotifications failed", e)
             }
-        } catch (e: Exception) {
-            Log.e("MainActivity", "pollAndShowNotifications failed", e)
         }
 
         // Support direct navigation via: am start -n app.vauchi/.MainActivity --es navigate exchange
