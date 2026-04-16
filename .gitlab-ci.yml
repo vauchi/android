@@ -54,7 +54,6 @@ stages:
   - test
   - security
   - deploy
-  - perf
 
 variables:
   ANDROID_COMPILE_SDK: "35"

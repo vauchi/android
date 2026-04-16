@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# F-Droid build metadata for Vauchi
+# Submit to gitlab.com/fdroid/fdroiddata as metadata/app.vauchi.yml
+
+Categories:
+  - Internet
+  - Security
+
+License: GPL-3.0-or-later
+
+AuthorName: Mattia Egloff
+AuthorEmail: mattia.egloff@pm.me
+AuthorWebSite: https://vauchi.app
+
+WebSite: https://vauchi.app
+SourceCode: https://gitlab.com/vauchi/android
+IssueTracker: https://gitlab.com/vauchi/android/-/issues
+Changelog: https://gitlab.com/vauchi/android/-/releases
+
+Name: Vauchi
+AutoName: Vauchi
+
+Summary: Privacy-focused updatable contact cards
+
+Description: |
+  Exchange contact cards in person via QR code. Update your info
+  anytime — contacts stay current automatically. End-to-end
+  encrypted, decentralized. Works without Google Play Services.
+
+RepoType: git
+Repo: https://gitlab.com/vauchi/android.git
+
+Builds:
+  - versionName: 0.5.0
+    versionCode: 1
+    commit: v0.5.0
+    subdir: app
+    gradle:
+      - yes
+    prebuild:
+      - rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+      - cargo install cargo-ndk
+    scandelete:
+      - build
+    ndk: r27c
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 0.5.0
+CurrentVersionCode: 1
