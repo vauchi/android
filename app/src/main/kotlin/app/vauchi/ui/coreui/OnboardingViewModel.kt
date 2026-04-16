@@ -166,6 +166,7 @@ class OnboardingViewModel : ViewModel() {
 
             is ActionResult.StartDeviceLink,
             is ActionResult.StartBackupImport,
+            is ActionResult.BackupExportComplete,
             is ActionResult.OpenContact,
             is ActionResult.EditContact,
             is ActionResult.OpenUrl,
