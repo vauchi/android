@@ -1658,6 +1658,10 @@ sealed class ActionResult {
 
     data object StartBackupImport : ActionResult()
 
+    data class BackupExportComplete(
+        val data: String,
+    ) : ActionResult()
+
     data class OpenContact(
         val contactId: String,
     ) : ActionResult()
@@ -1867,6 +1871,13 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                         )
                     }
 
+                    "BackupExportComplete" in element -> {
+                        val obj = element["BackupExportComplete"] as JsonObject
+                        ActionResult.BackupExportComplete(
+                            data = obj["data"]!!.jsonPrimitive.content,
+                        )
+                    }
+
                     "PreviewAs" in element -> {
                         val obj = element["PreviewAs"] as JsonObject
                         ActionResult.PreviewAs(
@@ -1928,6 +1939,19 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
 
             is ActionResult.StartBackupImport -> {
                 jsonEncoder.encodeJsonElement(JsonPrimitive("StartBackupImport"))
+            }
+
+            is ActionResult.BackupExportComplete -> {
+                jsonEncoder.encodeJsonElement(
+                    JsonObject(
+                        mapOf(
+                            "BackupExportComplete" to
+                                JsonObject(
+                                    mapOf("data" to JsonPrimitive(value.data)),
+                                ),
+                        ),
+                    ),
+                )
             }
 
             is ActionResult.RequestCamera -> {

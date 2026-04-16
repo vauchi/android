@@ -56,6 +56,13 @@ class CoreAppViewModel(
         _openUrlEvent.value = null
     }
 
+    private val _backupExportData = MutableStateFlow<String?>(null)
+    val backupExportData: StateFlow<String?> = _backupExportData.asStateFlow()
+
+    fun consumeBackupExportData() {
+        _backupExportData.value = null
+    }
+
     /**
      * Image picking events emitted by core via ExchangeCommands.
      * Values: "library", "camera", null (consumed).
@@ -282,6 +289,13 @@ class CoreAppViewModel(
 
             is ActionResult.StartDeviceLink, is ActionResult.StartBackupImport -> {
                 // Handled by native Android flows
+            }
+
+            is ActionResult.BackupExportComplete -> {
+                // Core executed the backup — surface the data for sharing.
+                // The encrypted hex is in result.data; emit to UI for save/share.
+                _backupExportData.value = result.data
+                loadScreen()
             }
 
             is ActionResult.RequestCamera -> {
