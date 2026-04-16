@@ -414,16 +414,20 @@ test:screenshots:
         mkdir -p app/native-host-libs
         CORE_DIR="${CI_PROJECT_DIR}/.core-checkout"
         rm -rf "$CORE_DIR"
-        # Clone core at the exact tag matching the AAR version.
-        # git clone --branch=TAG --depth=1 fails for tags on some git versions,
-        # so we clone, fetch the tag, and checkout instead.
+        # Clone core at the exact commit matching the AAR version tag.
+        # CI_JOB_TOKEN shallow clones can't resolve tags directly, so
+        # resolve the tag SHA via ls-remote first, then fetch that commit.
         CORE_URL="https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git"
-        git clone --depth=1 "$CORE_URL" "$CORE_DIR"
-        if git -C "$CORE_DIR" fetch --depth=1 origin "refs/tags/${CORE_REF}:refs/tags/${CORE_REF}" 2>/dev/null; then
-          git -C "$CORE_DIR" checkout "${CORE_REF}"
-          echo "✅ Checked out core at ${CORE_REF}"
+        TAG_SHA=$(git ls-remote --tags "$CORE_URL" "${CORE_REF}" | awk '{print $1}' | head -1)
+        if [ -n "$TAG_SHA" ]; then
+          mkdir -p "$CORE_DIR" && git -C "$CORE_DIR" init
+          git -C "$CORE_DIR" remote add origin "$CORE_URL"
+          git -C "$CORE_DIR" fetch --depth=1 origin "$TAG_SHA"
+          git -C "$CORE_DIR" checkout FETCH_HEAD
+          echo "✅ Checked out core at ${CORE_REF} (${TAG_SHA:0:12})"
         else
-          echo "⚠️  Tag ${CORE_REF} not found — using main (may cause checksum mismatch)"
+          echo "⚠️  Tag ${CORE_REF} not found — cloning main (may cause checksum mismatch)"
+          git clone --depth=1 "$CORE_URL" "$CORE_DIR"
         fi
         # Clone themes repo and generate themes.json — required by include_bytes! in vauchi-platform
         THEMES_DIR="${CI_PROJECT_DIR}/themes"
@@ -499,16 +503,20 @@ test:snapshots:record:
         mkdir -p app/native-host-libs
         CORE_DIR="${CI_PROJECT_DIR}/.core-checkout"
         rm -rf "$CORE_DIR"
-        # Clone core at the exact tag matching the AAR version.
-        # git clone --branch=TAG --depth=1 fails for tags on some git versions,
-        # so we clone, fetch the tag, and checkout instead.
+        # Clone core at the exact commit matching the AAR version tag.
+        # CI_JOB_TOKEN shallow clones can't resolve tags directly, so
+        # resolve the tag SHA via ls-remote first, then fetch that commit.
         CORE_URL="https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git"
-        git clone --depth=1 "$CORE_URL" "$CORE_DIR"
-        if git -C "$CORE_DIR" fetch --depth=1 origin "refs/tags/${CORE_REF}:refs/tags/${CORE_REF}" 2>/dev/null; then
-          git -C "$CORE_DIR" checkout "${CORE_REF}"
-          echo "✅ Checked out core at ${CORE_REF}"
+        TAG_SHA=$(git ls-remote --tags "$CORE_URL" "${CORE_REF}" | awk '{print $1}' | head -1)
+        if [ -n "$TAG_SHA" ]; then
+          mkdir -p "$CORE_DIR" && git -C "$CORE_DIR" init
+          git -C "$CORE_DIR" remote add origin "$CORE_URL"
+          git -C "$CORE_DIR" fetch --depth=1 origin "$TAG_SHA"
+          git -C "$CORE_DIR" checkout FETCH_HEAD
+          echo "✅ Checked out core at ${CORE_REF} (${TAG_SHA:0:12})"
         else
-          echo "⚠️  Tag ${CORE_REF} not found — using main (may cause checksum mismatch)"
+          echo "⚠️  Tag ${CORE_REF} not found — cloning main (may cause checksum mismatch)"
+          git clone --depth=1 "$CORE_URL" "$CORE_DIR"
         fi
         # Clone themes repo and generate themes.json — required by include_bytes! in vauchi-platform
         THEMES_DIR="${CI_PROJECT_DIR}/themes"
