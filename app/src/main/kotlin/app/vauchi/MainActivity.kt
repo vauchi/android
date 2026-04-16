@@ -45,6 +45,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.ArchivedContactsScreen
@@ -74,6 +75,7 @@ import app.vauchi.ui.model.ContentUpdateStatus
 import app.vauchi.ui.model.ContentUpdateType
 import app.vauchi.ui.model.PasswordStrengthResult
 import app.vauchi.ui.theme.VauchiTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import uniffi.vauchi_platform.MobileApplyResult
 import uniffi.vauchi_platform.MobileContactCard
@@ -105,11 +107,6 @@ class MainActivity : FragmentActivity() {
             )
         }
 
-        Log.i(
-            "Vauchi",
-            "Build: v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) core=${coreVersion()} buildId=${BuildConfig.BUILD_ID}",
-        )
-
         // Handle deep link from cold start
         handleIncomingIntent(intent)
 
@@ -133,6 +130,15 @@ class MainActivity : FragmentActivity() {
                     )
                 }
             }
+        }
+
+        // Log build info on IO thread so native library load (11.9 MB .so)
+        // doesn't block the first frame (D5 cold start < 2s).
+        lifecycleScope.launch(Dispatchers.IO) {
+            Log.i(
+                "Vauchi",
+                "Build: v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) core=${coreVersion()} buildId=${BuildConfig.BUILD_ID}",
+            )
         }
     }
 
