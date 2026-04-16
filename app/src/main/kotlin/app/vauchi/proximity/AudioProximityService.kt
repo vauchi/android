@@ -14,19 +14,18 @@ import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
 import androidx.core.content.ContextCompat
-import uniffi.vauchi_platform.PlatformAudioHandler
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.min
 
 /**
  * Ultrasonic audio proximity verification service for Android.
- * Implements PlatformAudioHandler callback interface for vauchi-platform.
+ * Audio methods kept as inherent methods after PlatformAudioHandler removal (ADR-031).
  *
  * Uses AudioRecord for recording and AudioTrack for playback at 18-20 kHz.
  */
 class AudioProximityService(
     private val context: Context,
-) : PlatformAudioHandler {
+) {
     companion object {
         private const val ULTRASONIC_MIN_FREQ = 18000
         private const val ULTRASONIC_MAX_FREQ = 20000
@@ -47,13 +46,13 @@ class AudioProximityService(
     private var cachedRecord: AudioRecord? = null
     private var cachedSampleRate: Int = 0
 
-    // MARK: - PlatformAudioHandler Implementation
+    // MARK: - Audio Methods (formerly PlatformAudioHandler)
 
     /**
      * Check device capability for ultrasonic audio.
      * Returns: "full", "emit_only", "receive_only", or "none"
      */
-    override fun checkCapability(): String {
+    fun checkCapability(): String {
         val hasRecordPermission =
             ContextCompat.checkSelfPermission(
                 context,
@@ -92,7 +91,7 @@ class AudioProximityService(
      * Emit ultrasonic signal with given samples.
      * Returns empty string on success, error message on failure.
      */
-    override fun emitSignal(
+    fun emitSignal(
         samples: List<Float>,
         sampleRate: UInt,
     ): String {
@@ -205,7 +204,7 @@ class AudioProximityService(
      * Record audio and return samples.
      * Returns recorded samples, or empty list on timeout/error.
      */
-    override fun receiveSignal(
+    fun receiveSignal(
         timeoutMs: ULong,
         sampleRate: UInt,
     ): List<Float> {
@@ -258,12 +257,12 @@ class AudioProximityService(
     /**
      * Check if audio is currently active.
      */
-    override fun isActive(): Boolean = isRecording.get() || isPlaying.get()
+    fun isActive(): Boolean = isRecording.get() || isPlaying.get()
 
     /**
      * Stop any ongoing audio operation.
      */
-    override fun stop() {
+    fun stop() {
         isRecording.set(false)
         isPlaying.set(false)
 

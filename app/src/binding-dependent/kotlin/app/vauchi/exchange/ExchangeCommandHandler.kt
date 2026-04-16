@@ -6,11 +6,9 @@ package app.vauchi.exchange
 import android.content.Context
 import android.util.Log
 import app.vauchi.ble.BleExchangeService
-import app.vauchi.proximity.AudioProximityService
 import uniffi.vauchi_platform.MobileExchangeCommand
 import uniffi.vauchi_platform.MobileExchangeHardwareEvent
 import uniffi.vauchi_platform.MobileExchangeSession
-import uniffi.vauchi_platform.MobileProximityVerifier
 
 /**
  * Dispatches ADR-031 exchange commands from core to Android platform services.
@@ -153,34 +151,14 @@ class ExchangeCommandHandler(
     // ── Audio ───────────────────────────────────────────────────────
 
     private fun emitAudioChallenge(data: List<UByte>) {
-        val verifier =
-            MobileProximityVerifier(
-                AudioProximityService.getInstance(context),
-            )
-        val result = verifier.emitChallenge(data.map { it.toByte() }.toByteArray())
-        if (!result.success) {
-            reportError("Audio", result.error)
-        }
+        // No-op: MobileProximityVerifier removed in core v0.19.21 (ADR-031).
+        // Will be re-implemented with command/event proximity protocol.
+        reportUnavailable("Audio")
     }
 
     private fun listenForAudioResponse(timeoutMs: ULong) {
-        Thread {
-            val verifier =
-                MobileProximityVerifier(
-                    AudioProximityService.getInstance(context),
-                )
-            val received = verifier.listenForResponse(timeoutMs)
-            try {
-                session.applyHardwareEvent(
-                    MobileExchangeHardwareEvent.AudioResponseReceived(
-                        data = received,
-                    ),
-                )
-                drainAndDispatch()
-            } catch (e: Exception) {
-                reportError("Audio", e.message ?: "listen failed")
-            }
-        }.start()
+        // No-op: MobileProximityVerifier removed in core v0.19.21 (ADR-031).
+        reportUnavailable("Audio")
     }
 
     // ── Relay Escrow ────────────────────────────────────────────────
