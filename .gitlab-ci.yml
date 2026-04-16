@@ -403,11 +403,15 @@ test:screenshots:
       CORE_REF="v${AAR_VERSION:-main}"
       NATIVE_LIB="app/native-host-libs/libvauchi_platform.so"
       VERSION_STAMP="app/native-host-libs/.version"
-      # Rebuild if lib missing or version changed (stale cache → UniFFI checksum mismatch)
+      # Rebuild if lib missing or version changed.
+      # Always clean the cargo target dir on rebuild to prevent stale object
+      # files from causing UniFFI API checksum mismatches at runtime.
       if [ -f "$NATIVE_LIB" ] && [ -f "$VERSION_STAMP" ] && [ "$(cat "$VERSION_STAMP")" = "$CORE_REF" ]; then
         echo "✅ Native library cached for ${CORE_REF}: $NATIVE_LIB"
       else
         echo "📦 Building libvauchi_platform.so for host platform (${CORE_REF})..."
+        rm -rf "${CI_PROJECT_DIR}/.cargo-target" app/native-host-libs
+        mkdir -p app/native-host-libs
         CORE_DIR="${CI_PROJECT_DIR}/.core-checkout"
         rm -rf "$CORE_DIR"
         git clone --depth=1 --branch="${CORE_REF}" \
@@ -484,6 +488,8 @@ test:snapshots:record:
       if [ -f "$NATIVE_LIB" ] && [ -f "$VERSION_STAMP" ] && [ "$(cat "$VERSION_STAMP")" = "$CORE_REF" ]; then
         echo "✅ Native library cached for ${CORE_REF}: $NATIVE_LIB"
       else
+        rm -rf "${CI_PROJECT_DIR}/.cargo-target" app/native-host-libs
+        mkdir -p app/native-host-libs
         CORE_DIR="${CI_PROJECT_DIR}/.core-checkout"
         rm -rf "$CORE_DIR"
         git clone --depth=1 --branch="${CORE_REF}" \
