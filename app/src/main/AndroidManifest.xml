@@ -59,7 +59,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.Vauchi">
+            android:theme="@style/Theme.Vauchi.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

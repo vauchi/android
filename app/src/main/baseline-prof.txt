@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Baseline profile for Vauchi Android
+# Pre-compiles hot startup paths to reduce cold start latency.
+# ART uses this during install to AOT-compile listed classes/methods.
+#
+# Generated from cold start trace analysis (2026-04-16).
+# Update by running: ./gradlew :app:generateBaselineProfile
+
+# App entry points
+HSPLapp/vauchi/VauchiApp;->onCreate()V
+HSPLapp/vauchi/MainActivity;->onCreate(Landroid/os/Bundle;)V
+
+# Compose runtime (hot during first composition)
+HSPLandroidx/compose/runtime/**;->**(**)**
+HSPLandroidx/compose/ui/**;->**(**)**
+HSPLandroidx/compose/foundation/**;->**(**)**
+HSPLandroidx/compose/material3/**;->**(**)**
+
+# Activity + lifecycle
+HSPLandroidx/activity/ComponentActivity;->**(**)**
+HSPLandroidx/lifecycle/**;->**(**)**
+HSPLandroidx/fragment/app/FragmentActivity;->**(**)**
+
+# Navigation
+HSPLandroidx/navigation/**;->**(**)**
+
+# Theme + rendering
+HSPLapp/vauchi/ui/theme/**;->**(**)**
+HSPLandroidx/compose/material3/ColorSchemeKt;->**(**)**
+
+# WorkManager (scheduled in Application.onCreate)
+HSPLandroidx/work/**;->**(**)**

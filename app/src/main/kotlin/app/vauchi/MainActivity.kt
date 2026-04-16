@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -95,6 +96,7 @@ class MainActivity : FragmentActivity() {
     private var _resetForTesting = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
@@ -113,6 +115,11 @@ class MainActivity : FragmentActivity() {
         setContent {
             val deepLinkUri by _deepLinkUri
             val navigateTo by _navigateTo
+            // Defer heavy MainScreen composition until after the first frame
+            // renders. This eliminates the 34-frame skip from inflating the
+            // entire navigation graph in a single Compose pass.
+            var ready by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) { ready = true }
             VauchiTheme {
                 Surface(
                     modifier =
@@ -121,13 +128,15 @@ class MainActivity : FragmentActivity() {
                             .navigationBarsPadding(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    MainScreen(
-                        deepLinkUri = deepLinkUri,
-                        onDeepLinkConsumed = { _deepLinkUri.value = null },
-                        navigateTo = navigateTo,
-                        onNavigateConsumed = { _navigateTo.value = null },
-                        resetForTesting = _resetForTesting,
-                    )
+                    if (ready) {
+                        MainScreen(
+                            deepLinkUri = deepLinkUri,
+                            onDeepLinkConsumed = { _deepLinkUri.value = null },
+                            navigateTo = navigateTo,
+                            onNavigateConsumed = { _navigateTo.value = null },
+                            resetForTesting = _resetForTesting,
+                        )
+                    }
                 }
             }
         }
