@@ -448,13 +448,14 @@ class VauchiRepository(
     fun checkPasswordStrength(password: String) = uniffi.vauchi_platform.checkPasswordStrength(password)
 
     // Full backup operations (identity + contacts + own card + labels)
-    fun exportFullBackup(password: String): String = platform().exportFullBackup(password)
+    // TODO: wire once export_full_backup is exported via UniFFI
+    fun exportFullBackup(password: String): String = platform().exportBackup(password)
 
     fun importFullBackup(
         backupData: String,
         password: String,
     ) {
-        platform().importFullBackup(backupData, password)
+        platform().importBackup(backupData, password)
     }
 
     // Social network operations
