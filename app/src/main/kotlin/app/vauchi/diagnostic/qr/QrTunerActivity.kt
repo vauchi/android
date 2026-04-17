@@ -195,8 +195,19 @@ class QrTunerActivity : ComponentActivity() {
                 "zxing" -> ScannerMode.ZXing
                 "rqrr_raw" -> ScannerMode.RqrrRaw
                 "rqrr_preprocessed" -> ScannerMode.RqrrPreprocessed
+                "yolo_rqrr" -> ScannerMode.YoloRqrr
                 else -> ScannerMode.MlKit
             }
+
+        // Load YOLO model if needed
+        if (scannerMode == ScannerMode.YoloRqrr) {
+            log("Loading YOLO QR detector model...")
+            if (!RustScannerBridge.loadYoloModel(this)) {
+                log("ERROR: YOLO model load failed. Ensure qrdet-n.onnx is in app assets.")
+                running = false
+                return
+            }
+        }
 
         val t =
             CameraConfigTuner(

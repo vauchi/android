@@ -75,6 +75,9 @@ enum class ScannerMode {
 
     /** rqrr in Rust via UniFFI, with Tier 1 preprocessing pipeline. */
     RqrrPreprocessed,
+
+    /** YOLO detector → crop → rqrr decode via UniFFI. */
+    YoloRqrr,
 }
 
 /**
@@ -367,7 +370,7 @@ class CameraConfigTuner(
                         }
                     }
 
-                    ScannerMode.RqrrRaw, ScannerMode.RqrrPreprocessed -> {
+                    ScannerMode.RqrrRaw, ScannerMode.RqrrPreprocessed, ScannerMode.YoloRqrr -> {
                         // Rust rqrr path: synchronous decode via UniFFI
                         val bytes = extractYPlane(mediaImage)
                         val width = mediaImage.width
