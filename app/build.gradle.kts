@@ -183,7 +183,7 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.4.1")
     implementation("androidx.camera:camera-view:1.4.1")
 
-    // ML Kit for barcode scanning
+    // ML Kit for barcode scanning (on-device, works without Google Play Services)
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
     // VauchiPlatform native bindings
