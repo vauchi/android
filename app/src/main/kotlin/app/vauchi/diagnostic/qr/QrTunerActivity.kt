@@ -51,9 +51,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import app.vauchi.ui.theme.VauchiTheme
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
-import app.vauchi.ui.theme.VauchiTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -69,6 +69,12 @@ import kotlinx.coroutines.withContext
  *   adb shell am start -n app.vauchi/.diagnostic.qr.QrTunerActivity --es test quick
  *   adb shell am start -n app.vauchi/.diagnostic.qr.QrTunerActivity --es test throughput
  *   adb shell am start -n app.vauchi/.diagnostic.qr.QrTunerActivity  (interactive)
+ *
+ * Scanner selection (--es scanner <mode>):
+ *   mlkit              ML Kit barcode scanner (default)
+ *   zxing              ZXing MultiFormatReader
+ *   rqrr_raw           rqrr in Rust, no preprocessing
+ *   rqrr_preprocessed  rqrr in Rust, with Tier 1 preprocessing
  */
 @androidx.camera.camera2.interop.ExperimentalCamera2Interop
 class QrTunerActivity : ComponentActivity() {
@@ -183,20 +189,26 @@ class QrTunerActivity : ComponentActivity() {
         }
 
         val stabilization = intent?.getIntExtra("stabilization", -1)?.toLong()?.let { if (it >= 0) it else null }
-        val scanner = intent?.getStringExtra("scanner") // "zxing" or "mlkit" (default)
-        val useZxing = scanner == "zxing"
+        val scanner = intent?.getStringExtra("scanner") ?: "mlkit"
+        val scannerMode =
+            when (scanner) {
+                "zxing" -> ScannerMode.ZXing
+                "rqrr_raw" -> ScannerMode.RqrrRaw
+                "rqrr_preprocessed" -> ScannerMode.RqrrPreprocessed
+                else -> ScannerMode.MlKit
+            }
 
         val t =
             CameraConfigTuner(
                 context = this,
                 lifecycleOwner = this,
                 stabilizationMs = stabilization ?: 1500L,
-                useZxing = useZxing,
+                scannerMode = scannerMode,
             )
         tuner = t
 
         if (stabilization != null) log("Stabilization: ${stabilization}ms (custom)")
-        if (useZxing) log("Scanner: ZXing (direct)") else log("Scanner: ML Kit (default)")
+        log("Scanner: $scannerMode")
 
         val cameraFilter = intent?.getStringExtra("camera") // "front" or "rear"
 
