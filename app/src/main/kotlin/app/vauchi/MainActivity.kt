@@ -652,7 +652,7 @@ fun MainScreen(
 
                 Screen.Help -> {
                     HelpScreen(
-                        onBack = { currentScreen = Screen.More },
+                        viewModel = coreAppViewModel,
                     )
                 }
 
