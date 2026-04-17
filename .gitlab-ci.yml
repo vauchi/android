@@ -329,6 +329,7 @@ lint:no-proprietary-deps:
         | grep -v "play-services-basement" \
         | grep -v "play-services-tasks" \
         | grep -v "play-services-base" \
+        | grep -v "play-services-mlkit" \
         | grep -v "firebase-encoders" \
         | grep -v "firebase-components" \
         | grep -v "firebase-annotations" \
