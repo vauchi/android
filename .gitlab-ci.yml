@@ -399,7 +399,7 @@ test:screenshots:
     # Uses the same core ref that produced the published AAR bindings.
     # The self-hosted runner has Rust installed (shared with vauchi/core).
     - |
-      AAR_VERSION=$(grep 'vauchi-platform:' app/build.gradle.kts | sed -n 's/.*vauchi-platform:\([0-9.]*\).*/\1/p')
+      AAR_VERSION=$(grep 'vauchi-platform:' app/build.gradle.kts | sed -n 's/.*vauchi-platform:\([0-9.]*\).*/\1/p' | head -1)
       CORE_REF="v${AAR_VERSION:-main}"
       NATIVE_LIB="app/native-host-libs/libvauchi_platform.so"
       VERSION_STAMP="app/native-host-libs/.version"
@@ -489,7 +489,7 @@ test:snapshots:record:
     - echo "📸 Recording screenshot baselines..."
     # Build host-platform native library (same as test:screenshots)
     - |
-      AAR_VERSION=$(grep 'vauchi-platform:' app/build.gradle.kts | sed -n 's/.*vauchi-platform:\([0-9.]*\).*/\1/p')
+      AAR_VERSION=$(grep 'vauchi-platform:' app/build.gradle.kts | sed -n 's/.*vauchi-platform:\([0-9.]*\).*/\1/p' | head -1)
       CORE_REF="v${AAR_VERSION:-main}"
       NATIVE_LIB="app/native-host-libs/libvauchi_platform.so"
       VERSION_STAMP="app/native-host-libs/.version"
