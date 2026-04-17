@@ -414,20 +414,17 @@ test:screenshots:
         mkdir -p app/native-host-libs
         CORE_DIR="${CI_PROJECT_DIR}/.core-checkout"
         rm -rf "$CORE_DIR"
-        # Clone core at the exact commit matching the AAR version tag.
-        # CI_JOB_TOKEN shallow clones can't resolve tags directly, so
-        # resolve the tag SHA via ls-remote first, then fetch that commit.
-        CORE_URL="https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git"
-        TAG_SHA=$(git ls-remote --tags "$CORE_URL" "${CORE_REF}" | awk '{print $1}' | head -1)
-        if [ -n "$TAG_SHA" ]; then
-          mkdir -p "$CORE_DIR" && git -C "$CORE_DIR" init
-          git -C "$CORE_DIR" remote add origin "$CORE_URL"
-          git -C "$CORE_DIR" fetch --depth=1 origin "$TAG_SHA"
-          git -C "$CORE_DIR" checkout FETCH_HEAD
-          echo "✅ Checked out core at ${CORE_REF} (${TAG_SHA:0:12})"
+        # Download core source at the exact tag via GitLab API archive.
+        # git clone --depth=1 --branch=TAG fails for tags with CI_JOB_TOKEN,
+        # and fetch-by-SHA is unreliable. The API archive is always correct.
+        ARCHIVE_URL="${CI_SERVER_URL}/api/v4/projects/vauchi%2Fcore/repository/archive.tar.gz?sha=${CORE_REF}"
+        mkdir -p "$CORE_DIR"
+        if curl -fsSL --header "JOB-TOKEN: ${CI_JOB_TOKEN}" "$ARCHIVE_URL" | tar xz --strip-components=1 -C "$CORE_DIR"; then
+          echo "✅ Downloaded core archive at ${CORE_REF}"
         else
-          echo "⚠️  Tag ${CORE_REF} not found — cloning main (may cause checksum mismatch)"
-          git clone --depth=1 "$CORE_URL" "$CORE_DIR"
+          echo "⚠️  Archive download failed for ${CORE_REF} — cloning main"
+          rm -rf "$CORE_DIR"
+          git clone --depth=1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
         fi
         # Clone themes repo and generate themes.json — required by include_bytes! in vauchi-platform
         THEMES_DIR="${CI_PROJECT_DIR}/themes"
@@ -503,20 +500,17 @@ test:snapshots:record:
         mkdir -p app/native-host-libs
         CORE_DIR="${CI_PROJECT_DIR}/.core-checkout"
         rm -rf "$CORE_DIR"
-        # Clone core at the exact commit matching the AAR version tag.
-        # CI_JOB_TOKEN shallow clones can't resolve tags directly, so
-        # resolve the tag SHA via ls-remote first, then fetch that commit.
-        CORE_URL="https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git"
-        TAG_SHA=$(git ls-remote --tags "$CORE_URL" "${CORE_REF}" | awk '{print $1}' | head -1)
-        if [ -n "$TAG_SHA" ]; then
-          mkdir -p "$CORE_DIR" && git -C "$CORE_DIR" init
-          git -C "$CORE_DIR" remote add origin "$CORE_URL"
-          git -C "$CORE_DIR" fetch --depth=1 origin "$TAG_SHA"
-          git -C "$CORE_DIR" checkout FETCH_HEAD
-          echo "✅ Checked out core at ${CORE_REF} (${TAG_SHA:0:12})"
+        # Download core source at the exact tag via GitLab API archive.
+        # git clone --depth=1 --branch=TAG fails for tags with CI_JOB_TOKEN,
+        # and fetch-by-SHA is unreliable. The API archive is always correct.
+        ARCHIVE_URL="${CI_SERVER_URL}/api/v4/projects/vauchi%2Fcore/repository/archive.tar.gz?sha=${CORE_REF}"
+        mkdir -p "$CORE_DIR"
+        if curl -fsSL --header "JOB-TOKEN: ${CI_JOB_TOKEN}" "$ARCHIVE_URL" | tar xz --strip-components=1 -C "$CORE_DIR"; then
+          echo "✅ Downloaded core archive at ${CORE_REF}"
         else
-          echo "⚠️  Tag ${CORE_REF} not found — cloning main (may cause checksum mismatch)"
-          git clone --depth=1 "$CORE_URL" "$CORE_DIR"
+          echo "⚠️  Archive download failed for ${CORE_REF} — cloning main"
+          rm -rf "$CORE_DIR"
+          git clone --depth=1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
         fi
         # Clone themes repo and generate themes.json — required by include_bytes! in vauchi-platform
         THEMES_DIR="${CI_PROJECT_DIR}/themes"
