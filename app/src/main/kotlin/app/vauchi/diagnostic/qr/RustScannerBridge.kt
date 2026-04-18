@@ -33,6 +33,8 @@ object RustScannerBridge {
 
     /**
      * Scan a QR code from Y-plane luma data.
+     * All modes use rxing via UniFFI. MlKit and ZXing are legacy aliases
+     * mapped to RqrrRaw and RqrrPreprocessed respectively.
      *
      * @return decoded string, or null if decode failed.
      */
@@ -43,32 +45,20 @@ object RustScannerBridge {
         height: Int,
     ): String? =
         try {
-            when (mode) {
-                ScannerMode.YoloRqrr -> {
-                    Log.w(TAG, "[QR Tuner] YOLO not available, falling back to RqrrPreprocessed")
-                    diagnosticScanQr(
-                        backend = MobileScannerBackend.RQRR_PREPROCESSED,
-                        lumaData = lumaData,
-                        width = width.toUInt(),
-                        height = height.toUInt(),
-                    ).decoded
-                }
+            val backend =
+                when (mode) {
+                    ScannerMode.RqrrRaw, ScannerMode.ZXing -> MobileScannerBackend.RQRR_RAW
 
-                else -> {
-                    val backend =
-                        if (mode == ScannerMode.RqrrRaw) {
-                            MobileScannerBackend.RQRR_RAW
-                        } else {
-                            MobileScannerBackend.RQRR_PREPROCESSED
-                        }
-                    diagnosticScanQr(
-                        backend = backend,
-                        lumaData = lumaData,
-                        width = width.toUInt(),
-                        height = height.toUInt(),
-                    ).decoded
+                    ScannerMode.RqrrPreprocessed, ScannerMode.MlKit,
+                    ScannerMode.YoloRqrr,
+                    -> MobileScannerBackend.RQRR_PREPROCESSED
                 }
-            }
+            diagnosticScanQr(
+                backend = backend,
+                lumaData = lumaData,
+                width = width.toUInt(),
+                height = height.toUInt(),
+            ).decoded
         } catch (e: Exception) {
             Log.e(TAG, "[QR Tuner] Rust scanner call failed: ${e.message}")
             null

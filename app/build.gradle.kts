@@ -175,16 +175,10 @@ dependencies {
     // WorkManager for background sync
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
-    // QR Code generation and scanning (ZXing)
-    implementation("com.google.zxing:core:3.5.3")
-
-    // CameraX for QR scanning
+    // CameraX for QR scanning (rxing via UniFFI replaces ML Kit + ZXing)
     implementation("androidx.camera:camera-camera2:1.4.1")
     implementation("androidx.camera:camera-lifecycle:1.4.1")
     implementation("androidx.camera:camera-view:1.4.1")
-
-    // ML Kit for barcode scanning (on-device, works without Google Play Services)
-    implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
     // VauchiPlatform native bindings
     if (useLocalBindings) {

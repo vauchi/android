@@ -18,14 +18,13 @@ import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
+import uniffi.vauchi_platform.MobileScannerBackend
+import uniffi.vauchi_platform.diagnosticScanQr
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -62,21 +61,23 @@ data class ConfigResult(
 
 /**
  * Scanner backend selection for benchmark comparison.
+ * All modes now use rxing via UniFFI — MlKit and ZXing are legacy aliases
+ * mapped to RqrrRaw and RqrrPreprocessed respectively.
  */
 enum class ScannerMode {
-    /** Google ML Kit barcode scanner (default, async). */
+    /** Legacy alias — mapped to RqrrRaw (rxing via UniFFI, no preprocessing). */
     MlKit,
 
-    /** ZXing MultiFormatReader (synchronous, from Y-plane). */
+    /** Legacy alias — mapped to RqrrRaw (rxing via UniFFI, no preprocessing). */
     ZXing,
 
-    /** rqrr in Rust via UniFFI, no preprocessing. */
+    /** rxing in Rust via UniFFI, no preprocessing. */
     RqrrRaw,
 
-    /** rqrr in Rust via UniFFI, with Tier 1 preprocessing pipeline. */
+    /** rxing in Rust via UniFFI, with Tier 1 preprocessing pipeline. */
     RqrrPreprocessed,
 
-    /** YOLO detector → crop → rqrr decode via UniFFI. */
+    /** YOLO detector → crop → rxing decode via UniFFI. */
     YoloRqrr,
 }
 
@@ -123,28 +124,18 @@ class CameraConfigTuner(
         }
     }
 
-    /** Effective scanner mode, accounting for legacy useZxing param. */
+    /** Effective scanner mode, mapping legacy MlKit/ZXing to rxing backends. */
     @Suppress("DEPRECATION")
     private val effectiveMode: ScannerMode =
-        if (useZxing && scannerMode == ScannerMode.MlKit) ScannerMode.ZXing else scannerMode
+        when {
+            useZxing && scannerMode == ScannerMode.MlKit -> ScannerMode.RqrrRaw
+            scannerMode == ScannerMode.MlKit -> ScannerMode.RqrrPreprocessed
+            scannerMode == ScannerMode.ZXing -> ScannerMode.RqrrRaw
+            else -> scannerMode
+        }
 
     private val thermalMonitor = ThermalMonitor(context)
     private val analysisExecutor = Executors.newSingleThreadExecutor()
-    private val barcodeScanner = BarcodeScanning.getClient()
-    private val zxingReader =
-        if (effectiveMode == ScannerMode.ZXing) {
-            com.google.zxing.MultiFormatReader().apply {
-                setHints(
-                    mapOf(
-                        com.google.zxing.DecodeHintType.POSSIBLE_FORMATS to
-                            listOf(com.google.zxing.BarcodeFormat.QR_CODE),
-                        com.google.zxing.DecodeHintType.TRY_HARDER to true,
-                    ),
-                )
-            }
-        } else {
-            null
-        }
 
     /**
      * Generates the full sweep matrix: 2 cameras x 2 resolutions x 3 zooms x 3 EVs = 36 configs.
@@ -315,126 +306,47 @@ class CameraConfigTuner(
             @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
             val mediaImage = imageProxy.image
             if (mediaImage != null) {
-                when (effectiveMode) {
-                    ScannerMode.ZXing -> {
-                        // ZXing path: synchronous decode from Y plane
-                        try {
-                            val width = mediaImage.width
-                            val height = mediaImage.height
-                            val bytes = extractYPlane(mediaImage)
-                            val source =
-                                com.google.zxing.PlanarYUVLuminanceSource(
-                                    bytes,
-                                    width,
-                                    height,
-                                    0,
-                                    0,
-                                    width,
-                                    height,
-                                    false,
-                                )
-                            val binaryBitmap =
-                                com.google.zxing.BinaryBitmap(
-                                    com.google.zxing.common
-                                        .HybridBinarizer(source),
-                                )
-                            val result = zxingReader!!.decodeWithState(binaryBitmap)
-                            val elapsedNs = System.nanoTime() - startNs
-                            val elapsedMs = elapsedNs / 1_000_000L
-                            framesDecoded.incrementAndGet().let { decoded ->
-                                if (decoded == 1) {
-                                    val startMs = cameraStartTimeMs.get()
-                                    if (startMs > 0) firstDecodeTimeMs.set(System.currentTimeMillis() - startMs)
-                                    val preview =
-                                        result.text?.take(50)?.let { if (result.text.length > 50) "$it..." else it } ?: "(no content)"
-                                    log("  -> ZXing decoded (${firstDecodeTimeMs.get()}ms): $preview")
-                                }
-                            }
-                            synchronized(latencies) { latencies.add(elapsedMs) }
-                            totalLatencyNs.addAndGet(elapsedNs)
-                        } catch (_: com.google.zxing.NotFoundException) {
-                            val elapsedNs = System.nanoTime() - startNs
-                            synchronized(latencies) { latencies.add(elapsedNs / 1_000_000L) }
-                            totalLatencyNs.addAndGet(elapsedNs)
-                        } catch (e: Exception) {
-                            val elapsedNs = System.nanoTime() - startNs
-                            synchronized(latencies) { latencies.add(elapsedNs / 1_000_000L) }
-                            totalLatencyNs.addAndGet(elapsedNs)
-                        } finally {
-                            zxingReader?.reset()
-                        }
-                        imageProxy.close()
-                        if (frameIndex >= FRAMES_PER_CONFIG && !analysisComplete.isCompleted) {
-                            analysisComplete.complete(Unit)
-                        }
+                // All modes use rxing via UniFFI (synchronous decode from Y plane)
+                val bytes = extractYPlane(mediaImage)
+                val width = mediaImage.width
+                val height = mediaImage.height
+                val backend =
+                    when (effectiveMode) {
+                        ScannerMode.RqrrRaw, ScannerMode.ZXing -> MobileScannerBackend.RQRR_RAW
+                        else -> MobileScannerBackend.RQRR_PREPROCESSED
                     }
-
-                    ScannerMode.RqrrRaw, ScannerMode.RqrrPreprocessed, ScannerMode.YoloRqrr -> {
-                        // Rust rqrr path: synchronous decode via UniFFI
-                        val bytes = extractYPlane(mediaImage)
-                        val width = mediaImage.width
-                        val height = mediaImage.height
-                        val scanResult =
-                            RustScannerBridge.scan(
-                                effectiveMode,
-                                bytes,
-                                width,
-                                height,
-                            )
-                        val elapsedNs = System.nanoTime() - startNs
-                        val elapsedMs = elapsedNs / 1_000_000L
-                        if (scanResult != null) {
-                            framesDecoded.incrementAndGet().let { decoded ->
-                                if (decoded == 1) {
-                                    val startMs = cameraStartTimeMs.get()
-                                    if (startMs > 0) firstDecodeTimeMs.set(System.currentTimeMillis() - startMs)
-                                    val preview = if (scanResult.length > 50) scanResult.take(50) + "..." else scanResult
-                                    val backendName = if (effectiveMode == ScannerMode.RqrrRaw) "rqrr-raw" else "rqrr-preproc"
-                                    log("  -> $backendName decoded (${firstDecodeTimeMs.get()}ms): $preview")
-                                }
+                try {
+                    val scanResult =
+                        diagnosticScanQr(
+                            backend = backend,
+                            lumaData = bytes,
+                            width = width.toUInt(),
+                            height = height.toUInt(),
+                        )
+                    val elapsedNs = System.nanoTime() - startNs
+                    val elapsedMs = elapsedNs / 1_000_000L
+                    scanResult.decoded?.let { content ->
+                        framesDecoded.incrementAndGet().let { decoded ->
+                            if (decoded == 1) {
+                                val startMs = cameraStartTimeMs.get()
+                                if (startMs > 0) firstDecodeTimeMs.set(System.currentTimeMillis() - startMs)
+                                val preview = if (content.length > 50) content.take(50) + "..." else content
+                                val backendName = if (backend == MobileScannerBackend.RQRR_RAW) "rqrr-raw" else "rqrr-preproc"
+                                log("  -> $backendName decoded (${firstDecodeTimeMs.get()}ms): $preview")
                             }
                         }
-                        synchronized(latencies) { latencies.add(elapsedMs) }
-                        totalLatencyNs.addAndGet(elapsedNs)
-                        imageProxy.close()
-                        if (frameIndex >= FRAMES_PER_CONFIG && !analysisComplete.isCompleted) {
-                            analysisComplete.complete(Unit)
-                        }
                     }
-
-                    ScannerMode.MlKit -> {
-                        // ML Kit path: async decode
-                        val inputImage =
-                            InputImage.fromMediaImage(
-                                mediaImage,
-                                imageProxy.imageInfo.rotationDegrees,
-                            )
-                        barcodeScanner
-                            .process(inputImage)
-                            .addOnSuccessListener { barcodes ->
-                                val elapsedNs = System.nanoTime() - startNs
-                                val elapsedMs = elapsedNs / 1_000_000L
-                                val qrCodes = barcodes.filter { it.format == Barcode.FORMAT_QR_CODE }
-                                if (qrCodes.isNotEmpty()) {
-                                    val decoded = framesDecoded.incrementAndGet()
-                                    if (decoded == 1) {
-                                        val startMs = cameraStartTimeMs.get()
-                                        if (startMs > 0) firstDecodeTimeMs.set(System.currentTimeMillis() - startMs)
-                                        val content = qrCodes.first().rawValue ?: "(no content)"
-                                        val preview = if (content.length > 50) content.take(50) + "..." else content
-                                        log("  -> MLKit decoded (${firstDecodeTimeMs.get()}ms): $preview")
-                                    }
-                                }
-                                synchronized(latencies) { latencies.add(elapsedMs) }
-                                totalLatencyNs.addAndGet(elapsedNs)
-                            }.addOnCompleteListener {
-                                imageProxy.close()
-                                if (frameIndex >= FRAMES_PER_CONFIG && !analysisComplete.isCompleted) {
-                                    analysisComplete.complete(Unit)
-                                }
-                            }
-                    }
-                } // when
+                    synchronized(latencies) { latencies.add(elapsedMs) }
+                    totalLatencyNs.addAndGet(elapsedNs)
+                } catch (e: Exception) {
+                    val elapsedNs = System.nanoTime() - startNs
+                    synchronized(latencies) { latencies.add(elapsedNs / 1_000_000L) }
+                    totalLatencyNs.addAndGet(elapsedNs)
+                }
+                imageProxy.close()
+                if (frameIndex >= FRAMES_PER_CONFIG && !analysisComplete.isCompleted) {
+                    analysisComplete.complete(Unit)
+                }
             } else {
                 imageProxy.close()
                 if (frameIndex >= FRAMES_PER_CONFIG && !analysisComplete.isCompleted) {
@@ -500,7 +412,7 @@ class CameraConfigTuner(
             log("Timeout waiting for frames on config ${config.id}")
         }
 
-        // Small delay to let final ML Kit callbacks complete
+        // Small delay to let final analyzer callbacks complete
         delay(300)
 
         // Unbind on main thread
@@ -598,7 +510,6 @@ class CameraConfigTuner(
      * Releases resources.
      */
     fun release() {
-        barcodeScanner.close()
         analysisExecutor.shutdown()
     }
 

@@ -32,9 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.theme.VauchiTheme
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.EncodeHintType
-import com.google.zxing.qrcode.QRCodeWriter
+import app.vauchi.util.generateQrBitmap
 import kotlinx.coroutines.delay
 
 /**
@@ -242,13 +240,17 @@ class QrBeaconActivity : ComponentActivity() {
         for (seq in 1..count) {
             val payload = generatePayload(seq, dataSize)
             try {
-                bitmaps.add(generateQrBitmap(payload, lowErrorCorrection = forceLowEcc, gray = gray, inverted = inverted, light = light))
+                bitmaps.add(
+                    generateBeaconQrBitmap(payload, lowErrorCorrection = forceLowEcc, gray = gray, inverted = inverted, light = light),
+                )
                 if (seq == 1) log("Payload sample (${payload.length} chars): ${payload.take(60)}...")
             } catch (e: Exception) {
                 log("ERROR generating QR for seq=$seq size=$dataSize: ${e.message}")
                 if (!forceLowEcc) {
                     try {
-                        bitmaps.add(generateQrBitmap(payload, lowErrorCorrection = true, gray = gray, inverted = inverted, light = light))
+                        bitmaps.add(
+                            generateBeaconQrBitmap(payload, lowErrorCorrection = true, gray = gray, inverted = inverted, light = light),
+                        )
                         log("  -> Succeeded with low error correction")
                     } catch (e2: Exception) {
                         log("  -> FAILED even with low EC: ${e2.message}")
@@ -288,21 +290,14 @@ class QrBeaconActivity : ComponentActivity() {
      * - inverted: white on black
      * - light: light gray (#808080) on white
      */
-    private fun generateQrBitmap(
+    private fun generateBeaconQrBitmap(
         data: String,
         lowErrorCorrection: Boolean = false,
         gray: Boolean = false,
         inverted: Boolean = false,
         light: Boolean = false,
     ): Bitmap {
-        val writer = QRCodeWriter()
-        val hints = mutableMapOf<EncodeHintType, Any>()
-        if (lowErrorCorrection) {
-            hints[EncodeHintType.ERROR_CORRECTION] = com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.L
-        }
-        hints[EncodeHintType.MARGIN] = 2
-        val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, QR_RENDER_SIZE, QR_RENDER_SIZE, hints)
-        val bitmap = Bitmap.createBitmap(QR_RENDER_SIZE, QR_RENDER_SIZE, Bitmap.Config.RGB_565)
+        val ecc = if (lowErrorCorrection) "L" else "M"
 
         val (fgColor, bgColor) =
             when {
@@ -312,12 +307,7 @@ class QrBeaconActivity : ComponentActivity() {
                 else -> android.graphics.Color.BLACK to android.graphics.Color.WHITE
             }
 
-        for (x in 0 until QR_RENDER_SIZE) {
-            for (y in 0 until QR_RENDER_SIZE) {
-                bitmap.setPixel(x, y, if (bitMatrix[x, y]) fgColor else bgColor)
-            }
-        }
-        return bitmap
+        return generateQrBitmap(data, QR_RENDER_SIZE, ecc, fgColor, bgColor)
     }
 
     private fun logBrightness() {

@@ -39,11 +39,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
+import app.vauchi.util.generateQrBitmap
+import uniffi.vauchi_platform.MobileScannerBackend
+import uniffi.vauchi_platform.diagnosticScanQr
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -52,15 +50,15 @@ import java.util.concurrent.atomic.AtomicReference
 private const val TAG = "QrDiag"
 
 /**
- * QR Code diagnostic screen — tests QR generation, camera capture, and ZXing
+ * QR Code diagnostic screen — tests QR generation, camera capture, and rxing
  * detection with configurable parameters. Use this to find the optimal setup
  * for the multi-stage exchange protocol.
  *
  * Features:
  * - Generates QR codes at different complexity levels (matching protocol stages)
  * - Front/rear camera toggle
- * - Live detection stats (frames, detections, resolution, binarizer)
- * - Tests both HybridBinarizer and GlobalHistogramBinarizer
+ * - Live detection stats (frames, detections, resolution)
+ * - Uses rxing via UniFFI for QR decoding (no Google Play Services dependency)
  * - Shows last detected content and timing
  * - Saves diagnostic frames for offline analysis
  */
@@ -99,7 +97,7 @@ fun QrDiagnosticScreen(onBack: () -> Unit) {
     val hybridHits by stats.hybridHitsState
     val globalHits by stats.globalHitsState
     val cropHits by stats.cropHitsState
-    val mlkitHits by stats.mlkitHitsState
+    val rxingHits by stats.rxingHitsState
 
     // Generate the test QR bitmap
     val qrContent = remember(qrComplexity) { qrComplexity.sampleContent() }
@@ -247,7 +245,7 @@ fun QrDiagnosticScreen(onBack: () -> Unit) {
                     StatRow("Frames", "$frameCount")
                     StatRow("Detections", "$detectionCount")
                     StatRow("Rate", if (frameCount > 0) "${"%.1f".format(detectionCount * 100.0 / frameCount)}%" else "—")
-                    StatRow("ML Kit hits", "$mlkitHits")
+                    StatRow("rxing hits", "$rxingHits")
                     if (lastDetected.isNotEmpty()) {
                         StatRow("Last detected", lastDetected.take(60) + if (lastDetected.length > 60) "..." else "")
                     }
@@ -351,7 +349,7 @@ class DiagnosticStats {
     private val _hybridHits = AtomicInteger(0)
     private val _globalHits = AtomicInteger(0)
     private val _cropHits = AtomicInteger(0)
-    private val _mlkitHits = AtomicInteger(0)
+    private val _rxingHits = AtomicInteger(0)
     private val _lastDetected = AtomicReference("")
     private val _lastError = AtomicReference("")
     private val _resolution = AtomicReference("—")
@@ -363,7 +361,7 @@ class DiagnosticStats {
     val hybridHitsState = mutableIntStateOf(0)
     val globalHitsState = mutableIntStateOf(0)
     val cropHitsState = mutableIntStateOf(0)
-    val mlkitHitsState = mutableIntStateOf(0)
+    val rxingHitsState = mutableIntStateOf(0)
     val lastDetectedState = mutableStateOf("")
     val lastErrorState = mutableStateOf("")
     val resolutionState = mutableStateOf("—")
@@ -385,7 +383,7 @@ class DiagnosticStats {
         _detectionCount.incrementAndGet()
         _lastDetected.set(content)
         when {
-            "mlkit" in method -> _mlkitHits.incrementAndGet()
+            "rxing" in method -> _rxingHits.incrementAndGet()
             "crop" in method -> _cropHits.incrementAndGet()
             "global" in method -> _globalHits.incrementAndGet()
             else -> _hybridHits.incrementAndGet()
@@ -404,7 +402,7 @@ class DiagnosticStats {
         _hybridHits.set(0)
         _globalHits.set(0)
         _cropHits.set(0)
-        _mlkitHits.set(0)
+        _rxingHits.set(0)
         _lastDetected.set("")
         _lastError.set("")
         syncToCompose()
@@ -420,7 +418,7 @@ class DiagnosticStats {
         hybridHitsState.intValue = _hybridHits.get()
         globalHitsState.intValue = _globalHits.get()
         cropHitsState.intValue = _cropHits.get()
-        mlkitHitsState.intValue = _mlkitHits.get()
+        rxingHitsState.intValue = _rxingHits.get()
         lastDetectedState.value = _lastDetected.get()
         lastErrorState.value = _lastError.get()
         resolutionState.value = _resolution.get()
@@ -486,7 +484,7 @@ private fun DiagnosticCameraScanner(
                                     .also { analysis ->
                                         analysis.setAnalyzer(
                                             cameraExecutor,
-                                            MlKitQrAnalyzer(stats = stats),
+                                            DiagnosticRxingAnalyzer(stats = stats),
                                         )
                                     }
 
@@ -530,18 +528,11 @@ private fun DiagnosticCameraScanner(
     }
 }
 
-// --- ML Kit QR analyzer ---
+// --- rxing QR analyzer (via UniFFI) ---
 
-class MlKitQrAnalyzer(
+class DiagnosticRxingAnalyzer(
     private val stats: DiagnosticStats,
 ) : ImageAnalysis.Analyzer {
-    private val scanner =
-        BarcodeScanning.getClient(
-            com.google.mlkit.vision.barcode.BarcodeScannerOptions
-                .Builder()
-                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-                .build(),
-        )
     private var frameIdx = 0
 
     @androidx.camera.core.ExperimentalGetImage
@@ -556,24 +547,46 @@ class MlKitQrAnalyzer(
         val rotation = imageProxy.imageInfo.rotationDegrees
         stats.recordFrame(imageProxy.width, imageProxy.height, rotation)
 
-        val inputImage = InputImage.fromMediaImage(mediaImage, rotation)
+        try {
+            // Extract Y-plane (luma) directly — no RGB conversion
+            val yPlane = mediaImage.planes[0]
+            val width = mediaImage.width
+            val height = mediaImage.height
+            val rowStride = yPlane.rowStride
+            val bytes =
+                if (rowStride == width) {
+                    val buf = yPlane.buffer
+                    ByteArray(buf.remaining()).also { buf.get(it) }
+                } else {
+                    val buf = yPlane.buffer
+                    val data = ByteArray(width * height)
+                    for (row in 0 until height) {
+                        buf.position(row * rowStride)
+                        buf.get(data, row * width, width)
+                    }
+                    data
+                }
 
-        scanner
-            .process(inputImage)
-            .addOnSuccessListener { barcodes ->
-                for (barcode in barcodes) {
-                    val text = barcode.rawValue ?: continue
-                    Log.i(TAG, "DETECTED [mlkit]: ${text.take(40)}...")
-                    stats.recordDetection(text, "mlkit")
-                }
-            }.addOnFailureListener { e ->
-                if (frameIdx % 60 == 1) {
-                    Log.w(TAG, "ML Kit error: ${e.message}")
-                    stats.recordError("mlkit: ${e.message}")
-                }
-            }.addOnCompleteListener {
-                imageProxy.close()
+            val result =
+                diagnosticScanQr(
+                    backend = MobileScannerBackend.RQRR_PREPROCESSED,
+                    lumaData = bytes,
+                    width = width.toUInt(),
+                    height = height.toUInt(),
+                )
+
+            result.decoded?.let { text ->
+                Log.i(TAG, "DETECTED [rxing]: ${text.take(40)}...")
+                stats.recordDetection(text, "rxing")
             }
+        } catch (e: Exception) {
+            if (frameIdx % 60 == 1) {
+                Log.w(TAG, "rxing error: ${e.message}")
+                stats.recordError("rxing: ${e.message}")
+            }
+        } finally {
+            imageProxy.close()
+        }
     }
 }
 
@@ -584,30 +597,7 @@ private fun generateDiagnosticQr(
     ecLevelStr: String,
 ): Bitmap? =
     try {
-        val ecLevel =
-            when (ecLevelStr) {
-                "L" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.L
-                "M" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M
-                "Q" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.Q
-                "H" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.H
-                else -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M
-            }
-        val writer = QRCodeWriter()
-        val hints =
-            mapOf(
-                com.google.zxing.EncodeHintType.ERROR_CORRECTION to ecLevel,
-                com.google.zxing.EncodeHintType.MARGIN to 2,
-            )
-        val bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, 512, 512, hints)
-        val w = bitMatrix.width
-        val h = bitMatrix.height
-        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565)
-        for (x in 0 until w) {
-            for (y in 0 until h) {
-                bitmap.setPixel(x, y, if (bitMatrix[x, y]) 0xFF000000.toInt() else 0xFFFFFFFF.toInt())
-            }
-        }
-        bitmap
+        generateQrBitmap(content, 512, ecLevelStr)
     } catch (e: Exception) {
         Log.e(TAG, "QR generation failed: ${e.message}")
         null

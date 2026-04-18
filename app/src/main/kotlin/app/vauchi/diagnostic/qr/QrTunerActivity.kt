@@ -52,8 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import app.vauchi.ui.theme.VauchiTheme
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
+import app.vauchi.util.generateQrBitmap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -72,10 +71,10 @@ import kotlinx.coroutines.withContext
  *   adb shell am start -n app.vauchi/.diagnostic.qr.QrTunerActivity  (interactive)
  *
  * Scanner selection (--es scanner <mode>):
- *   mlkit              ML Kit barcode scanner (default)
- *   zxing              ZXing MultiFormatReader
- *   rqrr_raw           rqrr in Rust, no preprocessing
- *   rqrr_preprocessed  rqrr in Rust, with Tier 1 preprocessing
+ *   mlkit              Legacy alias — mapped to rqrr_preprocessed (rxing via UniFFI)
+ *   zxing              Legacy alias — mapped to rqrr_raw (rxing via UniFFI)
+ *   rqrr_raw           rxing in Rust via UniFFI, no preprocessing
+ *   rqrr_preprocessed  rxing in Rust via UniFFI, with Tier 1 preprocessing
  */
 @androidx.camera.camera2.interop.ExperimentalCamera2Interop
 class QrTunerActivity : ComponentActivity() {
@@ -152,7 +151,11 @@ class QrTunerActivity : ComponentActivity() {
         val mode = intent?.getStringExtra("mode") // "dual" = show QR while scanning
         if (mode == "dual") {
             showQrOverlay = true
-            qrBitmap = generateQrBitmap("wb://BIDIRECTIONAL_TEST_${android.os.Build.MODEL}_${System.currentTimeMillis()}")
+            qrBitmap =
+                generateQrBitmap(
+                    "wb://BIDIRECTIONAL_TEST_${android.os.Build.MODEL}_${System.currentTimeMillis()}",
+                    600,
+                )
             log("DUAL MODE: Showing QR on screen while scanning")
         }
         if (!cameraGranted) {
@@ -161,19 +164,6 @@ class QrTunerActivity : ComponentActivity() {
             return
         }
         startSweep(testName)
-    }
-
-    private fun generateQrBitmap(data: String): Bitmap {
-        val writer = QRCodeWriter()
-        val size = 600
-        val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, size, size)
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
-        for (x in 0 until size) {
-            for (y in 0 until size) {
-                bitmap.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
-            }
-        }
-        return bitmap
     }
 
     private var throughputTester: QrThroughputTester? = null

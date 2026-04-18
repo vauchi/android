@@ -15,13 +15,12 @@ import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import org.json.JSONArray
 import org.json.JSONObject
+import uniffi.vauchi_platform.MobileScannerBackend
+import uniffi.vauchi_platform.diagnosticScanQr
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -72,7 +71,6 @@ class QrThroughputTester(
     }
 
     private val analysisExecutor = Executors.newSingleThreadExecutor()
-    private val barcodeScanner = BarcodeScanning.getClient()
 
     /**
      * Run a throughput measurement for the given duration.
@@ -117,36 +115,46 @@ class QrThroughputTester(
             @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
             val mediaImage = imageProxy.image
             if (mediaImage != null) {
-                val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-                barcodeScanner
-                    .process(inputImage)
-                    .addOnSuccessListener { barcodes ->
-                        val elapsedNs = System.nanoTime() - startNs
-                        synchronized(latencies) { latencies.add(elapsedNs / 1_000_000L) }
+                try {
+                    val bytes = CameraConfigTuner.extractYPlane(mediaImage)
+                    val width = mediaImage.width
+                    val height = mediaImage.height
 
-                        val qrCodes = barcodes.filter { it.format == Barcode.FORMAT_QR_CODE }
-                        for (qr in qrCodes) {
-                            val content = qr.rawValue ?: continue
-                            val count = totalDecodes.incrementAndGet()
-                            totalBytes.addAndGet(content.length.toLong())
-                            allContents[content] = (allContents[content] ?: 0) + 1
+                    val result =
+                        diagnosticScanQr(
+                            backend = MobileScannerBackend.RQRR_PREPROCESSED,
+                            lumaData = bytes,
+                            width = width.toUInt(),
+                            height = height.toUInt(),
+                        )
 
-                            // Track first decode
-                            if (count == 1) {
-                                val st = startTimeMs.get()
-                                if (st > 0) firstDecodeMs.set(System.currentTimeMillis() - st)
-                            }
+                    val elapsedNs = System.nanoTime() - startNs
+                    synchronized(latencies) { latencies.add(elapsedNs / 1_000_000L) }
 
-                            // Extract sequence from T:NNN: format
-                            val seq = extractSequence(content)
-                            if (seq != null && !uniqueSeqs.containsKey(seq)) {
-                                uniqueSeqs[seq] = System.currentTimeMillis()
-                                log("  Unique QR #${uniqueSeqs.size}: seq=$seq (${content.length}B)")
-                            }
+                    result.decoded?.let { content ->
+                        val count = totalDecodes.incrementAndGet()
+                        totalBytes.addAndGet(content.length.toLong())
+                        allContents[content] = (allContents[content] ?: 0) + 1
+
+                        // Track first decode
+                        if (count == 1) {
+                            val st = startTimeMs.get()
+                            if (st > 0) firstDecodeMs.set(System.currentTimeMillis() - st)
                         }
-                    }.addOnCompleteListener {
-                        imageProxy.close()
+
+                        // Extract sequence from T:NNN: format
+                        val seq = extractSequence(content)
+                        if (seq != null && !uniqueSeqs.containsKey(seq)) {
+                            uniqueSeqs[seq] = System.currentTimeMillis()
+                            log("  Unique QR #${uniqueSeqs.size}: seq=$seq (${content.length}B)")
+                        }
                     }
+                } catch (e: Exception) {
+                    val elapsedNs = System.nanoTime() - startNs
+                    synchronized(latencies) { latencies.add(elapsedNs / 1_000_000L) }
+                } finally {
+                    imageProxy.close()
+                }
             } else {
                 imageProxy.close()
             }
@@ -268,7 +276,6 @@ class QrThroughputTester(
     }
 
     fun release() {
-        barcodeScanner.close()
         analysisExecutor.shutdown()
     }
 
