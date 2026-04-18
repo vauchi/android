@@ -175,7 +175,10 @@ dependencies {
     // WorkManager for background sync
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
-    // CameraX for QR scanning (rxing via UniFFI replaces ML Kit + ZXing)
+    // QR Code generation (ZXing)
+    implementation("com.google.zxing:core:3.5.3")
+
+    // CameraX for QR scanning (rxing via UniFFI replaces ML Kit)
     implementation("androidx.camera:camera-camera2:1.4.1")
     implementation("androidx.camera:camera-lifecycle:1.4.1")
     implementation("androidx.camera:camera-view:1.4.1")

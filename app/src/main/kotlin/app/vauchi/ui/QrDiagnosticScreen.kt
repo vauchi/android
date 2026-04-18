@@ -39,7 +39,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import app.vauchi.util.generateQrBitmap
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 import uniffi.vauchi_platform.MobileScannerBackend
 import uniffi.vauchi_platform.diagnosticScanQr
 import java.util.concurrent.Executors
@@ -597,7 +598,30 @@ private fun generateDiagnosticQr(
     ecLevelStr: String,
 ): Bitmap? =
     try {
-        generateQrBitmap(content, 512, ecLevelStr)
+        val ecLevel =
+            when (ecLevelStr) {
+                "L" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.L
+                "M" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M
+                "Q" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.Q
+                "H" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.H
+                else -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M
+            }
+        val writer = QRCodeWriter()
+        val hints =
+            mapOf(
+                com.google.zxing.EncodeHintType.ERROR_CORRECTION to ecLevel,
+                com.google.zxing.EncodeHintType.MARGIN to 2,
+            )
+        val bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, 512, 512, hints)
+        val w = bitMatrix.width
+        val h = bitMatrix.height
+        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565)
+        for (x in 0 until w) {
+            for (y in 0 until h) {
+                bitmap.setPixel(x, y, if (bitMatrix[x, y]) 0xFF000000.toInt() else 0xFFFFFFFF.toInt())
+            }
+        }
+        bitmap
     } catch (e: Exception) {
         Log.e(TAG, "QR generation failed: ${e.message}")
         null

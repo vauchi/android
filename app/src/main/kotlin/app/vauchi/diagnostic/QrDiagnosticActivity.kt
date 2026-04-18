@@ -24,7 +24,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import app.vauchi.ui.theme.VauchiTheme
-import app.vauchi.util.generateQrBitmap
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.qrcode.QRCodeWriter
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import kotlinx.coroutines.*
 
 private const val TAG = "Vauchi"
@@ -102,6 +105,13 @@ class QrDiagnosticActivity : ComponentActivity() {
     private fun testQrGeneration() {
         log("--- Test: QR Generation ---")
         val ecLevels = listOf("L", "M", "Q", "H")
+        val ecMap =
+            mapOf(
+                "L" to ErrorCorrectionLevel.L,
+                "M" to ErrorCorrectionLevel.M,
+                "Q" to ErrorCorrectionLevel.Q,
+                "H" to ErrorCorrectionLevel.H,
+            )
         var passed = 0
         var failed = 0
 
@@ -135,13 +145,19 @@ class QrDiagnosticActivity : ComponentActivity() {
             var allOk = true
             for (ec in ecLevels) {
                 try {
-                    val bitmap = generateQrBitmap(level.content, 512, ec)
-                    if (bitmap.width > 0) {
+                    val writer = QRCodeWriter()
+                    val hints =
+                        mapOf(
+                            EncodeHintType.ERROR_CORRECTION to ecMap[ec]!!,
+                            EncodeHintType.MARGIN to 2,
+                        )
+                    val matrix = writer.encode(level.content, BarcodeFormat.QR_CODE, 512, 512, hints)
+                    if (matrix.width > 0) {
                         passed++
                     } else {
                         failed++
                         allOk = false
-                        log("FAIL: Zero-width bitmap for ${level.name} EC-$ec")
+                        log("FAIL: Zero-width matrix for ${level.name} EC-$ec")
                     }
                 } catch (e: Exception) {
                     failed++

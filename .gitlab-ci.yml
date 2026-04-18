@@ -319,17 +319,21 @@ lint:no-proprietary-deps:
   script:
     - |
       echo "=== No Proprietary Dependencies Check ==="
-      # ML Kit and ZXing have been fully replaced by rxing via UniFFI.
-      # No Google runtime deps should remain (only Play Store publishing plugin).
+      # ML Kit removed — replaced by rxing via UniFFI.
+      # ZXing (com.google.zxing:core) is kept for QR generation — it's a
+      # standalone Apache-2.0 library, no Google Play Services dependency.
+      # It will be replaced by core's qrcode crate via UniFFI in a future release.
       DEPS=$(./gradlew app:dependencies --configuration releaseRuntimeClasspath 2>/dev/null || true)
-      FORBIDDEN_PATTERNS="com.google.firebase|com.google.android.gms|play-services|com.google.mlkit|com.google.zxing"
-      if echo "$DEPS" | grep -E "$FORBIDDEN_PATTERNS"; then
+      # ZXing is allowed (standalone, no GMS); filter it before checking
+      FILTERED=$(echo "$DEPS" | grep -v "com.google.zxing")
+      FORBIDDEN_PATTERNS="com.google.firebase|com.google.android.gms|play-services|com.google.mlkit"
+      if echo "$FILTERED" | grep -E "$FORBIDDEN_PATTERNS"; then
         echo ""
-        echo "✗ FAIL: Found Google/proprietary runtime dependency"
-        echo "  Vauchi must work on de-Googled Android."
+        echo "✗ FAIL: Found Google Play Services, Firebase, or ML Kit dependency"
+        echo "  Vauchi must work on de-Googled Android (no GMS runtime)."
         exit 1
       fi
-      echo "✓ No proprietary runtime dependencies found"
+      echo "✓ No proprietary runtime dependencies found (ZXing allowed, no GMS)"
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:

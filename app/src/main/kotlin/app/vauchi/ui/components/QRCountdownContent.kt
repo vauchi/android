@@ -18,7 +18,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.util.LocalizationManager
-import app.vauchi.util.generateQrBitmap
 import kotlinx.coroutines.delay
 
 /**
@@ -166,7 +165,21 @@ private fun generateQRBitmap(
     size: Int,
 ): Bitmap? =
     try {
-        generateQrBitmap(data, size)
+        val writer =
+            com.google.zxing.qrcode
+                .QRCodeWriter()
+        val bitMatrix = writer.encode(data, com.google.zxing.BarcodeFormat.QR_CODE, size, size)
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
+        for (x in 0 until size) {
+            for (y in 0 until size) {
+                bitmap.setPixel(
+                    x,
+                    y,
+                    if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE,
+                )
+            }
+        }
+        bitmap
     } catch (_: Exception) {
         null
     }
