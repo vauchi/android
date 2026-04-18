@@ -70,7 +70,7 @@ object RustScannerBridge {
                             lumaData = lumaData,
                             width = width.toUInt(),
                             height = height.toUInt(),
-                            confidenceThreshold = 0.3f,
+                            confidenceThreshold = 0.15f,
                         )
                     result.decoded
                 }

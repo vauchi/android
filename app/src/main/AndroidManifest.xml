@@ -92,12 +92,12 @@
 
         <activity
             android:name=".diagnostic.qr.QrTunerActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="QR Camera Tuner" />
 
         <activity
             android:name=".diagnostic.qr.QrBeaconActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="QR Beacon"
             android:screenOrientation="portrait"
             android:keepScreenOn="true" />

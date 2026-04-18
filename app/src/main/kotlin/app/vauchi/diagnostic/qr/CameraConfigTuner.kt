@@ -177,11 +177,9 @@ class CameraConfigTuner(
      */
     fun generateQuickSweepMatrix(): List<CameraConfig> =
         listOf(
-            CameraConfig(id = 0, useFrontCamera = true, resolution = "720p", zoomRatio = 1.0f, exposureEv = 0),
-            CameraConfig(id = 1, useFrontCamera = true, resolution = "1080p", zoomRatio = 1.0f, exposureEv = 0),
-            CameraConfig(id = 2, useFrontCamera = false, resolution = "720p", zoomRatio = 1.0f, exposureEv = 0),
-            CameraConfig(id = 3, useFrontCamera = false, resolution = "1080p", zoomRatio = 1.0f, exposureEv = 0),
-            CameraConfig(id = 4, useFrontCamera = false, resolution = "1080p", zoomRatio = 2.0f, exposureEv = 0),
+            CameraConfig(id = 0, useFrontCamera = true, resolution = "240p", zoomRatio = 1.0f, exposureEv = 0),
+            CameraConfig(id = 1, useFrontCamera = true, resolution = "480p", zoomRatio = 1.0f, exposureEv = 0),
+            CameraConfig(id = 2, useFrontCamera = true, resolution = "720p", zoomRatio = 1.0f, exposureEv = 0),
         )
 
     /**
@@ -262,6 +260,7 @@ class CameraConfigTuner(
 
         val targetSize =
             when (config.resolution) {
+                "240p" -> Size(320, 240)
                 "480p" -> Size(640, 480)
                 "720p" -> Size(1280, 720)
                 "1080p" -> Size(1920, 1080)

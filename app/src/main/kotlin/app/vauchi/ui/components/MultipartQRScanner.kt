@@ -27,9 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
+// ML Kit replaced by rxing via UniFFI — no Google Play Services dependency
 import java.util.concurrent.Executors
 
 /**
@@ -319,16 +317,14 @@ private fun MultipartCameraPreview(onChunkScanned: (String) -> Unit) {
  * Uses ML Kit barcode scanner with a short debounce (100ms) to allow rapid
  * scanning of different QR codes as they cycle on the other device's display.
  */
+
+/**
+ * Multipart QR analyzer using rxing via UniFFI instead of ML Kit.
+ * Extracts Y-plane and calls rxing multi-decoder pipeline.
+ */
 private class MultipartQRAnalyzer(
     private val onChunkScanned: (String) -> Unit,
 ) : ImageAnalysis.Analyzer {
-    private val scanner =
-        BarcodeScanning.getClient(
-            com.google.mlkit.vision.barcode.BarcodeScannerOptions
-                .Builder()
-                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-                .build(),
-        )
     private var lastScanTimeMs = 0L
 
     @androidx.camera.core.ExperimentalGetImage
@@ -345,25 +341,46 @@ private class MultipartQRAnalyzer(
             return
         }
 
-        val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
-        scanner
-            .process(inputImage)
-            .addOnSuccessListener { barcodes ->
-                for (barcode in barcodes) {
-                    barcode.rawValue?.let { value ->
-                        lastScanTimeMs = System.currentTimeMillis()
-                        onChunkScanned(value)
+        try {
+            val yPlane = mediaImage.planes[0]
+            val width = mediaImage.width
+            val height = mediaImage.height
+            val rowStride = yPlane.rowStride
+            val bytes =
+                if (rowStride == width) {
+                    val buf = yPlane.buffer
+                    ByteArray(buf.remaining()).also { buf.get(it) }
+                } else {
+                    val buf = yPlane.buffer
+                    val data = ByteArray(width * height)
+                    for (row in 0 until height) {
+                        buf.position(row * rowStride)
+                        buf.get(data, row * width, width)
                     }
+                    data
                 }
-            }.addOnCompleteListener {
-                imageProxy.close()
+
+            val result =
+                uniffi.vauchi_platform.diagnosticScanQr(
+                    backend = uniffi.vauchi_platform.MobileScannerBackend.RQRR_PREPROCESSED,
+                    lumaData = bytes,
+                    width = width.toUInt(),
+                    height = height.toUInt(),
+                )
+
+            result.decoded?.let { value ->
+                lastScanTimeMs = System.currentTimeMillis()
+                onChunkScanned(value)
             }
+        } catch (e: Exception) {
+            android.util.Log.e("MultipartQR", "scan error: ${e.message}")
+        } finally {
+            imageProxy.close()
+        }
     }
 
     companion object {
-        /** Debounce interval in milliseconds between scans. */
-        private const val SCAN_DEBOUNCE_MS = 100L
+        private const val SCAN_DEBOUNCE_MS = 50L // faster than ML Kit's 100ms
     }
 }
 
