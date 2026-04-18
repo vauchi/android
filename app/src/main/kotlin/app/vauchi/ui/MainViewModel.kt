@@ -396,6 +396,10 @@ class MainViewModel(
 
     fun sync() {
         viewModelScope.launch {
+            if (!repository.hasIdentity()) {
+                _syncState.value = SyncState.Idle
+                return@launch
+            }
             _syncState.value = SyncState.Syncing
             try {
                 val result =
