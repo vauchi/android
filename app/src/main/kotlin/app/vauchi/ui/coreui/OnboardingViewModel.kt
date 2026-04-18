@@ -39,6 +39,9 @@ class OnboardingViewModel : ViewModel() {
     private val _displayName = MutableStateFlow<String?>(null)
     val displayName: StateFlow<String?> = _displayName.asStateFlow()
 
+    private val _postOnboardingDestination = MutableStateFlow<PostOnboardingDestination?>(null)
+    val postOnboardingDestination: StateFlow<PostOnboardingDestination?> = _postOnboardingDestination.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -161,6 +164,22 @@ class OnboardingViewModel : ViewModel() {
                     if (_toastMessage.value == message) {
                         dismissToast()
                     }
+                }
+            }
+
+            is ActionResult.CompleteWith -> {
+                viewModelScope.launch {
+                    val dataJson = getOnboardingDataJson()
+                    if (dataJson != null) {
+                        try {
+                            val data = json.decodeFromString<OnboardingData>(dataJson)
+                            _displayName.value = data.displayName
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to parse onboarding data", e)
+                        }
+                    }
+                    _postOnboardingDestination.value = result.destination
+                    _isComplete.value = true
                 }
             }
 

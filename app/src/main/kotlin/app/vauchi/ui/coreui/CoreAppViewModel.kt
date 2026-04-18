@@ -302,7 +302,9 @@ class CoreAppViewModel(
                 loadScreen()
             }
 
-            is ActionResult.Unknown -> { /* no-op */ }
+            is ActionResult.CompleteWith,
+            is ActionResult.Unknown,
+            -> { /* no-op */ }
         }
     }
 

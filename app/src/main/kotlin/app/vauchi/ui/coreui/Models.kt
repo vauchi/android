@@ -1654,6 +1654,10 @@ sealed class ActionResult {
 
     data object Complete : ActionResult()
 
+    data class CompleteWith(
+        val destination: PostOnboardingDestination,
+    ) : ActionResult()
+
     data object StartDeviceLink : ActionResult()
 
     data object StartBackupImport : ActionResult()
@@ -1706,6 +1710,15 @@ sealed class ActionResult {
     ) : ActionResult()
 
     data object Unknown : ActionResult()
+}
+
+/** Where to navigate after onboarding completes. Maps to core PostOnboardingDestination. */
+enum class PostOnboardingDestination {
+    MainScreen,
+    Exchange,
+    ImportContacts,
+    SecurityInfo,
+    BackupSetup,
 }
 
 // / DTO for exchange commands from core (ADR-031).
@@ -1883,6 +1896,19 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                         ActionResult.PreviewAs(
                             contactId = obj["contact_id"]!!.jsonPrimitive.content,
                         )
+                    }
+
+                    "CompleteWith" in element -> {
+                        val obj = element["CompleteWith"] as JsonObject
+                        val dest =
+                            when (obj["destination"]!!.jsonPrimitive.content) {
+                                "Exchange" -> PostOnboardingDestination.Exchange
+                                "ImportContacts" -> PostOnboardingDestination.ImportContacts
+                                "SecurityInfo" -> PostOnboardingDestination.SecurityInfo
+                                "BackupSetup" -> PostOnboardingDestination.BackupSetup
+                                else -> PostOnboardingDestination.MainScreen
+                            }
+                        ActionResult.CompleteWith(destination = dest)
                     }
 
                     else -> {
@@ -2067,6 +2093,15 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                         ),
                     )
                 jsonEncoder.encodeJsonElement(obj)
+            }
+
+            is ActionResult.CompleteWith -> {
+                val destStr = value.destination.name
+                val obj =
+                    JsonObject(
+                        mapOf("destination" to JsonPrimitive(destStr)),
+                    )
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("CompleteWith" to obj)))
             }
 
             is ActionResult.Unknown -> {
