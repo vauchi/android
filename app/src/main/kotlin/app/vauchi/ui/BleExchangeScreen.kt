@@ -39,9 +39,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uniffi.vauchi_platform.MobileErrorCorrectionLevel
 import uniffi.vauchi_platform.MobileExchangeSession
 import uniffi.vauchi_platform.MobileExchangeState
+import uniffi.vauchi_platform.MobileQrEccLevel
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** QR code colors: gray reduces screen glare at close face-to-face distance. */
@@ -561,7 +561,7 @@ private fun generateBleBitmap(data: String): Bitmap =
     generateQrBitmap(
         data = data,
         size = 800,
-        errorCorrection = MobileErrorCorrectionLevel.H,
+        errorCorrection = MobileQrEccLevel.HIGH,
         foreground = BLE_QR_FOREGROUND,
         background = BLE_QR_BACKGROUND,
         margin = 3,

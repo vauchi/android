@@ -26,7 +26,7 @@ import androidx.core.content.ContextCompat
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.generateQrBitmap
 import kotlinx.coroutines.*
-import uniffi.vauchi_platform.MobileErrorCorrectionLevel
+import uniffi.vauchi_platform.MobileQrEccLevel
 
 private const val TAG = "Vauchi"
 
@@ -105,10 +105,10 @@ class QrDiagnosticActivity : ComponentActivity() {
         val ecLevels = listOf("L", "M", "Q", "H")
         val ecMap =
             mapOf(
-                "L" to MobileErrorCorrectionLevel.L,
-                "M" to MobileErrorCorrectionLevel.M,
-                "Q" to MobileErrorCorrectionLevel.Q,
-                "H" to MobileErrorCorrectionLevel.H,
+                "L" to MobileQrEccLevel.LOW,
+                "M" to MobileQrEccLevel.MEDIUM,
+                "Q" to MobileQrEccLevel.QUARTILE,
+                "H" to MobileQrEccLevel.HIGH,
             )
         var passed = 0
         var failed = 0

@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.generateQrBitmap
 import kotlinx.coroutines.delay
-import uniffi.vauchi_platform.MobileErrorCorrectionLevel
+import uniffi.vauchi_platform.MobileQrEccLevel
 
 /**
  * QR Beacon: displays QR codes on screen for another device to scan.
@@ -298,7 +298,7 @@ class QrBeaconActivity : ComponentActivity() {
         inverted: Boolean = false,
         light: Boolean = false,
     ): Bitmap {
-        val ecLevel = if (lowErrorCorrection) MobileErrorCorrectionLevel.L else MobileErrorCorrectionLevel.M
+        val ecLevel = if (lowErrorCorrection) MobileQrEccLevel.LOW else MobileQrEccLevel.MEDIUM
 
         val (fgColor, bgColor) =
             when {

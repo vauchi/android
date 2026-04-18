@@ -57,8 +57,8 @@ import app.vauchi.util.LocalizationManager
 import app.vauchi.util.generateQrBitmap
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import uniffi.vauchi_platform.MobileErrorCorrectionLevel
 import uniffi.vauchi_platform.MobileProtocolState
+import uniffi.vauchi_platform.MobileQrEccLevel
 import uniffi.vauchi_platform.MobileQrPayload
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -791,10 +791,10 @@ private fun generateQrBitmapForMultiStage(
 ): Bitmap {
     val ec =
         when (errorCorrection.uppercase()) {
-            "H" -> MobileErrorCorrectionLevel.H
-            "Q" -> MobileErrorCorrectionLevel.Q
-            "M" -> MobileErrorCorrectionLevel.M
-            else -> MobileErrorCorrectionLevel.L
+            "H" -> MobileQrEccLevel.HIGH
+            "Q" -> MobileQrEccLevel.QUARTILE
+            "M" -> MobileQrEccLevel.MEDIUM
+            else -> MobileQrEccLevel.LOW
         }
     // Gray QR: reduces screen glare at close face-to-face distance
     return generateQrBitmap(

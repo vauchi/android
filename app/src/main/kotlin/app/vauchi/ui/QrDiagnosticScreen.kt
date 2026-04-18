@@ -43,7 +43,7 @@ import app.vauchi.diagnostic.qr.CameraConfigTuner
 import app.vauchi.diagnostic.qr.RustScannerBridge
 import app.vauchi.diagnostic.qr.ScannerMode
 import app.vauchi.util.generateQrBitmap
-import uniffi.vauchi_platform.MobileErrorCorrectionLevel
+import uniffi.vauchi_platform.MobileQrEccLevel
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -103,10 +103,10 @@ fun QrDiagnosticScreen(onBack: () -> Unit) {
     val ec =
         remember(ecLevel) {
             when (ecLevel) {
-                "L" -> MobileErrorCorrectionLevel.L
-                "Q" -> MobileErrorCorrectionLevel.Q
-                "H" -> MobileErrorCorrectionLevel.H
-                else -> MobileErrorCorrectionLevel.M
+                "L" -> MobileQrEccLevel.LOW
+                "Q" -> MobileQrEccLevel.QUARTILE
+                "H" -> MobileQrEccLevel.HIGH
+                else -> MobileQrEccLevel.MEDIUM
             }
         }
     val qrBitmap =
