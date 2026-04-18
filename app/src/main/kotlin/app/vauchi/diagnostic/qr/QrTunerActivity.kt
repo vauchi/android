@@ -68,6 +68,7 @@ import kotlinx.coroutines.withContext
  *   adb shell am start -n app.vauchi/.diagnostic.qr.QrTunerActivity --es test sweep
  *   adb shell am start -n app.vauchi/.diagnostic.qr.QrTunerActivity --es test quick
  *   adb shell am start -n app.vauchi/.diagnostic.qr.QrTunerActivity --es test throughput
+ *   adb shell am start -n app.vauchi/.diagnostic.qr.QrTunerActivity --es test rxing-throughput
  *   adb shell am start -n app.vauchi/.diagnostic.qr.QrTunerActivity  (interactive)
  *
  * Scanner selection (--es scanner <mode>):
@@ -143,6 +144,7 @@ class QrTunerActivity : ComponentActivity() {
         super.onDestroy()
         tuner?.release()
         throughputTester?.release()
+        rxingThroughputTester?.release()
     }
 
     private fun handleIntent(intent: Intent?) {
@@ -175,6 +177,7 @@ class QrTunerActivity : ComponentActivity() {
     }
 
     private var throughputTester: QrThroughputTester? = null
+    private var rxingThroughputTester: RxingThroughputTester? = null
 
     private fun startSweep(testName: String) {
         if (running) return
@@ -185,6 +188,12 @@ class QrTunerActivity : ComponentActivity() {
         // Throughput test mode — separate path
         if (testName == "throughput") {
             startThroughputTest()
+            return
+        }
+
+        // rxing throughput test — uses Rust scanner instead of ML Kit
+        if (testName == "rxing-throughput") {
+            startRxingThroughputTest()
             return
         }
 
@@ -375,6 +384,75 @@ class QrTunerActivity : ComponentActivity() {
                 log("Avg latency: ${"%.1f".format(result.avgDecodeLatencyMs)}ms")
 
                 // Save JSON
+                val file = tester.saveResultsJson(listOf(result))
+                if (file != null) log("JSON saved: ${file.name}")
+            } catch (e: Exception) {
+                log("ERROR: ${e.message}")
+            } finally {
+                withContext(Dispatchers.Main) {
+                    running = false
+                    progress = 1f
+                }
+            }
+        }
+    }
+
+    /**
+     * rxing throughput test — uses Rust scanner via UniFFI.
+     *
+     * Launch:
+     *   adb shell am start -n app.vauchi/.diagnostic.qr.QrTunerActivity \
+     *     --es test rxing-throughput --ei duration 15 --es resolution 240p
+     *
+     * Options:
+     *   --ei duration N       Measurement duration in seconds (default: 15)
+     *   --es resolution RES   Camera resolution: 240p, 480p, 720p (default: 240p)
+     *   --es scanner MODE     Scanner backend: rqrr_raw, rqrr_preprocessed (default: rqrr_raw)
+     *   --es camera FACE      Camera: front, rear (default: front)
+     */
+    private fun startRxingThroughputTest() {
+        val durationSec = intent?.getIntExtra("duration", 15) ?: 15
+        val durationMs = durationSec * 1000L
+        val resolution = intent?.getStringExtra("resolution") ?: "240p"
+        val scanner = intent?.getStringExtra("scanner") ?: "rqrr_raw"
+        val cameraFace = intent?.getStringExtra("camera") ?: "front"
+        val scannerMode =
+            when (scanner) {
+                "rqrr_preprocessed" -> ScannerMode.RqrrPreprocessed
+                else -> ScannerMode.RqrrRaw
+            }
+
+        log("=== RXING THROUGHPUT TEST ===")
+        log("Device: ${android.os.Build.MODEL} (Android ${android.os.Build.VERSION.SDK_INT})")
+        log("Duration: ${durationSec}s | Resolution: $resolution | Scanner: $scanner")
+        log("Camera: $cameraFace")
+        log("Point camera at beacon device showing QR codes!")
+        log("---")
+
+        val tester =
+            RxingThroughputTester(
+                context = this,
+                lifecycleOwner = this,
+                measurementDurationMs = durationMs,
+                resolution = resolution,
+                scannerMode = scannerMode,
+                useFrontCamera = cameraFace == "front",
+            )
+        rxingThroughputTester = tester
+
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                delay(500)
+                val result = tester.measure { msg -> log(msg) }
+                log("")
+                log("=== RXING THROUGHPUT SUMMARY ===")
+                log("Resolution: $resolution | Scanner: $scanner | Camera: $cameraFace")
+                log("TTFD: ${result.ttfdMs}ms")
+                log("Throughput: ${"%.0f".format(result.effectiveBytesPerSec)} B/s")
+                log("Unique QRs: ${result.uniqueDecodes} (${"%.2f".format(result.uniqueQrsPerSec)}/s)")
+                log("Decodes/s: ${"%.1f".format(result.decodesPerSec)}")
+                log("Avg latency: ${"%.1f".format(result.avgDecodeLatencyMs)}ms")
+
                 val file = tester.saveResultsJson(listOf(result))
                 if (file != null) log("JSON saved: ${file.name}")
             } catch (e: Exception) {
