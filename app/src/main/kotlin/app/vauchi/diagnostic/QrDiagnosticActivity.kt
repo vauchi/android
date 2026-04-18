@@ -24,11 +24,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import app.vauchi.ui.theme.VauchiTheme
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.EncodeHintType
-import com.google.zxing.qrcode.QRCodeWriter
-import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
+import app.vauchi.util.generateQrBitmap
 import kotlinx.coroutines.*
+import uniffi.vauchi_platform.MobileErrorCorrectionLevel
 
 private const val TAG = "Vauchi"
 
@@ -107,10 +105,10 @@ class QrDiagnosticActivity : ComponentActivity() {
         val ecLevels = listOf("L", "M", "Q", "H")
         val ecMap =
             mapOf(
-                "L" to ErrorCorrectionLevel.L,
-                "M" to ErrorCorrectionLevel.M,
-                "Q" to ErrorCorrectionLevel.Q,
-                "H" to ErrorCorrectionLevel.H,
+                "L" to MobileErrorCorrectionLevel.L,
+                "M" to MobileErrorCorrectionLevel.M,
+                "Q" to MobileErrorCorrectionLevel.Q,
+                "H" to MobileErrorCorrectionLevel.H,
             )
         var passed = 0
         var failed = 0
@@ -145,19 +143,19 @@ class QrDiagnosticActivity : ComponentActivity() {
             var allOk = true
             for (ec in ecLevels) {
                 try {
-                    val writer = QRCodeWriter()
-                    val hints =
-                        mapOf(
-                            EncodeHintType.ERROR_CORRECTION to ecMap[ec]!!,
-                            EncodeHintType.MARGIN to 2,
+                    val bitmap =
+                        generateQrBitmap(
+                            data = level.content,
+                            size = 512,
+                            errorCorrection = ecMap[ec]!!,
+                            margin = 2,
                         )
-                    val matrix = writer.encode(level.content, BarcodeFormat.QR_CODE, 512, 512, hints)
-                    if (matrix.width > 0) {
+                    if (bitmap != null && bitmap.width > 0) {
                         passed++
                     } else {
                         failed++
                         allOk = false
-                        log("FAIL: Zero-width matrix for ${level.name} EC-$ec")
+                        log("FAIL: Null or zero-width bitmap for ${level.name} EC-$ec")
                     }
                 } catch (e: Exception) {
                     failed++

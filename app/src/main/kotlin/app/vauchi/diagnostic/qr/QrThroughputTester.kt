@@ -117,21 +117,17 @@ class QrThroughputTester(
             if (mediaImage != null) {
                 try {
                     val bytes = CameraConfigTuner.extractYPlane(mediaImage)
-                    val width = mediaImage.width
-                    val height = mediaImage.height
-
-                    val result =
-                        diagnosticScanQr(
-                            backend = MobileScannerBackend.RQRR_PREPROCESSED,
-                            lumaData = bytes,
-                            width = width.toUInt(),
-                            height = height.toUInt(),
+                    val content =
+                        RustScannerBridge.scan(
+                            ScannerMode.RqrrPreprocessed,
+                            bytes,
+                            mediaImage.width,
+                            mediaImage.height,
                         )
-
                     val elapsedNs = System.nanoTime() - startNs
                     synchronized(latencies) { latencies.add(elapsedNs / 1_000_000L) }
 
-                    result.decoded?.let { content ->
+                    if (content != null) {
                         val count = totalDecodes.incrementAndGet()
                         totalBytes.addAndGet(content.length.toLong())
                         allContents[content] = (allContents[content] ?: 0) + 1

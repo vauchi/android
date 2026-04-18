@@ -33,8 +33,7 @@ object RustScannerBridge {
 
     /**
      * Scan a QR code from Y-plane luma data.
-     * All modes use rxing via UniFFI. MlKit and ZXing are legacy aliases
-     * mapped to RqrrRaw and RqrrPreprocessed respectively.
+     * All modes use rqrr/rxing via UniFFI.
      *
      * @return decoded string, or null if decode failed.
      */
@@ -47,9 +46,9 @@ object RustScannerBridge {
         try {
             val backend =
                 when (mode) {
-                    ScannerMode.RqrrRaw, ScannerMode.ZXing -> MobileScannerBackend.RQRR_RAW
+                    ScannerMode.RqrrRaw -> MobileScannerBackend.RQRR_RAW
 
-                    ScannerMode.RqrrPreprocessed, ScannerMode.MlKit,
+                    ScannerMode.RqrrPreprocessed,
                     ScannerMode.YoloRqrr,
                     -> MobileScannerBackend.RQRR_PREPROCESSED
                 }

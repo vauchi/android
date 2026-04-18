@@ -32,10 +32,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.theme.VauchiTheme
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.EncodeHintType
-import com.google.zxing.qrcode.QRCodeWriter
+import app.vauchi.util.generateQrBitmap
 import kotlinx.coroutines.delay
+import uniffi.vauchi_platform.MobileErrorCorrectionLevel
 
 /**
  * QR Beacon: displays QR codes on screen for another device to scan.
@@ -299,14 +298,7 @@ class QrBeaconActivity : ComponentActivity() {
         inverted: Boolean = false,
         light: Boolean = false,
     ): Bitmap {
-        val writer = QRCodeWriter()
-        val hints = mutableMapOf<EncodeHintType, Any>()
-        if (lowErrorCorrection) {
-            hints[EncodeHintType.ERROR_CORRECTION] = com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.L
-        }
-        hints[EncodeHintType.MARGIN] = 2
-        val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, QR_RENDER_SIZE, QR_RENDER_SIZE, hints)
-        val bitmap = Bitmap.createBitmap(QR_RENDER_SIZE, QR_RENDER_SIZE, Bitmap.Config.RGB_565)
+        val ecLevel = if (lowErrorCorrection) MobileErrorCorrectionLevel.L else MobileErrorCorrectionLevel.M
 
         val (fgColor, bgColor) =
             when {
@@ -316,12 +308,14 @@ class QrBeaconActivity : ComponentActivity() {
                 else -> android.graphics.Color.BLACK to android.graphics.Color.WHITE
             }
 
-        for (x in 0 until QR_RENDER_SIZE) {
-            for (y in 0 until QR_RENDER_SIZE) {
-                bitmap.setPixel(x, y, if (bitMatrix[x, y]) fgColor else bgColor)
-            }
-        }
-        return bitmap
+        return generateQrBitmap(
+            data = data,
+            size = QR_RENDER_SIZE,
+            errorCorrection = ecLevel,
+            foreground = fgColor,
+            background = bgColor,
+            margin = 2,
+        ) ?: throw IllegalStateException("QR generation failed for data of length ${data.length}")
     }
 
     private fun logBrightness() {

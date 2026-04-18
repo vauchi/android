@@ -39,10 +39,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
-import uniffi.vauchi_platform.MobileScannerBackend
-import uniffi.vauchi_platform.diagnosticScanQr
+import app.vauchi.diagnostic.qr.CameraConfigTuner
+import app.vauchi.diagnostic.qr.RustScannerBridge
+import app.vauchi.diagnostic.qr.ScannerMode
+import app.vauchi.util.generateQrBitmap
+import uniffi.vauchi_platform.MobileErrorCorrectionLevel
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -51,7 +52,7 @@ import java.util.concurrent.atomic.AtomicReference
 private const val TAG = "QrDiag"
 
 /**
- * QR Code diagnostic screen — tests QR generation, camera capture, and rxing
+ * QR Code diagnostic screen — tests QR generation, camera capture, and Rust rqrr
  * detection with configurable parameters. Use this to find the optimal setup
  * for the multi-stage exchange protocol.
  *
@@ -59,9 +60,8 @@ private const val TAG = "QrDiag"
  * - Generates QR codes at different complexity levels (matching protocol stages)
  * - Front/rear camera toggle
  * - Live detection stats (frames, detections, resolution)
- * - Uses rxing via UniFFI for QR decoding (no Google Play Services dependency)
+ * - Uses Rust rqrr scanner via UniFFI (RustScannerBridge)
  * - Shows last detected content and timing
- * - Saves diagnostic frames for offline analysis
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,13 +98,20 @@ fun QrDiagnosticScreen(onBack: () -> Unit) {
     val hybridHits by stats.hybridHitsState
     val globalHits by stats.globalHitsState
     val cropHits by stats.cropHitsState
-    val rxingHits by stats.rxingHitsState
-
     // Generate the test QR bitmap
     val qrContent = remember(qrComplexity) { qrComplexity.sampleContent() }
+    val ec =
+        remember(ecLevel) {
+            when (ecLevel) {
+                "L" -> MobileErrorCorrectionLevel.L
+                "Q" -> MobileErrorCorrectionLevel.Q
+                "H" -> MobileErrorCorrectionLevel.H
+                else -> MobileErrorCorrectionLevel.M
+            }
+        }
     val qrBitmap =
         remember(qrContent, ecLevel) {
-            generateDiagnosticQr(qrContent, ecLevel)
+            generateQrBitmap(data = qrContent, size = 512, errorCorrection = ec, margin = 2)
         }
 
     Scaffold(
@@ -246,7 +253,6 @@ fun QrDiagnosticScreen(onBack: () -> Unit) {
                     StatRow("Frames", "$frameCount")
                     StatRow("Detections", "$detectionCount")
                     StatRow("Rate", if (frameCount > 0) "${"%.1f".format(detectionCount * 100.0 / frameCount)}%" else "—")
-                    StatRow("rxing hits", "$rxingHits")
                     if (lastDetected.isNotEmpty()) {
                         StatRow("Last detected", lastDetected.take(60) + if (lastDetected.length > 60) "..." else "")
                     }
@@ -350,7 +356,6 @@ class DiagnosticStats {
     private val _hybridHits = AtomicInteger(0)
     private val _globalHits = AtomicInteger(0)
     private val _cropHits = AtomicInteger(0)
-    private val _rxingHits = AtomicInteger(0)
     private val _lastDetected = AtomicReference("")
     private val _lastError = AtomicReference("")
     private val _resolution = AtomicReference("—")
@@ -362,7 +367,6 @@ class DiagnosticStats {
     val hybridHitsState = mutableIntStateOf(0)
     val globalHitsState = mutableIntStateOf(0)
     val cropHitsState = mutableIntStateOf(0)
-    val rxingHitsState = mutableIntStateOf(0)
     val lastDetectedState = mutableStateOf("")
     val lastErrorState = mutableStateOf("")
     val resolutionState = mutableStateOf("—")
@@ -384,7 +388,6 @@ class DiagnosticStats {
         _detectionCount.incrementAndGet()
         _lastDetected.set(content)
         when {
-            "rxing" in method -> _rxingHits.incrementAndGet()
             "crop" in method -> _cropHits.incrementAndGet()
             "global" in method -> _globalHits.incrementAndGet()
             else -> _hybridHits.incrementAndGet()
@@ -403,7 +406,6 @@ class DiagnosticStats {
         _hybridHits.set(0)
         _globalHits.set(0)
         _cropHits.set(0)
-        _rxingHits.set(0)
         _lastDetected.set("")
         _lastError.set("")
         syncToCompose()
@@ -419,7 +421,6 @@ class DiagnosticStats {
         hybridHitsState.intValue = _hybridHits.get()
         globalHitsState.intValue = _globalHits.get()
         cropHitsState.intValue = _cropHits.get()
-        rxingHitsState.intValue = _rxingHits.get()
         lastDetectedState.value = _lastDetected.get()
         lastErrorState.value = _lastError.get()
         resolutionState.value = _resolution.get()
@@ -485,7 +486,7 @@ private fun DiagnosticCameraScanner(
                                     .also { analysis ->
                                         analysis.setAnalyzer(
                                             cameraExecutor,
-                                            DiagnosticRxingAnalyzer(stats = stats),
+                                            RustQrAnalyzer(stats = stats),
                                         )
                                     }
 
@@ -529,9 +530,9 @@ private fun DiagnosticCameraScanner(
     }
 }
 
-// --- rxing QR analyzer (via UniFFI) ---
+// --- Rust QR analyzer (replaces ML Kit) ---
 
-class DiagnosticRxingAnalyzer(
+class RustQrAnalyzer(
     private val stats: DiagnosticStats,
 ) : ImageAnalysis.Analyzer {
     private var frameIdx = 0
@@ -549,80 +550,25 @@ class DiagnosticRxingAnalyzer(
         stats.recordFrame(imageProxy.width, imageProxy.height, rotation)
 
         try {
-            // Extract Y-plane (luma) directly — no RGB conversion
-            val yPlane = mediaImage.planes[0]
-            val width = mediaImage.width
-            val height = mediaImage.height
-            val rowStride = yPlane.rowStride
-            val bytes =
-                if (rowStride == width) {
-                    val buf = yPlane.buffer
-                    ByteArray(buf.remaining()).also { buf.get(it) }
-                } else {
-                    val buf = yPlane.buffer
-                    val data = ByteArray(width * height)
-                    for (row in 0 until height) {
-                        buf.position(row * rowStride)
-                        buf.get(data, row * width, width)
-                    }
-                    data
-                }
-
-            val result =
-                diagnosticScanQr(
-                    backend = MobileScannerBackend.RQRR_PREPROCESSED,
-                    lumaData = bytes,
-                    width = width.toUInt(),
-                    height = height.toUInt(),
+            val bytes = CameraConfigTuner.extractYPlane(mediaImage)
+            val text =
+                RustScannerBridge.scan(
+                    ScannerMode.RqrrPreprocessed,
+                    bytes,
+                    mediaImage.width,
+                    mediaImage.height,
                 )
-
-            result.decoded?.let { text ->
-                Log.i(TAG, "DETECTED [rxing]: ${text.take(40)}...")
-                stats.recordDetection(text, "rxing")
+            if (text != null) {
+                Log.i(TAG, "DETECTED [rqrr]: ${text.take(40)}...")
+                stats.recordDetection(text, "rqrr")
             }
         } catch (e: Exception) {
             if (frameIdx % 60 == 1) {
-                Log.w(TAG, "rxing error: ${e.message}")
-                stats.recordError("rxing: ${e.message}")
+                Log.w(TAG, "Rust scanner error: ${e.message}")
+                stats.recordError("rqrr: ${e.message}")
             }
         } finally {
             imageProxy.close()
         }
     }
 }
-
-// --- QR generation helper ---
-
-private fun generateDiagnosticQr(
-    content: String,
-    ecLevelStr: String,
-): Bitmap? =
-    try {
-        val ecLevel =
-            when (ecLevelStr) {
-                "L" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.L
-                "M" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M
-                "Q" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.Q
-                "H" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.H
-                else -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M
-            }
-        val writer = QRCodeWriter()
-        val hints =
-            mapOf(
-                com.google.zxing.EncodeHintType.ERROR_CORRECTION to ecLevel,
-                com.google.zxing.EncodeHintType.MARGIN to 2,
-            )
-        val bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, 512, 512, hints)
-        val w = bitMatrix.width
-        val h = bitMatrix.height
-        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.RGB_565)
-        for (x in 0 until w) {
-            for (y in 0 until h) {
-                bitmap.setPixel(x, y, if (bitMatrix[x, y]) 0xFF000000.toInt() else 0xFFFFFFFF.toInt())
-            }
-        }
-        bitmap
-    } catch (e: Exception) {
-        Log.e(TAG, "QR generation failed: ${e.message}")
-        null
-    }

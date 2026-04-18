@@ -52,8 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import app.vauchi.ui.theme.VauchiTheme
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
+import app.vauchi.util.generateQrBitmap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -72,10 +71,8 @@ import kotlinx.coroutines.withContext
  *   adb shell am start -n app.vauchi/.diagnostic.qr.QrTunerActivity  (interactive)
  *
  * Scanner selection (--es scanner <mode>):
- *   mlkit              Legacy alias — mapped to rqrr_preprocessed (rxing via UniFFI)
- *   zxing              Legacy alias — mapped to rqrr_raw (rxing via UniFFI)
- *   rqrr_raw           rxing in Rust via UniFFI, no preprocessing
- *   rqrr_preprocessed  rxing in Rust via UniFFI, with Tier 1 preprocessing
+ *   rqrr_raw           rqrr in Rust, no preprocessing
+ *   rqrr_preprocessed  rqrr in Rust, with Tier 1 preprocessing (default)
  */
 @androidx.camera.camera2.interop.ExperimentalCamera2Interop
 class QrTunerActivity : ComponentActivity() {
@@ -152,7 +149,7 @@ class QrTunerActivity : ComponentActivity() {
         val mode = intent?.getStringExtra("mode") // "dual" = show QR while scanning
         if (mode == "dual") {
             showQrOverlay = true
-            qrBitmap = generateQrBitmap("wb://BIDIRECTIONAL_TEST_${android.os.Build.MODEL}_${System.currentTimeMillis()}")
+            qrBitmap = generateActivityQrBitmap("wb://BIDIRECTIONAL_TEST_${android.os.Build.MODEL}_${System.currentTimeMillis()}")
             log("DUAL MODE: Showing QR on screen while scanning")
         }
         if (!cameraGranted) {
@@ -163,18 +160,9 @@ class QrTunerActivity : ComponentActivity() {
         startSweep(testName)
     }
 
-    private fun generateQrBitmap(data: String): Bitmap {
-        val writer = QRCodeWriter()
-        val size = 600
-        val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, size, size)
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
-        for (x in 0 until size) {
-            for (y in 0 until size) {
-                bitmap.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
-            }
-        }
-        return bitmap
-    }
+    private fun generateActivityQrBitmap(data: String): Bitmap =
+        generateQrBitmap(data = data, size = 600)
+            ?: Bitmap.createBitmap(1, 1, Bitmap.Config.RGB_565)
 
     private var throughputTester: QrThroughputTester? = null
     private var rxingThroughputTester: RxingThroughputTester? = null
@@ -198,14 +186,12 @@ class QrTunerActivity : ComponentActivity() {
         }
 
         val stabilization = intent?.getIntExtra("stabilization", -1)?.toLong()?.let { if (it >= 0) it else null }
-        val scanner = intent?.getStringExtra("scanner") ?: "mlkit"
+        val scanner = intent?.getStringExtra("scanner") ?: "rqrr_preprocessed"
         val scannerMode =
             when (scanner) {
-                "zxing" -> ScannerMode.ZXing
                 "rqrr_raw" -> ScannerMode.RqrrRaw
-                "rqrr_preprocessed" -> ScannerMode.RqrrPreprocessed
                 "yolo_rqrr" -> ScannerMode.YoloRqrr
-                else -> ScannerMode.MlKit
+                else -> ScannerMode.RqrrPreprocessed
             }
 
         // Load YOLO model if needed
@@ -358,7 +344,7 @@ class QrTunerActivity : ComponentActivity() {
         log("=== THROUGHPUT TEST ===")
         log("Device: ${android.os.Build.MODEL} (Android ${android.os.Build.VERSION.SDK_INT})")
         log("Duration: ${durationSec}s per measurement")
-        log("Camera: front, 720p, zoom=1.0, ev=0 (MLKit)")
+        log("Camera: front, 720p, zoom=1.0, ev=0 (rqrr)")
         log("Ensure beacon device is showing QR codes!")
         log("---")
 

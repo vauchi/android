@@ -61,17 +61,10 @@ data class ConfigResult(
 
 /**
  * Scanner backend selection for benchmark comparison.
- * All modes now use rxing via UniFFI — MlKit and ZXing are legacy aliases
- * mapped to RqrrRaw and RqrrPreprocessed respectively.
+ * All modes use rqrr/rxing via UniFFI (no Google dependencies).
  */
 enum class ScannerMode {
-    /** Legacy alias — mapped to RqrrRaw (rxing via UniFFI, no preprocessing). */
-    MlKit,
-
-    /** Legacy alias — mapped to RqrrRaw (rxing via UniFFI, no preprocessing). */
-    ZXing,
-
-    /** rxing in Rust via UniFFI, no preprocessing. */
+    /** rqrr in Rust via UniFFI, no preprocessing. */
     RqrrRaw,
 
     /** rxing in Rust via UniFFI, with Tier 1 preprocessing pipeline. */
@@ -83,14 +76,13 @@ enum class ScannerMode {
 
 /**
  * Generates sweep matrices and runs camera configuration tests using
- * CameraX + Camera2 interop + configurable scanner backend.
+ * CameraX + Camera2 interop + configurable scanner backend (Rust rqrr).
  */
 class CameraConfigTuner(
     private val context: Context,
     private val lifecycleOwner: LifecycleOwner,
     val stabilizationMs: Long = DEFAULT_STABILIZATION_MS,
-    val scannerMode: ScannerMode = ScannerMode.MlKit,
-    @Deprecated("Use scannerMode instead") val useZxing: Boolean = false,
+    val scannerMode: ScannerMode = ScannerMode.RqrrPreprocessed,
 ) {
     companion object {
         private const val TAG = "Vauchi"
@@ -123,16 +115,6 @@ class CameraConfigTuner(
             }
         }
     }
-
-    /** Effective scanner mode, mapping legacy MlKit/ZXing to rxing backends. */
-    @Suppress("DEPRECATION")
-    private val effectiveMode: ScannerMode =
-        when {
-            useZxing && scannerMode == ScannerMode.MlKit -> ScannerMode.RqrrRaw
-            scannerMode == ScannerMode.MlKit -> ScannerMode.RqrrPreprocessed
-            scannerMode == ScannerMode.ZXing -> ScannerMode.RqrrRaw
-            else -> scannerMode
-        }
 
     private val thermalMonitor = ThermalMonitor(context)
     private val analysisExecutor = Executors.newSingleThreadExecutor()
@@ -306,46 +288,37 @@ class CameraConfigTuner(
             @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
             val mediaImage = imageProxy.image
             if (mediaImage != null) {
-                // All modes use rxing via UniFFI (synchronous decode from Y plane)
-                val bytes = extractYPlane(mediaImage)
-                val width = mediaImage.width
-                val height = mediaImage.height
-                val backend =
-                    when (effectiveMode) {
-                        ScannerMode.RqrrRaw, ScannerMode.ZXing -> MobileScannerBackend.RQRR_RAW
-                        else -> MobileScannerBackend.RQRR_PREPROCESSED
-                    }
-                try {
+                run {
+                    // Rust rqrr path: synchronous decode via UniFFI
+                    val bytes = extractYPlane(mediaImage)
+                    val width = mediaImage.width
+                    val height = mediaImage.height
                     val scanResult =
-                        diagnosticScanQr(
-                            backend = backend,
-                            lumaData = bytes,
-                            width = width.toUInt(),
-                            height = height.toUInt(),
+                        RustScannerBridge.scan(
+                            scannerMode,
+                            bytes,
+                            width,
+                            height,
                         )
                     val elapsedNs = System.nanoTime() - startNs
                     val elapsedMs = elapsedNs / 1_000_000L
-                    scanResult.decoded?.let { content ->
+                    if (scanResult != null) {
                         framesDecoded.incrementAndGet().let { decoded ->
                             if (decoded == 1) {
                                 val startMs = cameraStartTimeMs.get()
                                 if (startMs > 0) firstDecodeTimeMs.set(System.currentTimeMillis() - startMs)
-                                val preview = if (content.length > 50) content.take(50) + "..." else content
-                                val backendName = if (backend == MobileScannerBackend.RQRR_RAW) "rqrr-raw" else "rqrr-preproc"
+                                val preview = if (scanResult.length > 50) scanResult.take(50) + "..." else scanResult
+                                val backendName = if (scannerMode == ScannerMode.RqrrRaw) "rqrr-raw" else "rqrr-preproc"
                                 log("  -> $backendName decoded (${firstDecodeTimeMs.get()}ms): $preview")
                             }
                         }
                     }
                     synchronized(latencies) { latencies.add(elapsedMs) }
                     totalLatencyNs.addAndGet(elapsedNs)
-                } catch (e: Exception) {
-                    val elapsedNs = System.nanoTime() - startNs
-                    synchronized(latencies) { latencies.add(elapsedNs / 1_000_000L) }
-                    totalLatencyNs.addAndGet(elapsedNs)
-                }
-                imageProxy.close()
-                if (frameIndex >= FRAMES_PER_CONFIG && !analysisComplete.isCompleted) {
-                    analysisComplete.complete(Unit)
+                    imageProxy.close()
+                    if (frameIndex >= FRAMES_PER_CONFIG && !analysisComplete.isCompleted) {
+                        analysisComplete.complete(Unit)
+                    }
                 }
             } else {
                 imageProxy.close()
@@ -412,7 +385,7 @@ class CameraConfigTuner(
             log("Timeout waiting for frames on config ${config.id}")
         }
 
-        // Small delay to let final analyzer callbacks complete
+        // Small delay to let final scanner callbacks complete
         delay(300)
 
         // Unbind on main thread
