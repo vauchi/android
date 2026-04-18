@@ -14,6 +14,10 @@ import uniffi.vauchi_platform.generateQrBitmap as rustGenerateQrBitmap
  * Pixel rendering happens entirely in Rust — this is a thin wrapper
  * that maps grayscale output to ARGB and wraps in an Android Bitmap.
  *
+ * For black-on-white QR codes (the common case), uses ALPHA_8 format
+ * (1 byte/pixel) and copies the grayscale buffer directly — no ARGB
+ * mapping or intermediate IntArray.
+ *
  * @param data The string to encode as a QR code.
  * @param size The width and height of the output bitmap in pixels.
  * @param errorCorrection Error correction level (default Medium).
@@ -31,7 +35,6 @@ fun generateQrBitmap(
     margin: Int = 4,
 ): Bitmap? =
     try {
-        // Core renders grayscale: 0 = dark, 255 = light
         val qr =
             rustGenerateQrBitmap(
                 data,
@@ -41,17 +44,24 @@ fun generateQrBitmap(
                 255u,
                 margin.toUInt(),
             )
-        val grayscale = qr.pixels
 
-        // Map grayscale → ARGB colors
-        val argb =
-            IntArray(grayscale.size) { i ->
-                if (grayscale[i].toInt() == 0) foreground else background
-            }
-
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
-        bitmap.setPixels(argb, 0, size, 0, 0, size, size)
-        bitmap
+        if (foreground == Color.BLACK && background == Color.WHITE) {
+            // Fast path: grayscale buffer → ALPHA_8 bitmap directly (1 byte/pixel).
+            // Invert: Rust uses 0=dark/255=light, ALPHA_8 uses 255=opaque/0=transparent.
+            val alpha = ByteArray(qr.pixels.size) { i -> (255 - qr.pixels[i].toInt()).toByte() }
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ALPHA_8)
+            bitmap.copyPixelsFromBuffer(java.nio.ByteBuffer.wrap(alpha))
+            bitmap
+        } else {
+            // Color path: map grayscale → ARGB for custom foreground/background.
+            val argb =
+                IntArray(qr.pixels.size) { i ->
+                    if (qr.pixels[i].toInt() == 0) foreground else background
+                }
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
+            bitmap.setPixels(argb, 0, size, 0, 0, size, size)
+            bitmap
+        }
     } catch (_: Exception) {
         null
     }
