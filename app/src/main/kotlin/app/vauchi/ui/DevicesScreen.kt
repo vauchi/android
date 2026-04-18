@@ -40,8 +40,7 @@ import androidx.compose.ui.unit.dp
 import app.vauchi.ui.components.QRCountdownContent
 import app.vauchi.util.ClipboardUtils
 import app.vauchi.util.LocalizationManager
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
+import app.vauchi.util.generateQrBitmap
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import uniffi.vauchi_platform.MobileDeviceInfo
@@ -786,27 +785,4 @@ fun DeviceCard(
 private fun generateQRBitmap(
     data: String,
     size: Int,
-): Bitmap? =
-    try {
-        val writer = QRCodeWriter()
-        val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, size, size)
-        val width = bitMatrix.width
-        val height = bitMatrix.height
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
-        for (x in 0 until width) {
-            for (y in 0 until height) {
-                bitmap.setPixel(
-                    x,
-                    y,
-                    if (bitMatrix.get(x, y)) {
-                        android.graphics.Color.BLACK
-                    } else {
-                        android.graphics.Color.WHITE
-                    },
-                )
-            }
-        }
-        bitmap
-    } catch (e: Exception) {
-        null
-    }
+): Bitmap? = generateQrBitmap(data = data, size = size)

@@ -54,10 +54,10 @@ import app.vauchi.ui.components.PermissionRationaleDialog
 import app.vauchi.ui.components.rememberPermissionState
 import app.vauchi.ui.coreui.DesignTokens
 import app.vauchi.util.LocalizationManager
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
+import app.vauchi.util.generateQrBitmap
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import uniffi.vauchi_platform.MobileErrorCorrectionLevel
 import uniffi.vauchi_platform.MobileProtocolState
 import uniffi.vauchi_platform.MobileQrPayload
 import java.util.concurrent.Executors
@@ -789,30 +789,22 @@ private fun generateQrBitmapForMultiStage(
     data: String,
     errorCorrection: String,
 ): Bitmap {
-    val ecLevel =
+    val ec =
         when (errorCorrection.uppercase()) {
-            "H" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.H
-            "Q" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.Q
-            "M" -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M
-            else -> com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.L
+            "H" -> MobileErrorCorrectionLevel.H
+            "Q" -> MobileErrorCorrectionLevel.Q
+            "M" -> MobileErrorCorrectionLevel.M
+            else -> MobileErrorCorrectionLevel.L
         }
-    val writer = QRCodeWriter()
-    val hints =
-        mapOf(
-            com.google.zxing.EncodeHintType.ERROR_CORRECTION to ecLevel,
-            com.google.zxing.EncodeHintType.MARGIN to 3,
-        )
-    val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, 800, 800, hints)
-    val width = bitMatrix.width
-    val height = bitMatrix.height
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
     // Gray QR: reduces screen glare at close face-to-face distance
-    for (x in 0 until width) {
-        for (y in 0 until height) {
-            bitmap.setPixel(x, y, if (bitMatrix[x, y]) QR_FOREGROUND else QR_BACKGROUND)
-        }
-    }
-    return bitmap
+    return generateQrBitmap(
+        data = data,
+        size = 800,
+        errorCorrection = ec,
+        foreground = QR_FOREGROUND,
+        background = QR_BACKGROUND,
+        margin = 3,
+    ) ?: Bitmap.createBitmap(1, 1, Bitmap.Config.RGB_565)
 }
 
 /**

@@ -34,12 +34,12 @@ import app.vauchi.ui.components.PermissionRationaleDialog
 import app.vauchi.ui.components.rememberPermissionState
 import app.vauchi.ui.coreui.DesignTokens
 import app.vauchi.util.LocalizationManager
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.qrcode.QRCodeWriter
+import app.vauchi.util.generateQrBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uniffi.vauchi_platform.MobileErrorCorrectionLevel
 import uniffi.vauchi_platform.MobileExchangeSession
 import uniffi.vauchi_platform.MobileExchangeState
 import java.util.concurrent.atomic.AtomicBoolean
@@ -557,21 +557,12 @@ private fun BleExchangeFailedOverlay(
 }
 
 /** Generate a QR bitmap from [data] using high error correction for BLE bootstrap. */
-private fun generateBleBitmap(data: String): Bitmap {
-    val writer = QRCodeWriter()
-    val hints =
-        mapOf(
-            com.google.zxing.EncodeHintType.ERROR_CORRECTION to com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.H,
-            com.google.zxing.EncodeHintType.MARGIN to 3,
-        )
-    val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, 800, 800, hints)
-    val width = bitMatrix.width
-    val height = bitMatrix.height
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
-    for (x in 0 until width) {
-        for (y in 0 until height) {
-            bitmap.setPixel(x, y, if (bitMatrix[x, y]) BLE_QR_FOREGROUND else BLE_QR_BACKGROUND)
-        }
-    }
-    return bitmap
-}
+private fun generateBleBitmap(data: String): Bitmap =
+    generateQrBitmap(
+        data = data,
+        size = 800,
+        errorCorrection = MobileErrorCorrectionLevel.H,
+        foreground = BLE_QR_FOREGROUND,
+        background = BLE_QR_BACKGROUND,
+        margin = 3,
+    ) ?: Bitmap.createBitmap(1, 1, Bitmap.Config.RGB_565)

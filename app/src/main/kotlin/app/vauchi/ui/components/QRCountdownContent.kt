@@ -163,23 +163,4 @@ fun QRCountdownContent(
 private fun generateQRBitmap(
     data: String,
     size: Int,
-): Bitmap? =
-    try {
-        val writer =
-            com.google.zxing.qrcode
-                .QRCodeWriter()
-        val bitMatrix = writer.encode(data, com.google.zxing.BarcodeFormat.QR_CODE, size, size)
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
-        for (x in 0 until size) {
-            for (y in 0 until size) {
-                bitmap.setPixel(
-                    x,
-                    y,
-                    if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE,
-                )
-            }
-        }
-        bitmap
-    } catch (_: Exception) {
-        null
-    }
+): Bitmap? = app.vauchi.util.generateQrBitmap(data = data, size = size)
