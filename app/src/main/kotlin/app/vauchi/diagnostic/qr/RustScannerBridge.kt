@@ -7,48 +7,28 @@ package app.vauchi.diagnostic.qr
 import android.content.Context
 import android.util.Log
 import uniffi.vauchi_platform.MobileScannerBackend
-import uniffi.vauchi_platform.diagnosticLoadYoloModel
 import uniffi.vauchi_platform.diagnosticScanQr
-import uniffi.vauchi_platform.diagnosticScanQrYolo
 
 /**
- * Bridge to the Rust rqrr and YOLO+rqrr scanners via UniFFI.
+ * Bridge to the Rust rxing/rqrr scanner via UniFFI.
+ *
+ * YOLO detector is only available with diagnostic-yolo feature
+ * (not included in production builds).
  */
 object RustScannerBridge {
     private const val TAG = "Vauchi"
-    private const val MODEL_FILENAME = "qrdet-n.onnx"
 
     val isAvailable: Boolean = true
-    private var yoloLoaded = false
 
     /**
-     * Load the YOLO model from app assets. Call once before using YoloRqrr mode.
-     * Extracts the ONNX model from assets to internal storage, then loads it.
+     * Load the YOLO model. Returns false in production builds
+     * (diagnostic-yolo feature not enabled).
      */
+    @Suppress("UNUSED_PARAMETER")
     fun loadYoloModel(context: Context): Boolean {
-        if (yoloLoaded) return true
-        return try {
-            // Extract ONNX model from assets to internal files dir
-            val modelFile = java.io.File(context.filesDir, MODEL_FILENAME)
-            if (!modelFile.exists()) {
-                context.assets.open(MODEL_FILENAME).use { input ->
-                    modelFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                Log.i(TAG, "[QR Tuner] YOLO model extracted to ${modelFile.absolutePath}")
-            }
-            yoloLoaded = diagnosticLoadYoloModel(modelFile.absolutePath)
-            if (yoloLoaded) {
-                Log.i(TAG, "[QR Tuner] YOLO model loaded successfully")
-            } else {
-                Log.e(TAG, "[QR Tuner] YOLO model load failed")
-            }
-            yoloLoaded
-        } catch (e: Exception) {
-            Log.e(TAG, "[QR Tuner] YOLO model load error: ${e.message}")
-            false
-        }
+        // YOLO requires diagnostic-yolo feature — not available in production builds
+        Log.i(TAG, "[QR Tuner] YOLO not available (diagnostic-yolo feature not enabled)")
+        return false
     }
 
     /**
@@ -65,14 +45,13 @@ object RustScannerBridge {
         try {
             when (mode) {
                 ScannerMode.YoloRqrr -> {
-                    val result =
-                        diagnosticScanQrYolo(
-                            lumaData = lumaData,
-                            width = width.toUInt(),
-                            height = height.toUInt(),
-                            confidenceThreshold = 0.15f,
-                        )
-                    result.decoded
+                    Log.w(TAG, "[QR Tuner] YOLO not available, falling back to RqrrPreprocessed")
+                    diagnosticScanQr(
+                        backend = MobileScannerBackend.RQRR_PREPROCESSED,
+                        lumaData = lumaData,
+                        width = width.toUInt(),
+                        height = height.toUInt(),
+                    ).decoded
                 }
 
                 else -> {
