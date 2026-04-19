@@ -74,40 +74,13 @@
             </intent-filter>
         </activity>
 
-        <!-- Diagnostic activities: exported=false (internal only, launched via Settings or ADB) -->
-        <activity
-            android:name=".diagnostic.DiagnosticActivity"
-            android:exported="false"
-            android:label="Ultrasonic Diagnostic" />
-
-        <activity
-            android:name=".diagnostic.BleDiagnosticActivity"
-            android:exported="false"
-            android:label="BLE Diagnostic" />
-
-        <activity
-            android:name=".diagnostic.QrDiagnosticActivity"
-            android:exported="false"
-            android:label="QR Diagnostic" />
-
-        <activity
-            android:name=".diagnostic.qr.QrTunerActivity"
-            android:exported="true"
-            android:label="QR Camera Tuner" />
-
-        <activity
-            android:name=".diagnostic.qr.QrBeaconActivity"
-            android:exported="true"
-            android:label="QR Beacon"
-            android:screenOrientation="portrait"
-            android:keepScreenOn="true" />
-
-        <!-- NFC diagnostic activity -->
-        <activity
-            android:name=".diagnostic.NfcDiagnosticActivity"
-            android:exported="false"
-            android:launchMode="singleTask"
-            android:label="NFC Diagnostic" />
+        <!--
+          Diagnostic activities moved to src/debug/AndroidManifest.xml.
+          Per principle "diagnostics should only be in test/debug build,
+          never in production" (2026-04-19-diagnostics-out-of-production-plan.md).
+          R8 release minification tree-shakes the class bytecode since
+          no manifest entry keeps the symbols alive.
+        -->
 
         <!-- NFC test activity (launch via ADB only) -->
         <activity
@@ -115,7 +88,7 @@
             android:exported="false"
             android:launchMode="singleTask" />
 
-        <!-- NFC Host Card Emulation service for contact exchange -->
+        <!-- NFC Host Card Emulation service for contact exchange (production) -->
         <service
             android:name=".nfc.VauchiHceService"
             android:exported="true"
@@ -126,18 +99,6 @@
             <meta-data
                 android:name="android.nfc.cardemulation.host_apdu_service"
                 android:resource="@xml/nfc_aid_list" />
-        </service>
-        <!-- NFC Diagnostic HCE service (no auth required) -->
-        <service
-            android:name=".diagnostic.NfcDiagnosticHceService"
-            android:exported="true"
-            android:permission="android.permission.BIND_NFC_SERVICE">
-            <intent-filter>
-                <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.nfc.cardemulation.host_apdu_service"
-                android:resource="@xml/nfc_diagnostic_aid_list" />
         </service>
     </application>
 

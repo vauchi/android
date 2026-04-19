@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!--
+  Debug-only manifest overlay: registers diagnostic/benchmark activities
+  that must never ship in release APKs. Gradle merges this on top of
+  src/main/AndroidManifest.xml for the debug build variant only.
+
+  Per principle "diagnostics should only be in test/debug build, never
+  in production" (2026-04-19-diagnostics-out-of-production-plan.md).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Diagnostic activities: debug-only, launched via Settings (gated by BuildConfig.DEBUG) or ADB -->
+        <activity
+            android:name=".diagnostic.DiagnosticActivity"
+            android:exported="false"
+            android:label="Ultrasonic Diagnostic" />
+
+        <activity
+            android:name=".diagnostic.BleDiagnosticActivity"
+            android:exported="false"
+            android:label="BLE Diagnostic" />
+
+        <activity
+            android:name=".diagnostic.QrDiagnosticActivity"
+            android:exported="false"
+            android:label="QR Diagnostic" />
+
+        <activity
+            android:name=".diagnostic.qr.QrTunerActivity"
+            android:exported="true"
+            android:label="QR Camera Tuner" />
+
+        <activity
+            android:name=".diagnostic.qr.QrBeaconActivity"
+            android:exported="true"
+            android:label="QR Beacon"
+            android:screenOrientation="portrait"
+            android:keepScreenOn="true" />
+
+        <!-- NFC diagnostic activity -->
+        <activity
+            android:name=".diagnostic.NfcDiagnosticActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:label="NFC Diagnostic" />
+
+        <!-- NFC Diagnostic HCE service (no auth required) -->
+        <service
+            android:name=".diagnostic.NfcDiagnosticHceService"
+            android:exported="true"
+            android:permission="android.permission.BIND_NFC_SERVICE">
+            <intent-filter>
+                <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.cardemulation.host_apdu_service"
+                android:resource="@xml/nfc_diagnostic_aid_list" />
+        </service>
+    </application>
+</manifest>

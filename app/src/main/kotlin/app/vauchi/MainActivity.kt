@@ -657,9 +657,17 @@ fun MainScreen(
                 }
 
                 Screen.QrDiagnostic -> {
-                    QrDiagnosticScreen(
-                        onBack = { currentScreen = Screen.Settings },
-                    )
+                    // Guard with BuildConfig.DEBUG so R8 can tree-shake the
+                    // real QrDiagnosticScreen out of release APKs. In release,
+                    // the no-op stub from src/release/ is compiled instead and
+                    // the condition evaluates to a compile-time false.
+                    if (BuildConfig.DEBUG) {
+                        QrDiagnosticScreen(
+                            onBack = { currentScreen = Screen.Settings },
+                        )
+                    } else {
+                        currentScreen = Screen.Settings
+                    }
                 }
 
                 Screen.More -> {
