@@ -361,7 +361,7 @@ private class MultipartQRAnalyzer(
                 }
 
             val result =
-                uniffi.vauchi_platform.diagnosticScanQr(
+                uniffi.vauchi_platform.scanQr(
                     backend = uniffi.vauchi_platform.MobileScannerBackend.RQRR_PREPROCESSED,
                     lumaData = bytes,
                     width = width.toUInt(),

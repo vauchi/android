@@ -303,7 +303,7 @@ class QrCodeAnalyzer(
 
             // rxing tryHarder via UniFFI (RqrrPreprocessed = rxing multi-decoder)
             val result =
-                uniffi.vauchi_platform.diagnosticScanQr(
+                uniffi.vauchi_platform.scanQr(
                     backend = uniffi.vauchi_platform.MobileScannerBackend.RQRR_PREPROCESSED,
                     lumaData = bytes,
                     width = width.toUInt(),
