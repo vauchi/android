@@ -24,7 +24,7 @@ import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
 import uniffi.vauchi_platform.MobileScannerBackend
-import uniffi.vauchi_platform.diagnosticScanQr
+import uniffi.vauchi_platform.scanQr
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date

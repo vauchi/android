@@ -7,7 +7,7 @@ package app.vauchi.diagnostic.qr
 import android.content.Context
 import android.util.Log
 import uniffi.vauchi_platform.MobileScannerBackend
-import uniffi.vauchi_platform.diagnosticScanQr
+import uniffi.vauchi_platform.scanQr
 
 /**
  * Bridge to the Rust rxing/rqrr scanner via UniFFI.
@@ -52,7 +52,7 @@ object RustScannerBridge {
                     ScannerMode.YoloRqrr,
                     -> MobileScannerBackend.RQRR_PREPROCESSED
                 }
-            diagnosticScanQr(
+            scanQr(
                 backend = backend,
                 lumaData = lumaData,
                 width = width.toUInt(),
