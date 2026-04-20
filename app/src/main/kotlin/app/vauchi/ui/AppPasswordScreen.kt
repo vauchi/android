@@ -41,15 +41,18 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import app.vauchi.util.LocalizationManager
+import uniffi.vauchi_platform.passcodeMaxLength
+import uniffi.vauchi_platform.passcodeMinLength
 
 /**
  * Passcode policy shared between the unified entry surface and the
- * setup dialogs. Min 4 lets users choose a numeric PIN; max 64 keeps
- * room for full passwords. Move to core (G3) once the platform
- * exposes `MobileAppPasswordPolicy`.
+ * setup dialogs. Values come from core via the G3 UniFFI helpers
+ * (`passcode_min_length()` / `passcode_max_length()`), so a change
+ * in policy only needs to land in `vauchi-core` — no per-platform
+ * drift. Android, iOS, and linux-qt all call the same two functions.
  */
-internal const val MIN_PASSCODE_LENGTH = 4
-internal const val MAX_PASSCODE_LENGTH = 64
+internal val MIN_PASSCODE_LENGTH: Int = passcodeMinLength().toInt()
+internal val MAX_PASSCODE_LENGTH: Int = passcodeMaxLength().toInt()
 
 /**
  * Unified passcode entry shown after biometric auth. Accepts either
