@@ -591,13 +591,16 @@ test:snapshots:record:
         echo "$CORE_REF" > "$VERSION_STAMP"
       fi
     - |
+      # Namespace /tmp by CI_JOB_ID so concurrent/prior jobs on the same
+      # shell runner can't leave files with foreign ownership (EACCES).
+      GRADLE_LOG="/tmp/gradle-record-${CI_JOB_ID}.log"
       set +e
-      ./gradlew updateDebugScreenshotTest 2>&1 | tee /tmp/gradle-record.log
+      ./gradlew updateDebugScreenshotTest 2>&1 | tee "$GRADLE_LOG"
       GRADLE_EXIT=$?
       set -e
       if [ "$GRADLE_EXIT" -ne 0 ]; then
         echo "❌ Gradle failed (exit code ${GRADLE_EXIT})"
-        tail -20 /tmp/gradle-record.log
+        tail -20 "$GRADLE_LOG"
         exit 1
       fi
       echo "✅ Screenshot recording completed"
@@ -610,15 +613,16 @@ test:snapshots:record:
         cp -a "$NESTED"/. app/src/screenshotTestDebug/reference/
         rm -rf "$NESTED"
       fi
-    # Preserve recorded baselines across git checkout (copy CONTENTS, not directory)
-    - mkdir -p /tmp/screenshot-reference && cp -a app/src/screenshotTestDebug/reference/. /tmp/screenshot-reference/
+    # Preserve recorded baselines across git checkout (copy CONTENTS, not directory).
+    # Per-job dir guards against ownership collisions on the shared shell runner.
+    - mkdir -p "/tmp/screenshot-reference-${CI_JOB_ID}" && cp -a app/src/screenshotTestDebug/reference/. "/tmp/screenshot-reference-${CI_JOB_ID}"/
     # Configure git for push via CI_JOB_TOKEN (requires ci_push_repository_for_job_token_allowed)
     - git config user.name "${GITLAB_USER_NAME}"
     - git config user.email "${GITLAB_USER_EMAIL}"
     - git fetch origin "+refs/heads/${CI_COMMIT_REF_NAME}:refs/heads/${CI_COMMIT_REF_NAME}"
     - git checkout -B "${CI_COMMIT_REF_NAME}" FETCH_HEAD
     # Restore recorded baselines (git checkout above resets working directory)
-    - mkdir -p app/src/screenshotTestDebug/reference && cp -a /tmp/screenshot-reference/. app/src/screenshotTestDebug/reference/
+    - mkdir -p app/src/screenshotTestDebug/reference && cp -a "/tmp/screenshot-reference-${CI_JOB_ID}"/. app/src/screenshotTestDebug/reference/
     # Commit and push baselines (skip if unchanged)
     - |
       git add app/src/screenshotTestDebug/reference/
@@ -686,20 +690,24 @@ verify:reproducible-so:
       echo "=== Reproducible .so Build Verification ==="
       export RUSTFLAGS="--remap-path-prefix=${PWD}=/build"
 
+      # Per-job paths guard against ownership collisions on the shared shell runner.
+      BUILD1_SO="/tmp/build1-${CI_JOB_ID}.so"
+      BUILD2_SO="/tmp/build2-${CI_JOB_ID}.so"
+
       # Build 1
       echo "Build 1..."
       cargo ndk -t aarch64-linux-android build -p vauchi-platform --release
-      cp target/aarch64-linux-android/release/libvauchi_platform.so /tmp/build1.so
+      cp target/aarch64-linux-android/release/libvauchi_platform.so "$BUILD1_SO"
 
       # Clean and rebuild
       cargo clean -p vauchi-platform
       echo "Build 2..."
       cargo ndk -t aarch64-linux-android build -p vauchi-platform --release
-      cp target/aarch64-linux-android/release/libvauchi_platform.so /tmp/build2.so
+      cp target/aarch64-linux-android/release/libvauchi_platform.so "$BUILD2_SO"
 
       # Compare
-      HASH1=$(sha256sum /tmp/build1.so | cut -d' ' -f1)
-      HASH2=$(sha256sum /tmp/build2.so | cut -d' ' -f1)
+      HASH1=$(sha256sum "$BUILD1_SO" | cut -d' ' -f1)
+      HASH2=$(sha256sum "$BUILD2_SO" | cut -d' ' -f1)
 
       echo "Build 1: ${HASH1}"
       echo "Build 2: ${HASH2}"
