@@ -43,17 +43,27 @@ import androidx.lifecycle.LifecycleEventObserver
 import app.vauchi.util.LocalizationManager
 
 /**
- * App password screen shown after biometric auth when duress mode
- * is configured. Collects a 6-digit PIN and routes it through
- * core.authenticate() which determines Normal vs Duress mode.
+ * Passcode policy shared between the unified entry surface and the
+ * setup dialogs. Min 4 lets users choose a numeric PIN; max 64 keeps
+ * room for full passwords. Move to core (G3) once the platform
+ * exposes `MobileAppPasswordPolicy`.
+ */
+internal const val MIN_PASSCODE_LENGTH = 4
+internal const val MAX_PASSCODE_LENGTH = 64
+
+/**
+ * Unified passcode entry shown after biometric auth. Accepts either
+ * the app password or the duress PIN (4–64 chars, any character set);
+ * core.authenticate() decides Normal vs Duress mode based on which
+ * secret matched.
  *
- * Visually identical regardless of which PIN is entered — the
+ * Visually identical regardless of which secret is entered — the
  * observer cannot distinguish normal from duress authentication.
  *
- * Note on PIN zeroization: JVM String is immutable — we can't
- * guarantee heap scrubbing. We clear the variable immediately
- * after use and on lifecycle pause. Rust core zeroizes the
- * password after hashing (ZeroizeOnDrop).
+ * Note on zeroization: JVM String is immutable — we can't guarantee
+ * heap scrubbing. We clear the variable immediately after use and on
+ * lifecycle pause. Rust core zeroizes the password after hashing
+ * (ZeroizeOnDrop).
  */
 @Composable
 fun AppPasswordScreen(
@@ -100,42 +110,43 @@ fun AppPasswordScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = localizationManager.t("resistance.duress.pin_label"),
+            text = localizationManager.t("auth.unlock.title"),
             style = MaterialTheme.typography.headlineSmall,
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Enter your app password to continue",
+            text = localizationManager.t("auth.unlock.body"),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        val a11yInputLabel = localizationManager.t("auth.unlock.a11y_input")
         OutlinedTextField(
             value = pin,
             onValueChange = { value ->
-                if (value.length <= 6 && value.all { it.isDigit() }) {
+                if (value.length <= MAX_PASSCODE_LENGTH) {
                     pin = value
                 }
             },
             label = {
                 Text(
-                    localizationManager.t("resistance.duress.pin_label"),
+                    localizationManager.t("auth.unlock.field_label"),
                 )
             },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions =
                 KeyboardOptions(
-                    keyboardType = KeyboardType.NumberPassword,
+                    keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done,
                 ),
             keyboardActions =
                 KeyboardActions(
                     onDone = {
-                        if (pin.length == 6) {
+                        if (pin.length >= MIN_PASSCODE_LENGTH) {
                             val entered = pin
                             pin = ""
                             onAuthenticate(entered)
@@ -152,25 +163,25 @@ fun AppPasswordScreen(
                 Modifier
                     .fillMaxWidth()
                     .semantics {
-                        contentDescription =
-                            "App password input, masked"
+                        contentDescription = a11yInputLabel
                     },
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        val a11yButtonLabel = localizationManager.t("auth.unlock.a11y_button")
         Button(
             onClick = {
                 val entered = pin
                 pin = ""
                 onAuthenticate(entered)
             },
-            enabled = pin.length == 6,
+            enabled = pin.length >= MIN_PASSCODE_LENGTH,
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .semantics {
-                        contentDescription = "Unlock with app password"
+                        contentDescription = a11yButtonLabel
                     },
         ) {
             Text(localizationManager.t("action.unlock"))

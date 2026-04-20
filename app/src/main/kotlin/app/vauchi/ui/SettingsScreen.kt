@@ -1972,9 +1972,17 @@ fun DuressPinSetupDialog(
         confirmButton = {
             TextButton(onClick = {
                 when {
-                    pin.length < 4 -> error = "PIN must be at least 4 characters"
-                    pin != confirmPin -> error = "PINs do not match"
-                    else -> onConfirm(pin)
+                    pin.length < MIN_PASSCODE_LENGTH -> {
+                        error = "PIN must be at least $MIN_PASSCODE_LENGTH characters"
+                    }
+
+                    pin != confirmPin -> {
+                        error = "PINs do not match"
+                    }
+
+                    else -> {
+                        onConfirm(pin)
+                    }
                 }
             }) {
                 Text("Set PIN")

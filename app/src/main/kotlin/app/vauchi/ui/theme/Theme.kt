@@ -7,6 +7,8 @@ package app.vauchi.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import app.vauchi.util.ThemeManager
 import app.vauchi.util.hexToColor
@@ -50,6 +52,23 @@ private fun buildColorScheme(
     )
 }
 
+private fun buildStatusColors(themeManager: ThemeManager): StatusColors {
+    val theme = themeManager.currentTheme
+    if (theme == null) {
+        return StatusColors(
+            success = Color(0xFF2E7D32),
+            warning = Color(0xFFF9A825),
+            info = Color(0xFF1976D2),
+        )
+    }
+    val c = theme.colors
+    return StatusColors(
+        success = hexToColor(c.success),
+        warning = hexToColor(c.warning),
+        info = hexToColor(c.accent),
+    )
+}
+
 @Suppress("UNUSED_PARAMETER")
 @Composable
 fun VauchiTheme(
@@ -62,10 +81,14 @@ fun VauchiTheme(
     themeManager.applySelectedTheme(darkTheme)
 
     val colorScheme = buildColorScheme(themeManager, darkTheme)
+    val statusColors = buildStatusColors(themeManager)
 
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content,
-    )
+    ) {
+        CompositionLocalProvider(LocalStatusColors provides statusColors) {
+            content()
+        }
+    }
 }

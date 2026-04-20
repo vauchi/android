@@ -18,7 +18,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
@@ -31,10 +30,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.vauchi_platform.MobileNfcHandshake
-
-private val NfcBackground = Color(0xFFF0F4FF)
-private val NfcIconColor = Color(0xFF3B5BDB)
-private val InstructionTextColor = Color(0xFF555555)
 
 /**
  * Sealed state for the NFC exchange flow.
@@ -218,7 +213,7 @@ fun NfcExchangeScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .background(NfcBackground)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
                     .testTag("nfc_exchange_screen"),
             contentAlignment = Alignment.Center,
         ) {
@@ -286,7 +281,7 @@ private fun NfcWaitingContent(localizationManager: LocalizationManager) {
             Icons.Default.Nfc,
             contentDescription = "NFC ready",
             modifier = Modifier.size(96.dp),
-            tint = NfcIconColor,
+            tint = MaterialTheme.colorScheme.primary,
         )
         Text(
             text = "Hold phones together",
@@ -296,7 +291,7 @@ private fun NfcWaitingContent(localizationManager: LocalizationManager) {
         Text(
             text = "Touch the NFC areas of both phones to exchange contact cards.",
             style = MaterialTheme.typography.bodyMedium,
-            color = InstructionTextColor,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -321,7 +316,7 @@ private fun NfcExchangingContent(localizationManager: LocalizationManager) {
                 Modifier
                     .size(64.dp)
                     .testTag("nfc_exchange.exchanging_indicator"),
-            color = NfcIconColor,
+            color = MaterialTheme.colorScheme.primary,
         )
         Text(
             text = "Exchanging…",
@@ -331,7 +326,7 @@ private fun NfcExchangingContent(localizationManager: LocalizationManager) {
         Text(
             text = "Keep phones together until complete.",
             style = MaterialTheme.typography.bodyMedium,
-            color = InstructionTextColor,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
     }
@@ -362,7 +357,7 @@ private fun NfcSuccessContent(
         Text(
             text = localizationManager.t("exchange.contact_added", mapOf("name" to remoteDisplayName)),
             style = MaterialTheme.typography.bodyMedium,
-            color = InstructionTextColor,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -444,7 +439,7 @@ private fun NfcRelayFallbackContent(
         Text(
             text = "NFC tap dropped. The exchange will complete via the relay when both devices reconnect.",
             style = MaterialTheme.typography.bodyMedium,
-            color = InstructionTextColor,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(8.dp))

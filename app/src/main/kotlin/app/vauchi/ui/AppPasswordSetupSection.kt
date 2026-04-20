@@ -23,11 +23,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.model.PasswordStrengthResult
+import app.vauchi.util.LocalizationManager
 
 /**
  * Settings section for setting up an app password.
@@ -42,6 +44,8 @@ fun AppPasswordSetupSection(
     modifier: Modifier = Modifier,
 ) {
     var showDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -52,16 +56,14 @@ fun AppPasswordSetupSection(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "App Password",
+                text = localizationManager.t("app_password.title"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.semantics { heading() },
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text =
-                    "Required for duress PIN. Sets a separate password " +
-                        "asked after biometric unlock.",
+                text = localizationManager.t("app_password.description"),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -70,7 +72,7 @@ fun AppPasswordSetupSection(
                 onClick = { showDialog = true },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Set App Password")
+                Text(localizationManager.t("app_password.set_button"))
             }
         }
     }
@@ -97,24 +99,30 @@ private fun AppPasswordSetupDialog(
     var confirmPassword by remember { mutableStateOf("") }
     val strength = remember(password) { onCheckStrength(password) }
     val passwordsMatch = password == confirmPassword && password.isNotEmpty()
-    val isValid = passwordsMatch && password.length >= 6
+    val isValid = passwordsMatch && password.length >= MIN_PASSCODE_LENGTH
+    val context = LocalContext.current
+    val localizationManager = remember { LocalizationManager.getInstance(context) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Set App Password") },
+        title = { Text(localizationManager.t("app_password.dialog_title")) },
         text = {
             Column {
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password") },
+                    label = { Text(localizationManager.t("app_password.password_label")) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (password.isNotEmpty()) {
                     Text(
-                        text = "Strength: ${strength.description}",
+                        text =
+                            localizationManager.t(
+                                "app_password.strength",
+                                mapOf("strength" to strength.description),
+                            ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
@@ -124,7 +132,11 @@ private fun AppPasswordSetupDialog(
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
-                    label = { Text("Confirm Password") },
+                    label = {
+                        Text(
+                            localizationManager.t("app_password.confirm_password_label"),
+                        )
+                    },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     isError = confirmPassword.isNotEmpty() && !passwordsMatch,
@@ -132,7 +144,7 @@ private fun AppPasswordSetupDialog(
                 )
                 if (confirmPassword.isNotEmpty() && !passwordsMatch) {
                     Text(
-                        text = "Passwords do not match",
+                        text = localizationManager.t("app_password.passwords_mismatch"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(top = 4.dp),
@@ -145,12 +157,12 @@ private fun AppPasswordSetupDialog(
                 onClick = { onConfirm(password) },
                 enabled = isValid,
             ) {
-                Text("Set Password")
+                Text(localizationManager.t("app_password.dialog_confirm"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(localizationManager.t("action.cancel"))
             }
         },
     )

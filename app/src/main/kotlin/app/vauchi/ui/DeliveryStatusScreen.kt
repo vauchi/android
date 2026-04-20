@@ -20,6 +20,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.vauchi.ui.theme.LocalStatusColors
 import app.vauchi.util.LocalizationManager
 import uniffi.vauchi_platform.MobileDeliveryRecord
 import uniffi.vauchi_platform.MobileDeliveryStatus
@@ -365,14 +366,15 @@ fun RetryEntryCard(entry: MobileRetryEntry) {
 
 @Composable
 fun DeliveryStatusIcon(status: MobileDeliveryStatus) {
-    val (icon, color) =
+    val color = statusColor(status)
+    val icon =
         when (status) {
-            MobileDeliveryStatus.QUEUED -> Icons.Default.Schedule to Color.Gray
-            MobileDeliveryStatus.SENT -> Icons.Default.ArrowUpward to Color.Blue
-            MobileDeliveryStatus.STORED -> Icons.Default.CheckCircleOutline to Color.Cyan
-            MobileDeliveryStatus.DELIVERED -> Icons.Default.CheckCircle to Color.Green
-            MobileDeliveryStatus.EXPIRED -> Icons.Default.Warning to Color(0xFFFFA000)
-            MobileDeliveryStatus.FAILED -> Icons.Default.Error to Color.Red
+            MobileDeliveryStatus.QUEUED -> Icons.Default.Schedule
+            MobileDeliveryStatus.SENT -> Icons.Default.ArrowUpward
+            MobileDeliveryStatus.STORED -> Icons.Default.CheckCircleOutline
+            MobileDeliveryStatus.DELIVERED -> Icons.Default.CheckCircle
+            MobileDeliveryStatus.EXPIRED -> Icons.Default.Warning
+            MobileDeliveryStatus.FAILED -> Icons.Default.Error
         }
     Icon(icon, contentDescription = statusDisplayName(status), tint = color)
 }
@@ -498,15 +500,17 @@ private fun statusDisplayName(status: MobileDeliveryStatus): String =
     }
 
 @Composable
-private fun statusColor(status: MobileDeliveryStatus): Color =
-    when (status) {
-        MobileDeliveryStatus.QUEUED -> Color.Gray
-        MobileDeliveryStatus.SENT -> Color.Blue
-        MobileDeliveryStatus.STORED -> Color.Cyan
-        MobileDeliveryStatus.DELIVERED -> Color.Green
-        MobileDeliveryStatus.EXPIRED -> Color(0xFFFFA000)
+private fun statusColor(status: MobileDeliveryStatus): Color {
+    val statusColors = LocalStatusColors.current
+    return when (status) {
+        MobileDeliveryStatus.QUEUED -> MaterialTheme.colorScheme.onSurfaceVariant
+        MobileDeliveryStatus.SENT -> statusColors.info
+        MobileDeliveryStatus.STORED -> statusColors.info
+        MobileDeliveryStatus.DELIVERED -> statusColors.success
+        MobileDeliveryStatus.EXPIRED -> statusColors.warning
         MobileDeliveryStatus.FAILED -> MaterialTheme.colorScheme.error
     }
+}
 
 private fun formatTimestamp(timestamp: ULong): String {
     val date = Date(timestamp.toLong() * 1000)
