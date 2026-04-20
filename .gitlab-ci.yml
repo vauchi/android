@@ -490,13 +490,19 @@ test:screenshots:
           rm -rf "$CORE_DIR"
           git clone --depth=1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
         fi
-        # Clone themes repo and generate themes.json — required by include_bytes! in vauchi-platform
+        # Clone-or-refresh themes repo — required by include_bytes! in vauchi-platform.
+        # Mirrors the clone-if-absent + pull-if-present pattern in
+        # scripts/ci-templates/rust-base.yml .clone-themes (can't use the
+        # anchor directly because android needs themes at $CI_PROJECT_DIR/themes,
+        # not the sibling-of-project path the anchor assumes).
         THEMES_DIR="${CI_PROJECT_DIR}/themes"
         if [ ! -d "$THEMES_DIR" ]; then
           git clone --depth=1 --branch=main \
             "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/themes.git" "$THEMES_DIR"
-          python3 "$THEMES_DIR/scripts/generate.py"
+        else
+          git -C "$THEMES_DIR" pull --ff-only 2>/dev/null || true
         fi
+        python3 "$THEMES_DIR/scripts/generate.py"
         export CARGO_HOME="${CI_PROJECT_DIR}/.cargo-screenshots"
         export CARGO_TARGET_DIR="${CI_PROJECT_DIR}/.cargo-target"
         cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
@@ -576,13 +582,19 @@ test:snapshots:record:
           rm -rf "$CORE_DIR"
           git clone --depth=1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
         fi
-        # Clone themes repo and generate themes.json — required by include_bytes! in vauchi-platform
+        # Clone-or-refresh themes repo — required by include_bytes! in vauchi-platform.
+        # Mirrors the clone-if-absent + pull-if-present pattern in
+        # scripts/ci-templates/rust-base.yml .clone-themes (can't use the
+        # anchor directly because android needs themes at $CI_PROJECT_DIR/themes,
+        # not the sibling-of-project path the anchor assumes).
         THEMES_DIR="${CI_PROJECT_DIR}/themes"
         if [ ! -d "$THEMES_DIR" ]; then
           git clone --depth=1 --branch=main \
             "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/themes.git" "$THEMES_DIR"
-          python3 "$THEMES_DIR/scripts/generate.py"
+        else
+          git -C "$THEMES_DIR" pull --ff-only 2>/dev/null || true
         fi
+        python3 "$THEMES_DIR/scripts/generate.py"
         export CARGO_HOME="${CI_PROJECT_DIR}/.cargo-record"
         export CARGO_TARGET_DIR="${CI_PROJECT_DIR}/.cargo-target"
         cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
