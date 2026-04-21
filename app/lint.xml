@@ -12,4 +12,14 @@
          AND be wrapped in a non-clickable container. Icon-only buttons
          must use IconButton (which enforces 48dp touch target + semantics). -->
     <issue id="ContentDescription" severity="error" />
+
+    <!-- androidx.lifecycle NonNullableMutableLiveDataDetector crashes with
+         NoClassDefFoundError inside the Android Gradle Plugin lint worker
+         on the self-hosted CI runner (observed on AGP 8.x / lint 31.x).
+         The crash predates any file analysis, so no violation could ever
+         be reported. We don't use MutableLiveData anywhere in app/ —
+         Compose ViewModels use StateFlow — so disabling this specific
+         detector loses zero real coverage. See MR !304 pipeline
+         2469236572 job 14025338960 for the crash stack. -->
+    <issue id="NullSafeMutableLiveData" severity="ignore" />
 </lint>
