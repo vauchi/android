@@ -475,20 +475,10 @@ fun SettingsScreenDarkScreenshot() {
     }
 }
 
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun ContactsScreenDarkScreenshot() {
-    VauchiTheme(darkTheme = true, dynamicColor = false) {
-        ContactsScreen(
-            onBack = {},
-            onListContacts = { emptyList() },
-            onRemoveContact = {},
-            onContactClick = {},
-            syncState = SyncState.Idle,
-        )
-    }
-}
+// `ContactsScreenDarkScreenshot` removed in Phase 1B.2: same rationale
+// as the light-theme previews above — the native `ContactsScreen` is
+// gone; `CoreScreenView("Contacts")` covers the dark theme via the
+// shared `VauchiTheme`.
 
 @PreviewTest
 @Preview(showSystemUi = true, device = VRT_DEVICE)
@@ -712,22 +702,10 @@ fun SettingsScreenGermanScreenshot() {
     }
 }
 
-@PreviewTest
-@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
-@Composable
-fun ContactsScreenGermanScreenshot() {
-    GermanLocaleWrapper {
-        VauchiTheme(dynamicColor = false) {
-            ContactsScreen(
-                onBack = {},
-                onListContacts = { emptyList() },
-                onRemoveContact = {},
-                onContactClick = {},
-                syncState = SyncState.Idle,
-            )
-        }
-    }
-}
+// `ContactsScreenGermanScreenshot` removed in Phase 1B.2: same
+// rationale as the light-theme previews above — the native
+// `ContactsScreen` is gone; `CoreScreenView("Contacts")` renders in
+// production and core owns the localised empty state.
 
 @PreviewTest
 @Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
