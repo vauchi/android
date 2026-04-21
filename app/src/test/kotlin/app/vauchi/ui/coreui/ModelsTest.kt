@@ -633,4 +633,77 @@ class ModelsTest {
         assertTrue(result is ActionResult.PreviewAs)
         assertEquals("c42", (result as ActionResult.PreviewAs).contactId)
     }
+
+    // ── ContactItem + ListItemAction wire format (core!637) ─────────
+
+    @Test
+    fun `deserialize ContactItem with actions`() {
+        val input =
+            """
+            {
+                "id": "c1",
+                "name": "Alice",
+                "subtitle": "alice@example.org",
+                "avatar_initials": "A",
+                "status": null,
+                "searchable_fields": ["alice@example.org", "+41 79 123 45 67"],
+                "actions": [
+                    {"id": "archive", "label": "Archive", "kind": "archive", "destructive": false},
+                    {"id": "delete", "label": "Delete", "kind": "delete", "destructive": true}
+                ]
+            }
+            """.trimIndent()
+        val contact = json.decodeFromString<ContactItem>(input)
+        assertEquals("c1", contact.id)
+        assertEquals("A", contact.avatarInitials)
+        assertEquals(listOf("alice@example.org", "+41 79 123 45 67"), contact.searchableFields)
+        assertEquals(2, contact.actions.size)
+        assertEquals("archive", contact.actions[0].id)
+        assertEquals(ListItemActionKind.Archive, contact.actions[0].kind)
+        assertEquals(false, contact.actions[0].destructive)
+        assertEquals(ListItemActionKind.Delete, contact.actions[1].kind)
+        assertEquals(true, contact.actions[1].destructive)
+    }
+
+    @Test
+    fun `deserialize legacy ContactItem without new fields`() {
+        // Fixtures written before core!637 omit `actions` + `searchable_fields`.
+        // Decoding must still succeed — the data class provides empty defaults.
+        val input = """{"id":"c1","name":"Bob","avatar_initials":"B"}"""
+        val contact = json.decodeFromString<ContactItem>(input)
+        assertEquals("c1", contact.id)
+        assertTrue(contact.actions.isEmpty())
+        assertTrue(contact.searchableFields.isEmpty())
+    }
+
+    @Test
+    fun `deserialize ListItemActionKind unknown falls back`() {
+        // A newer core ships an unrecognised kind. Decoding must degrade to
+        // Unknown so the UI can render a generic affordance.
+        val input = """{"id":"x","label":"Future","kind":"promote_to_vip","destructive":false}"""
+        val action = json.decodeFromString<ListItemAction>(input)
+        assertEquals(ListItemActionKind.Unknown, action.kind)
+    }
+
+    @Test
+    fun `serialize ListItemAction user action round-trips`() {
+        val action =
+            UserAction.ListItemAction(
+                componentId = "contacts",
+                itemId = "c1",
+                actionId = "archive",
+            )
+        val out = json.encodeToString(UserActionSerializer, action)
+        assertEquals(
+            """{"ListItemAction":{"component_id":"contacts","item_id":"c1","action_id":"archive"}}""",
+            out,
+        )
+
+        val back = json.decodeFromString(UserActionSerializer, out)
+        assertTrue(back is UserAction.ListItemAction)
+        back as UserAction.ListItemAction
+        assertEquals("contacts", back.componentId)
+        assertEquals("c1", back.itemId)
+        assertEquals("archive", back.actionId)
+    }
 }

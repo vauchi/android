@@ -7,6 +7,8 @@ package app.vauchi.ui.coreui
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
@@ -1163,7 +1165,74 @@ data class ContactItem(
     val subtitle: String? = null,
     @SerialName("avatar_initials") val avatarInitials: String,
     val status: String? = null,
+    @SerialName("searchable_fields") val searchableFields: List<String> = emptyList(),
+    val actions: List<ListItemAction> = emptyList(),
     val a11y: A11y? = null,
+)
+
+/**
+ * Semantic classification for a per-row action. Mirrors
+ * `vauchi-core::ui::component::ListItemActionKind`. Serialized snake_case.
+ * A newer core may ship additional variants; [Unknown] is the
+ * forward-compat fallback so decoding never throws.
+ */
+@Serializable(with = ListItemActionKindSerializer::class)
+enum class ListItemActionKind {
+    Archive,
+    Unarchive,
+    Hide,
+    Unhide,
+    Delete,
+    Undelete,
+    Custom,
+    Unknown,
+}
+
+internal object ListItemActionKindSerializer : KSerializer<ListItemActionKind> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("ListItemActionKind", PrimitiveKind.STRING)
+
+    override fun serialize(
+        encoder: Encoder,
+        value: ListItemActionKind,
+    ) {
+        val wire =
+            when (value) {
+                ListItemActionKind.Archive -> "archive"
+                ListItemActionKind.Unarchive -> "unarchive"
+                ListItemActionKind.Hide -> "hide"
+                ListItemActionKind.Unhide -> "unhide"
+                ListItemActionKind.Delete -> "delete"
+                ListItemActionKind.Undelete -> "undelete"
+                ListItemActionKind.Custom -> "custom"
+                ListItemActionKind.Unknown -> "custom"
+            }
+        encoder.encodeString(wire)
+    }
+
+    override fun deserialize(decoder: Decoder): ListItemActionKind =
+        when (decoder.decodeString()) {
+            "archive" -> ListItemActionKind.Archive
+            "unarchive" -> ListItemActionKind.Unarchive
+            "hide" -> ListItemActionKind.Hide
+            "unhide" -> ListItemActionKind.Unhide
+            "delete" -> ListItemActionKind.Delete
+            "undelete" -> ListItemActionKind.Undelete
+            "custom" -> ListItemActionKind.Custom
+            else -> ListItemActionKind.Unknown
+        }
+}
+
+/**
+ * A per-row swipe / overflow-menu action produced by core. Mirrors
+ * `vauchi-core::ui::component::ListItemAction`.
+ */
+@Serializable
+data class ListItemAction(
+    val id: String,
+    val label: String,
+    val kind: ListItemActionKind,
+    val destructive: Boolean = false,
 )
 
 @Serializable
@@ -1347,6 +1416,16 @@ sealed class UserAction {
         val itemId: String,
     ) : UserAction()
 
+    /**
+     * User invoked a per-row action (overflow menu / swipe). `actionId`
+     * matches the id on the [ListItemAction] that core emitted for the row.
+     */
+    data class ListItemAction(
+        val componentId: String,
+        val itemId: String,
+        val actionId: String,
+    ) : UserAction()
+
     data class SettingsToggled(
         val componentId: String,
         val itemId: String,
@@ -1481,6 +1560,21 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                     )
                 }
 
+                is UserAction.ListItemAction -> {
+                    JsonObject(
+                        mapOf(
+                            "ListItemAction" to
+                                JsonObject(
+                                    mapOf(
+                                        "component_id" to JsonPrimitive(value.componentId),
+                                        "item_id" to JsonPrimitive(value.itemId),
+                                        "action_id" to JsonPrimitive(value.actionId),
+                                    ),
+                                ),
+                        ),
+                    )
+                }
+
                 is UserAction.SettingsToggled -> {
                     JsonObject(
                         mapOf(
@@ -1585,6 +1679,15 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                         UserAction.ListItemSelected(
                             componentId = obj["component_id"]!!.jsonPrimitive.content,
                             itemId = obj["item_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "ListItemAction" in element -> {
+                        val obj = element["ListItemAction"] as JsonObject
+                        UserAction.ListItemAction(
+                            componentId = obj["component_id"]!!.jsonPrimitive.content,
+                            itemId = obj["item_id"]!!.jsonPrimitive.content,
+                            actionId = obj["action_id"]!!.jsonPrimitive.content,
                         )
                     }
 
