@@ -52,7 +52,6 @@ import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.BleExchangeScreen
 import app.vauchi.ui.ContactDetailScreen
 import app.vauchi.ui.ContactMergeScreen
-import app.vauchi.ui.ContactsScreen
 import app.vauchi.ui.DevicesScreen
 import app.vauchi.ui.ExchangeMode
 import app.vauchi.ui.ExchangeModePicker
@@ -537,27 +536,19 @@ fun MainScreen(
                 }
 
                 Screen.Contacts -> {
-                    val demoContact by viewModel.demoContact.collectAsState()
-                    ContactsScreen(
-                        onBack = { currentScreen = Screen.Home },
-                        onListContacts = { viewModel.listContacts() },
-                        onSearchContacts = { query -> viewModel.searchContacts(query) },
-                        onListContactsPaginated = { offset, limit -> viewModel.listContactsPaginated(offset, limit) },
-                        onRemoveContact = { id -> viewModel.removeContact(id) },
-                        onContactClick = { id ->
-                            selectedContactId = id
-                            currentScreen = Screen.ContactDetail
-                        },
-                        syncState = syncState,
-                        onSync = { viewModel.sync() },
-                        demoContact = demoContact,
-                        onDismissDemo = { viewModel.dismissDemoContact() },
-                        onListHiddenContacts = { viewModel.listHiddenContacts() },
-                        onHideContact = { id -> viewModel.hideContact(id) },
-                        onUnhideContact = { id -> viewModel.unhideContact(id) },
-                        onImportVcf = { data -> viewModel.importContactsFromVcf(data) },
-                        onImportError = { msg -> viewModel.showMessage(msg) },
-                        onArchivedContacts = { currentScreen = Screen.ArchivedContacts },
+                    // Phase 1A.2 / 1B.2 (core-gui-architecture-alignment):
+                    // the Contacts tab is now a thin Compose shell around
+                    // `CoreScreenView("Contacts")`. Core's ContactListEngine
+                    // owns search, row actions (archive/hide/delete via the
+                    // ListItemAction overflow menu wired in MR !304), the
+                    // "Archived Contacts" and "Find Duplicates" screen
+                    // actions (AppEngine intercepts + navigates), and the
+                    // empty-state InfoPanel. See
+                    // `core/vauchi-app/src/ui/contact_list.rs`.
+                    CoreScreenView(
+                        viewModel = coreAppViewModel,
+                        screenName = "Contacts",
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
 

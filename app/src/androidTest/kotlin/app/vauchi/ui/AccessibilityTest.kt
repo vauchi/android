@@ -62,27 +62,13 @@ class AccessibilityTest {
 
     // MARK: - Contacts Accessibility
 
-    @Test
-    fun contactsScreen_emptyStateAccessible() {
-        composeTestRule.setContent {
-            VauchiTheme {
-                ContactsScreen(
-                    onBack = {},
-                    onListContacts = { emptyList() },
-                    onRemoveContact = {},
-                    onContactClick = {},
-                    syncState = SyncState.Idle,
-                )
-            }
-        }
-
-        // Empty state must describe what to do
-        composeTestRule.onNodeWithText("Exchange cards with someone to add contacts", substring = true).assertIsDisplayed()
-        // Back button must be accessible
-        composeTestRule.onNodeWithContentDescription("Back").assertExists()
-        // Empty state container must have semantic description for screen readers
-        composeTestRule.onNodeWithContentDescription("No contacts yet", substring = true).assertExists()
-    }
+    // `contactsScreen_emptyStateAccessible` was removed in Phase 1B.2:
+    // Screen.Contacts now renders through CoreScreenView("Contacts").
+    // The equivalent accessibility guarantees (empty-state copy, back
+    // button, "No contacts yet" heading) live on core's
+    // ContactListEngine and are covered by
+    // `core/vauchi-app/src/ui/contact_list.rs` unit tests plus the
+    // reachability walker in `test:reachability`.
 
     // MARK: - Labels Accessibility
 

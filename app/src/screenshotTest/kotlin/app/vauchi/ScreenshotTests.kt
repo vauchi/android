@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import app.vauchi.ui.ContactsScreen
 import app.vauchi.ui.DeliveryStatusScreen
 import app.vauchi.ui.LabelsScreen
 import app.vauchi.ui.SettingsScreen
@@ -52,37 +51,12 @@ fun SettingsScreenScreenshot() {
     }
 }
 
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun ContactsScreenEmptyScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        ContactsScreen(
-            onBack = {},
-            onListContacts = { emptyList() },
-            onRemoveContact = {},
-            onContactClick = {},
-            syncState = SyncState.Idle,
-        )
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun ContactsScreenWithContactsScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        // Note: Due to lazy loading, we use the empty state for now
-        // Real contacts would require more complex setup
-        ContactsScreen(
-            onBack = {},
-            onListContacts = { emptyList() },
-            onRemoveContact = {},
-            onContactClick = {},
-            syncState = SyncState.Idle,
-        )
-    }
-}
+// ContactsScreen* preview tests removed in Phase 1B.2: `Screen.Contacts`
+// now renders through `CoreScreenView("Contacts")` against core's
+// `ContactListEngine`, which is exercised from `core/vauchi-app/src/
+// ui/contact_list.rs` unit tests. A preview-time screenshot would
+// need a real `PlatformAppEngine` seeded with contacts, which is not
+// how the preview runtime is set up.
 
 @PreviewTest
 @Preview(showSystemUi = true, device = VRT_DEVICE)
