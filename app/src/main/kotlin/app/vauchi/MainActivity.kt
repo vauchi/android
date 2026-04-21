@@ -49,7 +49,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vauchi.ui.AppPasswordScreen
-import app.vauchi.ui.ArchivedContactsScreen
 import app.vauchi.ui.BleExchangeScreen
 import app.vauchi.ui.ContactDetailScreen
 import app.vauchi.ui.ContactMergeScreen
@@ -683,10 +682,10 @@ fun MainScreen(
                 }
 
                 Screen.ArchivedContacts -> {
-                    ArchivedContactsScreen(
-                        onBack = { currentScreen = Screen.More },
-                        onListArchivedContacts = { viewModel.listArchivedContacts() },
-                        onUnarchiveContact = { id -> viewModel.unarchiveContact(id) },
+                    CoreScreenView(
+                        viewModel = coreAppViewModel,
+                        screenName = "ArchivedContacts",
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
 
