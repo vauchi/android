@@ -106,10 +106,46 @@ class CoreAppViewModel(
         }
     }
 
+    /**
+     * Phase 2A/2B companion to iOS AppViewModel's event listener. Kept
+     * as a property so its lifetime is bound to the ViewModel — if it
+     * gets collected, UniFFI stops delivering callbacks.
+     */
+    private var eventListener: ScreenInvalidationListener? = null
+
     init {
         loadAvailableScreens()
         loadScreen()
+        attachEventListener()
     }
+
+    private fun attachEventListener() {
+        val listener =
+            ScreenInvalidationListener { screenIds ->
+                // Core may fire this on the same thread that called
+                // handleActionJson. Hopping back into the engine there
+                // would deadlock the internal Mutex — bounce through
+                // viewModelScope first.
+                viewModelScope.launch {
+                    withContext(Dispatchers.IO) {
+                        for (id in screenIds) {
+                            runCatching { appEngine.invalidateScreenJson("\"$id\"") }
+                        }
+                    }
+                    loadScreen()
+                }
+            }
+        try {
+            appEngine.setEventListener(listener = listener)
+            eventListener = listener
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to attach event listener", e)
+        }
+    }
+
+    /** Test-only accessor; see `ScreenInvalidationListenerTest`. */
+    internal val hasEventListener: Boolean
+        get() = eventListener != null
 
     fun loadAvailableScreens() {
         viewModelScope.launch {
