@@ -18,6 +18,22 @@ path = ["**/Cargo.lock", "**/package-lock.json", "**/yarn.lock", "**/*.lock"]
 SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
 
+# Cargo registry / build cache left behind by the self-hosted CI runner.
+# .gitlab-ci.yml sets CARGO_HOME to a project-local dir for both the
+# native-host-lib build (`.cargo-record`) and the screenshot test job
+# (`.cargo-screenshots`), plus a shared `.cargo-target`. The shared
+# reuse template's `git clean -ffd` does not remove them between jobs
+# on the same runner. These are cargo-managed third-party index
+# files, not vauchi-authored source. Rust and cargo are dual-licensed
+# Apache-2.0 OR MIT; we already carry Apache-2.0 in LICENSES/ (for
+# the Gradle wrapper), so attributing here to that identifier avoids
+# adding a new LICENSES/ file for pure CI transient state.
+[[annotations]]
+path = [".cargo-*/**", "**/.cargo-*/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "The Rust Project Developers"
+SPDX-License-Identifier = "Apache-2.0"
+
 # Git and editor config files
 [[annotations]]
 path = [".gitignore", "**/.gitignore", ".DS_Store", "**/.gitkeep", ".dockerignore"]
