@@ -737,32 +737,6 @@ class MainViewModel(
             repository.listArchivedContacts()
         }
 
-    suspend fun findDuplicates(): List<MobileDuplicatePair> =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.findDuplicates()
-            }
-        } catch (e: Exception) {
-            emptyList()
-        }
-
-    suspend fun mergeContacts(
-        primaryId: String,
-        secondaryId: String,
-    ): MobileContact =
-        withContext(Dispatchers.IO) {
-            repository.mergeContacts(primaryId, secondaryId)
-        }
-
-    suspend fun dismissDuplicate(
-        id1: String,
-        id2: String,
-    ) {
-        withContext(Dispatchers.IO) {
-            repository.dismissDuplicate(id1, id2)
-        }
-    }
-
     fun importContactsFromVcf(data: ByteArray) {
         viewModelScope.launch {
             try {
@@ -823,15 +797,6 @@ class MainViewModel(
         } catch (e: Exception) {
             showMessage("Failed to remove trust: ${e.message}")
             false
-        }
-
-    suspend fun trustedContactCount(): UInt =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.trustedContactCount()
-            }
-        } catch (e: Exception) {
-            0u
         }
 
     suspend fun getOwnPublicKey(): String? =
@@ -1406,36 +1371,6 @@ class MainViewModel(
     }
 
     // Recovery operations
-    suspend fun createRecoveryClaim(oldPkHex: String): MobileRecoveryClaim? =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.createRecoveryClaim(oldPkHex)
-            }
-        } catch (e: Exception) {
-            showMessage("Failed to create claim: ${e.message}")
-            null
-        }
-
-    suspend fun parseRecoveryClaim(claimB64: String): MobileRecoveryClaim? =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.parseRecoveryClaim(claimB64)
-            }
-        } catch (e: Exception) {
-            showMessage("Invalid claim data: ${e.message}")
-            null
-        }
-
-    suspend fun createRecoveryVoucher(claimB64: String): MobileRecoveryVoucher? =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.createRecoveryVoucher(claimB64)
-            }
-        } catch (e: Exception) {
-            showMessage("Failed to create voucher: ${e.message}")
-            null
-        }
-
     suspend fun addRecoveryVoucher(voucherB64: String): MobileRecoveryProgress? =
         try {
             withContext(Dispatchers.IO) {
@@ -1768,36 +1703,6 @@ class MainViewModel(
 
     // MARK: - Device Management
     // Based on: features/device_management.feature
-
-    /**
-     * Get list of linked devices
-     */
-    fun getDevices() = repository.getDevices()
-
-    /**
-     * Generate device link QR code for a new device to scan
-     */
-    fun generateDeviceLinkQr() = repository.generateDeviceLinkQr()
-
-    /**
-     * Parse device link QR code
-     */
-    fun parseDeviceLinkQr(qrData: String) = repository.parseDeviceLinkQr(qrData)
-
-    /**
-     * Get the number of linked devices
-     */
-    fun deviceCount(): UInt = repository.deviceCount()
-
-    /**
-     * Unlink a device by index
-     */
-    fun unlinkDevice(deviceIndex: UInt): Boolean = repository.unlinkDevice(deviceIndex)
-
-    /**
-     * Check if this is the primary device
-     */
-    fun isPrimaryDevice(): Boolean = repository.isPrimaryDevice()
 
     // MARK: - Device Linking Protocol
 

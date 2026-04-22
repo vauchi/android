@@ -336,18 +336,6 @@ class VauchiRepository(
 
     fun listArchivedContacts() = platform().listArchivedContacts()
 
-    fun findDuplicates() = platform().findDuplicates()
-
-    fun mergeContacts(
-        primaryId: String,
-        secondaryId: String,
-    ) = platform().mergeContacts(primaryId = primaryId, secondaryId = secondaryId)
-
-    fun dismissDuplicate(
-        id1: String,
-        id2: String,
-    ) = platform().dismissDuplicate(id1 = id1, id2 = id2)
-
     fun importContactsFromVcf(data: ByteArray) = platform().importContactsFromVcf(data)
 
     // Visibility operations
@@ -710,12 +698,11 @@ class VauchiRepository(
 
     fun untrustContactForRecovery(id: String) = platform().untrustContactForRecovery(id)
 
-    fun trustedContactCount(): UInt = platform().trustedContactCount()
-
     // Recovery operations
+    // `createRecoveryClaim` + `createRecoveryVoucher` retained despite no
+    // production consumer: VauchiRepositoryFfiTest asserts the UniFFI
+    // passthroughs at the repository layer (android-test suite).
     fun createRecoveryClaim(oldPkHex: String) = platform().createRecoveryClaim(oldPkHex)
-
-    fun parseRecoveryClaim(claimB64: String) = platform().parseRecoveryClaim(claimB64)
 
     fun createRecoveryVoucher(claimB64: String) = platform().createRecoveryVoucher(claimB64)
 
@@ -800,53 +787,6 @@ class VauchiRepository(
     fun restoreDemoContact() = platform().restoreDemoContact()
 
     // Device Linking operations
-    // Based on: features/device_management.feature
-
-    /**
-     * Get list of linked devices.
-     *
-     * @return List of device info for all linked devices
-     */
-    fun getDevices() = platform().getDevices()
-
-    /**
-     * Generate a device link QR code for a new device to scan.
-     *
-     * @return QR code data with expiration info
-     */
-    fun generateDeviceLinkQr() = platform().generateDeviceLinkQr()
-
-    /**
-     * Parse a device link QR code scanned from another device.
-     *
-     * @param qrData The raw QR code data string
-     * @return Parsed device link info
-     */
-    fun parseDeviceLinkQr(qrData: String) = platform().parseDeviceLinkQr(qrData)
-
-    /**
-     * Get the number of linked devices.
-     *
-     * @return Count of linked devices
-     */
-    fun deviceCount(): UInt = platform().deviceCount()
-
-    /**
-     * Unlink a device by its index in the device list.
-     * Cannot unlink the current device.
-     *
-     * @param deviceIndex The index of the device to unlink
-     * @return True if the device was successfully unlinked
-     */
-    fun unlinkDevice(deviceIndex: UInt): Boolean = platform().unlinkDevice(deviceIndex)
-
-    /**
-     * Check if this is the primary (first) device.
-     *
-     * @return True if this is the primary device
-     */
-    fun isPrimaryDevice(): Boolean = platform().isPrimaryDevice()
-
     // Device Linking Protocol operations (relay transport)
 
     /**
