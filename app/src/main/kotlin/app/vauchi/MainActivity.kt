@@ -51,7 +51,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.BleExchangeScreen
 import app.vauchi.ui.ContactDetailScreen
-import app.vauchi.ui.DevicesScreen
 import app.vauchi.ui.ExchangeMode
 import app.vauchi.ui.ExchangeModePicker
 import app.vauchi.ui.HelpScreen
@@ -592,13 +591,10 @@ fun MainScreen(
                 }
 
                 Screen.Devices -> {
-                    DevicesScreen(
-                        onBack = { currentScreen = Screen.More },
-                        viewModel = viewModel,
-                        getDevices = { viewModel.getDevices() },
-                        generateLinkQr = { viewModel.generateDeviceLinkQr() },
-                        unlinkDevice = { index -> viewModel.unlinkDevice(index) },
-                        isPrimaryDevice = { viewModel.isPrimaryDevice() },
+                    CoreScreenView(
+                        viewModel = coreAppViewModel,
+                        screenName = "DeviceManagement",
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
 
