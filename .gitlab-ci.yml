@@ -689,6 +689,13 @@ gate:app-size:release:
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
 
+# Diagnostic: builds libvauchi_platform.so twice and diffs the binaries.
+# Reproducibility is a defence-in-depth signal for supply-chain integrity
+# (SLSA L3 alignment), but real reproducible builds across the Android
+# NDK toolchain require infrastructure that isn't yet in place
+# (timestamp clamping, deterministic linker order, host environment
+# hermeticity). allow_failure: true keeps the job advisory until the
+# infrastructure work is done. Audited 2026-04-22 T2.5.
 verify:reproducible-so:
   extends: [.android-job, .timeout-long]
   stage: test
