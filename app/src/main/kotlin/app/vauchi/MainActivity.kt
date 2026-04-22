@@ -14,13 +14,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.People
@@ -75,9 +70,7 @@ import app.vauchi.ui.theme.VauchiTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import uniffi.vauchi_platform.MobileApplyResult
-import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileContentType
-import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileUpdateStatus
 import uniffi.vauchi_platform.coreVersion
 import java.time.Instant
@@ -422,17 +415,10 @@ fun MainScreen(
 
                         is UiState.Ready -> {
                             ReadyScreen(
-                                displayName = state.displayName,
-                                publicId = state.publicId,
-                                card = state.card,
-                                contactCount = state.contactCount,
-                                onAddField = viewModel::addField,
-                                onRemoveField = viewModel::removeField,
+                                coreAppViewModel = coreAppViewModel,
                                 onExchange = { currentScreen = Screen.MultiStageExchange },
                                 onContacts = { currentScreen = Screen.Contacts },
                                 onSettings = { currentScreen = Screen.Settings },
-                                socialNetworks = viewModel.listSocialNetworks(),
-                                onGetProfileUrl = viewModel::getProfileUrl,
                                 syncState = syncState,
                                 isOnline = isOnline,
                                 lastSyncTime = lastSyncTime,
@@ -773,33 +759,33 @@ fun LoadingScreen() {
     }
 }
 
+// Phase 1B.1 (core-gui-architecture-alignment): the home (My Card)
+// screen is now a thin Android shell around
+// `CoreScreenView(screenName = "MyInfo")`. Core owns the card header,
+// avatar, field list, add/edit/delete (via `form_dialog`), and the
+// first-exchange prompt — see `core/vauchi-app/src/ui/my_info.rs`.
+// The shell keeps the Android-specific chrome that isn't in the
+// cross-platform ScreenModel: the Vauchi title bar, sync chip + settings
+// icon, offline banner, and the Exchange / Contacts bottom shortcuts
+// (Android has no tab bar, so these bottom buttons replace what iOS
+// offers in its TabView).
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReadyScreen(
-    displayName: String,
-    publicId: String,
-    card: MobileContactCard,
-    contactCount: UInt,
-    onAddField: (MobileFieldType, String, String) -> Unit,
-    onRemoveField: (String) -> Unit,
+    coreAppViewModel: CoreAppViewModel,
     onExchange: () -> Unit,
     onContacts: () -> Unit,
     onSettings: () -> Unit,
-    socialNetworks: List<uniffi.vauchi_platform.MobileSocialNetwork> = emptyList(),
-    onGetProfileUrl: (String, String) -> String? = { _, _ -> null },
     syncState: SyncState = SyncState.Idle,
     isOnline: Boolean = true,
     lastSyncTime: Instant? = null,
     onSync: () -> Unit = {},
 ) {
-    var showAddDialog by remember { mutableStateOf(false) }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Vauchi") },
                 actions = {
-                    // Sync status indicator
                     SyncStatusChip(
                         syncState = syncState,
                         isOnline = isOnline,
@@ -813,11 +799,6 @@ fun ReadyScreen(
                 },
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }, modifier = Modifier.testTag("home.add_field")) {
-                Icon(Icons.Default.Add, contentDescription = "Add field")
-            }
-        },
     ) { padding ->
         Column(
             modifier =
@@ -825,351 +806,40 @@ fun ReadyScreen(
                     .fillMaxSize()
                     .padding(padding),
         ) {
-            // Offline banner
             if (!isOnline) {
                 OfflineBanner()
             }
-
-            LazyColumn(
+            CoreScreenView(
+                viewModel = coreAppViewModel,
+                screenName = "MyInfo",
+                modifier = Modifier.weight(1f),
+            )
+            Row(
                 modifier =
                     Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(vertical = 24.dp),
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                item {
-                    Text(
-                        text = "Hello, $displayName!",
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
-                }
-
-                item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "Your Card",
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Public ID: ${publicId.take(16)}...",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-
-                item {
-                    Text(
-                        text = "Fields",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
-
-                if (card.fields.isEmpty()) {
-                    item {
-                        Text(
-                            text = "No fields yet. Tap + to add contact info!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                } else {
-                    items(card.fields) { field ->
-                        val context = LocalContext.current
-                        val isSocialField = field.fieldType == MobileFieldType.SOCIAL
-                        val profileUrl =
-                            if (isSocialField) {
-                                onGetProfileUrl(field.label, field.value)
-                            } else {
-                                null
-                            }
-
-                        Card(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .then(
-                                        if (profileUrl != null) {
-                                            Modifier.clickable {
-                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(profileUrl))
-                                                context.startActivity(intent)
-                                            }
-                                        } else {
-                                            Modifier
-                                        },
-                                    ),
-                            colors =
-                                CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                ),
-                        ) {
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = field.label,
-                                        style = MaterialTheme.typography.labelMedium,
-                                    )
-                                    Text(
-                                        text = if (isSocialField) "@${field.value}" else field.value,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color =
-                                            if (profileUrl !=
-                                                null
-                                            ) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurface
-                                            },
-                                    )
-                                }
-                                if (profileUrl != null) {
-                                    Icon(
-                                        Icons.Default.Share,
-                                        contentDescription = "Open profile",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp),
-                                    )
-                                }
-                                IconButton(onClick = { onRemoveField(field.label) }) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = "Delete",
-                                        tint = MaterialTheme.colorScheme.error,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Contacts: $contactCount",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        Button(
-                            onClick = onExchange,
-                            modifier = Modifier.weight(1f).testTag("home.exchange"),
-                        ) {
-                            Icon(Icons.Default.Share, contentDescription = "Exchange")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Exchange")
-                        }
-                        OutlinedButton(
-                            onClick = onContacts,
-                            modifier = Modifier.weight(1f).testTag("home.contacts"),
-                        ) {
-                            Icon(Icons.Default.Person, contentDescription = "Contacts")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Contacts")
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (showAddDialog) {
-        AddFieldDialog(
-            onDismiss = { showAddDialog = false },
-            onAdd = { type, label, value ->
-                onAddField(type, label, value)
-                showAddDialog = false
-            },
-            socialNetworks = socialNetworks,
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AddFieldDialog(
-    onDismiss: () -> Unit,
-    onAdd: (MobileFieldType, String, String) -> Unit,
-    socialNetworks: List<uniffi.vauchi_platform.MobileSocialNetwork> = emptyList(),
-) {
-    var selectedType by remember { mutableStateOf(MobileFieldType.EMAIL) }
-    var label by remember { mutableStateOf("") }
-    var value by remember { mutableStateOf("") }
-    var expanded by remember { mutableStateOf(false) }
-    var socialExpanded by remember { mutableStateOf(false) }
-    var selectedNetwork by remember { mutableStateOf<uniffi.vauchi_platform.MobileSocialNetwork?>(null) }
-    var socialSearch by remember { mutableStateOf("") }
-
-    val fieldTypes =
-        listOf(
-            MobileFieldType.EMAIL to "Email",
-            MobileFieldType.PHONE to "Phone",
-            MobileFieldType.WEBSITE to "Website",
-            MobileFieldType.ADDRESS to "Address",
-            MobileFieldType.SOCIAL to "Social",
-            MobileFieldType.CUSTOM to "Custom",
-        )
-
-    // Filter social networks by search
-    val filteredNetworks =
-        remember(socialSearch, socialNetworks) {
-            if (socialSearch.isBlank()) {
-                socialNetworks.take(10)
-            } else {
-                socialNetworks
-                    .filter {
-                        it.displayName.contains(socialSearch, ignoreCase = true)
-                    }.take(10)
-            }
-        }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add Field") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                // Field type dropdown
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded },
+                Button(
+                    onClick = onExchange,
+                    modifier = Modifier.weight(1f).testTag("home.exchange"),
                 ) {
-                    OutlinedTextField(
-                        value = fieldTypes.find { it.first == selectedType }?.second ?: "",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Type") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier =
-                            Modifier
-                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
-                                .fillMaxWidth(),
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                    ) {
-                        fieldTypes.forEach { (type, name) ->
-                            DropdownMenuItem(
-                                text = { Text(name) },
-                                onClick = {
-                                    selectedType = type
-                                    if (type != MobileFieldType.SOCIAL && label.isEmpty()) {
-                                        label = name
-                                    }
-                                    if (type == MobileFieldType.SOCIAL) {
-                                        label = ""
-                                        selectedNetwork = null
-                                    }
-                                    expanded = false
-                                },
-                            )
-                        }
-                    }
+                    Icon(Icons.Default.Share, contentDescription = "Exchange")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Exchange")
                 }
-
-                // Social network picker (only shown for SOCIAL type)
-                if (selectedType == MobileFieldType.SOCIAL) {
-                    ExposedDropdownMenuBox(
-                        expanded = socialExpanded,
-                        onExpandedChange = { socialExpanded = !socialExpanded },
-                    ) {
-                        OutlinedTextField(
-                            value = selectedNetwork?.displayName ?: socialSearch,
-                            onValueChange = {
-                                socialSearch = it
-                                selectedNetwork = null
-                                socialExpanded = true
-                            },
-                            label = { Text("Social Network") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = socialExpanded) },
-                            modifier =
-                                Modifier
-                                    .menuAnchor(MenuAnchorType.PrimaryEditable, true)
-                                    .fillMaxWidth(),
-                        )
-                        ExposedDropdownMenu(
-                            expanded = socialExpanded,
-                            onDismissRequest = { socialExpanded = false },
-                        ) {
-                            filteredNetworks.forEach { network ->
-                                DropdownMenuItem(
-                                    text = { Text(network.displayName) },
-                                    onClick = {
-                                        selectedNetwork = network
-                                        label = network.displayName
-                                        socialSearch = network.displayName
-                                        socialExpanded = false
-                                    },
-                                )
-                            }
-                            if (filteredNetworks.isEmpty()) {
-                                DropdownMenuItem(
-                                    text = { Text("No networks found") },
-                                    onClick = { },
-                                    enabled = false,
-                                )
-                            }
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = value,
-                        onValueChange = { value = it },
-                        label = { Text("Username") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else {
-                    // Regular label and value fields
-                    OutlinedTextField(
-                        value = label,
-                        onValueChange = { label = it },
-                        label = { Text("Label") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    OutlinedTextField(
-                        value = value,
-                        onValueChange = { value = it },
-                        label = { Text("Value") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                OutlinedButton(
+                    onClick = onContacts,
+                    modifier = Modifier.weight(1f).testTag("home.contacts"),
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = "Contacts")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Contacts")
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onAdd(selectedType, label, value) },
-                enabled = label.isNotBlank() && value.isNotBlank(),
-            ) {
-                Text("Add")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
-    )
+        }
+    }
 }
 
 /**
