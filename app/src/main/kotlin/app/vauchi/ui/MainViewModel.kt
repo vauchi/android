@@ -14,8 +14,6 @@ import app.vauchi.data.DeviceNotSecureException
 import app.vauchi.data.ExchangeSessionData
 import app.vauchi.data.VauchiRepository
 import app.vauchi.ui.components.ProximityVerificationResult
-import app.vauchi.ui.model.PasswordStrengthLevel
-import app.vauchi.ui.model.PasswordStrengthResult
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NetworkMonitor
 import kotlinx.coroutines.Dispatchers
@@ -965,25 +963,6 @@ class MainViewModel(
             true
         } catch (e: Exception) {
             false
-        }
-
-    fun checkPasswordStrength(password: String): PasswordStrengthResult =
-        try {
-            val check = repository.checkPasswordStrength(password)
-            PasswordStrengthResult(
-                level =
-                    when (check.strength) {
-                        uniffi.vauchi_platform.MobilePasswordStrength.TOO_WEAK -> PasswordStrengthLevel.TooWeak
-                        uniffi.vauchi_platform.MobilePasswordStrength.FAIR -> PasswordStrengthLevel.Fair
-                        uniffi.vauchi_platform.MobilePasswordStrength.STRONG -> PasswordStrengthLevel.Strong
-                        uniffi.vauchi_platform.MobilePasswordStrength.VERY_STRONG -> PasswordStrengthLevel.VeryStrong
-                    },
-                description = check.description,
-                feedback = check.feedback,
-                isAcceptable = check.isAcceptable,
-            )
-        } catch (e: Exception) {
-            PasswordStrengthResult()
         }
 
     // Social network operations

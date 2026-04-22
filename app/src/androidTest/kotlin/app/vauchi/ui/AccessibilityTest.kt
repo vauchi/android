@@ -7,7 +7,6 @@ package app.vauchi.ui
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -38,27 +37,13 @@ class AccessibilityTest {
     val composeTestRule = createComposeRule()
 
     // MARK: - Settings Accessibility
-
-    @Test
-    fun settingsScreen_allSectionsAccessible() {
-        composeTestRule.setContent {
-            VauchiTheme {
-                SettingsScreen(
-                    displayName = "Alice",
-                    onBack = {},
-                    onExportBackup = { "" },
-                    onImportBackup = { _, _ -> false },
-                )
-            }
-        }
-
-        // Display name must be visible in the settings header
-        composeTestRule.onNodeWithText("Alice", substring = true).assertIsDisplayed()
-        // Back button must have accessible content description
-        composeTestRule.onNodeWithContentDescription("Back").assertExists()
-        // Back button must be clickable
-        composeTestRule.onNode(hasContentDescription("Back").and(hasClickAction())).assertExists()
-    }
+    //
+    // `settingsScreen_allSectionsAccessible` was removed alongside the native
+    // `SettingsScreen` composable: `Screen.Settings` routes through
+    // `CoreScreenView("Settings")`, so the accessibility guarantees (back
+    // button, section headings) now live on core's Settings engine and are
+    // covered by `test:reachability` + the cross-platform ScreenRenderer
+    // a11y wiring.
 
     // MARK: - Contacts Accessibility
 

@@ -62,16 +62,9 @@ import app.vauchi.ui.UiState
 import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.CoreOnboardingScreen
 import app.vauchi.ui.coreui.CoreScreenView
-import app.vauchi.ui.model.ContentApplyResult
-import app.vauchi.ui.model.ContentUpdateStatus
-import app.vauchi.ui.model.ContentUpdateType
-import app.vauchi.ui.model.PasswordStrengthResult
 import app.vauchi.ui.theme.VauchiTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import uniffi.vauchi_platform.MobileApplyResult
-import uniffi.vauchi_platform.MobileContentType
-import uniffi.vauchi_platform.MobileUpdateStatus
 import uniffi.vauchi_platform.coreVersion
 import java.time.Instant
 import java.time.ZoneId
@@ -1070,58 +1063,6 @@ fun SyncStatusChip(
         )
     }
 }
-
-// Content Updates mapping functions
-private fun mapMobileUpdateStatus(status: MobileUpdateStatus): ContentUpdateStatus =
-    when (status) {
-        is MobileUpdateStatus.UpToDate -> {
-            ContentUpdateStatus.UpToDate
-        }
-
-        is MobileUpdateStatus.UpdatesAvailable -> {
-            ContentUpdateStatus.UpdatesAvailable(
-                status.types.map { mapMobileContentType(it) },
-            )
-        }
-
-        is MobileUpdateStatus.CheckFailed -> {
-            ContentUpdateStatus.CheckFailed(status.error)
-        }
-
-        is MobileUpdateStatus.Disabled -> {
-            ContentUpdateStatus.Disabled
-        }
-    }
-
-private fun mapMobileApplyResult(result: MobileApplyResult): ContentApplyResult =
-    when (result) {
-        is MobileApplyResult.NoUpdates -> {
-            ContentApplyResult.NoUpdates
-        }
-
-        is MobileApplyResult.Applied -> {
-            ContentApplyResult.Applied(
-                applied = result.applied.map { mapMobileContentType(it) },
-                failed = result.failed.map { mapMobileContentType(it.contentType) },
-            )
-        }
-
-        is MobileApplyResult.Disabled -> {
-            ContentApplyResult.Disabled
-        }
-
-        is MobileApplyResult.Error -> {
-            ContentApplyResult.Error(result.error)
-        }
-    }
-
-private fun mapMobileContentType(type: MobileContentType): ContentUpdateType =
-    when (type) {
-        MobileContentType.NETWORKS -> ContentUpdateType.Networks
-        MobileContentType.LOCALES -> ContentUpdateType.Locales
-        MobileContentType.THEMES -> ContentUpdateType.Themes
-        MobileContentType.HELP -> ContentUpdateType.Help
-    }
 
 // Restore Identity Dialog
 @Composable

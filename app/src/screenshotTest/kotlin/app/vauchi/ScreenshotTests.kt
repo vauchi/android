@@ -15,7 +15,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.DeliveryStatusScreen
 import app.vauchi.ui.LabelsScreen
-import app.vauchi.ui.SettingsScreen
 import app.vauchi.ui.SyncState
 import app.vauchi.ui.theme.VauchiTheme
 import com.android.tools.screenshot.PreviewTest
@@ -36,20 +35,6 @@ private const val VRT_DEVICE = "spec:width=360dp,height=800dp,dpi=320"
 // =============================================================
 // Main Screens - Light Theme
 // =============================================================
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun SettingsScreenScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        SettingsScreen(
-            displayName = "Alice",
-            onBack = {},
-            onExportBackup = { "" },
-            onImportBackup = { _, _ -> false },
-        )
-    }
-}
 
 // ContactsScreen* preview tests removed in Phase 1B.2: `Screen.Contacts`
 // now renders through `CoreScreenView("Contacts")` against core's
@@ -274,20 +259,6 @@ fun VisibilityToggleItemScreenshot() {
 // Dark Mode Variants
 // =============================================================
 
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun SettingsScreenDarkScreenshot() {
-    VauchiTheme(darkTheme = true, dynamicColor = false) {
-        SettingsScreen(
-            displayName = "Alice",
-            onBack = {},
-            onExportBackup = { "" },
-            onImportBackup = { _, _ -> false },
-        )
-    }
-}
-
 // `ContactsScreenDarkScreenshot` removed in Phase 1B.2: same rationale
 // as the light-theme previews above — the native `ContactsScreen` is
 // gone; `CoreScreenView("Contacts")` covers the dark theme via the
@@ -432,27 +403,10 @@ private fun GermanLocaleWrapper(content: @Composable () -> Unit) {
     }
 }
 
-@PreviewTest
-@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
-@Composable
-fun SettingsScreenGermanScreenshot() {
-    GermanLocaleWrapper {
-        VauchiTheme(dynamicColor = false) {
-            SettingsScreen(
-                displayName = "Anna",
-                onBack = {},
-                onExportBackup = { "" },
-                onImportBackup = { _, _ -> false },
-            )
-        }
-    }
-}
-
 // `ContactsScreenGermanScreenshot` removed in Phase 1B.2: same
 // rationale as the light-theme previews above — the native
 // `ContactsScreen` is gone; `CoreScreenView("Contacts")` renders in
 // production and core owns the localised empty state.
-
 
 @PreviewTest
 @Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
@@ -494,20 +448,3 @@ fun LabelsScreenGermanScreenshot() {
 // =============================================================
 // German Locale + Dark Mode Variants
 // =============================================================
-
-@PreviewTest
-@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
-@Composable
-fun SettingsScreenGermanDarkScreenshot() {
-    GermanLocaleWrapper {
-        VauchiTheme(darkTheme = true, dynamicColor = false) {
-            SettingsScreen(
-                displayName = "Anna",
-                onBack = {},
-                onExportBackup = { "" },
-                onImportBackup = { _, _ -> false },
-            )
-        }
-    }
-}
-
