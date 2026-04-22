@@ -51,7 +51,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.BleExchangeScreen
 import app.vauchi.ui.ContactDetailScreen
-import app.vauchi.ui.ContactMergeScreen
 import app.vauchi.ui.DevicesScreen
 import app.vauchi.ui.ExchangeMode
 import app.vauchi.ui.ExchangeModePicker
@@ -681,20 +680,10 @@ fun MainScreen(
                 }
 
                 Screen.ContactMerge -> {
-                    ContactMergeScreen(
-                        onBack = { currentScreen = Screen.More },
-                        onFindDuplicates = { viewModel.findDuplicates() },
-                        onGetContact = { id -> viewModel.getContact(id) },
-                        onMergeContacts = { primaryId, secondaryId ->
-                            viewModel.mergeContacts(primaryId, secondaryId)
-                        },
-                        onDismissDuplicate = { id1, id2 ->
-                            viewModel.dismissDuplicate(id1, id2)
-                        },
-                        onSoftDeleteImported = { id ->
-                            viewModel.softDeleteImportedContact(id)
-                        },
-                        onShowMessage = { viewModel.showMessage(it) },
+                    CoreScreenView(
+                        viewModel = coreAppViewModel,
+                        screenName = "ContactDuplicates",
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
 
