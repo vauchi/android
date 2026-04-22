@@ -412,52 +412,6 @@ fun VisibilityToggleItemScreenshot() {
 }
 
 // =============================================================
-// Recovery Screen Components
-// Note: Full RecoveryScreen requires a ViewModel, so we test
-// the RecoveryStep component
-// =============================================================
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun RecoveryStepComponentScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    "Recovery Steps",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                )
-                app.vauchi.ui.RecoveryStep(
-                    number = 1,
-                    title = "Create New Identity",
-                    description = "First, create a new identity on your new device.",
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                app.vauchi.ui.RecoveryStep(
-                    number = 2,
-                    title = "Generate Recovery Claim",
-                    description = "Create a claim using your OLD public key from your lost identity.",
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                app.vauchi.ui.RecoveryStep(
-                    number = 3,
-                    title = "Collect Vouchers",
-                    description = "Meet with 3+ trusted contacts in person. Have them vouch for your recovery.",
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                app.vauchi.ui.RecoveryStep(
-                    number = 4,
-                    title = "Share Recovery Proof",
-                    description = "Once you have enough vouchers, share your recovery proof with all contacts.",
-                )
-            }
-        }
-    }
-}
-
-// =============================================================
 // Dark Mode Variants
 // =============================================================
 
@@ -629,34 +583,6 @@ fun ContactFieldItemDarkScreenshot() {
                             fieldType = MobileFieldType.PHONE,
                             note = null,
                         ),
-                )
-            }
-        }
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun RecoveryStepComponentDarkScreenshot() {
-    VauchiTheme(darkTheme = true, dynamicColor = false) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    "Recovery Steps",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                )
-                app.vauchi.ui.RecoveryStep(
-                    number = 1,
-                    title = "Create New Identity",
-                    description = "First, create a new identity on your new device.",
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                app.vauchi.ui.RecoveryStep(
-                    number = 2,
-                    title = "Generate Recovery Claim",
-                    description = "Create a claim using your OLD public key.",
                 )
             }
         }

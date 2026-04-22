@@ -604,7 +604,7 @@ fun MainScreen(
 
                 Screen.Recovery -> {
                     RecoveryScreen(
-                        viewModel = viewModel,
+                        coreAppViewModel = coreAppViewModel,
                         onBack = { currentScreen = Screen.More },
                     )
                 }
