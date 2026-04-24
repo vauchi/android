@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -150,9 +149,9 @@ fun MultiStageExchangeScreen(
     var useFrontCamera by remember { mutableStateOf(true) }
     val scannerGuard = remember { AtomicBoolean(false) }
     val multiStageState by viewModel.multiStageState.collectAsState()
-    var graceCompleted by remember { mutableStateOf(false) }
-    var finalizationResult by remember { mutableStateOf<String?>(null) }
-    var finalizationError by remember { mutableStateOf<String?>(null) }
+    val qrPayload by viewModel.multiStageQrPayload.collectAsState()
+    val finalizedContactName by viewModel.multiStageFinalizedName.collectAsState()
+    val sessionEnded by viewModel.multiStageSessionEnded.collectAsState()
     var lastScanTimestamp by remember { mutableLongStateOf(0L) }
     var scanTick by remember { mutableLongStateOf(0L) }
 
@@ -211,74 +210,11 @@ fun MultiStageExchangeScreen(
         }
     }
 
-    // QR display cycling loop — gets next QR from core on a timer.
-    // Core manages the grace period after Complete (cycling RDYY so slower
-    // peers can catch up). We keep calling getDisplayQr() until core returns null.
-    LaunchedEffect(cameraPermissionGranted) {
-        if (!cameraPermissionGranted) return@LaunchedEffect
-        var cycleCount = 0
-        val startMs = System.currentTimeMillis()
-        while (true) {
-            val payload = viewModel.getMultiStageDisplayQr()
-            cycleCount++
-            if (payload != null) {
-                val elapsed = System.currentTimeMillis() - startMs
-                if (cycleCount % 10 == 0) {
-                    Log.d(
-                        "Vauchi",
-                        "Exchange: cycle=$cycleCount t=${elapsed}ms dur=${payload.displayDurationMs}ms",
-                    )
-                }
-                qrBitmap =
-                    generateQrBitmapForMultiStage(
-                        payload.data,
-                        payload.errorCorrection,
-                    )
-                // Floor at 100ms to prevent tight CPU spin
-                delay(maxOf(payload.displayDurationMs.toLong(), 100L))
-            } else {
-                // Core returned null — grace period expired or failed
-                val state = viewModel.getMultiStageState()
-                val elapsed = System.currentTimeMillis() - startMs
-                Log.w("Vauchi", "Exchange: null QR at cycle=$cycleCount t=${elapsed}ms")
-                if (state is MobileProtocolState.Finalized && !graceCompleted) {
-                    // Finalize: save the received contact to storage
-                    val result = viewModel.finalizeMultiStageExchange()
-                    if (result != null) {
-                        finalizationResult = result.contactName
-                        Log.i("Vauchi", "Exchange: contact saved")
-                    } else {
-                        finalizationError = localizationManager.t("exchange.save_failed")
-                        Log.e("Vauchi", "Exchange: finalization returned null")
-                    }
-                    graceCompleted = true
-                }
-                break
-            }
-            // Refresh protocol state from core
-            val state = viewModel.getMultiStageState()
-            // Save contact immediately on Finalized — don't wait for grace period.
-            // The QR loop continues in the background so the peer can still scan.
-            if (state is MobileProtocolState.Finalized && !graceCompleted) {
-                val elapsed = System.currentTimeMillis() - startMs
-                Log.i("Vauchi", "Exchange: finalized at cycle=$cycleCount t=${elapsed}ms")
-                val result = viewModel.finalizeMultiStageExchange()
-                if (result != null) {
-                    finalizationResult = result.contactName
-                    Log.i("Vauchi", "Exchange: contact saved")
-                } else {
-                    finalizationError = localizationManager.t("exchange.save_failed")
-                    Log.e("Vauchi", "Exchange: finalization returned null")
-                }
-                graceCompleted = true
-                // Don't break — keep showing RDYY QR so peer can finalize too
-            }
-            if (state is MobileProtocolState.Failed) {
-                val elapsed = System.currentTimeMillis() - startMs
-                Log.w("Vauchi", "Exchange: FAILED at cycle=$cycleCount t=${elapsed}ms")
-                break
-            }
-        }
+    // Re-render the QR bitmap whenever core publishes a new payload via
+    // `on_qr_payload`. No timer — core drives the cycle.
+    LaunchedEffect(qrPayload?.data) {
+        val payload = qrPayload ?: return@LaunchedEffect
+        qrBitmap = generateQrBitmapForMultiStage(payload.data, payload.errorCorrection)
     }
 
     Scaffold(
@@ -326,8 +262,11 @@ fun MultiStageExchangeScreen(
     ) { padding ->
         // Camera and QR live OUTSIDE any when() block so they persist across
         // all state transitions. CameraX never rebinds mid-exchange.
+        //
+        // Core emits `on_session_ended` once the grace window expires or a
+        // FAIL broadcast completes; we flip to the terminal overlay then.
         val isExchangeActive =
-            !graceCompleted && multiStageState !is MobileProtocolState.Failed
+            !sessionEnded && multiStageState !is MobileProtocolState.Failed
 
         if (isExchangeActive) {
             LaunchedEffect(Unit) {
@@ -369,11 +308,10 @@ fun MultiStageExchangeScreen(
                 )
             }
 
-            // === TERMINAL OVERLAY: Success (after grace period) ===
-            if (graceCompleted) {
+            // === TERMINAL OVERLAY: Success (after cycle thread exits cleanly) ===
+            if (sessionEnded && multiStageState !is MobileProtocolState.Failed) {
                 ExchangeSuccessOverlay(
-                    finalizationError = finalizationError,
-                    finalizationResult = finalizationResult,
+                    finalizedContactName = finalizedContactName,
                     localizationManager = localizationManager,
                     onDone = onDone,
                 )
@@ -530,17 +468,19 @@ private fun ExchangeActiveContent(
 }
 
 /**
- * Success overlay shown after the grace period completes.
- * Displays either a success message with the contact name, or a finalization error.
+ * Success overlay shown once core signals `on_session_ended` after a
+ * successful exchange. Contact persistence happens inside core as part of
+ * the Finalized transition; [finalizedContactName] comes from the
+ * `on_finalized` callback and is always set by the time this overlay
+ * renders (except on unusually-malformed payloads — fall back to a generic
+ * "new contact" string in that case).
  */
 @Composable
 private fun ExchangeSuccessOverlay(
-    finalizationError: String?,
-    finalizationResult: String?,
+    finalizedContactName: String?,
     localizationManager: LocalizationManager,
     onDone: () -> Unit,
 ) {
-    // Grace period over — show success or finalization error
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -549,44 +489,25 @@ private fun ExchangeSuccessOverlay(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            if (finalizationError != null) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = localizationManager.t("status.error"),
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.error,
-                )
-                Text(
-                    localizationManager.t("exchange.save_failed"),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
-                Text(
-                    finalizationError,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                Icon(
-                    Icons.Default.CheckCircle,
-                    contentDescription = localizationManager.t("status.success"),
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    localizationManager.t("exchange.contact_exchanged"),
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-                Text(
-                    if (finalizationResult != null) {
-                        localizationManager.t("exchange.contact_added", mapOf("name" to finalizationResult))
-                    } else {
-                        localizationManager.t("exchange.new_contact_added")
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Icon(
+                Icons.Default.CheckCircle,
+                contentDescription = localizationManager.t("status.success"),
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                localizationManager.t("exchange.contact_exchanged"),
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Text(
+                if (!finalizedContactName.isNullOrBlank()) {
+                    localizationManager.t("exchange.contact_added", mapOf("name" to finalizedContactName))
+                } else {
+                    localizationManager.t("exchange.new_contact_added")
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = onDone,

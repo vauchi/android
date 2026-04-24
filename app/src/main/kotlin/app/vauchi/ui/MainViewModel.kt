@@ -52,6 +52,7 @@ import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.MobileUpdateStatus
 import uniffi.vauchi_platform.MobileVisibilityLabel
 import uniffi.vauchi_platform.MobileVisibilityLabelDetail
+import uniffi.vauchi_platform.MultiStageSessionListener
 import uniffi.vauchi_platform.PlatformAppEngine
 import java.time.Instant
 
@@ -109,10 +110,18 @@ class MainViewModel(
     private val localizationManager = LocalizationManager.getInstance(application)
     private val networkMonitor = NetworkMonitor(application)
 
-    // Multi-stage exchange session (chunked QR protocol)
+    // Multi-stage exchange — core drives the cycle thread via G4 event API.
+    // Flows below are populated by the `MultiStageSessionListener` registered
+    // in `startMultiStageExchange`; the UI collects them. No polling.
     private var multiStageSession: MobileMultiStageSession? = null
     private val _multiStageState = MutableStateFlow<MobileProtocolState>(MobileProtocolState.Idle)
     val multiStageState: StateFlow<MobileProtocolState> = _multiStageState.asStateFlow()
+    private val _multiStageQrPayload = MutableStateFlow<MobileQrPayload?>(null)
+    val multiStageQrPayload: StateFlow<MobileQrPayload?> = _multiStageQrPayload.asStateFlow()
+    private val _multiStageFinalizedName = MutableStateFlow<String?>(null)
+    val multiStageFinalizedName: StateFlow<String?> = _multiStageFinalizedName.asStateFlow()
+    private val _multiStageSessionEnded = MutableStateFlow(false)
+    val multiStageSessionEnded: StateFlow<Boolean> = _multiStageSessionEnded.asStateFlow()
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -518,14 +527,34 @@ class MainViewModel(
 
     /**
      * Start a new multi-stage exchange session.
-     * Creates the session through VauchiPlatform which serializes the real
-     * identity public key and contact card into the exchange payload.
+     *
+     * Registers a [MultiStageSessionListener] and calls `start()` so core's
+     * cycle thread drives the protocol clock. State, QR payloads,
+     * finalization, and end-of-session all arrive via the listener and are
+     * published through StateFlows on this view model. No polling, no
+     * manual finalize call.
      */
     fun startMultiStageExchange() {
+        // Reset all per-session flows before creating the new listener so an
+        // ON_RESUME re-entry starts from a clean snapshot.
+        _multiStageState.value = MobileProtocolState.Idle
+        _multiStageQrPayload.value = null
+        _multiStageFinalizedName.value = null
+        _multiStageSessionEnded.value = false
+
         try {
-            multiStageSession = repository.createMultistageSession()
-            _multiStageState.value = MobileProtocolState.Advertising
+            val session = repository.createMultistageSession()
+            session.setListener(MultiStageEventBridge(this))
+            session.start()
+            multiStageSession = session
             Log.d("Vauchi", "Exchange: session started")
+
+            // Audio proximity trust boost — non-blocking, tied to session
+            // start rather than the Finalized callback. Core finalizes the
+            // exchange itself now.
+            viewModelScope.launch(Dispatchers.IO) {
+                runAudioProximity()
+            }
         } catch (e: Exception) {
             Log.e("Vauchi", "Exchange: failed to create session", e)
             _multiStageState.value =
@@ -536,55 +565,34 @@ class MainViewModel(
     }
 
     /**
-     * Get the next QR payload to display. Returns null when the core has
-     * nothing to show (e.g., waiting for peer data).
-     */
-    fun getMultiStageDisplayQr(): MobileQrPayload? = multiStageSession?.getDisplayQr()
-
-    /**
      * Pass a scanned QR string to the core for processing.
      * The core handles all protocol logic — never parse QR content in Kotlin.
      */
     fun processMultiStageQr(raw: String): MobileProtocolState {
         val session = multiStageSession ?: return MobileProtocolState.Failed("No session")
-        val state = session.processScannedQr(raw)
-        _multiStageState.value = state
-        return state
+        // Core publishes the updated state via `on_state_changed`, but we
+        // also return synchronously so the camera pipeline has an immediate
+        // signal if the scan changed the state.
+        return session.processScannedQr(raw)
     }
 
-    /**
-     * Poll the current protocol state from the core session.
-     */
-    fun getMultiStageState(): MobileProtocolState {
-        val state = multiStageSession?.getState() ?: MobileProtocolState.Idle
-        _multiStageState.value = state
-        return state
+    /** Internal: called from the G4 listener thread. Safe to dispatch to a
+     *  main-bound StateFlow from any thread. */
+    internal fun onMultiStageQrPayload(payload: MobileQrPayload) {
+        _multiStageQrPayload.value = payload
     }
 
-    /**
-     * Retrieve received card data after exchange completes.
-     */
-    fun getMultiStageReceivedData(): ByteArray? = multiStageSession?.getReceivedData()
+    internal fun onMultiStageStateChanged(state: MobileProtocolState) {
+        _multiStageState.value = state
+    }
 
-    /**
-     * Finalize a completed multi-stage exchange: save the received contact
-     * to storage and initialize the double ratchet.
-     *
-     * Returns the exchange result on success, null on failure.
-     */
-    fun finalizeMultiStageExchange(): uniffi.vauchi_platform.MobileExchangeResult? {
-        val session = multiStageSession ?: return null
-        return try {
-            val result = repository.finalizeMultistageExchange(session)
-            Log.i("Vauchi", "Exchange: contact finalized")
-            viewModelScope.launch(Dispatchers.IO) {
-                runAudioProximity()
-            }
-            result
-        } catch (e: Exception) {
-            Log.e("Vauchi", "Exchange: finalization failed", e)
-            null
-        }
+    internal fun onMultiStageFinalized(contactName: String) {
+        Log.i("Vauchi", "Exchange: contact finalized")
+        _multiStageFinalizedName.value = contactName
+    }
+
+    internal fun onMultiStageSessionEnded() {
+        _multiStageSessionEnded.value = true
     }
 
     // --- NFC exchange ---
@@ -1966,3 +1974,33 @@ private data class Tuple4<A, B, C, D>(
     val c: C,
     val d: D,
 )
+
+/**
+ * UniFFI callback target for the multi-stage exchange event channel. Core
+ * invokes these methods on the `vauchi-exchange-cycle` OS thread; they
+ * forward to [MainViewModel] whose `MutableStateFlow` assignments are safe
+ * from any thread and deliver on the main dispatcher to composables.
+ *
+ * Held by the view model for the session lifetime so the FFI vtable points
+ * at a live instance. Released implicitly when `session.cancel()` drops the
+ * core-side reference and the session is nulled out.
+ */
+private class MultiStageEventBridge(
+    private val vm: MainViewModel,
+) : MultiStageSessionListener {
+    override fun onQrPayload(payload: MobileQrPayload) {
+        vm.onMultiStageQrPayload(payload)
+    }
+
+    override fun onStateChanged(state: MobileProtocolState) {
+        vm.onMultiStageStateChanged(state)
+    }
+
+    override fun onFinalized(contactName: String) {
+        vm.onMultiStageFinalized(contactName)
+    }
+
+    override fun onSessionEnded() {
+        vm.onMultiStageSessionEnded()
+    }
+}
