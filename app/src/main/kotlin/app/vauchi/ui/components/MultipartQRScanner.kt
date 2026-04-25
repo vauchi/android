@@ -29,23 +29,28 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 // ML Kit replaced by rxing via UniFFI — no Google Play Services dependency
 import java.util.concurrent.Executors
+import uniffi.vauchi_platform.MobileMultipartDecoder
 
 /**
  * Continuous QR scanner that tracks multipart reassembly progress.
  *
- * Scans QR codes using CameraX + ML Kit and parses the multipart chunk header
- * format: `{index}/{total}/{crc32_hex}/{base64url_data}`.
+ * Scans QR codes via CameraX + rxing, then feeds each detected chunk into
+ * core's [MobileMultipartDecoder] for parsing, CRC32 validation, duplicate
+ * detection, and final assembly. The frontend never parses the chunk header
+ * itself — per ADR-021 (Humble UI), reassembly is core logic.
  *
- * Shows a progress bar as chunks are received and calls [onComplete] when all
- * chunks have been collected.
+ * Shows a progress bar driven by the core decoder's `received()` /
+ * `expectedTotal()` accessors and calls [onComplete] with the assembled
+ * payload bytes when [MobileMultipartDecoder.isComplete] flips true.
  *
- * @param onComplete Callback invoked with all received chunk strings (ordered by index) when reassembly is complete.
+ * @param onComplete Callback invoked with the assembled payload bytes once
+ *   all chunks have been received and CRC-validated by core.
  * @param onCancel Callback invoked when the user presses the cancel button.
  * @param modifier Modifier for the root layout.
  */
 @Composable
 fun MultipartQRScanner(
-    onComplete: (List<String>) -> Unit,
+    onComplete: (ByteArray) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -70,9 +75,14 @@ fun MultipartQRScanner(
         }
     }
 
-    // Chunk tracking state
-    // Key: chunk index (0-based), Value: raw scanned string
-    val receivedChunks = remember { mutableStateMapOf<Int, String>() }
+    // Reassembly state owned by core. Compose only mirrors the counters
+    // the decoder exposes for the progress UI; the chunk Map<Int, String>
+    // and ad-hoc completeness check that used to live here are gone.
+    val decoder = remember { MobileMultipartDecoder() }
+    DisposableEffect(decoder) {
+        onDispose { decoder.destroy() }
+    }
+    var receivedCount by remember { mutableIntStateOf(0) }
     var totalChunks by remember { mutableIntStateOf(0) }
     var isComplete by remember { mutableStateOf(false) }
 
@@ -95,28 +105,18 @@ fun MultipartQRScanner(
             ) {
                 MultipartCameraPreview(
                     onChunkScanned = { rawValue ->
-                        // TODO: When vauchi-platform-kotlin publishes MobileMultipartDecoder,
-                        // replace this local parsing with the Rust-backed decoder for
-                        // proper CRC32 validation and base64url decoding.
-                        val parsed = parseChunkHeader(rawValue)
-                        if (parsed != null) {
-                            val (index, total, _) = parsed
-                            if (totalChunks == 0) {
-                                totalChunks = total
+                        try {
+                            decoder.addChunk(rawValue)
+                            receivedCount = decoder.received().toInt()
+                            totalChunks = decoder.expectedTotal()?.toInt() ?: 0
+                            if (decoder.isComplete()) {
+                                isComplete = true
+                                onComplete(decoder.assemble())
                             }
-                            if (total == totalChunks && index < total) {
-                                receivedChunks[index] = rawValue
-
-                                // Check completeness
-                                if (receivedChunks.size == totalChunks) {
-                                    isComplete = true
-                                    val ordered =
-                                        (0 until totalChunks).map { i ->
-                                            receivedChunks[i] ?: ""
-                                        }
-                                    onComplete(ordered)
-                                }
-                            }
+                        } catch (e: Exception) {
+                            // Malformed / CRC-mismatched chunk: core rejects it,
+                            // we drop it silently and keep scanning.
+                            android.util.Log.d("MultipartQR", "decoder rejected chunk: ${e.message}")
                         }
                     },
                 )
@@ -143,13 +143,13 @@ fun MultipartQRScanner(
             ) {
                 if (totalChunks > 0) {
                     Text(
-                        text = "Received ${receivedChunks.size} of $totalChunks parts",
+                        text = "Received $receivedCount of $totalChunks parts",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
 
                     LinearProgressIndicator(
-                        progress = { receivedChunks.size.toFloat() / totalChunks },
+                        progress = { receivedCount.toFloat() / totalChunks },
                         modifier =
                             Modifier
                                 .fillMaxWidth()
@@ -312,15 +312,8 @@ private fun MultipartCameraPreview(onChunkScanned: (String) -> Unit) {
 }
 
 /**
- * Image analyzer for continuous multipart QR code scanning.
- *
- * Uses ML Kit barcode scanner with a short debounce (100ms) to allow rapid
- * scanning of different QR codes as they cycle on the other device's display.
- */
-
-/**
- * Multipart QR analyzer using rxing via UniFFI instead of ML Kit.
- * Extracts Y-plane and calls rxing multi-decoder pipeline.
+ * Multipart QR analyzer using rxing via UniFFI. Extracts the Y-plane from
+ * each frame and runs core's `scanQr` against it.
  */
 private class MultipartQRAnalyzer(
     private val onChunkScanned: (String) -> Unit,
@@ -382,32 +375,4 @@ private class MultipartQRAnalyzer(
     companion object {
         private const val SCAN_DEBOUNCE_MS = 50L // faster than ML Kit's 100ms
     }
-}
-
-/**
- * Parses a multipart QR chunk header.
- *
- * Expected format: `{index}/{total}/{crc32_hex}/{base64url_data}`
- *
- * TODO: When vauchi-platform-kotlin publishes MobileMultipartDecoder bindings,
- * replace this with the Rust-backed decoder for proper CRC32 validation.
- *
- * @param raw The raw QR code content string.
- * @return A triple of (index, total, data) or null if parsing fails.
- */
-internal fun parseChunkHeader(raw: String): Triple<Int, Int, String>? {
-    // Format: {index}/{total}/{crc32_hex}/{base64url_data}
-    val parts = raw.split("/", limit = 4)
-    if (parts.size != 4) return null
-
-    val index = parts[0].toIntOrNull() ?: return null
-    val total = parts[1].toIntOrNull() ?: return null
-    val crc32Hex = parts[2]
-    val data = parts[3]
-
-    // Basic validation
-    if (index < 0 || total <= 0 || index >= total) return null
-    if (crc32Hex.isBlank() || data.isBlank()) return null
-
-    return Triple(index, total, data)
 }
