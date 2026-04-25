@@ -298,9 +298,6 @@ class VauchiRepository(
     /** Create a multi-stage exchange session with the real identity and card data. */
     fun createMultistageSession(): MobileMultiStageSession = platform().createMultistageSession()
 
-    /** Finalize a multi-stage exchange: save peer contact and initialize ratchet. */
-    fun finalizeMultistageExchange(session: MobileMultiStageSession): MobileExchangeResult = platform().finalizeMultistageExchange(session)
-
     /** Create an NFC initiator (reader) handshake session. */
     fun createNfcInitiator() = platform().createNfcInitiator()
 
