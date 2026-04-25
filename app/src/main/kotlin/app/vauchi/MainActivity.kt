@@ -29,6 +29,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
@@ -62,7 +63,12 @@ import app.vauchi.ui.UiState
 import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.CoreOnboardingScreen
 import app.vauchi.ui.coreui.CoreScreenView
+import app.vauchi.ui.coreui.MaterialIconName
+import app.vauchi.ui.coreui.coreTabIdForScreen
+import app.vauchi.ui.coreui.materialIconNameForCoreIcon
+import app.vauchi.ui.coreui.screenForCoreTabId
 import app.vauchi.ui.theme.VauchiTheme
+import app.vauchi.util.LocalizationManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import uniffi.vauchi_platform.coreVersion
@@ -211,6 +217,24 @@ enum class Screen {
     DeviceReplacement,
 }
 
+/**
+ * Resolve the SF-Symbol icon name from core's `MobileTabInfo.icon`
+ * to a concrete Material `ImageVector`. Pure platform-presentation
+ * (no logic), kept beside `MainScreen` so `androidx.compose.material`
+ * imports stay in this file. The semantic mapping (which Material
+ * Icon fits which SF Symbol) lives in
+ * [app.vauchi.ui.coreui.materialIconNameForCoreIcon] so it can be
+ * unit-tested without Compose.
+ */
+private fun imageVectorForCoreTab(coreIcon: String): ImageVector =
+    when (materialIconNameForCoreIcon(coreIcon)) {
+        MaterialIconName.PERSON -> Icons.Default.Person
+        MaterialIconName.PEOPLE -> Icons.Default.People
+        MaterialIconName.QR_CODE -> Icons.Default.QrCode
+        MaterialIconName.GROUP -> Icons.Default.Group
+        MaterialIconName.MORE_HORIZ -> Icons.Default.MoreHoriz
+    }
+
 @Composable
 fun MainScreen(
     viewModel: MainViewModel = viewModel(),
@@ -239,6 +263,18 @@ fun MainScreen(
         remember(viewModel) {
             CoreAppViewModel(viewModel.appEngine)
         }
+
+    // Bottom-nav tabs come from core (`tabInfo(locale)`) — labels,
+    // icons, and the tab set itself are core-owned. Reload when
+    // identity is created (uiState transitions to Ready) and whenever
+    // the active locale changes so labels stay in sync.
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
+    val tabs by coreAppViewModel.tabs.collectAsState()
+    LaunchedEffect(uiState, localizationManager.currentLocale) {
+        if (uiState is UiState.Ready) {
+            coreAppViewModel.loadTabs(localizationManager.currentLocale)
+        }
+    }
 
     // Handle OpenUrl events from core-driven screens
     val openUrlEvent by coreAppViewModel.openUrlEvent.collectAsState()
@@ -324,53 +360,30 @@ fun MainScreen(
         }
     }
 
-    // Top-level screens that show the bottom navigation bar
-    val isTopLevel =
-        currentScreen in
-            setOf(
-                Screen.Home,
-                Screen.Contacts,
-                Screen.ExchangeModePicker,
-                Screen.Labels,
-                Screen.More,
-            )
+    // The bottom nav is shown only on top-level screens. "Top-level"
+    // is now whatever core's `tab_info(locale)` returned — the local
+    // hardcoded set is gone (§6 pure-renderer remediation).
+    val activeTabId = coreTabIdForScreen(currentScreen)
+    val isTopLevel = activeTabId != null
 
     Scaffold(
         bottomBar = {
-            if (isTopLevel && uiState is UiState.Ready) {
+            if (isTopLevel && uiState is UiState.Ready && tabs.isNotEmpty()) {
                 NavigationBar {
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Person, contentDescription = "My Card") },
-                        label = { Text("My Card") },
-                        selected = currentScreen == Screen.Home,
-                        onClick = { currentScreen = Screen.Home },
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.People, contentDescription = "Contacts") },
-                        label = { Text("Contacts") },
-                        selected = currentScreen == Screen.Contacts,
-                        onClick = { currentScreen = Screen.Contacts },
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.QrCode, contentDescription = "Exchange") },
-                        label = { Text("Exchange") },
-                        selected =
-                            currentScreen in
-                                setOf(Screen.ExchangeModePicker, Screen.MultiStageExchange, Screen.NfcExchange, Screen.BleExchange),
-                        onClick = { currentScreen = Screen.ExchangeModePicker },
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Group, contentDescription = "Groups") },
-                        label = { Text("Groups") },
-                        selected = currentScreen == Screen.Labels,
-                        onClick = { currentScreen = Screen.Labels },
-                    )
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.MoreHoriz, contentDescription = "More") },
-                        label = { Text("More") },
-                        selected = currentScreen == Screen.More,
-                        onClick = { currentScreen = Screen.More },
-                    )
+                    for (tab in tabs) {
+                        val targetScreen = screenForCoreTabId(tab.id) ?: continue
+                        NavigationBarItem(
+                            icon = {
+                                Icon(
+                                    imageVector = imageVectorForCoreTab(tab.icon),
+                                    contentDescription = tab.label,
+                                )
+                            },
+                            label = { Text(tab.label) },
+                            selected = activeTabId == tab.id,
+                            onClick = { currentScreen = targetScreen },
+                        )
+                    }
                 }
             }
         },

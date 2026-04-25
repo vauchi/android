@@ -15,6 +15,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import uniffi.vauchi_platform.MobileExchangeHardwareEvent
+import uniffi.vauchi_platform.MobileLocale
+import uniffi.vauchi_platform.MobileTabInfo
 import uniffi.vauchi_platform.PlatformAppEngine
 
 /**
@@ -36,6 +38,17 @@ class CoreAppViewModel(
 
     private val _availableScreens = MutableStateFlow<List<String>>(emptyList())
     val availableScreens: StateFlow<List<String>> = _availableScreens.asStateFlow()
+
+    /**
+     * Top-level tabs as core describes them — `id` (snake_case
+     * `screen_id`), `label` (locale-resolved), `icon` (SF Symbol name
+     * Android maps to a Material Icon), `badge_count`. Empty before
+     * identity exists or before the first [loadTabs] call. Driven by
+     * `PlatformAppEngine.tabInfo(locale)`; reload via [loadTabs] when
+     * identity transitions or the user changes locale.
+     */
+    private val _tabs = MutableStateFlow<List<MobileTabInfo>>(emptyList())
+    val tabs: StateFlow<List<MobileTabInfo>> = _tabs.asStateFlow()
 
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
@@ -157,6 +170,26 @@ class CoreAppViewModel(
                 _availableScreens.value = json.decodeFromString(screensJson)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load available screens", e)
+            }
+        }
+    }
+
+    /**
+     * Refresh [tabs] from `PlatformAppEngine.tabInfo(locale)`. Call on
+     * startup, after identity creation (pre-identity returns just
+     * Onboarding; post-identity returns the five mobile top-level
+     * tabs), and whenever the active locale changes so labels stay in
+     * sync. Errors are logged and leave the previous tabs in place.
+     */
+    fun loadTabs(locale: MobileLocale) {
+        viewModelScope.launch {
+            try {
+                _tabs.value =
+                    withContext(Dispatchers.IO) {
+                        appEngine.tabInfo(locale = locale)
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load tabs", e)
             }
         }
     }
