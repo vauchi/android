@@ -331,6 +331,14 @@ class VauchiRepository(
 
     fun unarchiveContact(id: String) = platform().unarchiveContact(id)
 
+    /**
+     * Returns the footer-button action id (`"delete_contact"` or
+     * `"archive_contact"`) for the given contact. Views dispatch on
+     * the returned id so they never branch on the imported-vs-exchanged
+     * distinction in the view layer (§1A pure-renderer rule).
+     */
+    fun contactDetailFooterActionId(contactId: String) = platform().contactDetailFooterActionId(contactId)
+
     fun listArchivedContacts() = platform().listArchivedContacts()
 
     fun importContactsFromVcf(data: ByteArray) = platform().importContactsFromVcf(data)

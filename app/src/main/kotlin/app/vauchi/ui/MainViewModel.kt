@@ -738,6 +738,17 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Returns the footer-button action id (`"delete_contact"` or
+     * `"archive_contact"`) for the given contact. Views dispatch on
+     * the returned id so they never branch on the imported-vs-exchanged
+     * distinction in the view layer (§1A pure-renderer rule).
+     */
+    suspend fun contactDetailFooterActionId(contactId: String): String =
+        withContext(Dispatchers.IO) {
+            repository.contactDetailFooterActionId(contactId)
+        }
+
     suspend fun listArchivedContacts(): List<MobileContact> =
         withContext(Dispatchers.IO) {
             repository.listArchivedContacts()
