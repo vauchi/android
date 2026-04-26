@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uniffi.vauchi_platform.DeviceLinkSessionListener
 import uniffi.vauchi_platform.MobileApplyResult
 import uniffi.vauchi_platform.MobileConsentRecord
 import uniffi.vauchi_platform.MobileConsentType
@@ -34,7 +35,7 @@ import uniffi.vauchi_platform.MobileDeletionInfo
 import uniffi.vauchi_platform.MobileDeletionState
 import uniffi.vauchi_platform.MobileDemoContact
 import uniffi.vauchi_platform.MobileDemoContactState
-import uniffi.vauchi_platform.MobileDeviceLinkInitiator
+import uniffi.vauchi_platform.MobileDeviceLinkSession
 import uniffi.vauchi_platform.MobileDuplicatePair
 import uniffi.vauchi_platform.MobileException
 import uniffi.vauchi_platform.MobileFieldType
@@ -1739,111 +1740,124 @@ class MainViewModel(
     private val _deviceLinkState = MutableStateFlow<DeviceLinkState>(DeviceLinkState.Idle)
     val deviceLinkState: StateFlow<DeviceLinkState> = _deviceLinkState.asStateFlow()
 
-    private var currentInitiator: MobileDeviceLinkInitiator? = null
-    private var currentSenderToken: String? = null
+    private var currentSession: MobileDeviceLinkSession? = null
 
     /**
-     * Start the device link protocol as initiator.
-     * Creates an initiator state machine and generates QR data for the new device to scan.
+     * Listener bridge — forwards core's cycle-thread events onto the
+     * UI state flow. Holds a weak-ish reference (cancel resets the session,
+     * which detaches the listener slot) so the cycle thread can finish its
+     * `on_session_ended` emit without leaking the ViewModel.
      */
-    suspend fun startDeviceLinkInitiator(): String? {
-        _deviceLinkState.value = DeviceLinkState.GeneratingQR
-        return try {
-            val initiator =
-                withContext(Dispatchers.IO) {
-                    repository.startDeviceLink()
+    private inner class DeviceLinkSessionBridge : DeviceLinkSessionListener {
+        override fun onQrReady(
+            qrData: String,
+            expiresAtUnix: ULong,
+        ) {
+            _deviceLinkState.value = DeviceLinkState.WaitingForRequest(qrData, expiresAtUnix)
+        }
+
+        override fun onConfirmationRequired(
+            deviceName: String,
+            confirmationCode: String,
+            identityFingerprint: String,
+            proximityChallenge: ByteArray,
+        ) {
+            _deviceLinkState.value =
+                DeviceLinkState.ConfirmingDevice(
+                    deviceName = deviceName,
+                    confirmationCode = confirmationCode,
+                    challenge = proximityChallenge,
+                )
+        }
+
+        override fun onRequestSent(confirmationCode: String) {
+            // Phase 1 responder-only — never fires from initiator cycle
+        }
+
+        override fun onCompleted(
+            deviceName: String,
+            deviceIndex: UInt,
+        ) {
+            _deviceLinkState.value = DeviceLinkState.Success
+        }
+
+        override fun onFailed(reason: String) {
+            _deviceLinkState.value =
+                if (reason == "qr_expired") DeviceLinkState.Expired else DeviceLinkState.Failed(reason)
+        }
+
+        override fun onSessionEnded() {
+            // Final emit — idempotent reset if neither success/failed/expired fired
+            when (_deviceLinkState.value) {
+                is DeviceLinkState.Success,
+                is DeviceLinkState.Failed,
+                is DeviceLinkState.Expired,
+                -> { /* terminal — leave as-is */ }
+
+                else -> {
+                    _deviceLinkState.value = DeviceLinkState.Idle
                 }
-            val qrData = initiator.qrData()
-            // TODO: use initiator.expiresAt() once core 0.18.5 bindings are published
-            val expiresAt = (System.currentTimeMillis() / 1000).toULong() + 300u
-            currentInitiator = initiator
-            _deviceLinkState.value = DeviceLinkState.WaitingForRequest(qrData, expiresAt)
-            qrData
-        } catch (e: Exception) {
-            _deviceLinkState.value = DeviceLinkState.Failed(e.message ?: "Failed to generate QR")
-            null
+            }
         }
     }
 
     /**
-     * Listen for an incoming device link request from the new device via relay.
-     * This is called after displaying the QR code.
+     * Start the device link protocol as initiator.
+     *
+     * Core's cycle thread owns QR generation, relay listening, and protocol
+     * transitions. This method just primes the session; the listener bridge
+     * receives all subsequent state changes asynchronously.
      */
-    suspend fun listenForDeviceLinkRequest() {
+    suspend fun startDeviceLinkInitiator() {
+        _deviceLinkState.value = DeviceLinkState.GeneratingQR
         try {
-            val initiator =
-                currentInitiator
-                    ?: throw IllegalStateException("No initiator — call startDeviceLinkInitiator first")
-
-            val request =
+            val session =
                 withContext(Dispatchers.IO) {
-                    repository.listenForDeviceLinkRequest(300u)
+                    repository.createDeviceLinkSessionInitiator()
                 }
-            currentSenderToken = request.senderToken
-            val confirmation = initiator.prepareConfirmation(request.encryptedPayload)
-            val challenge = initiator.proximityChallenge()
-            _deviceLinkState.value =
-                DeviceLinkState.ConfirmingDevice(
-                    deviceName = confirmation.deviceName,
-                    confirmationCode = confirmation.confirmationCode,
-                    challenge = challenge,
-                )
+            currentSession = session
+            session.setListener(DeviceLinkSessionBridge())
+            session.start()
+            // Listener callbacks will drive the next state transition
         } catch (e: Exception) {
-            _deviceLinkState.value = DeviceLinkState.Failed(e.message ?: "Failed to listen for request")
+            _deviceLinkState.value = DeviceLinkState.Failed(e.message ?: "Failed to start device link")
         }
     }
 
     /**
      * Approve the device link after proximity verification.
      *
-     * Calls core's confirm_link with the proximity proof. Core validates the proof
-     * cryptographically (HMAC for manual, challenge match for ultrasonic) and rejects
-     * expired or invalid proofs. The encrypted response is sent to the new device
-     * via relay only on success.
-     *
-     * @param verificationResult The proximity proof from the verification step.
+     * Forwards the proximity proof to core's session. Core validates the proof
+     * cryptographically (HMAC for manual, challenge match for ultrasonic) and
+     * persists the device registry on success before firing `on_completed`.
      */
     suspend fun approveDeviceLink(verificationResult: ProximityVerificationResult) {
         _deviceLinkState.value = DeviceLinkState.Completing
         try {
-            val initiator =
-                currentInitiator
-                    ?: throw IllegalStateException("No initiator — call startDeviceLinkInitiator first")
-            val senderToken =
-                currentSenderToken
-                    ?: throw IllegalStateException("No sender token — call listenForDeviceLinkRequest first")
+            val session =
+                currentSession
+                    ?: throw IllegalStateException("No active session — call startDeviceLinkInitiator first")
 
-            val result =
-                withContext(Dispatchers.IO) {
-                    when (verificationResult) {
-                        is ProximityVerificationResult.Ultrasonic -> {
-                            initiator.confirmLinkUltrasonic(
-                                verificationResult.challengeResponse,
-                                verificationResult.verifiedAt,
-                            )
-                        }
+            withContext(Dispatchers.IO) {
+                when (verificationResult) {
+                    is ProximityVerificationResult.Ultrasonic -> {
+                        session.confirmUltrasonic(
+                            verificationResult.challengeResponse,
+                            verificationResult.verifiedAt,
+                        )
+                    }
 
-                        is ProximityVerificationResult.Manual -> {
-                            initiator.confirmLinkManual(
-                                verificationResult.confirmationCode,
-                                verificationResult.confirmedAt,
-                            )
-                        }
+                    is ProximityVerificationResult.Manual -> {
+                        session.confirmManual(
+                            verificationResult.confirmationCode,
+                            verificationResult.confirmedAt,
+                        )
                     }
                 }
-            result.encryptedResponse?.let { responseBytes ->
-                withContext(Dispatchers.IO) {
-                    repository.sendDeviceLinkResponse(senderToken, responseBytes)
-                }
             }
-
-            _deviceLinkState.value = DeviceLinkState.Success
-            currentInitiator = null
-            currentSenderToken = null
+            // Listener callback (on_completed / on_failed) drives terminal state
         } catch (e: Exception) {
             _deviceLinkState.value = DeviceLinkState.Failed(e.message ?: "Failed to complete link")
-            currentInitiator = null
-            currentSenderToken = null
         }
     }
 
@@ -1851,13 +1865,17 @@ class MainViewModel(
      * Cancel the device link protocol.
      */
     fun cancelDeviceLink() {
+        currentSession?.let { runCatching { it.cancel() } }
         _deviceLinkState.value = DeviceLinkState.Idle
-        currentInitiator = null
-        currentSenderToken = null
+        currentSession = null
     }
 
     /**
      * Transition to expired state when the QR code times out.
+     *
+     * Retained for backward compatibility with the view layer; new code should
+     * rely on the listener's `on_failed("qr_expired")` callback instead. Core
+     * owns the expiry clock now (no frontend timer needed).
      */
     fun setDeviceLinkExpired() {
         _deviceLinkState.value = DeviceLinkState.Expired

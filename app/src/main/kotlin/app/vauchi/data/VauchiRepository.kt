@@ -817,6 +817,13 @@ class VauchiRepository(
     ) = platform().sendDeviceLinkResponse(senderToken, encryptedResponse)
 
     /**
+     * Create a new device-link orchestration session (Phase 1: initiator only).
+     * Core's cycle thread owns QR generation, request listening, state transitions,
+     * and persistence. Frontend wires a `DeviceLinkSessionListener` for events.
+     */
+    fun createDeviceLinkSessionInitiator() = platform().createDeviceLinkSessionInitiator()
+
+    /**
      * Send a device link request via the relay and wait for a response.
      */
     fun sendDeviceLinkRequest(
