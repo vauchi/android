@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
@@ -73,29 +71,37 @@ fun ContactListComponent(
             )
         }
 
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items(contacts, key = { it.id }) { contact ->
-                ContactRow(
-                    contact = contact,
-                    onTap = {
-                        onAction(
-                            UserAction.ListItemSelected(
-                                componentId = componentId,
-                                itemId = contact.id,
-                            ),
-                        )
-                    },
-                    onAction = { action ->
-                        onAction(
-                            UserAction.ListItemAction(
-                                componentId = componentId,
-                                itemId = contact.id,
-                                actionId = action.id,
-                            ),
-                        )
-                    },
-                )
-            }
+        // Use plain Column iteration instead of LazyColumn — this component
+        // is rendered inside `ScreenRenderer`'s vertically-scrollable Column,
+        // and Compose forbids nesting a vertically-scrollable LazyColumn
+        // inside another vertically-scrollable container (the parent passes
+        // an infinite-height constraint, which the LazyColumn measure
+        // policy explicitly rejects). The exchange-verification ScreenModel
+        // hit this on Samsung S7 (Compose throws IllegalStateException →
+        // process crash) when the new contact appeared in the list.
+        // Performance trade-off is acceptable: contact lists in this
+        // component are short (verification preview, group filters).
+        for (contact in contacts) {
+            ContactRow(
+                contact = contact,
+                onTap = {
+                    onAction(
+                        UserAction.ListItemSelected(
+                            componentId = componentId,
+                            itemId = contact.id,
+                        ),
+                    )
+                },
+                onAction = { action ->
+                    onAction(
+                        UserAction.ListItemAction(
+                            componentId = componentId,
+                            itemId = contact.id,
+                            actionId = action.id,
+                        ),
+                    )
+                },
+            )
         }
     }
 }
