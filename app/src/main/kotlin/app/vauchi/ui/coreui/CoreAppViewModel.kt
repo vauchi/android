@@ -227,6 +227,36 @@ class CoreAppViewModel(
         }
     }
 
+    /**
+     * Dispatch an incoming `vauchi://exchange?...` deep link URI to core.
+     *
+     * On success core navigates to `AppScreen::DeepLinkConsent` and
+     * `screen` updates to the consent ScreenModel — observers (the
+     * native consent dialog) react via `screen.collectAsState()`.
+     *
+     * On parse failure, [onInvalid] is invoked with a human-readable
+     * detail (UniFFI `MobileError::InvalidInput.detail`). The native
+     * UI surfaces this via snackbar.
+     */
+    fun handleDeepLinkUri(
+        uri: String,
+        onInvalid: (String) -> Unit,
+    ) {
+        viewModelScope.launch {
+            try {
+                val screenJson =
+                    withContext(Dispatchers.IO) {
+                        appEngine.handleDeepLinkUri(uri = uri)
+                    }
+                _screen.value = json.decodeFromString<ScreenModel>(screenJson)
+                loadAvailableScreens()
+            } catch (e: Exception) {
+                Log.e(TAG, "Deep link dispatch failed", e)
+                onInvalid(e.message ?: "Unknown error")
+            }
+        }
+    }
+
     fun navigateTo(screenName: String) {
         viewModelScope.launch {
             try {

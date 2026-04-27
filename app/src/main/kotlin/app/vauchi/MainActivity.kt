@@ -64,6 +64,7 @@ import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.CoreOnboardingScreen
 import app.vauchi.ui.coreui.CoreScreenView
 import app.vauchi.ui.coreui.MaterialIconName
+import app.vauchi.ui.coreui.UserAction
 import app.vauchi.ui.coreui.coreTabIdForScreen
 import app.vauchi.ui.coreui.materialIconNameForCoreIcon
 import app.vauchi.ui.coreui.screenForCoreTabId
@@ -286,10 +287,13 @@ fun MainScreen(
         }
     }
 
-    // Deep link consent gate (SP-9)
-    val deepLinkHandler = remember { app.vauchi.deeplink.DeepLinkHandler() }
-    var showDeepLinkConsent by remember { mutableStateOf(false) }
-    var deepLinkPayload by remember { mutableStateOf<String?>(null) }
+    // Deep link consent gate (SP-9). The state machine + URL parser
+    // live in core (`PlatformAppEngine.handleDeepLinkUri`) since the
+    // 2026-04-25-deeplink-consent-orchestrator cleanup. The native
+    // dialog is shown whenever core's current screen is the consent
+    // gate — `screenId == "deep_link_consent"`.
+    val coreScreen by coreAppViewModel.screen.collectAsState()
+    val showDeepLinkConsent = coreScreen?.screenId == "deep_link_consent"
 
     // --reset-for-testing: create test identity so app skips onboarding (DEBUG only)
     LaunchedEffect(resetForTesting, uiState) {
@@ -312,18 +316,13 @@ fun MainScreen(
         }
     }
 
-    // Handle incoming deep link URI with consent gate
+    // Handle incoming deep link URI — forward raw URI string to core,
+    // which parses it and (on success) navigates to the consent screen.
     LaunchedEffect(deepLinkUri) {
         deepLinkUri?.let { uri ->
-            val result = deepLinkHandler.handleDeepLink(uri)
-            when (result) {
-                is app.vauchi.deeplink.DeepLinkResult.ExchangePending -> {
-                    deepLinkPayload = result.exchangePayload
-                    showDeepLinkConsent = true
-                }
-
-                is app.vauchi.deeplink.DeepLinkResult.Invalid -> {
-                    snackbarHostState.showSnackbar("Invalid link: ${result.reason}")
+            coreAppViewModel.handleDeepLinkUri(uri.toString()) { reason ->
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("Invalid link: $reason")
                 }
             }
             onDeepLinkConsumed()
@@ -687,24 +686,15 @@ fun MainScreen(
         }
     } // Scaffold
 
-    // Deep link consent dialog (SP-9)
-    // NEVER auto-process — always ask the user first
-    if (showDeepLinkConsent && deepLinkPayload != null) {
+    // Deep link consent dialog (SP-9). Visibility is driven by core —
+    // the dialog is shown while `screenId == "deep_link_consent"` and
+    // auto-hides when the user's grant/deny dispatch causes core to
+    // navigate away. NEVER auto-process: the dialog forces an explicit
+    // grant or deny ScreenAction press before any exchange can proceed.
+    if (showDeepLinkConsent) {
         DeepLinkConsentDialog(
-            onConfirm = {
-                showDeepLinkConsent = false
-                deepLinkHandler.grantConsent()
-                // TODO: Deep links use the old wb:// single-QR format.
-                // Navigate to multi-stage exchange for now; deep link exchange
-                // will be re-implemented when the protocol supports it.
-                currentScreen = Screen.MultiStageExchange
-                deepLinkPayload = null
-            },
-            onDeny = {
-                showDeepLinkConsent = false
-                deepLinkHandler.denyConsent()
-                deepLinkPayload = null
-            },
+            onConfirm = { coreAppViewModel.handleAction(UserAction.ActionPressed("grant")) },
+            onDeny = { coreAppViewModel.handleAction(UserAction.ActionPressed("deny")) },
         )
     }
 }
