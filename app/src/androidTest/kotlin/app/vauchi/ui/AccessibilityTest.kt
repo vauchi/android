@@ -109,6 +109,7 @@ class AccessibilityTest {
             VauchiTheme {
                 DeliveryStatusScreen(
                     deliveryRecords = emptyList(),
+                    failedRecords = emptyList(),
                     retryEntries = emptyList(),
                     failedCount = 0,
                     isLoading = false,

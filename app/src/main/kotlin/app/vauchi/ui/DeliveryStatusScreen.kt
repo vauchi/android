@@ -33,6 +33,7 @@ import java.util.*
 @Composable
 fun DeliveryStatusScreen(
     deliveryRecords: List<MobileDeliveryRecord>,
+    failedRecords: List<MobileDeliveryRecord>,
     retryEntries: List<MobileRetryEntry>,
     failedCount: Int,
     isLoading: Boolean,
@@ -105,8 +106,9 @@ fun DeliveryStatusScreen(
                 }
 
                 selectedTab == 1 -> {
+                    // G3 (ADR-021/043): pre-filtered by core, no frontend filter.
                     FailedDeliveriesList(
-                        records = deliveryRecords.filter { it.status == MobileDeliveryStatus.FAILED },
+                        records = failedRecords,
                         onRetry = onRetry,
                     )
                 }

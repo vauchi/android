@@ -87,6 +87,7 @@ fun DeliveryStatusWithRecordsScreenshot() {
                         expiresAt = null,
                     ),
                 ),
+            failedRecords = emptyList(),
             retryEntries =
                 listOf(
                     MobileRetryEntry(
@@ -291,6 +292,7 @@ fun DeliveryStatusWithRecordsDarkScreenshot() {
                         expiresAt = null,
                     ),
                 ),
+            failedRecords = emptyList(),
             retryEntries =
                 listOf(
                     MobileRetryEntry(

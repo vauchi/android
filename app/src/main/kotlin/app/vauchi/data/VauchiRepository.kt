@@ -728,6 +728,10 @@ class VauchiRepository(
     // Delivery status operations
     fun getAllDeliveryRecords() = platform().getAllDeliveryRecords()
 
+    /** G3 (ADR-021/043): pre-filtered failed-record list — frontends should
+     *  call this instead of `.filter { it.status == FAILED }` themselves. */
+    fun getFailedDeliveryRecords() = platform().getFailedDeliveryRecords()
+
     fun getDeliveryRecordsForContact(contactId: String) = platform().getDeliveryRecordsForContact(contactId)
 
     fun getDeliverySummary(messageId: String) = platform().getDeliverySummary(messageId)
