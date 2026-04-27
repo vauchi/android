@@ -421,8 +421,6 @@ fun MainScreen(
                         is UiState.Ready -> {
                             ReadyScreen(
                                 coreAppViewModel = coreAppViewModel,
-                                onExchange = { currentScreen = Screen.MultiStageExchange },
-                                onContacts = { currentScreen = Screen.Contacts },
                                 onSettings = { currentScreen = Screen.Settings },
                                 syncState = syncState,
                                 isOnline = isOnline,
@@ -763,15 +761,16 @@ fun LoadingScreen() {
 // first-exchange prompt — see `core/vauchi-app/src/ui/my_info.rs`.
 // The shell keeps the Android-specific chrome that isn't in the
 // cross-platform ScreenModel: the Vauchi title bar, sync chip + settings
-// icon, offline banner, and the Exchange / Contacts bottom shortcuts
-// (Android has no tab bar, so these bottom buttons replace what iOS
-// offers in its TabView).
+// icon, and the offline banner. Exchange / Contacts navigation is now
+// handled entirely by the parent Scaffold's NavigationBar (driven by
+// core's `tab_info`); the legacy bottom Exchange / Contacts pill
+// shortcuts were dropped — they bypassed the mode picker (only
+// reaching QR mode), duplicated the bottom-nav, and confused users
+// about why the same destination had two different entry points.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReadyScreen(
     coreAppViewModel: CoreAppViewModel,
-    onExchange: () -> Unit,
-    onContacts: () -> Unit,
     onSettings: () -> Unit,
     syncState: SyncState = SyncState.Idle,
     isOnline: Boolean = true,
@@ -809,32 +808,8 @@ fun ReadyScreen(
             CoreScreenView(
                 viewModel = coreAppViewModel,
                 screenName = "MyInfo",
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxSize(),
             )
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Button(
-                    onClick = onExchange,
-                    modifier = Modifier.weight(1f).testTag("home.exchange"),
-                ) {
-                    Icon(Icons.Default.Share, contentDescription = "Exchange")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Exchange")
-                }
-                OutlinedButton(
-                    onClick = onContacts,
-                    modifier = Modifier.weight(1f).testTag("home.contacts"),
-                ) {
-                    Icon(Icons.Default.Person, contentDescription = "Contacts")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Contacts")
-                }
-            }
         }
     }
 }
