@@ -194,6 +194,7 @@ sealed class Component {
         val fields: List<FieldDisplay>,
         val groupViews: List<GroupCardView>,
         val selectedGroup: String? = null,
+        val visibleFields: List<FieldDisplay> = emptyList(),
         val avatarData: List<Int>? = null,
         val a11y: A11y? = null,
     ) : Component()
@@ -368,6 +369,7 @@ private data class CardPreviewContent(
     val fields: List<FieldDisplay>,
     @SerialName("group_views") val groupViews: List<GroupCardView>,
     @SerialName("selected_group") val selectedGroup: String? = null,
+    @SerialName("visible_fields") val visibleFields: List<FieldDisplay> = emptyList(),
     @SerialName("avatar_data") val avatarData: List<Int>? = null,
     val a11y: A11y? = null,
 )
@@ -573,6 +575,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                             fields = c.fields,
                             groupViews = c.groupViews,
                             selectedGroup = c.selectedGroup,
+                            visibleFields = c.visibleFields,
                             avatarData = c.avatarData,
                             a11y = c.a11y,
                         )
@@ -808,6 +811,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                         fields = value.fields,
                         groupViews = value.groupViews,
                         selectedGroup = value.selectedGroup,
+                        visibleFields = value.visibleFields,
                         avatarData = value.avatarData,
                         a11y = value.a11y,
                     )

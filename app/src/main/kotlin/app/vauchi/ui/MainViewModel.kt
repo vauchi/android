@@ -750,6 +750,14 @@ class MainViewModel(
             repository.contactDetailFooterActionId(contactId)
         }
 
+    /**
+     * G4 (ADR-021/043): typed contact-detail view-state.
+     */
+    suspend fun contactDetailViewState(contactId: String): uniffi.vauchi_platform.MobileContactDetailViewState =
+        withContext(Dispatchers.IO) {
+            repository.contactDetailViewState(contactId)
+        }
+
     suspend fun listArchivedContacts(): List<MobileContact> =
         withContext(Dispatchers.IO) {
             repository.listArchivedContacts()

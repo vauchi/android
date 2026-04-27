@@ -211,16 +211,22 @@ fun LabelDetailScreen(
                     }
 
                     // Contacts section
+                    // G2 (ADR-021/043): render core-resolved label_contacts
+                    // directly. Closes the raw-fingerprint UX bug where the
+                    // previous `?: contactId` fallback printed a 64-char
+                    // fingerprint as the contact name when a label
+                    // referenced a deleted contact. Core now omits stale
+                    // references and reports the count separately.
                     item {
                         Text(
-                            text = "Contacts (${detail.contactIds.size})",
+                            text = "Contacts (${detail.labelContacts.size})",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 8.dp).semantics { heading() },
                         )
                     }
 
-                    if (detail.contactIds.isEmpty()) {
+                    if (detail.labelContacts.isEmpty()) {
                         item {
                             Text(
                                 text = "No contacts in this label",
@@ -230,12 +236,22 @@ fun LabelDetailScreen(
                             )
                         }
                     } else {
-                        items(detail.contactIds) { contactId ->
-                            val contact = contacts.find { it.id == contactId }
+                        items(detail.labelContacts) { row ->
                             ContactChip(
-                                displayName = contact?.displayName ?: contactId,
-                                trustLevel = contact?.trustLevel ?: MobileContactTrustLevel.STANDARD,
+                                displayName = row.displayName,
+                                trustLevel = row.trustLevel,
                             )
+                        }
+                        if (detail.staleReferenceCount > 0u) {
+                            item {
+                                Text(
+                                    text = "(${detail.staleReferenceCount} stale reference${if (detail.staleReferenceCount == 1u) "" else "s"})",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    modifier = Modifier.padding(top = 4.dp),
+                                )
+                            }
                         }
                     }
 

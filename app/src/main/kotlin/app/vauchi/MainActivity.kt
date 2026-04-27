@@ -568,6 +568,7 @@ fun MainScreen(
                             onSoftDeleteContact = { id -> viewModel.softDeleteImportedContact(id) },
                             onUndoSoftDeleteContact = { id -> viewModel.undoDeleteImportedContact(id) },
                             onGetFooterActionId = { id -> viewModel.contactDetailFooterActionId(id) },
+                            onGetViewState = { id -> viewModel.contactDetailViewState(id) },
                         )
                     }
                 }

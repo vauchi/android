@@ -55,6 +55,7 @@ fun CardPreviewComponent(
     fields: List<FieldDisplay>,
     groupViews: List<GroupCardView>,
     selectedGroup: String?,
+    visibleFields: List<FieldDisplay>,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
     avatarData: List<Int>? = null,
@@ -89,12 +90,10 @@ fun CardPreviewComponent(
         }
 
         // Card
-        val displayFields =
-            if (selectedGroup != null) {
-                groupViews.find { it.groupName == selectedGroup }?.visibleFields ?: fields
-            } else {
-                fields
-            }
+        // G1 (ADR-021/043): use the pre-filtered list emitted by core's
+        // `build_visible_fields` helper. Replaces the previous frontend
+        // fallback (`?: fields`) which leaked Hidden fields into the preview.
+        val displayFields = visibleFields
 
         val displayName =
             if (selectedGroup != null) {

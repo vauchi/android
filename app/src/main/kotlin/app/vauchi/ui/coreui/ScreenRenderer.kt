@@ -204,6 +204,7 @@ fun ComponentRenderer(
                 fields = component.fields,
                 groupViews = component.groupViews,
                 selectedGroup = component.selectedGroup,
+                visibleFields = component.visibleFields,
                 onAction = onAction,
                 modifier = modifier,
                 avatarData = component.avatarData,

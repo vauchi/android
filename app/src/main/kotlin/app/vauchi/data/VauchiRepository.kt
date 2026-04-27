@@ -339,6 +339,14 @@ class VauchiRepository(
      */
     fun contactDetailFooterActionId(contactId: String) = platform().contactDetailFooterActionId(contactId)
 
+    /**
+     * G4 (ADR-021/043): typed contact-detail view-state — frontends
+     * iterate `actions`/`badges`/`banners` instead of branching on
+     * raw MobileContact flags. Closes the iOS/Android Verify-button
+     * divergence (audit V4).
+     */
+    fun contactDetailViewState(contactId: String) = platform().contactDetailViewState(contactId)
+
     fun listArchivedContacts() = platform().listArchivedContacts()
 
     fun importContactsFromVcf(data: ByteArray) = platform().importContactsFromVcf(data)

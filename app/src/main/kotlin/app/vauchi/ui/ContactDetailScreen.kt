@@ -61,6 +61,12 @@ fun ContactDetailScreen(
      * keeps the §1A pure-renderer rule local to this screen.
      */
     onGetFooterActionId: (suspend (String) -> String)? = null,
+    /**
+     * G4 (ADR-021/043): Returns the typed contact-detail view-state
+     * (badges/banners/actions). Optional so existing callers without
+     * the new wiring still render via the legacy predicates.
+     */
+    onGetViewState: (suspend (String) -> uniffi.vauchi_platform.MobileContactDetailViewState)? = null,
 ) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
@@ -81,6 +87,9 @@ fun ContactDetailScreen(
     var proposalTrusted by remember { mutableStateOf(false) }
     var isTogglingProposalTrust by remember { mutableStateOf(false) }
     var footerActionId by remember { mutableStateOf<String?>(null) }
+    var viewState by remember {
+        mutableStateOf<uniffi.vauchi_platform.MobileContactDetailViewState?>(null)
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -96,6 +105,12 @@ fun ContactDetailScreen(
                 // Best-effort: an unreachable contact_id leaves the
                 // footer empty rather than surfacing a technical error
                 // in the detail screen.
+                null
+            }
+        viewState =
+            try {
+                onGetViewState?.invoke(contactId)
+            } catch (_: Throwable) {
                 null
             }
 
@@ -224,14 +239,21 @@ fun ContactDetailScreen(
                     }
 
                     // Trust level (derived from core — ADR-021/034)
+                    // G4 (ADR-021/043): Verify-button visibility from core's
+                    // typed view-state. Replaces the previous frontend
+                    // predicate `trustLevel ∈ {STANDARD, HIGH}` (audit V4)
+                    // with the canonical core predicate
+                    // `!is_verified && trust_level ∈ {Standard, High}`.
                     item {
                         Spacer(modifier = Modifier.height(8.dp))
+                        val verifyAvailable =
+                            viewState?.actions?.any {
+                                it is uniffi.vauchi_platform.MobileContactDetailAction.Verify
+                            } ?: false
                         TrustLevelCard(
                             trustLevel = c.trustLevel,
                             onVerify =
-                                if (c.trustLevel == MobileContactTrustLevel.STANDARD ||
-                                    c.trustLevel == MobileContactTrustLevel.HIGH
-                                ) {
+                                if (verifyAvailable) {
                                     { showVerification = true }
                                 } else {
                                     null
