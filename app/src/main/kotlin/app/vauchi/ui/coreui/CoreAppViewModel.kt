@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import uniffi.vauchi_platform.MobileExchangeHardwareEvent
 import uniffi.vauchi_platform.MobileLocale
 import uniffi.vauchi_platform.MobileTabInfo
@@ -272,6 +275,40 @@ class CoreAppViewModel(
         }
     }
 
+    /**
+     * Navigate to a parameterized AppScreen variant — `{"ContactDetail":
+     * {"contact_id": "..."}}` and similar. Mirror of iOS
+     * `AppViewModel.navigateToScreen(["ContactDetail": ["contact_id": …]])`.
+     */
+    fun navigateToScreenWithParam(
+        screenName: String,
+        paramKey: String,
+        paramValue: String,
+    ) {
+        viewModelScope.launch {
+            try {
+                // Construct {"<screenName>": {"<paramKey>": "<paramValue>"}}
+                val payload =
+                    buildJsonObject {
+                        put(
+                            screenName,
+                            buildJsonObject {
+                                put(paramKey, JsonPrimitive(paramValue))
+                            },
+                        )
+                    }
+                val screenJson =
+                    withContext(Dispatchers.IO) {
+                        appEngine.navigateToJson(screenJson = payload.toString())
+                    }
+                _screen.value = json.decodeFromString<ScreenModel>(screenJson)
+                loadAvailableScreens()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to navigate to $screenName with $paramKey=$paramValue", e)
+            }
+        }
+    }
+
     fun navigateBack() {
         viewModelScope.launch {
             try {
@@ -336,15 +373,15 @@ class CoreAppViewModel(
             }
 
             is ActionResult.OpenContact -> {
-                navigateTo("ContactDetail")
+                navigateToScreenWithParam("ContactDetail", "contact_id", result.contactId)
             }
 
             is ActionResult.EditContact -> {
-                navigateTo("ContactEdit")
+                navigateToScreenWithParam("ContactEdit", "contact_id", result.contactId)
             }
 
             is ActionResult.OpenEntryDetail -> {
-                navigateTo("EntryDetail")
+                navigateToScreenWithParam("EntryDetail", "field_id", result.fieldId)
             }
 
             is ActionResult.OpenUrl -> {

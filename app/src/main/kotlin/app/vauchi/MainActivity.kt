@@ -251,7 +251,8 @@ fun MainScreen(
     val isOnline by viewModel.isOnline.collectAsState()
     val lastSyncTime by viewModel.lastSyncTime.collectAsState()
     var currentScreen by remember { mutableStateOf(Screen.Home) }
-    var selectedContactId by remember { mutableStateOf<String?>(null) }
+    // selectedContactId removed — ContactDetail is now driven by core via
+    // CoreAppViewModel.navigateToScreenWithParam("ContactDetail", "contact_id", …)
     var selectedLabelId by remember { mutableStateOf<String?>(null) }
     var showRestoreDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -540,37 +541,13 @@ fun MainScreen(
                 }
 
                 Screen.ContactDetail -> {
-                    selectedContactId?.let { contactId ->
-                        ContactDetailScreen(
-                            contactId = contactId,
-                            onBack = { currentScreen = Screen.Contacts },
-                            onGetContact = { viewModel.getContact(it) },
-                            onGetOwnCard = { viewModel.getOwnCard() },
-                            onSetFieldVisibility = { cId, label, visible ->
-                                viewModel.setFieldVisibility(cId, label, visible)
-                            },
-                            onIsFieldVisible = { cId, label ->
-                                viewModel.isFieldVisibleToContact(cId, label)
-                            },
-                            onVerifyContact = { viewModel.verifyContact(it) },
-                            onGetOwnPublicKey = { viewModel.getOwnPublicKey() },
-                            onGetOwnFingerprint = { viewModel.getOwnFingerprint() },
-                            onTrustForRecovery = { viewModel.trustContactForRecovery(it) },
-                            onUntrustForRecovery = { viewModel.untrustContactForRecovery(it) },
-                            onGetContactNote = { viewModel.getContactNote(it) },
-                            onSetContactNote = { cId, note -> viewModel.setContactNote(cId, note) },
-                            onGetContactFieldNotes = { viewModel.getContactFieldNotes(it) },
-                            onSetContactFieldNote = { cId, fId, note -> viewModel.setContactFieldNote(cId, fId, note) },
-                            onDeleteContactFieldNote = { cId, fId -> viewModel.deleteContactFieldNote(cId, fId) },
-                            onSetProposalTrusted = { cId, trusted -> viewModel.setProposalTrusted(cId, trusted) },
-                            onArchiveContact = { id -> viewModel.archiveContact(id) },
-                            onUnarchiveContact = { id -> viewModel.unarchiveContact(id) },
-                            onSoftDeleteContact = { id -> viewModel.softDeleteImportedContact(id) },
-                            onUndoSoftDeleteContact = { id -> viewModel.undoDeleteImportedContact(id) },
-                            onGetFooterActionId = { id -> viewModel.contactDetailFooterActionId(id) },
-                            onGetViewState = { id -> viewModel.contactDetailViewState(id) },
-                        )
-                    }
+                    // Pure Humble UI shell — render via core's
+                    // `ContactDetailEngine`. The engine is selected by
+                    // `CoreAppViewModel.navigateToScreenWithParam`
+                    // ("ContactDetail", "contact_id", …) on
+                    // `ActionResult.OpenContact`. See
+                    // `_private/docs/problems/2026-04-28-pure-humble-ui-retire-native-screens/`.
+                    ContactDetailScreen(viewModel = coreAppViewModel)
                 }
 
                 Screen.Settings -> {
