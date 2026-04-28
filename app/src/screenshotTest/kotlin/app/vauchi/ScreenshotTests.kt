@@ -114,86 +114,12 @@ fun LabelsScreenWithLabelsScreenshot() {
 // the individual components used within it
 // =============================================================
 
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun ContactFieldItemScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)) {
-                app.vauchi.ui.ContactFieldItem(
-                    field =
-                        MobileContactField(
-                            id = "field-1",
-                            label = "Email",
-                            value = "bob@example.com",
-                            fieldType = MobileFieldType.EMAIL,
-                            note = null,
-                        ),
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                app.vauchi.ui.ContactFieldItem(
-                    field =
-                        MobileContactField(
-                            id = "field-2",
-                            label = "Phone",
-                            value = "+41 79 987 65 43",
-                            fieldType = MobileFieldType.PHONE,
-                            note = null,
-                        ),
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                app.vauchi.ui.ContactFieldItem(
-                    field =
-                        MobileContactField(
-                            id = "field-3",
-                            label = "Twitter",
-                            value = "@bobsmith",
-                            fieldType = MobileFieldType.SOCIAL,
-                            note = null,
-                        ),
-                )
-            }
-        }
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun VisibilityToggleItemScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)) {
-                app.vauchi.ui.VisibilityToggleItem(
-                    field =
-                        MobileContactField(
-                            id = "field-1",
-                            label = "Email",
-                            value = "alice@example.com",
-                            fieldType = MobileFieldType.EMAIL,
-                            note = null,
-                        ),
-                    isVisible = true,
-                    onToggle = {},
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                app.vauchi.ui.VisibilityToggleItem(
-                    field =
-                        MobileContactField(
-                            id = "field-2",
-                            label = "Phone",
-                            value = "+41 79 123 45 67",
-                            fieldType = MobileFieldType.PHONE,
-                            note = null,
-                        ),
-                    isVisible = false,
-                    onToggle = {},
-                )
-            }
-        }
-    }
-}
+// ContactFieldItemScreenshot + VisibilityToggleItemScreenshot removed in
+// the 2026-04-28 Pure Humble UI retirement: those were preview tests for
+// helpers (ContactFieldItem, VisibilityToggleItem) that lived inside the
+// now-deleted ContactDetailScreen. Field rendering is now driven by core
+// via Component::FieldList. Same rationale as the
+// DeliveryStatusEmptyScreenshot removal earlier in this file.
 
 // =============================================================
 // Dark Mode Variants
@@ -241,38 +167,8 @@ fun LabelsScreenWithLabelsDarkScreenshot() {
     }
 }
 
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun ContactFieldItemDarkScreenshot() {
-    VauchiTheme(darkTheme = true, dynamicColor = false) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)) {
-                app.vauchi.ui.ContactFieldItem(
-                    field =
-                        MobileContactField(
-                            id = "field-1",
-                            label = "Email",
-                            value = "bob@example.com",
-                            fieldType = MobileFieldType.EMAIL,
-                            note = null,
-                        ),
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                app.vauchi.ui.ContactFieldItem(
-                    field =
-                        MobileContactField(
-                            id = "field-2",
-                            label = "Phone",
-                            value = "+41 79 987 65 43",
-                            fieldType = MobileFieldType.PHONE,
-                            note = null,
-                        ),
-                )
-            }
-        }
-    }
-}
+// ContactFieldItemDarkScreenshot removed — see ContactFieldItemScreenshot
+// comment above (helper deleted alongside ContactDetailScreen).
 
 // =============================================================
 // German Locale Variants
