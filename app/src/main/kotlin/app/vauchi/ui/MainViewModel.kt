@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.vauchi_platform.DeviceLinkSessionListener
 import uniffi.vauchi_platform.MobileApplyResult
+import uniffi.vauchi_platform.MobileBiometricUnlockOutcome
 import uniffi.vauchi_platform.MobileConsentRecord
 import uniffi.vauchi_platform.MobileConsentType
 import uniffi.vauchi_platform.MobileContact
@@ -195,6 +196,27 @@ class MainViewModel(
     init {
         checkIdentity()
         loadAccessibilitySettingsSafely()
+        observeNetworkStateForCore()
+    }
+
+    /**
+     * Forward `NetworkMonitor` reachability into core so the
+     * offline `Component::Banner` is injected into every emitted
+     * `ScreenModel` while offline (audit
+     * `2026-04-28-lifecycle-session-residue-umbrella` P2-D).
+     * The frontend keeps `isOnline` for legacy collectors but the
+     * banner-render decision lives in core.
+     */
+    private fun observeNetworkStateForCore() {
+        viewModelScope.launch {
+            networkMonitor.isOnline.collect { online ->
+                try {
+                    appEngine.setNetworkOnline(online)
+                } catch (e: Exception) {
+                    Log.w("Vauchi", "setNetworkOnline failed: ${e.message}")
+                }
+            }
+        }
     }
 
     private fun loadAccessibilitySettingsSafely() {
@@ -351,23 +373,28 @@ class MainViewModel(
     /** Re-run full initialization (identity check + load). Use after biometric auth. */
     fun retryInit() {
         viewModelScope.launch {
-            // Constant-time delay after biometric: prevents timing
-            // side-channel that could reveal whether duress is enabled.
-            val start = System.currentTimeMillis()
-            val duressEnabled =
+            // Core owns the post-biometric duress decision and the
+            // 300 ms constant-time floor that hides whether duress
+            // is configured (audit
+            // `2026-04-28-lifecycle-session-residue-umbrella` P2-B).
+            // The call sleeps in Rust for ≥
+            // BIOMETRIC_UNLOCK_MIN_DURATION, so dispatch off the main
+            // thread.
+            val outcome =
                 try {
-                    withContext(Dispatchers.IO) { repository.isDuressEnabled() }
+                    withContext(Dispatchers.IO) { appEngine.biometricUnlockCheck() }
                 } catch (_: Exception) {
-                    false
+                    null
                 }
-            val elapsed = System.currentTimeMillis() - start
-            val pad = (300L - elapsed).coerceAtLeast(0)
-            if (pad > 0) kotlinx.coroutines.delay(pad)
 
-            if (duressEnabled) {
-                _uiState.value = UiState.AppPasswordRequired
-            } else {
-                checkIdentity()
+            when (outcome) {
+                MobileBiometricUnlockOutcome.PROMPT_FOR_DURESS_PIN -> {
+                    _uiState.value = UiState.AppPasswordRequired
+                }
+
+                MobileBiometricUnlockOutcome.UNLOCKED, null -> {
+                    checkIdentity()
+                }
             }
         }
     }

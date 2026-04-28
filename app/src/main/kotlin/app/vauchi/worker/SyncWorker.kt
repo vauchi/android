@@ -12,9 +12,8 @@ import app.vauchi.data.VauchiRepository
 
 class SyncWorker(
     context: Context,
-    params: WorkerParameters
+    params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
-
     companion object {
         const val TAG = "SyncWorker"
         const val WORK_NAME = "vauchi_periodic_sync"
@@ -23,32 +22,43 @@ class SyncWorker(
     override suspend fun doWork(): Result {
         Log.d(TAG, "Starting background sync")
 
-        return try {
-            val repository = VauchiRepository(applicationContext)
-
-            // Only sync if identity exists
-            if (!repository.hasIdentity()) {
-                Log.d(TAG, "No identity found, skipping sync")
-                return Result.success()
+        // Build the repository once, before the per-tick try block,
+        // so the catch arm can read core's max-retries constant.
+        val repository =
+            try {
+                VauchiRepository(applicationContext)
+            } catch (e: Exception) {
+                Log.e(TAG, "Repository init failed: ${e.message}", e)
+                return Result.failure()
             }
+        val maxRetries =
+            runCatching { repository.appEngine.periodicSyncMaxRetries() }
+                .getOrDefault(3u)
 
-            val result = repository.sync()
-            Log.d(TAG, "Sync complete: ${result.contactsAdded} contacts added, ${result.cardsUpdated} cards updated")
-            
+        return try {
+            // Per-tick decision (gate on identity / OHTTP key, honour
+            // throttle window) lives in core (audit
+            // `2026-04-28-lifecycle-session-residue-umbrella` P2-C).
+            // The worker shrinks to a single core call plus
+            // notification polling. The retry budget mirrors
+            // core's PERIODIC_SYNC_MAX_RETRIES.
+            repository.appEngine.periodicSyncTick()
+
             // Poll for pending notifications (E)
             val notifications = repository.pollNotifications()
             for (notification in notifications) {
-                app.vauchi.util.NotificationHelper.showNotification(applicationContext, notification)
+                app.vauchi.util.NotificationHelper
+                    .showNotification(applicationContext, notification)
             }
-            
+
             Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "Sync failed: ${e.message}", e)
-            if (runAttemptCount < 3) {
-                Log.d(TAG, "Retrying sync (attempt ${runAttemptCount + 1})")
+            if (runAttemptCount.toUInt() < maxRetries) {
+                Log.d(TAG, "Retrying sync (attempt ${runAttemptCount + 1} of $maxRetries)")
                 Result.retry()
             } else {
-                Log.e(TAG, "Max retry attempts reached, giving up")
+                Log.e(TAG, "Max retry attempts ($maxRetries) reached, giving up")
                 Result.failure()
             }
         }
