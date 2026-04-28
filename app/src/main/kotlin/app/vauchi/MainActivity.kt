@@ -202,12 +202,10 @@ enum class Screen {
     NfcExchange,
     BleExchange,
     Contacts,
-    ContactDetail,
     Settings,
     Devices,
     Recovery,
     Labels,
-    LabelDetail,
     ThemeSettings,
     LanguageSettings,
     Help,
@@ -216,6 +214,14 @@ enum class Screen {
     ArchivedContacts,
     ContactMerge,
     DeviceReplacement,
+    // ContactDetail and LabelDetail removed in the 2026-04-28 audit
+    // follow-up. Both were unreachable enum branches — `currentScreen`
+    // was never set to them. Real navigation to ContactDetail and
+    // GroupDetail (a.k.a. LabelDetail) happens via
+    // `coreAppViewModel.navigateToScreenWithParam(...)` updating
+    // `coreAppViewModel.screen` directly, which the inner `CoreScreenView`
+    // observes and re-renders. The local enum was a vestige of the
+    // pre-Pure-Humble architecture.
 }
 
 /**
@@ -253,7 +259,9 @@ fun MainScreen(
     var currentScreen by remember { mutableStateOf(Screen.Home) }
     // selectedContactId removed — ContactDetail is now driven by core via
     // CoreAppViewModel.navigateToScreenWithParam("ContactDetail", "contact_id", …)
-    var selectedLabelId by remember { mutableStateOf<String?>(null) }
+    // selectedLabelId removed — same rationale as selectedContactId:
+    // GroupDetail navigation is driven by core via
+    // `coreAppViewModel.navigateToScreenWithParam(...)`.
     var showRestoreDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -540,16 +548,6 @@ fun MainScreen(
                     )
                 }
 
-                Screen.ContactDetail -> {
-                    // Pure Humble UI shell — render via core's
-                    // `ContactDetailEngine`. The engine is selected by
-                    // `CoreAppViewModel.navigateToScreenWithParam`
-                    // ("ContactDetail", "contact_id", …) on
-                    // `ActionResult.OpenContact`. See
-                    // `_private/docs/problems/2026-04-28-pure-humble-ui-retire-native-screens/`.
-                    ContactDetailScreen(viewModel = coreAppViewModel)
-                }
-
                 Screen.Settings -> {
                     CoreScreenView(
                         viewModel = coreAppViewModel,
@@ -579,16 +577,6 @@ fun MainScreen(
                         screenName = "Groups",
                         modifier = Modifier.fillMaxSize(),
                     )
-                }
-
-                Screen.LabelDetail -> {
-                    selectedLabelId?.let { labelId ->
-                        CoreScreenView(
-                            viewModel = coreAppViewModel,
-                            screenName = "GroupDetail",
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
                 }
 
                 Screen.ThemeSettings -> {
