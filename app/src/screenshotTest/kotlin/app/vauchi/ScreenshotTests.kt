@@ -13,14 +13,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import app.vauchi.ui.LabelsScreen
 import app.vauchi.ui.SyncState
 import app.vauchi.ui.theme.VauchiTheme
 import com.android.tools.screenshot.PreviewTest
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileContactField
 import uniffi.vauchi_platform.MobileFieldType
-import uniffi.vauchi_platform.MobileVisibilityLabel
 import java.util.Locale
 
 // VRT device spec: 360dp wide, 800dp tall, xhdpi (2x) = 720×1600 px.
@@ -48,65 +46,14 @@ private const val VRT_DEVICE = "spec:width=360dp,height=800dp,dpi=320"
 // seeded with delivery records, which is not how the preview runtime
 // is set up.
 
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun LabelsScreenEmptyScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        LabelsScreen(
-            labels = emptyList(),
-            suggestedLabels = listOf("Work", "Family", "Friends"),
-            onBack = {},
-            onLabelClick = {},
-            onCreateLabel = {},
-            onDeleteLabel = {},
-            onRefresh = {},
-        )
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun LabelsScreenWithLabelsScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        LabelsScreen(
-            labels =
-                listOf(
-                    MobileVisibilityLabel(
-                        id = "label-1",
-                        name = "Work",
-                        contactCount = 5U,
-                        visibleFieldCount = 3U,
-                        createdAt = 1706745600UL,
-                        modifiedAt = 1706745600UL,
-                    ),
-                    MobileVisibilityLabel(
-                        id = "label-2",
-                        name = "Family",
-                        contactCount = 12U,
-                        visibleFieldCount = 5U,
-                        createdAt = 1706745500UL,
-                        modifiedAt = 1706745700UL,
-                    ),
-                    MobileVisibilityLabel(
-                        id = "label-3",
-                        name = "Friends",
-                        contactCount = 8U,
-                        visibleFieldCount = 4U,
-                        createdAt = 1706745400UL,
-                        modifiedAt = 1706745800UL,
-                    ),
-                ),
-            suggestedLabels = emptyList(),
-            onBack = {},
-            onLabelClick = {},
-            onCreateLabel = {},
-            onDeleteLabel = {},
-            onRefresh = {},
-        )
-    }
-}
+// LabelsScreen* preview tests removed in the 2026-04-28 Pure Humble UI
+// retirement (Pair 2): `Screen.Labels` already renders through
+// `CoreScreenView("Groups")` against core's `GroupsEngine` /
+// `GroupDetailEngine`. Same rationale as the ContactsScreen* and
+// DeliveryStatusScreen* removals above — preview-time screenshots would
+// need a real `PlatformAppEngine` seeded with labels, which is not how
+// the preview runtime is set up. Behavioral coverage now lives in
+// core's group engines + reachability tests.
 
 // =============================================================
 // Contact Detail Screen
@@ -132,40 +79,8 @@ fun LabelsScreenWithLabelsScreenshot() {
 
 // DeliveryStatusWithRecordsDarkScreenshot removed — see comment above.
 
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun LabelsScreenWithLabelsDarkScreenshot() {
-    VauchiTheme(darkTheme = true, dynamicColor = false) {
-        LabelsScreen(
-            labels =
-                listOf(
-                    MobileVisibilityLabel(
-                        id = "label-1",
-                        name = "Work",
-                        contactCount = 5U,
-                        visibleFieldCount = 3U,
-                        createdAt = 1706745600UL,
-                        modifiedAt = 1706745600UL,
-                    ),
-                    MobileVisibilityLabel(
-                        id = "label-2",
-                        name = "Family",
-                        contactCount = 12U,
-                        visibleFieldCount = 5U,
-                        createdAt = 1706745500UL,
-                        modifiedAt = 1706745700UL,
-                    ),
-                ),
-            suggestedLabels = emptyList(),
-            onBack = {},
-            onLabelClick = {},
-            onCreateLabel = {},
-            onDeleteLabel = {},
-            onRefresh = {},
-        )
-    }
-}
+// LabelsScreenWithLabelsDarkScreenshot removed — see LabelsScreen*
+// comment in the light-theme section above.
 
 // ContactFieldItemDarkScreenshot removed — see ContactFieldItemScreenshot
 // comment above (helper deleted alongside ContactDetailScreen).
@@ -198,42 +113,8 @@ private fun GermanLocaleWrapper(content: @Composable () -> Unit) {
 // `ContactsScreen` is gone; `CoreScreenView("Contacts")` renders in
 // production and core owns the localised empty state.
 
-@PreviewTest
-@Preview(showSystemUi = true, locale = "de", device = VRT_DEVICE)
-@Composable
-fun LabelsScreenGermanScreenshot() {
-    GermanLocaleWrapper {
-        VauchiTheme(dynamicColor = false) {
-            LabelsScreen(
-                labels =
-                    listOf(
-                        MobileVisibilityLabel(
-                            id = "label-1",
-                            name = "Arbeit",
-                            contactCount = 5U,
-                            visibleFieldCount = 3U,
-                            createdAt = 1706745600UL,
-                            modifiedAt = 1706745600UL,
-                        ),
-                        MobileVisibilityLabel(
-                            id = "label-2",
-                            name = "Familie",
-                            contactCount = 12U,
-                            visibleFieldCount = 5U,
-                            createdAt = 1706745500UL,
-                            modifiedAt = 1706745700UL,
-                        ),
-                    ),
-                suggestedLabels = listOf("Arbeit", "Familie", "Freunde"),
-                onBack = {},
-                onLabelClick = {},
-                onCreateLabel = {},
-                onDeleteLabel = {},
-                onRefresh = {},
-            )
-        }
-    }
-}
+// LabelsScreenGermanScreenshot removed — see LabelsScreen* comment in
+// the light-theme section above. Localized strings now live in core.
 
 // =============================================================
 // German Locale + Dark Mode Variants

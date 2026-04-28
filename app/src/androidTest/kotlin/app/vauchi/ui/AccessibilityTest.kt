@@ -20,7 +20,6 @@ import app.vauchi.ui.coreui.Status
 import app.vauchi.ui.theme.VauchiTheme
 import org.junit.Rule
 import org.junit.Test
-import uniffi.vauchi_platform.MobileVisibilityLabel
 
 /**
  * Accessibility tests for Compose UI screens.
@@ -56,50 +55,14 @@ class AccessibilityTest {
     // reachability walker in `test:reachability`.
 
     // MARK: - Labels Accessibility
-
-    @Test
-    fun labelsScreen_labelsAreClickable() {
-        composeTestRule.setContent {
-            VauchiTheme {
-                LabelsScreen(
-                    labels =
-                        listOf(
-                            MobileVisibilityLabel(
-                                id = "label-1",
-                                name = "Work",
-                                contactCount = 5U,
-                                visibleFieldCount = 3U,
-                                createdAt = 1706745600UL,
-                                modifiedAt = 1706745600UL,
-                            ),
-                            MobileVisibilityLabel(
-                                id = "label-2",
-                                name = "Family",
-                                contactCount = 12U,
-                                visibleFieldCount = 5U,
-                                createdAt = 1706745500UL,
-                                modifiedAt = 1706745700UL,
-                            ),
-                        ),
-                    suggestedLabels = emptyList(),
-                    onBack = {},
-                    onLabelClick = {},
-                    onCreateLabel = {},
-                    onDeleteLabel = {},
-                    onRefresh = {},
-                )
-            }
-        }
-
-        // Label items must be visible and interactive
-        composeTestRule.onNodeWithText("Work", substring = true).assertIsDisplayed()
-        composeTestRule.onNodeWithText("Family", substring = true).assertIsDisplayed()
-        // Back navigation must be accessible
-        composeTestRule.onNodeWithContentDescription("Back").assertExists()
-        // Label cards must be clickable for navigation
-        composeTestRule.onNode(hasText("Work", substring = true).and(hasClickAction())).assertExists()
-        composeTestRule.onNode(hasText("Family", substring = true).and(hasClickAction())).assertExists()
-    }
+    //
+    // `labelsScreen_labelsAreClickable` removed in the 2026-04-28 Pure
+    // Humble UI retirement (Pair 2): `Screen.Labels` already renders
+    // through `CoreScreenView("Groups")` against core's `GroupsEngine`,
+    // which emits per-row a11y labels via `Component.ListItem.a11y`. The
+    // core-driven accessibility contract is exercised by
+    // `coreScreenView_appliesA11yLabelsFromModel` below and by
+    // `core/vauchi-app/tests/reachability/groups.rs`.
 
     // Note: native DeliveryStatusScreen accessibility tests removed in
     // 2026-04-28 Pure Humble UI retirement. Delivery status now renders
