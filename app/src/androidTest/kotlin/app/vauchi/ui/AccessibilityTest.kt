@@ -101,34 +101,13 @@ class AccessibilityTest {
         composeTestRule.onNode(hasText("Family", substring = true).and(hasClickAction())).assertExists()
     }
 
-    // MARK: - Delivery Status Accessibility
-
-    @Test
-    fun deliveryStatusScreen_emptyStateReadable() {
-        composeTestRule.setContent {
-            VauchiTheme {
-                DeliveryStatusScreen(
-                    deliveryRecords = emptyList(),
-                    failedRecords = emptyList(),
-                    retryEntries = emptyList(),
-                    failedCount = 0,
-                    isLoading = false,
-                    onBack = {},
-                    onRetry = {},
-                    onRefresh = {},
-                )
-            }
-        }
-
-        // Screen title must be visible
-        composeTestRule.onNodeWithText("Delivery Status", substring = true).assertIsDisplayed()
-        // Tab labels must be present and clickable
-        composeTestRule.onNodeWithText("Recent").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Failed").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Pending").assertIsDisplayed()
-        // Back navigation must be accessible
-        composeTestRule.onNodeWithContentDescription("Back").assertExists()
-    }
+    // Note: native DeliveryStatusScreen accessibility tests removed in
+    // 2026-04-28 Pure Humble UI retirement. Delivery status now renders
+    // through `CoreScreenView("DeliveryStatus")` against core's
+    // `DeliveryStatusEngine`, which emits ScreenModel a11y labels via
+    // ScreenAction.a11y / Component.a11y. The core-driven accessibility
+    // contract is exercised by `coreScreenView_appliesA11yLabelsFromModel`
+    // below and by `core/vauchi-app/tests/reachability/delivery_status.rs`.
 
     // MARK: - Core-Driven Accessibility (ScreenRenderer)
 

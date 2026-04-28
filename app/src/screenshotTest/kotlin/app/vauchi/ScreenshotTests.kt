@@ -13,17 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import app.vauchi.ui.DeliveryStatusScreen
 import app.vauchi.ui.LabelsScreen
 import app.vauchi.ui.SyncState
 import app.vauchi.ui.theme.VauchiTheme
 import com.android.tools.screenshot.PreviewTest
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileContactField
-import uniffi.vauchi_platform.MobileDeliveryRecord
-import uniffi.vauchi_platform.MobileDeliveryStatus
 import uniffi.vauchi_platform.MobileFieldType
-import uniffi.vauchi_platform.MobileRetryEntry
 import uniffi.vauchi_platform.MobileVisibilityLabel
 import java.util.Locale
 
@@ -43,72 +39,14 @@ private const val VRT_DEVICE = "spec:width=360dp,height=800dp,dpi=320"
 // need a real `PlatformAppEngine` seeded with contacts, which is not
 // how the preview runtime is set up.
 
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun DeliveryStatusEmptyScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        DeliveryStatusScreen(
-            deliveryRecords = emptyList(),
-            failedRecords = emptyList(),
-            retryEntries = emptyList(),
-            failedCount = 0,
-            isLoading = false,
-            onBack = {},
-            onRetry = {},
-            onRefresh = {},
-        )
-    }
-}
-
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun DeliveryStatusWithRecordsScreenshot() {
-    VauchiTheme(dynamicColor = false) {
-        DeliveryStatusScreen(
-            deliveryRecords =
-                listOf(
-                    MobileDeliveryRecord(
-                        messageId = "msg-1",
-                        recipientId = "recipient-1",
-                        status = MobileDeliveryStatus.DELIVERED,
-                        errorReason = null,
-                        createdAt = 1706745600UL,
-                        updatedAt = 1706745700UL,
-                        expiresAt = null,
-                    ),
-                    MobileDeliveryRecord(
-                        messageId = "msg-2",
-                        recipientId = "recipient-2",
-                        status = MobileDeliveryStatus.FAILED,
-                        errorReason = "Recipient offline",
-                        createdAt = 1706745500UL,
-                        updatedAt = 1706745600UL,
-                        expiresAt = null,
-                    ),
-                ),
-            failedRecords = emptyList(),
-            retryEntries =
-                listOf(
-                    MobileRetryEntry(
-                        messageId = "msg-2",
-                        recipientId = "recipient-2",
-                        attempt = 2U,
-                        nextRetry = 1706746000UL,
-                        createdAt = 1706745500UL,
-                        maxAttempts = 5U,
-                        isMaxExceeded = false,
-                    ),
-                ),
-            failedCount = 1,
-            isLoading = false,
-            onBack = {},
-            onRetry = {},
-            onRefresh = {},
-        )
-    }
-}
+// DeliveryStatus* preview tests removed in the 2026-04-28 Pure Humble
+// UI retirement: `DeliveryStatusScreen` now renders through
+// `CoreScreenView("DeliveryStatus")` against core's
+// `DeliveryStatusEngine`, exercised from the engine's reachability test
+// + golden fixtures. Same rationale as the ContactsScreen* removals
+// above — preview-time screenshots would need a real `PlatformAppEngine`
+// seeded with delivery records, which is not how the preview runtime
+// is set up.
 
 @PreviewTest
 @Preview(showSystemUi = true, device = VRT_DEVICE)
@@ -266,54 +204,7 @@ fun VisibilityToggleItemScreenshot() {
 // gone; `CoreScreenView("Contacts")` covers the dark theme via the
 // shared `VauchiTheme`.
 
-@PreviewTest
-@Preview(showSystemUi = true, device = VRT_DEVICE)
-@Composable
-fun DeliveryStatusWithRecordsDarkScreenshot() {
-    VauchiTheme(darkTheme = true, dynamicColor = false) {
-        DeliveryStatusScreen(
-            deliveryRecords =
-                listOf(
-                    MobileDeliveryRecord(
-                        messageId = "msg-1",
-                        recipientId = "recipient-1",
-                        status = MobileDeliveryStatus.DELIVERED,
-                        errorReason = null,
-                        createdAt = 1706745600UL,
-                        updatedAt = 1706745700UL,
-                        expiresAt = null,
-                    ),
-                    MobileDeliveryRecord(
-                        messageId = "msg-2",
-                        recipientId = "recipient-2",
-                        status = MobileDeliveryStatus.FAILED,
-                        errorReason = "Recipient offline",
-                        createdAt = 1706745500UL,
-                        updatedAt = 1706745600UL,
-                        expiresAt = null,
-                    ),
-                ),
-            failedRecords = emptyList(),
-            retryEntries =
-                listOf(
-                    MobileRetryEntry(
-                        messageId = "msg-2",
-                        recipientId = "recipient-2",
-                        attempt = 2U,
-                        nextRetry = 1706746000UL,
-                        createdAt = 1706745500UL,
-                        maxAttempts = 5U,
-                        isMaxExceeded = false,
-                    ),
-                ),
-            failedCount = 1,
-            isLoading = false,
-            onBack = {},
-            onRetry = {},
-            onRefresh = {},
-        )
-    }
-}
+// DeliveryStatusWithRecordsDarkScreenshot removed — see comment above.
 
 @PreviewTest
 @Preview(showSystemUi = true, device = VRT_DEVICE)
