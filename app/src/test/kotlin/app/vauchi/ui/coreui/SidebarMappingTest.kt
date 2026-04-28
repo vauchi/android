@@ -49,8 +49,8 @@ class SidebarMappingTest {
 
     @Test
     fun `coreTabIdForScreen returns null for non-top-level screens`() {
-        assertNull(coreTabIdForScreen(Screen.ContactDetail))
         assertNull(coreTabIdForScreen(Screen.Settings))
+        assertNull(coreTabIdForScreen(Screen.Devices))
     }
 
     @Test
