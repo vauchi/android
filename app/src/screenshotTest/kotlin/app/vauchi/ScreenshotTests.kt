@@ -50,6 +50,7 @@ fun DeliveryStatusEmptyScreenshot() {
     VauchiTheme(dynamicColor = false) {
         DeliveryStatusScreen(
             deliveryRecords = emptyList(),
+            failedRecords = emptyList(),
             retryEntries = emptyList(),
             failedCount = 0,
             isLoading = false,
