@@ -304,6 +304,28 @@ fun MainScreen(
     val coreScreen by coreAppViewModel.screen.collectAsState()
     val showDeepLinkConsent = coreScreen?.screenId == "deep_link_consent"
 
+    // Follow core's lead — when core navigates away from a screen the
+    // Activity tracks via its `currentScreen` enum, mirror that. The
+    // GUI never decides where to go; it reflects core's published state.
+    // Per ADR-021/043, this sync layer is a transitional bridge until
+    // the Activity drops the enum and renders coreScreen.screenId
+    // directly. Only screens still routed through the enum are listed.
+    LaunchedEffect(coreScreen?.screenId, currentScreen) {
+        val coreId = coreScreen?.screenId ?: return@LaunchedEffect
+        if (currentScreen == Screen.MultiStageExchange &&
+            coreId != "multi_stage_exchange"
+        ) {
+            currentScreen =
+                when (coreId) {
+                    "exchange" -> Screen.ExchangeModePicker
+                    "contacts" -> Screen.Contacts
+                    "my_info", "home" -> Screen.Home
+                    else -> Screen.ExchangeModePicker
+                }
+            viewModel.refresh()
+        }
+    }
+
     // --reset-for-testing: create test identity so app skips onboarding (DEBUG only)
     LaunchedEffect(resetForTesting, uiState) {
         if (resetForTesting && uiState is UiState.Ready) {
@@ -495,18 +517,7 @@ fun MainScreen(
                 }
 
                 Screen.MultiStageExchange -> {
-                    MultiStageExchangeScreen(
-                        viewModel = viewModel,
-                        onBack = {
-                            viewModel.cancelMultiStageExchange()
-                            currentScreen = Screen.ExchangeModePicker
-                        },
-                        onDone = {
-                            viewModel.cancelMultiStageExchange()
-                            viewModel.refresh()
-                            currentScreen = Screen.Contacts
-                        },
-                    )
+                    MultiStageExchangeScreen(coreAppViewModel = coreAppViewModel)
                 }
 
                 Screen.NfcExchange -> {
