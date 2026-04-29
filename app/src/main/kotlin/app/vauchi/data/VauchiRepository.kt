@@ -457,15 +457,23 @@ class VauchiRepository(
         platform().importBackup(backupData, password)
     }
 
-    // Social network operations
-    fun listSocialNetworks() = platform().listSocialNetworks()
+    // Social network operations.
+    //
+    // Non-throwing wrappers that silently degrade on dispatch failure —
+    // callers treat social-networks data as a UI hint, so the legacy
+    // non-throwing FFI shape is preserved by swallowing
+    // `dispatchDomainCommand` errors. Same convention applies to the
+    // Content Updates / Aha Moments / Cert Pinning wrappers below.
+    fun listSocialNetworks(): List<uniffi.vauchi_platform.MobileSocialNetwork> =
+        runCatching { appEngine.listSocialNetworks() }.getOrDefault(emptyList())
 
-    fun searchSocialNetworks(query: String) = platform().searchSocialNetworks(query)
+    fun searchSocialNetworks(query: String): List<uniffi.vauchi_platform.MobileSocialNetwork> =
+        runCatching { appEngine.searchSocialNetworks(query) }.getOrDefault(emptyList())
 
     fun getProfileUrl(
         networkId: String,
         username: String,
-    ): String? = platform().getProfileUrl(networkId, username)
+    ): String? = runCatching { appEngine.getProfileUrl(networkId, username) }.getOrNull()
 
     // Content Updates operations
     // Based on: features/content_updates.feature
@@ -473,34 +481,41 @@ class VauchiRepository(
     /**
      * Check if content updates feature is supported
      */
-    fun isContentUpdatesSupported(): Boolean = platform().isContentUpdatesSupported()
+    fun isContentUpdatesSupported(): Boolean = runCatching { appEngine.isContentUpdatesSupported() }.getOrDefault(false)
 
     /**
      * Check for available content updates
      */
-    fun checkContentUpdates() = platform().checkContentUpdates()
+    fun checkContentUpdates(): uniffi.vauchi_platform.MobileUpdateStatus =
+        runCatching { appEngine.checkContentUpdates() }
+            .getOrDefault(uniffi.vauchi_platform.MobileUpdateStatus.UpToDate)
 
     /**
      * Apply available content updates
      */
-    fun applyContentUpdates() = platform().applyContentUpdates()
+    fun applyContentUpdates(): uniffi.vauchi_platform.MobileApplyResult =
+        runCatching { appEngine.applyContentUpdates() }
+            .getOrDefault(uniffi.vauchi_platform.MobileApplyResult.Error("Dispatch failed"))
 
     /**
      * Reload social networks after content updates
      */
-    fun reloadSocialNetworks() = platform().reloadSocialNetworks()
+    fun reloadSocialNetworks(): List<uniffi.vauchi_platform.MobileSocialNetwork> =
+        runCatching { appEngine.reloadSocialNetworks() }.getOrDefault(emptyList())
 
     // Aha Moments operations (Progressive Onboarding)
 
     /**
      * Check if user has seen a specific aha moment
      */
-    fun hasSeenAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType): Boolean = platform().hasSeenAhaMoment(momentType)
+    fun hasSeenAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType): Boolean =
+        runCatching { appEngine.hasSeenAhaMoment(momentType) }.getOrDefault(false)
 
     /**
      * Try to trigger an aha moment (returns null if already seen)
      */
-    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType) = platform().tryTriggerAhaMoment(momentType)
+    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType): uniffi.vauchi_platform.MobileAhaMoment? =
+        appEngine.tryTriggerAhaMoment(momentType)
 
     /**
      * Try to trigger an aha moment with context (returns null if already seen)
@@ -508,35 +523,37 @@ class VauchiRepository(
     fun tryTriggerAhaMomentWithContext(
         momentType: uniffi.vauchi_platform.MobileAhaMomentType,
         context: String,
-    ) = platform().tryTriggerAhaMomentWithContext(momentType, context)
+    ): uniffi.vauchi_platform.MobileAhaMoment? = appEngine.tryTriggerAhaMomentWithContext(momentType, context)
 
     /**
      * Get count of seen aha moments
      */
-    fun ahaMomentsSeenCount(): UInt = platform().ahaMomentsSeenCount()
+    fun ahaMomentsSeenCount(): UInt = runCatching { appEngine.ahaMomentsSeenCount() }.getOrDefault(0u)
 
     /**
      * Get total count of aha moments
      */
-    fun ahaMomentsTotalCount(): UInt = platform().ahaMomentsTotalCount()
+    fun ahaMomentsTotalCount(): UInt = runCatching { appEngine.ahaMomentsTotalCount() }.getOrDefault(0u)
 
     /**
      * Reset all aha moments (for development/testing)
      */
-    fun resetAhaMoments() = platform().resetAhaMoments()
+    fun resetAhaMoments() = appEngine.resetAhaMoments()
 
     // Certificate Pinning operations
 
     /**
      * Check if certificate pinning is enabled
      */
-    fun isCertificatePinningEnabled(): Boolean = platform().isCertificatePinningEnabled()
+    fun isCertificatePinningEnabled(): Boolean = runCatching { appEngine.isCertificatePinningEnabled() }.getOrDefault(false)
 
     /**
      * Set the pinned certificate for relay TLS connections
      * @param certPem Certificate in PEM format
      */
-    fun setPinnedCertificate(certPem: String) = platform().setPinnedCertificate(certPem)
+    fun setPinnedCertificate(certPem: String) {
+        runCatching { appEngine.setPinnedCertificate(certPem) }
+    }
 
     // Duress PIN operations
 
@@ -751,40 +768,60 @@ class VauchiRepository(
      *
      * @return The demo contact if created, null if user has contacts or demo was dismissed
      */
-    fun initDemoContactIfNeeded() = platform().initDemoContactIfNeeded()
+    fun initDemoContactIfNeeded(): uniffi.vauchi_platform.MobileDemoContact? {
+        platform() // ensure initialized
+        return appEngine.initDemoContactIfNeeded()
+    }
 
     /**
      * Get the current demo contact if active.
      *
      * @return The demo contact if active, null otherwise
      */
-    fun getDemoContact() = platform().getDemoContact()
+    fun getDemoContact(): uniffi.vauchi_platform.MobileDemoContact? {
+        platform() // ensure initialized
+        return appEngine.getDemoContact()
+    }
 
     /**
      * Get the demo contact state.
      *
      * @return Current state of the demo contact
      */
-    fun getDemoContactState() = platform().getDemoContactState()
+    fun getDemoContactState(): uniffi.vauchi_platform.MobileDemoContactState =
+        runCatching { appEngine.getDemoContactState() }.getOrDefault(
+            uniffi.vauchi_platform.MobileDemoContactState(
+                isActive = false,
+                wasDismissed = false,
+                autoRemoved = false,
+                updateCount = 0u,
+            ),
+        )
 
     /**
      * Check if a demo update is available.
      *
      * @return True if an update is due (based on 2-hour interval)
      */
-    fun isDemoUpdateAvailable(): Boolean = platform().isDemoUpdateAvailable()
+    fun isDemoUpdateAvailable(): Boolean = runCatching { appEngine.isDemoUpdateAvailable() }.getOrDefault(false)
 
     /**
      * Trigger a demo update and get the new content.
      *
      * @return Updated demo contact with new tip, null if demo not active
      */
-    fun triggerDemoUpdate() = platform().triggerDemoUpdate()
+    fun triggerDemoUpdate(): uniffi.vauchi_platform.MobileDemoContact? {
+        platform() // ensure initialized
+        return appEngine.triggerDemoUpdate()
+    }
 
     /**
      * Dismiss the demo contact manually.
      */
-    fun dismissDemoContact() = platform().dismissDemoContact()
+    fun dismissDemoContact() {
+        platform() // ensure initialized
+        appEngine.dismissDemoContact()
+    }
 
     /**
      * Auto-remove demo contact after first real exchange.
@@ -792,14 +829,20 @@ class VauchiRepository(
      *
      * @return True if demo was removed, false if it wasn't active
      */
-    fun autoRemoveDemoContact(): Boolean = platform().autoRemoveDemoContact()
+    fun autoRemoveDemoContact(): Boolean {
+        platform() // ensure initialized
+        return appEngine.autoRemoveDemoContact()
+    }
 
     /**
      * Restore the demo contact from Settings.
      *
      * @return The restored demo contact
      */
-    fun restoreDemoContact() = platform().restoreDemoContact()
+    fun restoreDemoContact(): uniffi.vauchi_platform.MobileDemoContact? {
+        platform() // ensure initialized
+        return appEngine.restoreDemoContact()
+    }
 
     // Device Linking operations
     // Device Linking Protocol operations (relay transport)
