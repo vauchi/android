@@ -325,32 +325,32 @@ class VauchiRepository(
     /** Create an NFC responder (HCE) handshake session. */
     fun createNfcResponder() = platform().createNfcResponder()
 
-    fun contactCount(): UInt = platform().contactCount()
+    fun contactCount(): UInt = appEngine.contactCount()
 
-    fun listContacts() = platform().listContacts()
+    fun listContacts() = appEngine.listContacts()
 
     fun listContactsPaginated(
         offset: UInt,
         limit: UInt,
-    ) = platform().listContactsPaginated(offset, limit)
+    ) = appEngine.listContactsPaginated(offset, limit)
 
-    fun searchContacts(query: String) = platform().searchContacts(query)
+    fun searchContacts(query: String) = appEngine.searchContacts(query)
 
-    fun getContact(id: String) = platform().getContact(id)
+    fun getContact(id: String) = appEngine.getContact(id)
 
-    fun removeContact(id: String) = platform().removeContact(id)
+    fun removeContact(id: String) = appEngine.removeContact(id)
 
     // Contact lifecycle (reversible deletion + archival)
 
-    fun softDeleteImportedContact(id: String) = platform().softDeleteImportedContact(id)
+    fun softDeleteImportedContact(id: String) = appEngine.softDeleteImportedContact(id)
 
-    fun undoDeleteImportedContact(id: String) = platform().undoDeleteImportedContact(id)
+    fun undoDeleteImportedContact(id: String) = appEngine.undoDeleteImportedContact(id)
 
-    fun hardDeleteImportedContact(id: String) = platform().hardDeleteImportedContact(id)
+    fun hardDeleteImportedContact(id: String) = appEngine.hardDeleteImportedContact(id)
 
-    fun archiveContact(id: String) = platform().archiveContact(id)
+    fun archiveContact(id: String) = appEngine.archiveContact(id)
 
-    fun unarchiveContact(id: String) = platform().unarchiveContact(id)
+    fun unarchiveContact(id: String) = appEngine.unarchiveContact(id)
 
     /**
      * Returns the footer-button action id (`"delete_contact"` or
@@ -368,7 +368,7 @@ class VauchiRepository(
      */
     fun contactDetailViewState(contactId: String) = platform().contactDetailViewState(contactId)
 
-    fun listArchivedContacts() = platform().listArchivedContacts()
+    fun listArchivedContacts() = appEngine.listArchivedContacts()
 
     fun importContactsFromVcf(data: ByteArray) = platform().importContactsFromVcf(data)
 
@@ -637,11 +637,11 @@ class VauchiRepository(
     }
 
     fun hideContact(contactId: String) {
-        platform().hideContact(contactId)
+        appEngine.hideContact(contactId)
     }
 
     fun unhideContact(contactId: String) {
-        platform().unhideContact(contactId)
+        appEngine.unhideContact(contactId)
     }
 
     fun listHiddenContacts(): List<uniffi.vauchi_platform.MobileContact> = platform().listHiddenContacts()
@@ -661,13 +661,13 @@ class VauchiRepository(
         contactId: String,
         note: String,
     ) {
-        platform().setContactNote(contactId, note)
+        appEngine.setContactNote(contactId, note)
     }
 
-    fun getContactNote(contactId: String): String? = platform().getContactNote(contactId)
+    fun getContactNote(contactId: String): String? = appEngine.getContactNote(contactId)
 
     fun deleteContactNote(contactId: String) {
-        platform().deleteContactNote(contactId)
+        appEngine.deleteContactNote(contactId)
     }
 
     fun setContactFieldNote(
@@ -675,16 +675,16 @@ class VauchiRepository(
         fieldId: String,
         note: String,
     ) {
-        platform().setContactFieldNote(contactId, fieldId, note)
+        appEngine.setContactFieldNote(contactId, fieldId, note)
     }
 
-    fun getContactFieldNotes(contactId: String): List<uniffi.vauchi_platform.MobileFieldNote> = platform().getContactFieldNotes(contactId)
+    fun getContactFieldNotes(contactId: String): List<uniffi.vauchi_platform.MobileFieldNote> = appEngine.getContactFieldNotes(contactId)
 
     fun deleteContactFieldNote(
         contactId: String,
         fieldId: String,
     ) {
-        platform().deleteContactFieldNote(contactId, fieldId)
+        appEngine.deleteContactFieldNote(contactId, fieldId)
     }
 
     // Proposal trust
@@ -693,7 +693,7 @@ class VauchiRepository(
         contactId: String,
         trusted: Boolean,
     ) {
-        platform().setProposalTrusted(contactId, trusted)
+        appEngine.setProposalTrusted(contactId, trusted)
     }
 
     // Panic Shred operations
@@ -744,14 +744,14 @@ class VauchiRepository(
     }
 
     // Verification operations
-    fun verifyContact(id: String) = platform().verifyContact(id)
+    fun verifyContact(id: String) = appEngine.verifyContact(id)
 
     fun getPublicKey(): String {
         platform() // ensure initialized
         return appEngine.getPublicId()
     }
 
-    fun getOwnFingerprint(): String = platform().getOwnFingerprint()
+    fun getOwnFingerprint(): String = appEngine.getOwnFingerprint()
 
     // Recovery trust operations
     fun trustContactForRecovery(id: String) = platform().trustContactForRecovery(id)
@@ -916,7 +916,7 @@ class VauchiRepository(
      * Core's cycle thread owns QR generation, request listening, state transitions,
      * and persistence. Frontend wires a `DeviceLinkSessionListener` for events.
      */
-    fun createDeviceLinkSessionInitiator() = platform().createDeviceLinkSessionInitiator()
+    fun createDeviceLinkSessionInitiator() = appEngine.createDeviceLinkSessionInitiator()
 
     /**
      * Send a device link request via the relay and wait for a response.

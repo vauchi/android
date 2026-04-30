@@ -8,10 +8,12 @@ import uniffi.vauchi_platform.DomainCommandResult
 import uniffi.vauchi_platform.MobileAhaMoment
 import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileApplyResult
+import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileDemoContact
 import uniffi.vauchi_platform.MobileDemoContactState
 import uniffi.vauchi_platform.MobileException
+import uniffi.vauchi_platform.MobileFieldNote
 import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileSocialNetwork
 import uniffi.vauchi_platform.MobileUpdateStatus
@@ -225,4 +227,133 @@ fun PlatformAppEngine.isCertificatePinningEnabled(): Boolean {
 
 fun PlatformAppEngine.setPinnedCertificate(certPem: String) {
     dispatchDomainCommand(DomainCommand.SetPinnedCertificate(certPem))
+}
+
+// ── Contact CRUD (C2) ──
+
+fun PlatformAppEngine.listContacts(): List<MobileContact> {
+    val result = dispatchDomainCommand(DomainCommand.ListContacts)
+    return (result as? DomainCommandResult.Contacts)?.contacts ?: unexpectedResult("ListContacts")
+}
+
+fun PlatformAppEngine.listContactsPaginated(
+    offset: UInt,
+    limit: UInt,
+): List<MobileContact> {
+    val result = dispatchDomainCommand(DomainCommand.ListContactsPaginated(offset, limit))
+    return (result as? DomainCommandResult.Contacts)?.contacts
+        ?: unexpectedResult("ListContactsPaginated")
+}
+
+fun PlatformAppEngine.getContact(id: String): MobileContact? {
+    val result = dispatchDomainCommand(DomainCommand.GetContact(id))
+    val opt = result as? DomainCommandResult.ContactOpt ?: unexpectedResult("GetContact")
+    return opt.contact
+}
+
+fun PlatformAppEngine.searchContacts(query: String): List<MobileContact> {
+    val result = dispatchDomainCommand(DomainCommand.SearchContacts(query))
+    return (result as? DomainCommandResult.Contacts)?.contacts ?: unexpectedResult("SearchContacts")
+}
+
+fun PlatformAppEngine.contactCount(): UInt {
+    val result = dispatchDomainCommand(DomainCommand.ContactCount)
+    return (result as? DomainCommandResult.Count)?.value ?: unexpectedResult("ContactCount")
+}
+
+fun PlatformAppEngine.removeContact(id: String): Boolean {
+    val result = dispatchDomainCommand(DomainCommand.RemoveContact(id))
+    return (result as? DomainCommandResult.Bool)?.value ?: unexpectedResult("RemoveContact")
+}
+
+fun PlatformAppEngine.softDeleteImportedContact(id: String) {
+    dispatchDomainCommand(DomainCommand.SoftDeleteImportedContact(id))
+}
+
+fun PlatformAppEngine.undoDeleteImportedContact(id: String) {
+    dispatchDomainCommand(DomainCommand.UndoDeleteImportedContact(id))
+}
+
+fun PlatformAppEngine.hardDeleteImportedContact(id: String) {
+    dispatchDomainCommand(DomainCommand.HardDeleteImportedContact(id))
+}
+
+fun PlatformAppEngine.archiveContact(id: String) {
+    dispatchDomainCommand(DomainCommand.ArchiveContact(id))
+}
+
+fun PlatformAppEngine.unarchiveContact(id: String) {
+    dispatchDomainCommand(DomainCommand.UnarchiveContact(id))
+}
+
+fun PlatformAppEngine.listArchivedContacts(): List<MobileContact> {
+    val result = dispatchDomainCommand(DomainCommand.ListArchivedContacts)
+    return (result as? DomainCommandResult.Contacts)?.contacts
+        ?: unexpectedResult("ListArchivedContacts")
+}
+
+fun PlatformAppEngine.hideContact(contactId: String) {
+    dispatchDomainCommand(DomainCommand.HideContact(contactId))
+}
+
+fun PlatformAppEngine.unhideContact(contactId: String) {
+    dispatchDomainCommand(DomainCommand.UnhideContact(contactId))
+}
+
+// ── Contact Verification (C2) ──
+
+fun PlatformAppEngine.verifyContact(id: String) {
+    dispatchDomainCommand(DomainCommand.VerifyContact(id))
+}
+
+fun PlatformAppEngine.setProposalTrusted(
+    contactId: String,
+    trusted: Boolean,
+) {
+    dispatchDomainCommand(DomainCommand.SetProposalTrusted(contactId, trusted))
+}
+
+fun PlatformAppEngine.getOwnFingerprint(): String {
+    val result = dispatchDomainCommand(DomainCommand.GetOwnFingerprint)
+    return (result as? DomainCommandResult.Text)?.value ?: unexpectedResult("GetOwnFingerprint")
+}
+
+// ── Contact Notes (C2) ──
+
+fun PlatformAppEngine.setContactNote(
+    contactId: String,
+    note: String,
+) {
+    dispatchDomainCommand(DomainCommand.SetContactNote(contactId, note))
+}
+
+fun PlatformAppEngine.getContactNote(contactId: String): String? {
+    val result = dispatchDomainCommand(DomainCommand.GetContactNote(contactId))
+    val opt = result as? DomainCommandResult.StringOpt ?: unexpectedResult("GetContactNote")
+    return opt.value
+}
+
+fun PlatformAppEngine.deleteContactNote(contactId: String) {
+    dispatchDomainCommand(DomainCommand.DeleteContactNote(contactId))
+}
+
+fun PlatformAppEngine.setContactFieldNote(
+    contactId: String,
+    fieldId: String,
+    note: String,
+) {
+    dispatchDomainCommand(DomainCommand.SetContactFieldNote(contactId, fieldId, note))
+}
+
+fun PlatformAppEngine.getContactFieldNotes(contactId: String): List<MobileFieldNote> {
+    val result = dispatchDomainCommand(DomainCommand.GetContactFieldNotes(contactId))
+    return (result as? DomainCommandResult.FieldNotes)?.notes
+        ?: unexpectedResult("GetContactFieldNotes")
+}
+
+fun PlatformAppEngine.deleteContactFieldNote(
+    contactId: String,
+    fieldId: String,
+) {
+    dispatchDomainCommand(DomainCommand.DeleteContactFieldNote(contactId, fieldId))
 }
