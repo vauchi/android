@@ -788,21 +788,21 @@ class VauchiRepository(
     fun verifyRecoveryProof(proofB64: String) = platform().verifyRecoveryProof(proofB64)
 
     // Delivery status operations
-    fun getAllDeliveryRecords() = platform().getAllDeliveryRecords()
+    fun getAllDeliveryRecords() = appEngine.getAllDeliveryRecords()
 
     /** G3 (ADR-021/043): pre-filtered failed-record list — frontends should
      *  call this instead of `.filter { it.status == FAILED }` themselves. */
-    fun getFailedDeliveryRecords() = platform().getFailedDeliveryRecords()
+    fun getFailedDeliveryRecords() = appEngine.getFailedDeliveryRecords()
 
-    fun getDeliveryRecordsForContact(contactId: String) = platform().getDeliveryRecordsForContact(contactId)
+    fun getDeliveryRecordsForContact(contactId: String) = appEngine.getDeliveryRecordsForContact(contactId)
 
-    fun getDeliverySummary(messageId: String) = platform().getDeliverySummary(messageId)
+    fun getDeliverySummary(messageId: String) = appEngine.getDeliverySummary(messageId)
 
-    fun getDueRetries() = platform().getDueRetries()
+    fun getDueRetries() = appEngine.getDueRetries()
 
-    fun countFailedDeliveries(): UInt = platform().countFailedDeliveries()
+    fun countFailedDeliveries(): UInt = appEngine.countFailedDeliveries()
 
-    fun manualRetry(messageId: String): Boolean = platform().manualRetry(messageId)
+    fun manualRetry(messageId: String): Boolean = appEngine.manualRetry(messageId)
 
     // Demo contact operations
     // Based on: features/demo_contact.feature

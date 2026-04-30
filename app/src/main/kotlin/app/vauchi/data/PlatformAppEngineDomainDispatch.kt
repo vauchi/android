@@ -10,11 +10,14 @@ import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileApplyResult
 import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactCard
+import uniffi.vauchi_platform.MobileDeliveryRecord
+import uniffi.vauchi_platform.MobileDeliverySummary
 import uniffi.vauchi_platform.MobileDemoContact
 import uniffi.vauchi_platform.MobileDemoContactState
 import uniffi.vauchi_platform.MobileException
 import uniffi.vauchi_platform.MobileFieldNote
 import uniffi.vauchi_platform.MobileFieldType
+import uniffi.vauchi_platform.MobileRetryEntry
 import uniffi.vauchi_platform.MobileSocialNetwork
 import uniffi.vauchi_platform.MobileUpdateStatus
 import uniffi.vauchi_platform.MobileVisibilityLabel
@@ -451,4 +454,47 @@ fun PlatformAppEngine.setGroupFieldVisibility(
 fun PlatformAppEngine.getSuggestedLabels(): List<String> {
     val result = dispatchDomainCommand(DomainCommand.GetSuggestedLabels)
     return (result as? DomainCommandResult.Strings)?.values ?: unexpectedResult("GetSuggestedLabels")
+}
+
+// ── Delivery Records / Retry Queue (C4) ──
+
+fun PlatformAppEngine.getAllDeliveryRecords(): List<MobileDeliveryRecord> {
+    val result = dispatchDomainCommand(DomainCommand.GetAllDeliveryRecords)
+    return (result as? DomainCommandResult.DeliveryRecords)?.records
+        ?: unexpectedResult("GetAllDeliveryRecords")
+}
+
+fun PlatformAppEngine.getFailedDeliveryRecords(): List<MobileDeliveryRecord> {
+    val result = dispatchDomainCommand(DomainCommand.GetFailedDeliveryRecords)
+    return (result as? DomainCommandResult.DeliveryRecords)?.records
+        ?: unexpectedResult("GetFailedDeliveryRecords")
+}
+
+fun PlatformAppEngine.getDeliveryRecordsForContact(recipientId: String): List<MobileDeliveryRecord> {
+    val result = dispatchDomainCommand(DomainCommand.GetDeliveryRecordsForContact(recipientId))
+    return (result as? DomainCommandResult.DeliveryRecords)?.records
+        ?: unexpectedResult("GetDeliveryRecordsForContact")
+}
+
+fun PlatformAppEngine.getDeliverySummary(messageId: String): MobileDeliverySummary {
+    val result = dispatchDomainCommand(DomainCommand.GetDeliverySummary(messageId))
+    return (result as? DomainCommandResult.DeliverySummary)?.summary
+        ?: unexpectedResult("GetDeliverySummary")
+}
+
+fun PlatformAppEngine.getDueRetries(): List<MobileRetryEntry> {
+    val result = dispatchDomainCommand(DomainCommand.GetDueRetries)
+    return (result as? DomainCommandResult.RetryEntries)?.entries
+        ?: unexpectedResult("GetDueRetries")
+}
+
+fun PlatformAppEngine.manualRetry(messageId: String): Boolean {
+    val result = dispatchDomainCommand(DomainCommand.ManualRetry(messageId))
+    return (result as? DomainCommandResult.Bool)?.value ?: unexpectedResult("ManualRetry")
+}
+
+fun PlatformAppEngine.countFailedDeliveries(): UInt {
+    val result = dispatchDomainCommand(DomainCommand.CountFailedDeliveries)
+    return (result as? DomainCommandResult.Count)?.value
+        ?: unexpectedResult("CountFailedDeliveries")
 }
