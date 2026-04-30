@@ -18,6 +18,7 @@ import uniffi.vauchi_platform.MobileDemoContactState
 import uniffi.vauchi_platform.MobileException
 import uniffi.vauchi_platform.MobileFieldNote
 import uniffi.vauchi_platform.MobileFieldType
+import uniffi.vauchi_platform.MobileRecoveryVerification
 import uniffi.vauchi_platform.MobileRetryEntry
 import uniffi.vauchi_platform.MobileSocialNetwork
 import uniffi.vauchi_platform.MobileUpdateStatus
@@ -526,4 +527,12 @@ fun PlatformAppEngine.listHiddenContacts(): List<MobileContact> {
     val result = dispatchDomainCommand(DomainCommand.ListHiddenContacts)
     return (result as? DomainCommandResult.Contacts)?.contacts
         ?: unexpectedResult("ListHiddenContacts")
+}
+
+// ── Recovery Verification (C7 remainder) ──
+
+fun PlatformAppEngine.verifyRecoveryProof(proofB64: String): MobileRecoveryVerification {
+    val result = dispatchDomainCommand(DomainCommand.VerifyRecoveryProof(proofB64))
+    return (result as? DomainCommandResult.RecoveryVerification)?.verification
+        ?: unexpectedResult("VerifyRecoveryProof")
 }

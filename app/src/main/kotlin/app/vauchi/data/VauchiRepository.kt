@@ -728,24 +728,24 @@ class VauchiRepository(
         message: String,
         includeLocation: Boolean,
     ) {
-        platform().configureEmergencyBroadcast(contactIds, message, includeLocation)
+        appEngine.configureEmergencyBroadcast(contactIds, message, includeLocation)
     }
 
     /**
      * Get emergency broadcast config
      */
-    fun getEmergencyConfig(): uniffi.vauchi_platform.MobileEmergencyConfig? = platform().getEmergencyConfig()
+    fun getEmergencyConfig(): uniffi.vauchi_platform.MobileEmergencyConfig? = appEngine.getEmergencyConfig()
 
     /**
      * Send emergency broadcast
      */
-    fun sendEmergencyBroadcast(): uniffi.vauchi_platform.MobileBroadcastResult = platform().sendEmergencyBroadcast()
+    fun sendEmergencyBroadcast(): uniffi.vauchi_platform.MobileBroadcastResult = appEngine.sendEmergencyBroadcast()
 
     /**
      * Disable emergency broadcast
      */
     fun disableEmergencyBroadcast() {
-        platform().disableEmergencyBroadcast()
+        appEngine.disableEmergencyBroadcast()
     }
 
     // Verification operations
@@ -782,10 +782,7 @@ class VauchiRepository(
 
     fun getRecoveryProof(): String? = appEngine.getRecoveryProof()
 
-    // verifyRecoveryProof stays on legacy `platform()` — iOS commit
-    // `c2db048` did the same. Goes through `DomainCommand::VerifyRecoveryProof`
-    // when migrated, separate batch.
-    fun verifyRecoveryProof(proofB64: String) = platform().verifyRecoveryProof(proofB64)
+    fun verifyRecoveryProof(proofB64: String) = appEngine.verifyRecoveryProof(proofB64)
 
     // Delivery status operations
     fun getAllDeliveryRecords() = appEngine.getAllDeliveryRecords()
