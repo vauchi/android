@@ -238,36 +238,57 @@ class VauchiRepository(
 
     fun pendingUpdateCount(): UInt = platform().pendingUpdateCount()
 
-    fun hasIdentity(): Boolean = platform().hasIdentity()
-
-    fun createIdentity(displayName: String) {
-        platform().createIdentity(displayName)
+    fun hasIdentity(): Boolean {
+        platform() // ensure initialized
+        return appEngine.hasIdentity()
     }
 
-    fun getDisplayName(): String = platform().getDisplayName()
+    fun createIdentity(displayName: String) {
+        platform() // ensure initialized
+        appEngine.createIdentity(displayName)
+    }
 
-    fun setDisplayName(name: String) = platform().setDisplayName(name)
+    fun getDisplayName(): String {
+        platform() // ensure initialized
+        return appEngine.getDisplayName()
+    }
 
-    fun getPublicId(): String = platform().getPublicId()
+    fun setDisplayName(name: String) {
+        platform() // ensure initialized
+        appEngine.setDisplayName(name)
+    }
 
-    fun getOwnCard(): MobileContactCard = platform().getOwnCard()
+    fun getPublicId(): String {
+        platform() // ensure initialized
+        return appEngine.getPublicId()
+    }
+
+    fun getOwnCard(): MobileContactCard {
+        platform() // ensure initialized
+        return appEngine.getOwnCard()
+    }
 
     fun addField(
         fieldType: MobileFieldType,
         label: String,
         value: String,
     ) {
-        platform().addField(fieldType, label, value)
+        platform() // ensure initialized
+        appEngine.addField(fieldType, label, value)
     }
 
     fun updateField(
         label: String,
         newValue: String,
     ) {
-        platform().updateField(label, newValue)
+        platform() // ensure initialized
+        appEngine.updateField(label, newValue)
     }
 
-    fun removeField(label: String): Boolean = platform().removeField(label)
+    fun removeField(label: String): Boolean {
+        platform() // ensure initialized
+        return appEngine.removeField(label)
+    }
 
     /**
      * Generate exchange QR data AND return the live session.
@@ -281,7 +302,7 @@ class VauchiRepository(
         val data =
             ExchangeData(
                 qrData = qrData,
-                publicId = platform().getPublicId(),
+                publicId = appEngine.getPublicId(),
                 expiresAt = expiresAt.toULong(),
                 audioChallenge = extractAudioChallenge(qrData),
             )
@@ -437,24 +458,32 @@ class VauchiRepository(
     fun getSuggestedLabels(): List<String> = platform().getSuggestedLabels()
 
     // Backup operations
-    fun exportBackup(password: String): String = platform().exportBackup(password)
+    fun exportBackup(password: String): String {
+        platform() // ensure initialized
+        return appEngine.exportBackup(password)
+    }
 
     fun importBackup(
         backupData: String,
         password: String,
     ) {
-        platform().importBackup(backupData, password)
+        platform() // ensure initialized
+        appEngine.importBackup(backupData, password)
     }
 
     // Full backup operations (identity + contacts + own card + labels)
     // TODO: wire once export_full_backup is exported via UniFFI
-    fun exportFullBackup(password: String): String = platform().exportBackup(password)
+    fun exportFullBackup(password: String): String {
+        platform() // ensure initialized
+        return appEngine.exportBackup(password)
+    }
 
     fun importFullBackup(
         backupData: String,
         password: String,
     ) {
-        platform().importBackup(backupData, password)
+        platform() // ensure initialized
+        appEngine.importBackup(backupData, password)
     }
 
     // Social network operations.
@@ -717,7 +746,10 @@ class VauchiRepository(
     // Verification operations
     fun verifyContact(id: String) = platform().verifyContact(id)
 
-    fun getPublicKey(): String = platform().getPublicId()
+    fun getPublicKey(): String {
+        platform() // ensure initialized
+        return appEngine.getPublicId()
+    }
 
     fun getOwnFingerprint(): String = platform().getOwnFingerprint()
 
@@ -726,20 +758,28 @@ class VauchiRepository(
 
     fun untrustContactForRecovery(id: String) = platform().untrustContactForRecovery(id)
 
-    // Recovery operations
-    // `createRecoveryClaim` + `createRecoveryVoucher` retained despite no
-    // production consumer: VauchiRepositoryFfiTest asserts the UniFFI
+    // Recovery operations.
+    //
+    // C7: Recovery uses direct typed methods on `PlatformAppEngine`
+    // (R3 hybrid B2 carve-out — these are not in the `DomainCommand`
+    // enum). Mirrors iOS commit `c2db048` C1+C5+C7 mega-MR.
+    //
+    // `createRecoveryClaim` + `createRecoveryVoucher` retained despite
+    // no production consumer: VauchiRepositoryFfiTest asserts the UniFFI
     // passthroughs at the repository layer (android-test suite).
-    fun createRecoveryClaim(oldPkHex: String) = platform().createRecoveryClaim(oldPkHex)
+    fun createRecoveryClaim(oldPkHex: String) = appEngine.createRecoveryClaim(oldPkHex)
 
-    fun createRecoveryVoucher(claimB64: String) = platform().createRecoveryVoucher(claimB64)
+    fun createRecoveryVoucher(claimB64: String) = appEngine.createRecoveryVoucher(claimB64)
 
-    fun addRecoveryVoucher(voucherB64: String) = platform().addRecoveryVoucher(voucherB64)
+    fun addRecoveryVoucher(voucherB64: String) = appEngine.addRecoveryVoucher(voucherB64)
 
-    fun getRecoveryStatus() = platform().getRecoveryStatus()
+    fun getRecoveryStatus() = appEngine.getRecoveryStatus()
 
-    fun getRecoveryProof(): String? = platform().getRecoveryProof()
+    fun getRecoveryProof(): String? = appEngine.getRecoveryProof()
 
+    // verifyRecoveryProof stays on legacy `platform()` — iOS commit
+    // `c2db048` did the same. Goes through `DomainCommand::VerifyRecoveryProof`
+    // when migrated, separate batch.
     fun verifyRecoveryProof(proofB64: String) = platform().verifyRecoveryProof(proofB64)
 
     // Delivery status operations

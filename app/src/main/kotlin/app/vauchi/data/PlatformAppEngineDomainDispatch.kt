@@ -8,22 +8,84 @@ import uniffi.vauchi_platform.DomainCommandResult
 import uniffi.vauchi_platform.MobileAhaMoment
 import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileApplyResult
+import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileDemoContact
 import uniffi.vauchi_platform.MobileDemoContactState
 import uniffi.vauchi_platform.MobileException
+import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileSocialNetwork
 import uniffi.vauchi_platform.MobileUpdateStatus
 import uniffi.vauchi_platform.PlatformAppEngine
 
 // Typed wrappers around `PlatformAppEngine.dispatchDomainCommand` for
-// the C8-partial migration (Aha Moments, Demo Contact, Social Networks,
-// Content Updates, Certificate Pinning). Mirrors the iOS
+// the collapse-vauchi-platform migration. Mirrors the iOS
 // `PlatformAppEngine+DomainDispatch.swift` extension; keeps repository
 // call sites readable while the long-tail UniFFI surface collapses
 // onto `dispatch_domain_command` per
 // `_private/docs/problems/2026-04-28-collapse-vauchi-platform-into-app-engine/`.
 
 private fun unexpectedResult(name: String): Nothing = throw MobileException.Other(detail = "$name: unexpected result variant")
+
+// ── Identity / Bootstrap (C1) ──
+
+fun PlatformAppEngine.createIdentity(displayName: String) {
+    dispatchDomainCommand(DomainCommand.CreateIdentity(displayName))
+}
+
+fun PlatformAppEngine.getPublicId(): String {
+    val result = dispatchDomainCommand(DomainCommand.GetPublicId)
+    return (result as? DomainCommandResult.Text)?.value ?: unexpectedResult("GetPublicId")
+}
+
+fun PlatformAppEngine.getDisplayName(): String {
+    val result = dispatchDomainCommand(DomainCommand.GetDisplayName)
+    return (result as? DomainCommandResult.Text)?.value ?: unexpectedResult("GetDisplayName")
+}
+
+// ── Contact Field Mutation (C1) ──
+
+fun PlatformAppEngine.getOwnCard(): MobileContactCard {
+    val result = dispatchDomainCommand(DomainCommand.GetOwnCard)
+    return (result as? DomainCommandResult.ContactCardPayload)?.card ?: unexpectedResult("GetOwnCard")
+}
+
+fun PlatformAppEngine.addField(
+    fieldType: MobileFieldType,
+    label: String,
+    value: String,
+) {
+    dispatchDomainCommand(DomainCommand.AddField(fieldType, label, value))
+}
+
+fun PlatformAppEngine.updateField(
+    label: String,
+    newValue: String,
+) {
+    dispatchDomainCommand(DomainCommand.UpdateField(label, newValue))
+}
+
+fun PlatformAppEngine.removeField(label: String): Boolean {
+    val result = dispatchDomainCommand(DomainCommand.RemoveField(label))
+    return (result as? DomainCommandResult.Bool)?.value ?: unexpectedResult("RemoveField")
+}
+
+fun PlatformAppEngine.setDisplayName(name: String) {
+    dispatchDomainCommand(DomainCommand.SetDisplayName(name))
+}
+
+// ── Backup (C5) ──
+
+fun PlatformAppEngine.exportBackup(password: String): String {
+    val result = dispatchDomainCommand(DomainCommand.ExportBackup(password))
+    return (result as? DomainCommandResult.Text)?.value ?: unexpectedResult("ExportBackup")
+}
+
+fun PlatformAppEngine.importBackup(
+    backupData: String,
+    password: String,
+) {
+    dispatchDomainCommand(DomainCommand.ImportBackup(backupData, password))
+}
 
 // ── Aha Moments (B7 batch 5) ──
 
