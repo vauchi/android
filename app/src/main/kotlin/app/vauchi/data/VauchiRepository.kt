@@ -633,12 +633,12 @@ class VauchiRepository(
     fun addDecoyContact(
         name: String,
         cardJson: String,
-    ): String = platform().addDecoyContact(name, cardJson)
+    ): String = appEngine.addDecoyContact(name, cardJson)
 
-    fun listDecoyContacts(): List<uniffi.vauchi_platform.MobileDecoyContact> = platform().listDecoyContacts()
+    fun listDecoyContacts(): List<uniffi.vauchi_platform.MobileDecoyContact> = appEngine.listDecoyContacts()
 
     fun deleteDecoyContact(id: String) {
-        platform().deleteDecoyContact(id)
+        appEngine.deleteDecoyContact(id)
     }
 
     fun hideContact(contactId: String) {
@@ -649,7 +649,7 @@ class VauchiRepository(
         appEngine.unhideContact(contactId)
     }
 
-    fun listHiddenContacts(): List<uniffi.vauchi_platform.MobileContact> = platform().listHiddenContacts()
+    fun listHiddenContacts(): List<uniffi.vauchi_platform.MobileContact> = appEngine.listHiddenContacts()
 
     fun configureDuressAlerts(
         contactIds: List<String>,
