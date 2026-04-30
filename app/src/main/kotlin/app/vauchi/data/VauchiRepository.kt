@@ -758,10 +758,10 @@ class VauchiRepository(
 
     fun getOwnFingerprint(): String = appEngine.getOwnFingerprint()
 
-    // Recovery trust operations
-    fun trustContactForRecovery(id: String) = platform().trustContactForRecovery(id)
+    // Recovery trust operations (direct B2 typed methods on PlatformAppEngine).
+    fun trustContactForRecovery(id: String) = appEngine.trustContactForRecovery(id)
 
-    fun untrustContactForRecovery(id: String) = platform().untrustContactForRecovery(id)
+    fun untrustContactForRecovery(id: String) = appEngine.untrustContactForRecovery(id)
 
     // Recovery operations.
     //
