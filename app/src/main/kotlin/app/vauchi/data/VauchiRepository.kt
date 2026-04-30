@@ -377,20 +377,20 @@ class VauchiRepository(
         contactId: String,
         fieldLabel: String,
     ) {
-        platform().hideFieldFromContact(contactId, fieldLabel)
+        appEngine.hideFieldFromContact(contactId, fieldLabel)
     }
 
     fun showFieldToContact(
         contactId: String,
         fieldLabel: String,
     ) {
-        platform().showFieldToContact(contactId, fieldLabel)
+        appEngine.showFieldToContact(contactId, fieldLabel)
     }
 
     fun isFieldVisibleToContact(
         contactId: String,
         fieldLabel: String,
-    ): Boolean = platform().isFieldVisibleToContact(contactId, fieldLabel)
+    ): Boolean = appEngine.isFieldVisibleToContact(contactId, fieldLabel)
 
     // Visibility Labels operations
     // Based on: features/visibility_labels.feature
@@ -398,17 +398,17 @@ class VauchiRepository(
     /**
      * List all visibility labels
      */
-    fun listLabels() = platform().listLabels()
+    fun listLabels() = appEngine.listLabels()
 
     /**
      * Create a new visibility label
      */
-    fun createLabel(name: String) = platform().createLabel(name)
+    fun createLabel(name: String) = appEngine.createLabel(name)
 
     /**
      * Get label details by ID
      */
-    fun getLabel(labelId: String) = platform().getLabel(labelId)
+    fun getLabel(labelId: String) = appEngine.getLabel(labelId)
 
     /**
      * Rename a visibility label
@@ -417,45 +417,50 @@ class VauchiRepository(
         labelId: String,
         newName: String,
     ) {
-        platform().renameLabel(labelId, newName)
+        appEngine.renameLabel(labelId, newName)
     }
 
     /**
      * Delete a visibility label
      */
     fun deleteLabel(labelId: String) {
-        platform().deleteLabel(labelId)
+        appEngine.deleteLabel(labelId)
     }
 
     fun addContactToLabel(
         labelId: String,
         contactId: String,
     ) {
-        platform().addContactToGroup(labelId, contactId)
+        appEngine.addContactToGroup(labelId, contactId)
     }
 
     fun removeContactFromLabel(
         labelId: String,
         contactId: String,
     ) {
-        platform().removeContactFromGroup(labelId, contactId)
+        appEngine.removeContactFromGroup(labelId, contactId)
     }
 
     fun getLabelsForContact(contactId: String): List<uniffi.vauchi_platform.MobileVisibilityLabel> =
-        platform().getGroupsForContact(contactId)
+        appEngine.getGroupsForContact(contactId)
 
     fun setLabelFieldVisibility(
         labelId: String,
         fieldId: String,
         visible: Boolean,
     ) {
-        platform().setGroupFieldVisibility(labelId, fieldId, visible)
+        appEngine.setGroupFieldVisibility(labelId, fieldId, visible)
     }
 
     /**
-     * Get suggested label names
+     * Get suggested label names.
+     *
+     * Non-throwing wrapper that returns `[]` on failure — `getSuggestedLabels`
+     * is a non-essential UI hint, so dispatch errors silently degrade rather
+     * than propagate. The legacy `platform().getSuggestedLabels()` was likewise
+     * non-throwing on the FFI surface; we preserve that shape.
      */
-    fun getSuggestedLabels(): List<String> = platform().getSuggestedLabels()
+    fun getSuggestedLabels(): List<String> = runCatching { appEngine.getSuggestedLabels() }.getOrDefault(emptyList())
 
     // Backup operations
     fun exportBackup(password: String): String {

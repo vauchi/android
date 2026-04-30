@@ -17,6 +17,8 @@ import uniffi.vauchi_platform.MobileFieldNote
 import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileSocialNetwork
 import uniffi.vauchi_platform.MobileUpdateStatus
+import uniffi.vauchi_platform.MobileVisibilityLabel
+import uniffi.vauchi_platform.MobileVisibilityLabelDetail
 import uniffi.vauchi_platform.PlatformAppEngine
 
 // Typed wrappers around `PlatformAppEngine.dispatchDomainCommand` for
@@ -363,4 +365,90 @@ fun PlatformAppEngine.deleteContactFieldNote(
     fieldId: String,
 ) {
     dispatchDomainCommand(DomainCommand.DeleteContactFieldNote(contactId, fieldId))
+}
+
+// ── Field Visibility (C3) ──
+
+fun PlatformAppEngine.hideFieldFromContact(
+    contactId: String,
+    fieldLabel: String,
+) {
+    dispatchDomainCommand(DomainCommand.HideFieldFromContact(contactId, fieldLabel))
+}
+
+fun PlatformAppEngine.showFieldToContact(
+    contactId: String,
+    fieldLabel: String,
+) {
+    dispatchDomainCommand(DomainCommand.ShowFieldToContact(contactId, fieldLabel))
+}
+
+fun PlatformAppEngine.isFieldVisibleToContact(
+    contactId: String,
+    fieldLabel: String,
+): Boolean {
+    val result = dispatchDomainCommand(DomainCommand.IsFieldVisibleToContact(contactId, fieldLabel))
+    return (result as? DomainCommandResult.Bool)?.value
+        ?: unexpectedResult("IsFieldVisibleToContact")
+}
+
+// ── Visibility Labels (C3) ──
+
+fun PlatformAppEngine.listLabels(): List<MobileVisibilityLabel> {
+    val result = dispatchDomainCommand(DomainCommand.ListLabels)
+    return (result as? DomainCommandResult.Labels)?.labels ?: unexpectedResult("ListLabels")
+}
+
+fun PlatformAppEngine.createLabel(name: String): MobileVisibilityLabel {
+    val result = dispatchDomainCommand(DomainCommand.CreateLabel(name))
+    return (result as? DomainCommandResult.Label)?.label ?: unexpectedResult("CreateLabel")
+}
+
+fun PlatformAppEngine.getLabel(labelId: String): MobileVisibilityLabelDetail {
+    val result = dispatchDomainCommand(DomainCommand.GetLabel(labelId))
+    return (result as? DomainCommandResult.LabelDetail)?.detail ?: unexpectedResult("GetLabel")
+}
+
+fun PlatformAppEngine.renameLabel(
+    labelId: String,
+    newName: String,
+) {
+    dispatchDomainCommand(DomainCommand.RenameLabel(labelId, newName))
+}
+
+fun PlatformAppEngine.deleteLabel(labelId: String) {
+    dispatchDomainCommand(DomainCommand.DeleteLabel(labelId))
+}
+
+fun PlatformAppEngine.addContactToGroup(
+    labelId: String,
+    contactId: String,
+) {
+    dispatchDomainCommand(DomainCommand.AddContactToGroup(labelId, contactId))
+}
+
+fun PlatformAppEngine.removeContactFromGroup(
+    labelId: String,
+    contactId: String,
+) {
+    dispatchDomainCommand(DomainCommand.RemoveContactFromGroup(labelId, contactId))
+}
+
+fun PlatformAppEngine.getGroupsForContact(contactId: String): List<MobileVisibilityLabel> {
+    val result = dispatchDomainCommand(DomainCommand.GetGroupsForContact(contactId))
+    return (result as? DomainCommandResult.Labels)?.labels
+        ?: unexpectedResult("GetGroupsForContact")
+}
+
+fun PlatformAppEngine.setGroupFieldVisibility(
+    labelId: String,
+    fieldLabel: String,
+    isVisible: Boolean,
+) {
+    dispatchDomainCommand(DomainCommand.SetGroupFieldVisibility(labelId, fieldLabel, isVisible))
+}
+
+fun PlatformAppEngine.getSuggestedLabels(): List<String> {
+    val result = dispatchDomainCommand(DomainCommand.GetSuggestedLabels)
+    return (result as? DomainCommandResult.Strings)?.values ?: unexpectedResult("GetSuggestedLabels")
 }
