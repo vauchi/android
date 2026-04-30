@@ -98,7 +98,8 @@ fun PlatformAppEngine.hasSeenAhaMoment(momentType: MobileAhaMomentType): Boolean
 
 fun PlatformAppEngine.tryTriggerAhaMoment(momentType: MobileAhaMomentType): MobileAhaMoment? {
     val result = dispatchDomainCommand(DomainCommand.TryTriggerAhaMoment(momentType))
-    return (result as? DomainCommandResult.AhaMomentOpt)?.moment ?: unexpectedResult("TryTriggerAhaMoment")
+    val opt = result as? DomainCommandResult.AhaMomentOpt ?: unexpectedResult("TryTriggerAhaMoment")
+    return opt.moment
 }
 
 fun PlatformAppEngine.tryTriggerAhaMomentWithContext(
@@ -109,8 +110,10 @@ fun PlatformAppEngine.tryTriggerAhaMomentWithContext(
         dispatchDomainCommand(
             DomainCommand.TryTriggerAhaMomentWithContext(momentType, context),
         )
-    return (result as? DomainCommandResult.AhaMomentOpt)?.moment
-        ?: unexpectedResult("TryTriggerAhaMomentWithContext")
+    val opt =
+        result as? DomainCommandResult.AhaMomentOpt
+            ?: unexpectedResult("TryTriggerAhaMomentWithContext")
+    return opt.moment
 }
 
 fun PlatformAppEngine.ahaMomentsSeenCount(): UInt {
@@ -131,13 +134,16 @@ fun PlatformAppEngine.resetAhaMoments() {
 
 fun PlatformAppEngine.initDemoContactIfNeeded(): MobileDemoContact? {
     val result = dispatchDomainCommand(DomainCommand.InitDemoContactIfNeeded)
-    return (result as? DomainCommandResult.DemoContactOpt)?.contact
-        ?: unexpectedResult("InitDemoContactIfNeeded")
+    val opt =
+        result as? DomainCommandResult.DemoContactOpt
+            ?: unexpectedResult("InitDemoContactIfNeeded")
+    return opt.contact
 }
 
 fun PlatformAppEngine.getDemoContact(): MobileDemoContact? {
     val result = dispatchDomainCommand(DomainCommand.GetDemoContact)
-    return (result as? DomainCommandResult.DemoContactOpt)?.contact ?: unexpectedResult("GetDemoContact")
+    val opt = result as? DomainCommandResult.DemoContactOpt ?: unexpectedResult("GetDemoContact")
+    return opt.contact
 }
 
 fun PlatformAppEngine.getDemoContactState(): MobileDemoContactState {
@@ -153,8 +159,8 @@ fun PlatformAppEngine.isDemoUpdateAvailable(): Boolean {
 
 fun PlatformAppEngine.triggerDemoUpdate(): MobileDemoContact? {
     val result = dispatchDomainCommand(DomainCommand.TriggerDemoUpdate)
-    return (result as? DomainCommandResult.DemoContactOpt)?.contact
-        ?: unexpectedResult("TriggerDemoUpdate")
+    val opt = result as? DomainCommandResult.DemoContactOpt ?: unexpectedResult("TriggerDemoUpdate")
+    return opt.contact
 }
 
 fun PlatformAppEngine.dismissDemoContact() {
@@ -168,8 +174,8 @@ fun PlatformAppEngine.autoRemoveDemoContact(): Boolean {
 
 fun PlatformAppEngine.restoreDemoContact(): MobileDemoContact? {
     val result = dispatchDomainCommand(DomainCommand.RestoreDemoContact)
-    return (result as? DomainCommandResult.DemoContactOpt)?.contact
-        ?: unexpectedResult("RestoreDemoContact")
+    val opt = result as? DomainCommandResult.DemoContactOpt ?: unexpectedResult("RestoreDemoContact")
+    return opt.contact
 }
 
 // ── Social Networks (B7 batch 2 / 19) ──
@@ -191,7 +197,8 @@ fun PlatformAppEngine.getProfileUrl(
     username: String,
 ): String? {
     val result = dispatchDomainCommand(DomainCommand.GetProfileUrl(networkId, username))
-    return (result as? DomainCommandResult.StringOpt)?.value ?: unexpectedResult("GetProfileUrl")
+    val opt = result as? DomainCommandResult.StringOpt ?: unexpectedResult("GetProfileUrl")
+    return opt.value
 }
 
 fun PlatformAppEngine.reloadSocialNetworks(): List<MobileSocialNetwork> {
