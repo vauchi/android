@@ -8,16 +8,23 @@ import uniffi.vauchi_platform.DomainCommandResult
 import uniffi.vauchi_platform.MobileAhaMoment
 import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileApplyResult
+import uniffi.vauchi_platform.MobileAuthMode
+import uniffi.vauchi_platform.MobileConsentRecord
+import uniffi.vauchi_platform.MobileConsentStatus
+import uniffi.vauchi_platform.MobileConsentType
 import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileDecoyContact
+import uniffi.vauchi_platform.MobileDeletionInfo
 import uniffi.vauchi_platform.MobileDeliveryRecord
 import uniffi.vauchi_platform.MobileDeliverySummary
 import uniffi.vauchi_platform.MobileDemoContact
 import uniffi.vauchi_platform.MobileDemoContactState
+import uniffi.vauchi_platform.MobileDuressSettings
 import uniffi.vauchi_platform.MobileException
 import uniffi.vauchi_platform.MobileFieldNote
 import uniffi.vauchi_platform.MobileFieldType
+import uniffi.vauchi_platform.MobileGdprExport
 import uniffi.vauchi_platform.MobileRecoveryVerification
 import uniffi.vauchi_platform.MobileRetryEntry
 import uniffi.vauchi_platform.MobileSocialNetwork
@@ -535,4 +542,97 @@ fun PlatformAppEngine.verifyRecoveryProof(proofB64: String): MobileRecoveryVerif
     val result = dispatchDomainCommand(DomainCommand.VerifyRecoveryProof(proofB64))
     return (result as? DomainCommandResult.RecoveryVerification)?.verification
         ?: unexpectedResult("VerifyRecoveryProof")
+}
+
+// ── Passcode (C6) ──
+
+fun PlatformAppEngine.authenticate(password: String): MobileAuthMode {
+    val result = dispatchDomainCommand(DomainCommand.Authenticate(password))
+    return (result as? DomainCommandResult.AuthMode)?.mode ?: unexpectedResult("Authenticate")
+}
+
+fun PlatformAppEngine.setupAppPassword(password: String) {
+    dispatchDomainCommand(DomainCommand.SetupAppPassword(password))
+}
+
+fun PlatformAppEngine.isPasswordEnabled(): Boolean {
+    val result = dispatchDomainCommand(DomainCommand.IsPasswordEnabled)
+    return (result as? DomainCommandResult.Bool)?.value ?: unexpectedResult("IsPasswordEnabled")
+}
+
+// ── Duress (C6) ──
+
+fun PlatformAppEngine.isDuressEnabled(): Boolean {
+    val result = dispatchDomainCommand(DomainCommand.IsDuressEnabled)
+    return (result as? DomainCommandResult.Bool)?.value ?: unexpectedResult("IsDuressEnabled")
+}
+
+fun PlatformAppEngine.setupDuressPassword(duressPassword: String) {
+    dispatchDomainCommand(DomainCommand.SetupDuressPassword(duressPassword))
+}
+
+fun PlatformAppEngine.disableDuress() {
+    dispatchDomainCommand(DomainCommand.DisableDuress)
+}
+
+fun PlatformAppEngine.configureDuressAlerts(
+    contactIds: List<String>,
+    message: String,
+) {
+    dispatchDomainCommand(DomainCommand.ConfigureDuressAlerts(contactIds, message))
+}
+
+fun PlatformAppEngine.getDuressSettings(): MobileDuressSettings? {
+    val result = dispatchDomainCommand(DomainCommand.GetDuressSettings)
+    val opt = result as? DomainCommandResult.DuressSettingsOpt ?: unexpectedResult("GetDuressSettings")
+    return opt.settings
+}
+
+// ── GDPR / Identity Deletion (C6) ──
+
+fun PlatformAppEngine.exportGdprData(): MobileGdprExport {
+    val result = dispatchDomainCommand(DomainCommand.ExportGdprData)
+    return (result as? DomainCommandResult.GdprExport)?.export ?: unexpectedResult("ExportGdprData")
+}
+
+fun PlatformAppEngine.scheduleIdentityDeletion(): MobileDeletionInfo {
+    val result = dispatchDomainCommand(DomainCommand.ScheduleIdentityDeletion)
+    return (result as? DomainCommandResult.DeletionInfo)?.info
+        ?: unexpectedResult("ScheduleIdentityDeletion")
+}
+
+fun PlatformAppEngine.cancelIdentityDeletion() {
+    dispatchDomainCommand(DomainCommand.CancelIdentityDeletion)
+}
+
+fun PlatformAppEngine.getDeletionState(): MobileDeletionInfo {
+    val result = dispatchDomainCommand(DomainCommand.GetDeletionState)
+    return (result as? DomainCommandResult.DeletionInfo)?.info ?: unexpectedResult("GetDeletionState")
+}
+
+// ── Consent (C6) ──
+
+fun PlatformAppEngine.grantConsent(consentType: MobileConsentType) {
+    dispatchDomainCommand(DomainCommand.GrantConsent(consentType))
+}
+
+fun PlatformAppEngine.revokeConsent(consentType: MobileConsentType) {
+    dispatchDomainCommand(DomainCommand.RevokeConsent(consentType))
+}
+
+fun PlatformAppEngine.checkConsent(consentType: MobileConsentType): Boolean {
+    val result = dispatchDomainCommand(DomainCommand.CheckConsent(consentType))
+    return (result as? DomainCommandResult.Bool)?.value ?: unexpectedResult("CheckConsent")
+}
+
+fun PlatformAppEngine.getConsentRecords(): List<MobileConsentRecord> {
+    val result = dispatchDomainCommand(DomainCommand.GetConsentRecords)
+    return (result as? DomainCommandResult.ConsentRecords)?.records
+        ?: unexpectedResult("GetConsentRecords")
+}
+
+fun PlatformAppEngine.getConsentStatus(consentType: MobileConsentType): MobileConsentStatus {
+    val result = dispatchDomainCommand(DomainCommand.GetConsentStatus(consentType))
+    return (result as? DomainCommandResult.ConsentStatus)?.status
+        ?: unexpectedResult("GetConsentStatus")
 }

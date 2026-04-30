@@ -595,37 +595,37 @@ class VauchiRepository(
      * Authenticate with app password. Returns the auth mode (Normal or Duress).
      * Core sets internal auth_mode which controls contact visibility (decoy vs real).
      */
-    fun authenticate(password: String): uniffi.vauchi_platform.MobileAuthMode = platform().authenticate(password)
+    fun authenticate(password: String): uniffi.vauchi_platform.MobileAuthMode = appEngine.authenticate(password)
 
     /**
      * Set up app password (prerequisite for duress PIN).
      */
     fun setupAppPassword(password: String) {
-        platform().setupAppPassword(password)
+        appEngine.setupAppPassword(password)
     }
 
     /**
      * Check if app password is configured.
      */
-    fun isPasswordEnabled(): Boolean = platform().isPasswordEnabled()
+    fun isPasswordEnabled(): Boolean = appEngine.isPasswordEnabled()
 
     /**
      * Check if duress PIN is enabled
      */
-    fun isDuressEnabled(): Boolean = platform().isDuressEnabled()
+    fun isDuressEnabled(): Boolean = appEngine.isDuressEnabled()
 
     /**
      * Set up duress PIN (requires app password to be set first)
      */
     fun setupDuressPassword(duressPassword: String) {
-        platform().setupDuressPassword(duressPassword)
+        appEngine.setupDuressPassword(duressPassword)
     }
 
     /**
      * Disable duress PIN
      */
     fun disableDuress() {
-        platform().disableDuress()
+        appEngine.disableDuress()
     }
 
     // Decoy contact management (duress mode profile)
@@ -655,10 +655,10 @@ class VauchiRepository(
         contactIds: List<String>,
         message: String,
     ) {
-        platform().configureDuressAlerts(contactIds, message)
+        appEngine.configureDuressAlerts(contactIds, message)
     }
 
-    fun getDuressSettings(): uniffi.vauchi_platform.MobileDuressSettings? = platform().getDuressSettings()
+    fun getDuressSettings(): uniffi.vauchi_platform.MobileDuressSettings? = appEngine.getDuressSettings()
 
     // Contact notes
 
@@ -944,40 +944,40 @@ class VauchiRepository(
      *
      * @return GDPR export with JSON data, timestamp, and version
      */
-    fun exportGdprData() = platform().exportGdprData()
+    fun exportGdprData() = appEngine.exportGdprData()
 
     /**
      * Schedule account deletion with 7-day grace period.
      *
      * @return Deletion info with state and timing
      */
-    fun scheduleIdentityDeletion() = platform().scheduleIdentityDeletion()
+    fun scheduleIdentityDeletion() = appEngine.scheduleIdentityDeletion()
 
     /**
      * Cancel a scheduled account deletion.
      */
-    fun cancelIdentityDeletion() = platform().cancelIdentityDeletion()
+    fun cancelIdentityDeletion() = appEngine.cancelIdentityDeletion()
 
     /**
      * Get current deletion state.
      *
      * @return Current deletion info
      */
-    fun getDeletionState() = platform().getDeletionState()
+    fun getDeletionState() = appEngine.getDeletionState()
 
     /**
      * Grant consent for a specific type.
      *
      * @param consentType The type of consent to grant
      */
-    fun grantConsent(consentType: uniffi.vauchi_platform.MobileConsentType) = platform().grantConsent(consentType)
+    fun grantConsent(consentType: uniffi.vauchi_platform.MobileConsentType) = appEngine.grantConsent(consentType)
 
     /**
      * Revoke consent for a specific type.
      *
      * @param consentType The type of consent to revoke
      */
-    fun revokeConsent(consentType: uniffi.vauchi_platform.MobileConsentType) = platform().revokeConsent(consentType)
+    fun revokeConsent(consentType: uniffi.vauchi_platform.MobileConsentType) = appEngine.revokeConsent(consentType)
 
     /**
      * Check if consent is granted for a specific type.
@@ -985,16 +985,16 @@ class VauchiRepository(
      * @param consentType The type to check
      * @return True if consent is currently granted
      */
-    fun checkConsent(consentType: uniffi.vauchi_platform.MobileConsentType): Boolean = platform().checkConsent(consentType)
+    fun checkConsent(consentType: uniffi.vauchi_platform.MobileConsentType): Boolean = appEngine.checkConsent(consentType)
 
     /**
      * Get all consent records.
      *
      * @return List of all consent records
      */
-    fun getConsentRecords() = platform().getConsentRecords()
+    fun getConsentRecords() = appEngine.getConsentRecords()
 
-    fun getConsentStatus(consentType: uniffi.vauchi_platform.MobileConsentType) = platform().getConsentStatus(consentType)
+    fun getConsentStatus(consentType: uniffi.vauchi_platform.MobileConsentType) = appEngine.getConsentStatus(consentType)
 
     /**
      * Handle app backgrounded event (C1 auto-lock).
