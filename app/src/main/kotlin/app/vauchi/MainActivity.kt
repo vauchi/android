@@ -65,9 +65,7 @@ import app.vauchi.ui.coreui.CoreOnboardingScreen
 import app.vauchi.ui.coreui.CoreScreenView
 import app.vauchi.ui.coreui.MaterialIconName
 import app.vauchi.ui.coreui.UserAction
-import app.vauchi.ui.coreui.coreTabIdForScreen
 import app.vauchi.ui.coreui.materialIconNameForCoreIcon
-import app.vauchi.ui.coreui.screenForCoreTabId
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
 import kotlinx.coroutines.Dispatchers
@@ -196,33 +194,74 @@ class MainActivity : FragmentActivity() {
 }
 
 enum class Screen {
+    // Pre-Ready boot/auth states. Home renders one of:
+    // LoadingScreen / CoreOnboardingScreen / AuthenticationGate /
+    // AppPasswordScreen / ErrorScreen / ReadyScreen, dispatched by
+    // `UiState`. ReadyScreen is itself core-driven.
     Home,
+
+    // Native screens awaiting per-pair retirement (Phase 2+ of
+    // `2026-04-30-android-activity-enum-collapse`). Each one is its
+    // own Pure Humble UI pair, sequenced low-risk-first.
     ExchangeModePicker,
-    MultiStageExchange,
     NfcExchange,
     BleExchange,
-    Contacts,
-    Settings,
-    Devices,
     Recovery,
-    Labels,
     ThemeSettings,
     LanguageSettings,
     Help,
     QrDiagnostic,
     More,
-    ArchivedContacts,
-    ContactMerge,
-    DeviceReplacement,
-    // ContactDetail and LabelDetail removed in the 2026-04-28 audit
-    // follow-up. Both were unreachable enum branches — `currentScreen`
-    // was never set to them. Real navigation to ContactDetail and
-    // GroupDetail (a.k.a. LabelDetail) happens via
-    // `coreAppViewModel.navigateToScreenWithParam(...)` updating
-    // `coreAppViewModel.screen` directly, which the inner `CoreScreenView`
-    // observes and re-renders. The local enum was a vestige of the
-    // pre-Pure-Humble architecture.
+
+    // Hardware-presentation wrapper (orientation lock, brightness,
+    // keep-screen-on) around a `CoreScreenView`. Stays native — not
+    // a pure 1:1 shell, so the default core-driven render path doesn't
+    // apply. ADR-031 hardware-event flow is the eventual migration.
+    MultiStageExchange,
+    // Pure Humble UI cases (Contacts, Settings, Devices, Labels,
+    // ArchivedContacts, ContactMerge, DeviceReplacement) collapsed in
+    // Phase 1 — they render through the core-driven dispatch above
+    // the `when (currentScreen)` block. ContactDetail and LabelDetail
+    // were removed earlier (2026-04-28 audit follow-up); they navigate
+    // via `coreAppViewModel.navigateToScreenWithParam(...)` and
+    // observe `coreAppViewModel.screen` directly.
 }
+
+/**
+ * Map a snake_case core screen id (`AppScreen::screen_id()` output)
+ * to the PascalCase `AppScreen` variant name that
+ * [CoreAppViewModel.navigateTo] accepts. Returns `null` for ids that
+ * either don't map to a Pure Humble UI screen (native cases handled
+ * by their dedicated [Screen] enum arms) or aren't recognised.
+ *
+ * The 7 ids covered here mirror the cases removed from `Screen` in
+ * the 2026-04-30 Activity-enum-collapse Phase 1 — they all render
+ * through the default `CoreScreenView` path. `MultiStageExchange`
+ * stays native because it's a hardware-presentation wrapper
+ * (orientation lock, brightness, keep-screen-on) around a
+ * `CoreScreenView`, not a pure 1:1 shell.
+ */
+private fun coreScreenIdToVariant(id: String): String? =
+    when (id) {
+        "contacts" -> "Contacts"
+        "settings" -> "Settings"
+        "device_management" -> "DeviceManagement"
+        "groups" -> "Groups"
+        "archived_contacts" -> "ArchivedContacts"
+        "contact_duplicates" -> "ContactDuplicates"
+        "device_replacement" -> "DeviceReplacement"
+        else -> null
+    }
+
+/** Top-level core screen ids that show the bottom navigation bar. */
+private val TOP_LEVEL_SCREEN_IDS =
+    setOf(
+        "my_info",
+        "contacts",
+        "exchange",
+        "groups",
+        "more",
+    )
 
 /**
  * Resolve the SF-Symbol icon name from core's `MobileTabInfo.icon`
@@ -304,27 +343,15 @@ fun MainScreen(
     val coreScreen by coreAppViewModel.screen.collectAsState()
     val showDeepLinkConsent = coreScreen?.screenId == "deep_link_consent"
 
-    // Follow core's lead — when core navigates away from a screen the
-    // Activity tracks via its `currentScreen` enum, mirror that. The
-    // GUI never decides where to go; it reflects core's published state.
-    // Per ADR-021/043, this sync layer is a transitional bridge until
-    // the Activity drops the enum and renders coreScreen.screenId
-    // directly. Only screens still routed through the enum are listed.
-    LaunchedEffect(coreScreen?.screenId, currentScreen) {
-        val coreId = coreScreen?.screenId ?: return@LaunchedEffect
-        if (currentScreen == Screen.MultiStageExchange &&
-            coreId != "multi_stage_exchange"
-        ) {
-            currentScreen =
-                when (coreId) {
-                    "exchange" -> Screen.ExchangeModePicker
-                    "contacts" -> Screen.Contacts
-                    "my_info", "home" -> Screen.Home
-                    else -> Screen.ExchangeModePicker
-                }
-            viewModel.refresh()
-        }
-    }
+    // Activity-enum-collapse Phase 1 dropped the `MultiStageExchange`
+    // case; it now renders through the default `CoreScreenView` arm
+    // driven directly by `coreScreen?.screenId`. The previous
+    // transitional `LaunchedEffect` mirror that synced
+    // `currentScreen` back into `Screen.ExchangeModePicker` when core
+    // navigated away from `multi_stage_exchange` is no longer needed:
+    // post-collapse, `currentScreen` is `Screen.ExchangeModePicker`
+    // anyway when entering the multi-stage flow, and the default arm
+    // follows core regardless of the enum value.
 
     // --reset-for-testing: create test identity so app skips onboarding (DEBUG only)
     LaunchedEffect(resetForTesting, uiState) {
@@ -339,9 +366,14 @@ fun MainScreen(
         if (navigateTo != null && uiState is UiState.Ready) {
             when (navigateTo) {
                 "exchange" -> currentScreen = Screen.ExchangeModePicker
-                "contacts" -> currentScreen = Screen.Contacts
-                "settings" -> currentScreen = Screen.Settings
+
                 "home" -> currentScreen = Screen.Home
+
+                // Activity-enum collapse: Contacts and Settings render
+                // through the default core-driven arm; navigate via core.
+                "contacts" -> coreAppViewModel.navigateTo("Contacts")
+
+                "settings" -> coreAppViewModel.navigateTo("Settings")
             }
             onNavigateConsumed()
         }
@@ -382,18 +414,26 @@ fun MainScreen(
         }
     }
 
-    // Dynamic default screen: land on Contacts if user has contacts
+    // Dynamic default screen: land on Contacts if user has contacts.
+    // Activity-enum collapse: Contacts is no longer in the local enum;
+    // route via core's nav so the default `CoreScreenView` arm renders.
     LaunchedEffect(uiState) {
         val state = uiState
         if (state is UiState.Ready && currentScreen == Screen.Home && state.contactCount > 0u) {
-            currentScreen = Screen.Contacts
+            coreAppViewModel.navigateTo("Contacts")
         }
     }
 
-    // The bottom nav is shown only on top-level screens. "Top-level"
-    // is now whatever core's `tab_info(locale)` returned — the local
-    // hardcoded set is gone (§6 pure-renderer remediation).
-    val activeTabId = coreTabIdForScreen(currentScreen)
+    // The bottom nav is shown only on top-level screens. The active
+    // tab id is core's published `screenId` (when it's one of the
+    // top-level set), since core owns the navigation state of record
+    // post-collapse. Native screens still in the local enum (Home,
+    // ExchangeModePicker, More, etc.) keep their selection by
+    // delegating through `coreScreen?.screenId` after navigation has
+    // landed on a core screen, OR by leaving `activeTabId` null when
+    // currently on a non-top-level native screen — both behaviours
+    // are unchanged from the pre-collapse mapping.
+    val activeTabId = coreScreen?.screenId?.takeIf { it in TOP_LEVEL_SCREEN_IDS }
     val isTopLevel = activeTabId != null
 
     Scaffold(
@@ -401,7 +441,14 @@ fun MainScreen(
             if (isTopLevel && uiState is UiState.Ready && tabs.isNotEmpty()) {
                 NavigationBar {
                     for (tab in tabs) {
-                        val targetScreen = screenForCoreTabId(tab.id) ?: continue
+                        // Route the tap through core's nav; the default
+                        // `CoreScreenView` arm picks up the resulting
+                        // `coreScreen.screenId` and renders.
+                        val variant =
+                            coreScreenIdToVariant(tab.id)
+                                ?: tab.id.split('_').joinToString("") {
+                                    it.replaceFirstChar(Char::uppercase)
+                                }
                         NavigationBarItem(
                             icon = {
                                 Icon(
@@ -411,7 +458,19 @@ fun MainScreen(
                             },
                             label = { Text(tab.label) },
                             selected = activeTabId == tab.id,
-                            onClick = { currentScreen = targetScreen },
+                            onClick = {
+                                // Native top-level cases (my_info -> Home,
+                                // exchange -> ExchangeModePicker, more -> More)
+                                // still need the local enum until their
+                                // per-pair retirement; everything else goes
+                                // through core's nav.
+                                when (tab.id) {
+                                    "my_info" -> currentScreen = Screen.Home
+                                    "exchange" -> currentScreen = Screen.ExchangeModePicker
+                                    "more" -> currentScreen = Screen.More
+                                    else -> coreAppViewModel.navigateTo(variant)
+                                }
+                            },
                         )
                     }
                 }
@@ -422,240 +481,198 @@ fun MainScreen(
         },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            when (currentScreen) {
-                Screen.Home -> {
-                    when (val state = uiState) {
-                        is UiState.Loading -> {
-                            LoadingScreen()
-                        }
+            // Activity-enum-collapse Phase 1 dispatch: core wins when
+            // it has navigated to one of the 7 Pure Humble UI screens
+            // covered by `coreScreenIdToVariant`. The local `Screen`
+            // enum below handles only the still-native screens
+            // (ExchangeModePicker, hardware-aware MultiStageExchange,
+            // NFC/BLE, Recovery, ThemeSettings, LanguageSettings, Help,
+            // QrDiagnostic, More) and the pre-Ready boot states (Home).
+            val coreVariant = coreScreen?.screenId?.let(::coreScreenIdToVariant)
+            if (coreVariant != null && uiState is UiState.Ready) {
+                CoreScreenView(
+                    viewModel = coreAppViewModel,
+                    screenName = coreVariant,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                when (currentScreen) {
+                    Screen.Home -> {
+                        when (val state = uiState) {
+                            is UiState.Loading -> {
+                                LoadingScreen()
+                            }
 
-                        is UiState.Onboarding -> {
-                            CoreOnboardingScreen(
-                                onComplete = { displayName -> viewModel.onCoreOnboardingComplete(displayName) },
-                            )
+                            is UiState.Onboarding -> {
+                                CoreOnboardingScreen(
+                                    onComplete = { displayName -> viewModel.onCoreOnboardingComplete(displayName) },
+                                )
 
-                            if (showRestoreDialog) {
-                                RestoreIdentityDialog(
-                                    onDismiss = { showRestoreDialog = false },
-                                    onRestore = { backupData, password ->
-                                        coroutineScope.launch {
-                                            val success = viewModel.importFullBackup(backupData, password)
-                                            if (success) {
-                                                showRestoreDialog = false
+                                if (showRestoreDialog) {
+                                    RestoreIdentityDialog(
+                                        onDismiss = { showRestoreDialog = false },
+                                        onRestore = { backupData, password ->
+                                            coroutineScope.launch {
+                                                val success = viewModel.importFullBackup(backupData, password)
+                                                if (success) {
+                                                    showRestoreDialog = false
+                                                }
                                             }
-                                        }
+                                        },
+                                    )
+                                }
+                            }
+
+                            is UiState.Ready -> {
+                                ReadyScreen(
+                                    coreAppViewModel = coreAppViewModel,
+                                    onSettings = { coreAppViewModel.navigateTo("Settings") },
+                                    syncState = syncState,
+                                    isOnline = isOnline,
+                                    lastSyncTime = lastSyncTime,
+                                    onSync = { viewModel.sync() },
+                                )
+                            }
+
+                            is UiState.AuthRequired -> {
+                                AuthenticationGate(
+                                    onAuthenticated = { viewModel.retryInit() },
+                                    onError = { msg ->
+                                        viewModel.setError(msg)
                                     },
                                 )
                             }
-                        }
 
-                        is UiState.Ready -> {
-                            ReadyScreen(
-                                coreAppViewModel = coreAppViewModel,
-                                onSettings = { currentScreen = Screen.Settings },
-                                syncState = syncState,
-                                isOnline = isOnline,
-                                lastSyncTime = lastSyncTime,
-                                onSync = { viewModel.sync() },
-                            )
-                        }
-
-                        is UiState.AuthRequired -> {
-                            AuthenticationGate(
-                                onAuthenticated = { viewModel.retryInit() },
-                                onError = { msg ->
-                                    viewModel.setError(msg)
-                                },
-                            )
-                        }
-
-                        is UiState.AppPasswordRequired -> {
-                            var authError by remember {
-                                mutableStateOf<String?>(null)
+                            is UiState.AppPasswordRequired -> {
+                                var authError by remember {
+                                    mutableStateOf<String?>(null)
+                                }
+                                AppPasswordScreen(
+                                    onAuthenticate = { pin ->
+                                        authError = null
+                                        viewModel.authenticateAppPassword(
+                                            pin,
+                                        ) { msg -> authError = msg }
+                                    },
+                                    onCancel = {
+                                        viewModel.cancelAppPassword()
+                                    },
+                                    errorMessage = authError,
+                                )
                             }
-                            AppPasswordScreen(
-                                onAuthenticate = { pin ->
-                                    authError = null
-                                    viewModel.authenticateAppPassword(
-                                        pin,
-                                    ) { msg -> authError = msg }
-                                },
-                                onCancel = {
-                                    viewModel.cancelAppPassword()
-                                },
-                                errorMessage = authError,
-                            )
-                        }
 
-                        is UiState.Error -> {
-                            ErrorScreen(
-                                message = state.message,
-                                onRetry = { viewModel.refresh() },
-                            )
+                            is UiState.Error -> {
+                                ErrorScreen(
+                                    message = state.message,
+                                    onRetry = { viewModel.refresh() },
+                                )
+                            }
                         }
                     }
-                }
 
-                Screen.ExchangeModePicker -> {
-                    ExchangeModePicker(
-                        onModeSelected = { mode ->
-                            when (mode) {
-                                ExchangeMode.QR -> {
-                                    currentScreen = Screen.MultiStageExchange
+                    Screen.ExchangeModePicker -> {
+                        ExchangeModePicker(
+                            onModeSelected = { mode ->
+                                when (mode) {
+                                    ExchangeMode.QR -> {
+                                        currentScreen = Screen.MultiStageExchange
+                                    }
+
+                                    ExchangeMode.NFC -> {
+                                        currentScreen = Screen.NfcExchange
+                                    }
+
+                                    ExchangeMode.BLE -> {
+                                        currentScreen = Screen.BleExchange
+                                    }
                                 }
-
-                                ExchangeMode.NFC -> {
-                                    currentScreen = Screen.NfcExchange
-                                }
-
-                                ExchangeMode.BLE -> {
-                                    currentScreen = Screen.BleExchange
-                                }
-                            }
-                        },
-                    )
-                }
-
-                Screen.MultiStageExchange -> {
-                    MultiStageExchangeScreen(coreAppViewModel = coreAppViewModel)
-                }
-
-                Screen.NfcExchange -> {
-                    NfcExchangeScreen(
-                        viewModel = viewModel,
-                        onBack = { currentScreen = Screen.ExchangeModePicker },
-                        onDone = {
-                            viewModel.refresh()
-                            currentScreen = Screen.Contacts
-                        },
-                    )
-                }
-
-                Screen.BleExchange -> {
-                    BleExchangeScreen(
-                        viewModel = viewModel,
-                        onBack = { currentScreen = Screen.ExchangeModePicker },
-                        onDone = {
-                            viewModel.refresh()
-                            currentScreen = Screen.Contacts
-                        },
-                    )
-                }
-
-                Screen.Contacts -> {
-                    // Phase 1A.2 / 1B.2 (core-gui-architecture-alignment):
-                    // the Contacts tab is now a thin Compose shell around
-                    // `CoreScreenView("Contacts")`. Core's ContactListEngine
-                    // owns search, row actions (archive/hide/delete via the
-                    // ListItemAction overflow menu wired in MR !304), the
-                    // "Archived Contacts" and "Find Duplicates" screen
-                    // actions (AppEngine intercepts + navigates), and the
-                    // empty-state InfoPanel. See
-                    // `core/vauchi-app/src/ui/contact_list.rs`.
-                    CoreScreenView(
-                        viewModel = coreAppViewModel,
-                        screenName = "Contacts",
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-
-                Screen.Settings -> {
-                    CoreScreenView(
-                        viewModel = coreAppViewModel,
-                        screenName = "Settings",
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-
-                Screen.Devices -> {
-                    CoreScreenView(
-                        viewModel = coreAppViewModel,
-                        screenName = "DeviceManagement",
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-
-                Screen.Recovery -> {
-                    RecoveryScreen(
-                        coreAppViewModel = coreAppViewModel,
-                        onBack = { currentScreen = Screen.More },
-                    )
-                }
-
-                Screen.Labels -> {
-                    CoreScreenView(
-                        viewModel = coreAppViewModel,
-                        screenName = "Groups",
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-
-                Screen.ThemeSettings -> {
-                    ThemeSettingsScreen(
-                        onBack = { currentScreen = Screen.Settings },
-                    )
-                }
-
-                Screen.LanguageSettings -> {
-                    LanguageSettingsScreen(
-                        onBack = { currentScreen = Screen.Settings },
-                    )
-                }
-
-                Screen.Help -> {
-                    HelpScreen(
-                        viewModel = coreAppViewModel,
-                    )
-                }
-
-                Screen.QrDiagnostic -> {
-                    // Guard with BuildConfig.DEBUG so R8 can tree-shake the
-                    // real QrDiagnosticScreen out of release APKs. In release,
-                    // the no-op stub from src/release/ is compiled instead and
-                    // the condition evaluates to a compile-time false.
-                    if (BuildConfig.DEBUG) {
-                        QrDiagnosticScreen(
-                            onBack = { currentScreen = Screen.Settings },
+                            },
                         )
-                    } else {
-                        currentScreen = Screen.Settings
                     }
-                }
 
-                Screen.More -> {
-                    MoreScreen(
-                        onSettings = { currentScreen = Screen.Settings },
-                        onHelp = { currentScreen = Screen.Help },
-                        onDevices = { currentScreen = Screen.Devices },
-                        onRecovery = { currentScreen = Screen.Recovery },
-                        onArchivedContacts = { currentScreen = Screen.ArchivedContacts },
-                        onMergeContacts = { currentScreen = Screen.ContactMerge },
-                        onDeviceReplacement = { currentScreen = Screen.DeviceReplacement },
-                    )
-                }
+                    Screen.MultiStageExchange -> {
+                        MultiStageExchangeScreen(coreAppViewModel = coreAppViewModel)
+                    }
 
-                Screen.ArchivedContacts -> {
-                    CoreScreenView(
-                        viewModel = coreAppViewModel,
-                        screenName = "ArchivedContacts",
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+                    Screen.NfcExchange -> {
+                        NfcExchangeScreen(
+                            viewModel = viewModel,
+                            onBack = { currentScreen = Screen.ExchangeModePicker },
+                            onDone = {
+                                viewModel.refresh()
+                                coreAppViewModel.navigateTo("Contacts")
+                            },
+                        )
+                    }
 
-                Screen.ContactMerge -> {
-                    CoreScreenView(
-                        viewModel = coreAppViewModel,
-                        screenName = "ContactDuplicates",
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+                    Screen.BleExchange -> {
+                        BleExchangeScreen(
+                            viewModel = viewModel,
+                            onBack = { currentScreen = Screen.ExchangeModePicker },
+                            onDone = {
+                                viewModel.refresh()
+                                coreAppViewModel.navigateTo("Contacts")
+                            },
+                        )
+                    }
 
-                Screen.DeviceReplacement -> {
-                    CoreScreenView(
-                        viewModel = coreAppViewModel,
-                        screenName = "DeviceReplacement",
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                    Screen.Recovery -> {
+                        RecoveryScreen(
+                            coreAppViewModel = coreAppViewModel,
+                            onBack = { currentScreen = Screen.More },
+                        )
+                    }
+
+                    Screen.ThemeSettings -> {
+                        ThemeSettingsScreen(
+                            onBack = { coreAppViewModel.navigateTo("Settings") },
+                        )
+                    }
+
+                    Screen.LanguageSettings -> {
+                        LanguageSettingsScreen(
+                            onBack = { coreAppViewModel.navigateTo("Settings") },
+                        )
+                    }
+
+                    Screen.Help -> {
+                        HelpScreen(
+                            viewModel = coreAppViewModel,
+                        )
+                    }
+
+                    Screen.QrDiagnostic -> {
+                        // Guard with BuildConfig.DEBUG so R8 can tree-shake the
+                        // real QrDiagnosticScreen out of release APKs. In release,
+                        // the no-op stub from src/release/ is compiled instead and
+                        // the condition evaluates to a compile-time false.
+                        if (BuildConfig.DEBUG) {
+                            QrDiagnosticScreen(
+                                onBack = { coreAppViewModel.navigateTo("Settings") },
+                            )
+                        } else {
+                            coreAppViewModel.navigateTo("Settings")
+                        }
+                    }
+
+                    Screen.More -> {
+                        MoreScreen(
+                            onSettings = { coreAppViewModel.navigateTo("Settings") },
+                            onHelp = { currentScreen = Screen.Help },
+                            onDevices = { coreAppViewModel.navigateTo("DeviceManagement") },
+                            onRecovery = { currentScreen = Screen.Recovery },
+                            onArchivedContacts = { coreAppViewModel.navigateTo("ArchivedContacts") },
+                            onMergeContacts = { coreAppViewModel.navigateTo("ContactDuplicates") },
+                            onDeviceReplacement = { coreAppViewModel.navigateTo("DeviceReplacement") },
+                        )
+                    }
+
+                    // The 7 Pure Humble UI cases collapsed in
+                    // 2026-04-30-android-activity-enum-collapse Phase 1
+                    // (Contacts, Settings, Devices, Labels, ArchivedContacts,
+                    // ContactMerge, DeviceReplacement) render through the
+                    // `if (coreVariant != null)` branch above. They no
+                    // longer have a local `Screen` enum value.
                 }
             }
         }

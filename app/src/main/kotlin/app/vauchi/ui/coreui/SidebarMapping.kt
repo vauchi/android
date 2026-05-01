@@ -4,8 +4,6 @@
 
 package app.vauchi.ui.coreui
 
-import app.vauchi.Screen
-
 /**
  * Pure-Kotlin enum identifying which Material Icon to render for a
  * `MobileTabInfo.icon` SF-Symbol name. Kept separate from the Compose
@@ -41,50 +39,8 @@ fun materialIconNameForCoreIcon(coreIcon: String): MaterialIconName =
         else -> MaterialIconName.MORE_HORIZ
     }
 
-/**
- * Map a core `MobileTabInfo.id` (snake_case `screen_id` from
- * `AppScreen::screen_id()` in core) to the local `Screen` enum that
- * drives the Android navigation state machine.
- *
- * Only the five mobile top-level tabs are recognised — non-top-level
- * screens return `null` because they should not appear in the bottom
- * nav.
- */
-fun screenForCoreTabId(id: String): Screen? =
-    when (id) {
-        "my_info" -> Screen.Home
-        "contacts" -> Screen.Contacts
-        "exchange" -> Screen.ExchangeModePicker
-        "groups" -> Screen.Labels
-        "more" -> Screen.More
-        else -> null
-    }
-
-/**
- * Reverse of [screenForCoreTabId]. Returns the core tab id that the
- * given `Screen` belongs under for selection-state highlighting.
- *
- * The Exchange tab spans `ExchangeModePicker` plus its sub-modes
- * (`MultiStageExchange`, `NfcExchange`, `BleExchange`); all four fold
- * into `"exchange"` so the tab stays highlighted while the user is
- * inside any exchange flow. Screens that never appear in the bottom
- * nav return `null`.
- */
-fun coreTabIdForScreen(screen: Screen): String? =
-    when (screen) {
-        Screen.Home -> "my_info"
-
-        Screen.Contacts -> "contacts"
-
-        Screen.ExchangeModePicker,
-        Screen.MultiStageExchange,
-        Screen.NfcExchange,
-        Screen.BleExchange,
-        -> "exchange"
-
-        Screen.Labels -> "groups"
-
-        Screen.More -> "more"
-
-        else -> null
-    }
+// `screenForCoreTabId` and `coreTabIdForScreen` removed in the
+// 2026-04-30 Activity-enum-collapse Phase 1. Top-level navigation is
+// now driven by `coreScreen.screenId` (membership in
+// `TOP_LEVEL_SCREEN_IDS` for nav-bar visibility, direct
+// `coreAppViewModel.navigateTo(variant)` calls for tab taps).
