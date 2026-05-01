@@ -651,13 +651,8 @@ fun MainScreen(
 
                     Screen.More -> {
                         MoreScreen(
-                            onSettings = { coreAppViewModel.navigateTo("Settings") },
-                            onHelp = { coreAppViewModel.navigateTo("Help") },
-                            onDevices = { coreAppViewModel.navigateTo("DeviceManagement") },
+                            coreAppViewModel = coreAppViewModel,
                             onRecovery = { currentScreen = Screen.Recovery },
-                            onArchivedContacts = { coreAppViewModel.navigateTo("ArchivedContacts") },
-                            onMergeContacts = { coreAppViewModel.navigateTo("ContactDuplicates") },
-                            onDeviceReplacement = { coreAppViewModel.navigateTo("DeviceReplacement") },
                         )
                     }
 
