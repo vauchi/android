@@ -44,7 +44,7 @@ class ExistingCodeDiagnostic(
             }
 
             val recorded =
-                audioService.receiveSignal(
+                audioService.receiveSignalSync(
                     timeoutMs = 4000u.toULong(),
                     sampleRate = sampleRate.toUInt(),
                 )
@@ -76,7 +76,7 @@ class ExistingCodeDiagnostic(
         log.add("--- Test B: Noise Floor (existing code) ---")
 
         val recorded =
-            audioService.receiveSignal(
+            audioService.receiveSignalSync(
                 timeoutMs = 5000u.toULong(),
                 sampleRate = sampleRate.toUInt(),
             )

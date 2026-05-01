@@ -13,9 +13,11 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
+import android.os.Handler
+import android.os.Looper
 import androidx.core.content.ContextCompat
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.min
 
 /**
  * Ultrasonic audio proximity verification service for Android.
@@ -45,6 +47,11 @@ class AudioProximityService(
     private var audioTrack: AudioTrack? = null
     private var cachedRecord: AudioRecord? = null
     private var cachedSampleRate: Int = 0
+    private val recordExecutor =
+        Executors.newSingleThreadExecutor { r ->
+            Thread(r, "AudioProximityRecord").apply { isDaemon = true }
+        }
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     // MARK: - Audio Methods (formerly PlatformAudioHandler)
 
@@ -201,13 +208,39 @@ class AudioProximityService(
     }
 
     /**
-     * Record audio and return samples.
-     * Returns recorded samples, or empty list on timeout/error.
+     * Record audio for [timeoutMs] and report (samples, recordedRate) via callback.
+     *
+     * [sampleRate] is core's suggested rate. If [AudioRecord] initializes at that
+     * rate the recording matches; otherwise the actual operating rate from
+     * [AudioRecord.getSampleRate] is reported so core can resample (Phase 1
+     * resampler in audio_modem). Recording runs on a dedicated background
+     * executor; the callback fires on the main thread.
      */
     fun receiveSignal(
         timeoutMs: ULong,
         sampleRate: UInt,
-    ): List<Float> {
+        completion: (List<Float>, UInt) -> Unit,
+    ) {
+        recordExecutor.execute {
+            val (samples, recordedRate) = recordSamples(timeoutMs, sampleRate)
+            mainHandler.post { completion(samples, recordedRate) }
+        }
+    }
+
+    /**
+     * Synchronous variant for the debug `ExistingCodeDiagnostic` loopback tool,
+     * which already runs on a background thread. Production code
+     * (`ExchangeCommandHandler`) uses the callback-based [receiveSignal] above.
+     */
+    fun receiveSignalSync(
+        timeoutMs: ULong,
+        sampleRate: UInt,
+    ): List<Float> = recordSamples(timeoutMs, sampleRate).first
+
+    private fun recordSamples(
+        timeoutMs: ULong,
+        sampleRate: UInt,
+    ): Pair<List<Float>, UInt> {
         val hasPermission =
             ContextCompat.checkSelfPermission(
                 context,
@@ -215,16 +248,17 @@ class AudioProximityService(
             ) == PackageManager.PERMISSION_GRANTED
 
         if (!hasPermission) {
-            return emptyList()
+            return Pair(emptyList(), 0u)
         }
 
         return try {
             val sampleRateInt = sampleRate.toInt()
-            val record = getOrCreateAudioRecord(sampleRateInt) ?: return emptyList()
+            val record = getOrCreateAudioRecord(sampleRateInt) ?: return Pair(emptyList(), 0u)
 
             audioRecord = record
             isRecording.set(true)
 
+            val recordedRate = record.sampleRate.toUInt()
             val bufferSize = record.bufferSizeInFrames
             val samples = mutableListOf<Float>()
             val buffer = FloatArray(bufferSize)
@@ -247,10 +281,10 @@ class AudioProximityService(
             // Do NOT release — keep cached for reuse
             isRecording.set(false)
 
-            samples
+            Pair(samples, recordedRate)
         } catch (e: Exception) {
             isRecording.set(false)
-            emptyList()
+            Pair(emptyList(), 0u)
         }
     }
 
