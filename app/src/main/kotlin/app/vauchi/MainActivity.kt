@@ -44,6 +44,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.vauchi.deeplink.LinkResponderSessionService
 import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.BleExchangeScreen
 import app.vauchi.ui.ContactDetailScreen
@@ -388,6 +389,24 @@ fun MainScreen(
                 }
             }
             onDeepLinkConsumed()
+        }
+    }
+
+    // Phase 2b — observe core navigation into / out of the link-mode
+    // responder screen and start / stop the
+    // [LinkResponderSessionService] accordingly. After Accept on the
+    // existing deep-link consent dialog, core navigates to
+    // `link_responder_waiting`; this side-effect picks up the
+    // transition automatically and attaches the listener to the
+    // engine-cached session. The 0×0 placement is intentional — this
+    // block is a side-effect carrier, not a UI element.
+    val linkResponderService =
+        remember(coreAppViewModel) { LinkResponderSessionService(coreAppViewModel) }
+    LaunchedEffect(coreScreen?.screenId) {
+        if (coreScreen?.screenId == "link_responder_waiting") {
+            linkResponderService.startIfNeeded()
+        } else {
+            linkResponderService.stop()
         }
     }
 

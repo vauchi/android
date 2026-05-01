@@ -340,6 +340,29 @@ class CoreAppViewModel(
         _toastUndoActionId.value = null
     }
 
+    /**
+     * Surface a transient toast directly. Mirrors the
+     * `ActionResult::ShowToast` path but lets non-action callers
+     * (e.g. [LinkResponderSessionService] reporting a typed
+     * `on_failed` reason) drop a message into the same Snackbar
+     * pipeline. Shape mirrors iOS `AppViewModel.showToast(...)`.
+     */
+    fun showToast(
+        message: String,
+        undoActionId: String? = null,
+    ) {
+        _toastMessage.value = message
+        _toastUndoActionId.value = undoActionId
+    }
+
+    /**
+     * Internal accessor for the cached `PlatformAppEngine`. Used by
+     * the `LinkResponderSessionService` Phase 2b wire-up to call
+     * `currentLinkResponderSession()` without breaking encapsulation
+     * of the rest of the engine surface.
+     */
+    internal fun platformAppEngine(): PlatformAppEngine = appEngine
+
     fun dismissAlert() {
         _alertMessage.value = null
     }
