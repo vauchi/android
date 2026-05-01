@@ -51,7 +51,6 @@ import app.vauchi.ui.ExchangeMode
 import app.vauchi.ui.ExchangeModePicker
 import app.vauchi.ui.LanguageSettingsScreen
 import app.vauchi.ui.MainViewModel
-import app.vauchi.ui.MoreScreen
 import app.vauchi.ui.MultiStageExchangeScreen
 import app.vauchi.ui.NfcExchangeScreen
 import app.vauchi.ui.QrDiagnosticScreen
@@ -209,7 +208,6 @@ enum class Screen {
     ThemeSettings,
     LanguageSettings,
     QrDiagnostic,
-    More,
 
     // Hardware-presentation wrapper (orientation lock, brightness,
     // keep-screen-on) around a `CoreScreenView`. Stays native — not
@@ -250,6 +248,7 @@ private fun coreScreenIdToVariant(id: String): String? =
         "contact_duplicates" -> "ContactDuplicates"
         "device_replacement" -> "DeviceReplacement"
         "help" -> "Help"
+        "more" -> "More"
         else -> null
     }
 
@@ -467,7 +466,6 @@ fun MainScreen(
                                 when (tab.id) {
                                     "my_info" -> currentScreen = Screen.Home
                                     "exchange" -> currentScreen = Screen.ExchangeModePicker
-                                    "more" -> currentScreen = Screen.More
                                     else -> coreAppViewModel.navigateTo(variant)
                                 }
                             },
@@ -619,7 +617,7 @@ fun MainScreen(
                     Screen.Recovery -> {
                         RecoveryScreen(
                             coreAppViewModel = coreAppViewModel,
-                            onBack = { currentScreen = Screen.More },
+                            onBack = { coreAppViewModel.navigateTo("More") },
                         )
                     }
 
@@ -649,19 +647,15 @@ fun MainScreen(
                         }
                     }
 
-                    Screen.More -> {
-                        MoreScreen(
-                            coreAppViewModel = coreAppViewModel,
-                            onRecovery = { currentScreen = Screen.Recovery },
-                        )
-                    }
-
-                    // The 7 Pure Humble UI cases collapsed in
-                    // 2026-04-30-android-activity-enum-collapse Phase 1
-                    // (Contacts, Settings, Devices, Labels, ArchivedContacts,
-                    // ContactMerge, DeviceReplacement) render through the
-                    // `if (coreVariant != null)` branch above. They no
-                    // longer have a local `Screen` enum value.
+                    // The 8 Pure Humble UI cases collapsed in
+                    // 2026-04-30-android-activity-enum-collapse Phase 1 +
+                    // 1.1 (Contacts, Settings, Devices, Labels,
+                    // ArchivedContacts, ContactMerge, DeviceReplacement,
+                    // Help) plus More (Phase 2,
+                    // 2026-05-01-more-engine-extension-android-retirement)
+                    // render through the `if (coreVariant != null)` branch
+                    // above. They no longer have a local `Screen` enum
+                    // value.
                 }
             }
         }
