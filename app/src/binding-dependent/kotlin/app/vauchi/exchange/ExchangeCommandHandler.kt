@@ -6,6 +6,7 @@ package app.vauchi.exchange
 import android.content.Context
 import android.util.Log
 import app.vauchi.ble.BleExchangeService
+import app.vauchi.proximity.AudioProximityService
 import uniffi.vauchi_platform.MobileExchangeCommand
 import uniffi.vauchi_platform.MobileExchangeHardwareEvent
 import uniffi.vauchi_platform.MobileExchangeSession
@@ -30,6 +31,8 @@ class ExchangeCommandHandler(
                 Log.e(TAG, "Failed to apply BLE event: $e")
             }
         }
+
+    private val audioService = AudioProximityService.getInstance(context)
 
     companion object {
         private const val TAG = "ExchangeCmd"
@@ -58,17 +61,17 @@ class ExchangeCommandHandler(
                 // Camera scanning handled by CameraX in the view layer
             }
 
-            // ── Audio (ultrasonic proximity) ────────────────────────
+            // ── Audio (ultrasonic proximity, ADR-031) ───────────────
             is MobileExchangeCommand.AudioEmitChallenge -> {
-                emitAudioChallenge(command.data.toList().map { it.toUByte() })
+                emitAudioChallenge(command.samples, command.sampleRate)
             }
 
             is MobileExchangeCommand.AudioListenForResponse -> {
-                listenForAudioResponse(command.timeoutMs)
+                listenForAudioResponse(command.timeoutMs, command.sampleRate)
             }
 
             is MobileExchangeCommand.AudioStop -> {
-                // Audio operations are one-shot — no persistent state to stop
+                audioService.stop()
             }
 
             // ── BLE (native Android) ──────────────────────────────────
@@ -148,17 +151,33 @@ class ExchangeCommandHandler(
         }
     }
 
-    // ── Audio ───────────────────────────────────────────────────────
+    // ── Audio (ADR-031 command/event protocol) ──────────────────────
 
-    private fun emitAudioChallenge(data: List<UByte>) {
-        // No-op: MobileProximityVerifier removed in core v0.19.21 (ADR-031).
-        // Will be re-implemented with command/event proximity protocol.
-        reportUnavailable("Audio")
+    private fun emitAudioChallenge(
+        samples: List<Float>,
+        sampleRate: UInt,
+    ) {
+        // emitSignal blocks for the playback duration, so dispatch off the
+        // command-drain thread to avoid stalling other commands.
+        Thread({
+            audioService.emitSignal(samples, sampleRate)
+        }, "AudioEmitChallenge").apply { isDaemon = true }.start()
     }
 
-    private fun listenForAudioResponse(timeoutMs: ULong) {
-        // No-op: MobileProximityVerifier removed in core v0.19.21 (ADR-031).
-        reportUnavailable("Audio")
+    private fun listenForAudioResponse(
+        timeoutMs: ULong,
+        sampleRate: UInt,
+    ) {
+        audioService.receiveSignal(timeoutMs, sampleRate) { recordedSamples, recordedRate ->
+            try {
+                session.applyHardwareEvent(
+                    MobileExchangeHardwareEvent.AudioSamplesRecorded(recordedSamples, recordedRate),
+                )
+                drainAndDispatch()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to apply audio event: $e")
+            }
+        }
     }
 
     // ── Relay Escrow ────────────────────────────────────────────────
