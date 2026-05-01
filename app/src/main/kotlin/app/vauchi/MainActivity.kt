@@ -49,7 +49,6 @@ import app.vauchi.ui.BleExchangeScreen
 import app.vauchi.ui.ContactDetailScreen
 import app.vauchi.ui.ExchangeMode
 import app.vauchi.ui.ExchangeModePicker
-import app.vauchi.ui.HelpScreen
 import app.vauchi.ui.LanguageSettingsScreen
 import app.vauchi.ui.MainViewModel
 import app.vauchi.ui.MoreScreen
@@ -209,7 +208,6 @@ enum class Screen {
     Recovery,
     ThemeSettings,
     LanguageSettings,
-    Help,
     QrDiagnostic,
     More,
 
@@ -219,12 +217,13 @@ enum class Screen {
     // apply. ADR-031 hardware-event flow is the eventual migration.
     MultiStageExchange,
     // Pure Humble UI cases (Contacts, Settings, Devices, Labels,
-    // ArchivedContacts, ContactMerge, DeviceReplacement) collapsed in
-    // Phase 1 — they render through the core-driven dispatch above
-    // the `when (currentScreen)` block. ContactDetail and LabelDetail
-    // were removed earlier (2026-04-28 audit follow-up); they navigate
-    // via `coreAppViewModel.navigateToScreenWithParam(...)` and
-    // observe `coreAppViewModel.screen` directly.
+    // ArchivedContacts, ContactMerge, DeviceReplacement, Help)
+    // collapsed in Phase 1 — they render through the core-driven
+    // dispatch above the `when (currentScreen)` block. ContactDetail
+    // and LabelDetail were removed earlier (2026-04-28 audit
+    // follow-up); they navigate via
+    // `coreAppViewModel.navigateToScreenWithParam(...)` and observe
+    // `coreAppViewModel.screen` directly.
 }
 
 /**
@@ -250,6 +249,7 @@ private fun coreScreenIdToVariant(id: String): String? =
         "archived_contacts" -> "ArchivedContacts"
         "contact_duplicates" -> "ContactDuplicates"
         "device_replacement" -> "DeviceReplacement"
+        "help" -> "Help"
         else -> null
     }
 
@@ -635,12 +635,6 @@ fun MainScreen(
                         )
                     }
 
-                    Screen.Help -> {
-                        HelpScreen(
-                            viewModel = coreAppViewModel,
-                        )
-                    }
-
                     Screen.QrDiagnostic -> {
                         // Guard with BuildConfig.DEBUG so R8 can tree-shake the
                         // real QrDiagnosticScreen out of release APKs. In release,
@@ -658,7 +652,7 @@ fun MainScreen(
                     Screen.More -> {
                         MoreScreen(
                             onSettings = { coreAppViewModel.navigateTo("Settings") },
-                            onHelp = { currentScreen = Screen.Help },
+                            onHelp = { coreAppViewModel.navigateTo("Help") },
                             onDevices = { coreAppViewModel.navigateTo("DeviceManagement") },
                             onRecovery = { currentScreen = Screen.Recovery },
                             onArchivedContacts = { coreAppViewModel.navigateTo("ArchivedContacts") },
