@@ -13,7 +13,6 @@ import app.vauchi.data.AuthenticationRequiredException
 import app.vauchi.data.DeviceNotSecureException
 import app.vauchi.data.ExchangeSessionData
 import app.vauchi.data.VauchiRepository
-import app.vauchi.ui.components.ProximityVerificationResult
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NetworkMonitor
 import kotlinx.coroutines.Dispatchers
@@ -523,16 +522,6 @@ class MainViewModel(
             }
         }
     }
-
-    // Proximity stubs — ultrasonic removed from exchange. Kept for DevicesScreen device linking.
-    val proximitySupported: StateFlow<Boolean> = MutableStateFlow(false)
-    val proximityCapability: StateFlow<String> = MutableStateFlow("none")
-
-    fun emitProximityChallenge(challenge: ByteArray): Boolean = false
-
-    fun listenForProximityResponse(timeoutMs: ULong = 5000u): ByteArray? = null
-
-    fun stopProximityVerification() {}
 
     // --- NFC exchange ---
 
@@ -1745,43 +1734,6 @@ class MainViewModel(
             // Listener callbacks will drive the next state transition
         } catch (e: Exception) {
             _deviceLinkState.value = DeviceLinkState.Failed(e.message ?: "Failed to start device link")
-        }
-    }
-
-    /**
-     * Approve the device link after proximity verification.
-     *
-     * Forwards the proximity proof to core's session. Core validates the proof
-     * cryptographically (HMAC for manual, challenge match for ultrasonic) and
-     * persists the device registry on success before firing `on_completed`.
-     */
-    suspend fun approveDeviceLink(verificationResult: ProximityVerificationResult) {
-        _deviceLinkState.value = DeviceLinkState.Completing
-        try {
-            val session =
-                currentSession
-                    ?: throw IllegalStateException("No active session — call startDeviceLinkInitiator first")
-
-            withContext(Dispatchers.IO) {
-                when (verificationResult) {
-                    is ProximityVerificationResult.Ultrasonic -> {
-                        session.confirmUltrasonic(
-                            verificationResult.challengeResponse,
-                            verificationResult.verifiedAt,
-                        )
-                    }
-
-                    is ProximityVerificationResult.Manual -> {
-                        session.confirmManual(
-                            verificationResult.confirmationCode,
-                            verificationResult.confirmedAt,
-                        )
-                    }
-                }
-            }
-            // Listener callback (on_completed / on_failed) drives terminal state
-        } catch (e: Exception) {
-            _deviceLinkState.value = DeviceLinkState.Failed(e.message ?: "Failed to complete link")
         }
     }
 
