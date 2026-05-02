@@ -7,6 +7,7 @@ package app.vauchi.ui.coreui
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -1088,6 +1089,9 @@ internal object UiFieldVisibilitySerializer : KSerializer<UiFieldVisibility> {
 
     override fun deserialize(decoder: Decoder): UiFieldVisibility {
         val jsonDecoder = decoder as JsonDecoder
+        // Visibility is security-relevant — silently defaulting to Shown
+        // would leak fields that core wanted hidden. Unknown variants
+        // throw so the screen pipeline can flag "frontend out of date".
         return when (val element = jsonDecoder.decodeJsonElement()) {
             is JsonPrimitive -> {
                 when (element.content) {
@@ -1095,8 +1099,9 @@ internal object UiFieldVisibilitySerializer : KSerializer<UiFieldVisibility> {
 
                     "Hidden" -> UiFieldVisibility.Hidden
 
-                    // Unknown visibility variant — default to Shown
-                    else -> UiFieldVisibility.Shown
+                    else -> throw SerializationException(
+                        "Unknown UiFieldVisibility variant: ${element.content}",
+                    )
                 }
             }
 
@@ -1106,14 +1111,17 @@ internal object UiFieldVisibilitySerializer : KSerializer<UiFieldVisibility> {
                 if (groups != null) {
                     UiFieldVisibility.Groups(groups)
                 } else {
-                    // Unknown object variant — default to Shown
-                    UiFieldVisibility.Shown
+                    val variant = element.keys.firstOrNull() ?: "(empty object)"
+                    throw SerializationException(
+                        "Unknown UiFieldVisibility variant: $variant",
+                    )
                 }
             }
 
-            // Unknown JSON structure — default to Shown
             else -> {
-                UiFieldVisibility.Shown
+                throw SerializationException(
+                    "Unknown UiFieldVisibility JSON structure: $element",
+                )
             }
         }
     }
