@@ -5,8 +5,11 @@
 package app.vauchi.util
 
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
+import android.os.Build
+import android.os.PersistableBundle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -15,7 +18,6 @@ import kotlinx.coroutines.launch
  * Clipboard utilities with automatic clearing for sensitive data.
  */
 object ClipboardUtils {
-
     private const val CLEAR_DELAY_MS = 30_000L // 30 seconds
 
     /**
@@ -30,10 +32,18 @@ object ClipboardUtils {
         context: Context,
         scope: CoroutineScope,
         text: String,
-        label: String = "Vauchi"
+        label: String = "Vauchi",
     ) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText(label, text)
+        // Mark the clip as sensitive so the system clipboard preview hides
+        // its contents (Android 13+ shows "•••" instead of the text).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            clip.description.extras =
+                PersistableBundle().apply {
+                    putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+                }
+        }
         clipboard.setPrimaryClip(clip)
 
         // Schedule auto-clear after 30 seconds
@@ -54,7 +64,11 @@ object ClipboardUtils {
     /**
      * Copy text to clipboard without auto-clear (for non-sensitive data).
      */
-    fun copy(context: Context, text: String, label: String = "Vauchi") {
+    fun copy(
+        context: Context,
+        text: String,
+        label: String = "Vauchi",
+    ) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText(label, text)
         clipboard.setPrimaryClip(clip)
