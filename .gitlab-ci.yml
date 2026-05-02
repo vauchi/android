@@ -40,6 +40,7 @@ include:
       - '/ci-templates/reuse.yml'
       - '/ci-templates/design-drift.yml'
       - '/ci-templates/image-lint.yml'
+      - '/ci-templates/parser-parity.yml'
       - '/ci-templates/removed-symbols.yml'
       - '/ci-templates/badges.yml'
       - '/ci-templates/github-mirror.yml'
@@ -279,6 +280,16 @@ check:design-drift:
     DESIGN_DRIFT_FILE_EXT: ".kt"
     DESIGN_DRIFT_FILE_SUFFIX: "Component"
     DESIGN_DRIFT_CASE: "pascal"
+
+# Parser-parity gate: verify the kotlinx.serialization sealed dispatch
+# in `app/src/main/kotlin/app/vauchi/ui/coreui/Models.kt` covers every
+# variant declared in core's canonical `Component` enum. Catches
+# silent drift when core adds a variant.
+check:parser-parity:
+  extends: .parser-parity-job
+  variables:
+    FRONTEND_NAME: "android"
+    PARSER_FILE: "app/src/main/kotlin/app/vauchi/ui/coreui/Models.kt"
 
 # Removed symbols: detect stale references to removed features
 check:removed-symbols:
