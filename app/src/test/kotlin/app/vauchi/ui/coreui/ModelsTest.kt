@@ -4,9 +4,11 @@
 
 package app.vauchi.ui.coreui
 
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -530,17 +532,32 @@ class ModelsTest {
     }
 
     @Test
-    fun `unknown UiFieldVisibility defaults to Shown`() {
+    fun `unknown UiFieldVisibility primitive throws SerializationException`() {
+        // Unknown variants must surface as decode errors so the screen
+        // pipeline can flag "frontend out of date" instead of silently
+        // showing fields that core wanted hidden (security-relevant).
         val input = """"Redacted""""
-        val vis = json.decodeFromString<UiFieldVisibility>(input)
-        assertTrue(vis is UiFieldVisibility.Shown)
+        val ex =
+            assertThrows(SerializationException::class.java) {
+                json.decodeFromString<UiFieldVisibility>(input)
+            }
+        assertTrue(
+            "exception message should name the unknown variant: ${ex.message}",
+            ex.message?.contains("Redacted") == true,
+        )
     }
 
     @Test
-    fun `unknown object UiFieldVisibility defaults to Shown`() {
+    fun `unknown UiFieldVisibility object throws SerializationException`() {
         val input = """{"Conditional": {"rule": "age > 18"}}"""
-        val vis = json.decodeFromString<UiFieldVisibility>(input)
-        assertTrue(vis is UiFieldVisibility.Shown)
+        val ex =
+            assertThrows(SerializationException::class.java) {
+                json.decodeFromString<UiFieldVisibility>(input)
+            }
+        assertTrue(
+            "exception message should name the unknown variant: ${ex.message}",
+            ex.message?.contains("Conditional") == true,
+        )
     }
 
     @Test
