@@ -30,7 +30,6 @@ import uniffi.vauchi_platform.MobileConsentRecord
 import uniffi.vauchi_platform.MobileConsentType
 import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactCard
-import uniffi.vauchi_platform.MobileDecoyContact
 import uniffi.vauchi_platform.MobileDeletionInfo
 import uniffi.vauchi_platform.MobileDeletionState
 import uniffi.vauchi_platform.MobileDemoContact
@@ -1153,48 +1152,6 @@ class MainViewModel(
                 showMessage("Emergency shred complete. All data destroyed.")
             } catch (e: Exception) {
                 showMessage("Failed to shred: ${e.message}")
-            }
-        }
-    }
-
-    // Decoy contacts (for duress mode plausible deniability)
-    private val _decoyContacts = MutableStateFlow<List<MobileDecoyContact>>(emptyList())
-    val decoyContacts: StateFlow<List<MobileDecoyContact>> = _decoyContacts.asStateFlow()
-
-    fun loadDecoyContacts() {
-        viewModelScope.launch {
-            _decoyContacts.value =
-                try {
-                    withContext(Dispatchers.IO) { repository.listDecoyContacts() }
-                } catch (_: Exception) {
-                    emptyList()
-                }
-        }
-    }
-
-    fun addDecoyContact(name: String) {
-        viewModelScope.launch {
-            try {
-                val cardJson = """{"id":"decoy","display_name":"$name","fields":[]}"""
-                withContext(Dispatchers.IO) {
-                    repository.addDecoyContact(name, cardJson)
-                }
-                loadDecoyContacts()
-                showMessage("Decoy contact added")
-            } catch (e: Exception) {
-                showMessage("Failed to add decoy contact: ${e.message}")
-            }
-        }
-    }
-
-    fun deleteDecoyContact(id: String) {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) { repository.deleteDecoyContact(id) }
-                loadDecoyContacts()
-                showMessage("Decoy contact removed")
-            } catch (e: Exception) {
-                showMessage("Failed to remove decoy contact: ${e.message}")
             }
         }
     }

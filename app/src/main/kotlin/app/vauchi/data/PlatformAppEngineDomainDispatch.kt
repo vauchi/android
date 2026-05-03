@@ -14,7 +14,6 @@ import uniffi.vauchi_platform.MobileConsentStatus
 import uniffi.vauchi_platform.MobileConsentType
 import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactCard
-import uniffi.vauchi_platform.MobileDecoyContact
 import uniffi.vauchi_platform.MobileDeletionInfo
 import uniffi.vauchi_platform.MobileDeliveryRecord
 import uniffi.vauchi_platform.MobileDeliverySummary
@@ -506,26 +505,6 @@ fun PlatformAppEngine.countFailedDeliveries(): UInt {
     val result = dispatchDomainCommand(DomainCommand.CountFailedDeliveries)
     return (result as? DomainCommandResult.Count)?.value
         ?: unexpectedResult("CountFailedDeliveries")
-}
-
-// ── Decoy Contacts (C5 remainder) ──
-
-fun PlatformAppEngine.addDecoyContact(
-    name: String,
-    cardJson: String,
-): String {
-    val result = dispatchDomainCommand(DomainCommand.AddDecoyContact(name, cardJson))
-    return (result as? DomainCommandResult.Text)?.value ?: unexpectedResult("AddDecoyContact")
-}
-
-fun PlatformAppEngine.listDecoyContacts(): List<MobileDecoyContact> {
-    val result = dispatchDomainCommand(DomainCommand.ListDecoyContacts)
-    return (result as? DomainCommandResult.DecoyContacts)?.contacts
-        ?: unexpectedResult("ListDecoyContacts")
-}
-
-fun PlatformAppEngine.deleteDecoyContact(id: String) {
-    dispatchDomainCommand(DomainCommand.DeleteDecoyContact(id))
 }
 
 // ── Hidden Contacts (C5 remainder) ──

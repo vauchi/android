@@ -729,19 +729,6 @@ class VauchiRepository(
         appEngine.disableDuress()
     }
 
-    // Decoy contact management (duress mode profile)
-
-    fun addDecoyContact(
-        name: String,
-        cardJson: String,
-    ): String = appEngine.addDecoyContact(name, cardJson)
-
-    fun listDecoyContacts(): List<uniffi.vauchi_platform.MobileDecoyContact> = appEngine.listDecoyContacts()
-
-    fun deleteDecoyContact(id: String) {
-        appEngine.deleteDecoyContact(id)
-    }
-
     fun hideContact(contactId: String) {
         appEngine.hideContact(contactId)
     }
