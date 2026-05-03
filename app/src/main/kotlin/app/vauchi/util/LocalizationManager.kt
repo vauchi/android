@@ -12,8 +12,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import androidx.core.content.pm.PackageInfoCompat
+import uniffi.vauchi_platform.MobileAppPreferences
 import uniffi.vauchi_platform.MobileLocale
 import uniffi.vauchi_platform.MobileLocaleInfo
+import uniffi.vauchi_platform.VauchiPlatform
 import uniffi.vauchi_platform.getAvailableLocales
 import uniffi.vauchi_platform.getLocaleInfo
 import uniffi.vauchi_platform.getString
@@ -32,6 +34,9 @@ class LocalizationManager(
 ) {
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    @Volatile
+    private var vauchi: VauchiPlatform? = null
+
     /** Currently selected locale */
     var currentLocale: MobileLocale by mutableStateOf(MobileLocale.ENGLISH)
         private set
@@ -44,17 +49,43 @@ class LocalizationManager(
     var followSystem: Boolean by mutableStateOf(true)
         private set
 
-    /** Selected locale code */
-    var selectedLocaleCode: String?
-        get() = prefs.getString(KEY_SELECTED_LOCALE, null)
-        private set(value) {
-            prefs.edit { putString(KEY_SELECTED_LOCALE, value) }
-        }
+    /** Selected locale code (`null` when following system). */
+    var selectedLocaleCode: String? by mutableStateOf(null)
+        private set
 
     init {
-        followSystem = prefs.getBoolean(KEY_FOLLOW_SYSTEM, true)
         extractAndInitLocales(context)
         loadLocales()
+    }
+
+    /**
+     * Wire this manager to the live [VauchiPlatform] instance so
+     * subsequent reads/writes flow through the core `app_preferences`
+     * row. Called once by `VauchiRepository.platform()` after the
+     * platform finishes lazy initialisation. Re-applies the locale
+     * immediately so observers pick up any value just migrated from
+     * legacy SharedPreferences.
+     */
+    fun attachVauchi(vauchi: VauchiPlatform) {
+        this.vauchi = vauchi
+        applySelectedLocale()
+    }
+
+    private fun loadPrefsOrFallback(): MobileAppPreferences {
+        val v = vauchi
+        if (v != null) {
+            try {
+                return v.appPreferences()
+            } catch (_: Exception) {
+                // Fall through to SharedPreferences-backed fallback.
+            }
+        }
+        return MobileAppPreferences(
+            themeId = null,
+            languageCode = prefs.getString(KEY_SELECTED_LOCALE, null),
+            followSystemTheme = true,
+            followSystemLanguage = prefs.getBoolean(KEY_FOLLOW_SYSTEM, true),
+        )
     }
 
     /**
@@ -122,12 +153,14 @@ class LocalizationManager(
      * Apply the currently selected locale.
      */
     fun applySelectedLocale() {
+        val p = loadPrefsOrFallback()
+        followSystem = p.followSystemLanguage
+        selectedLocaleCode = p.languageCode
         currentLocale =
             try {
-                if (!followSystem && selectedLocaleCode != null) {
-                    parseLocaleCode(selectedLocaleCode!!) ?: MobileLocale.ENGLISH
+                if (!p.followSystemLanguage && p.languageCode != null) {
+                    parseLocaleCode(p.languageCode!!) ?: MobileLocale.ENGLISH
                 } else {
-                    // Use system language
                     val systemLanguage = Locale.getDefault().language
                     parseLocaleCode(systemLanguage) ?: MobileLocale.ENGLISH
                 }
@@ -141,9 +174,7 @@ class LocalizationManager(
      * Select a locale by code.
      */
     fun selectLocale(code: String) {
-        followSystem = false
-        prefs.edit { putBoolean(KEY_FOLLOW_SYSTEM, false) }
-        selectedLocaleCode = code
+        persist(languageCode = code, followSystemLanguage = false)
         applySelectedLocale()
     }
 
@@ -165,10 +196,35 @@ class LocalizationManager(
      * Reset to follow system language.
      */
     fun resetToSystem() {
-        followSystem = true
-        prefs.edit { putBoolean(KEY_FOLLOW_SYSTEM, true) }
-        selectedLocaleCode = null
+        persist(languageCode = null, followSystemLanguage = true)
         applySelectedLocale()
+    }
+
+    private fun persist(
+        languageCode: String?,
+        followSystemLanguage: Boolean,
+    ) {
+        val v = vauchi
+        if (v != null) {
+            try {
+                val current = v.appPreferences()
+                v.setAppPreferences(
+                    MobileAppPreferences(
+                        themeId = current.themeId,
+                        languageCode = languageCode,
+                        followSystemTheme = current.followSystemTheme,
+                        followSystemLanguage = followSystemLanguage,
+                    ),
+                )
+                return
+            } catch (_: Exception) {
+                // Fall through to SharedPreferences-backed fallback.
+            }
+        }
+        prefs.edit {
+            putBoolean(KEY_FOLLOW_SYSTEM, followSystemLanguage)
+            if (languageCode == null) remove(KEY_SELECTED_LOCALE) else putString(KEY_SELECTED_LOCALE, languageCode)
+        }
     }
 
     /**

@@ -11,18 +11,35 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.edit
+import uniffi.vauchi_platform.MobileAppPreferences
 import uniffi.vauchi_platform.MobileTheme
 import uniffi.vauchi_platform.MobileThemeMode
+import uniffi.vauchi_platform.VauchiPlatform
 import uniffi.vauchi_platform.getAvailableThemes
 import uniffi.vauchi_platform.getDefaultThemeId
 import uniffi.vauchi_platform.getTheme
 
 /**
  * Manages theme selection and application.
- * Integrates with vauchi-platform for theme definitions.
+ *
+ * Source of truth is the core `app_preferences` row, accessed through
+ * [VauchiPlatform.appPreferences] / [VauchiPlatform.setAppPreferences].
+ * The Settings screen `Component::Dropdown` for theme writes the same
+ * row via the AppEngine intercept, so this manager and the inline
+ * dropdown stay in sync without a back-channel.
+ *
+ * Before [attachVauchi] runs (cold start, before VauchiRepository
+ * initialises), the manager falls back to legacy SharedPreferences and
+ * the system default theme — the Compose theme provider recomposes
+ * once the row becomes available.
  */
-class ThemeManager(context: Context) {
+class ThemeManager(
+    context: Context,
+) {
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    @Volatile
+    private var vauchi: VauchiPlatform? = null
 
     /** Currently selected theme */
     var currentTheme: MobileTheme? by mutableStateOf(null)
@@ -36,15 +53,11 @@ class ThemeManager(context: Context) {
     var followSystem: Boolean by mutableStateOf(true)
         private set
 
-    /** Selected theme ID */
-    var selectedThemeId: String?
-        get() = prefs.getString(KEY_SELECTED_THEME, null)
-        private set(value) {
-            prefs.edit { putString(KEY_SELECTED_THEME, value) }
-        }
+    /** Selected theme ID (`null` when following system). */
+    var selectedThemeId: String? by mutableStateOf(null)
+        private set
 
     init {
-        followSystem = prefs.getBoolean(KEY_FOLLOW_SYSTEM, true)
         loadThemes()
     }
 
@@ -58,17 +71,51 @@ class ThemeManager(context: Context) {
     }
 
     /**
+     * Wire this manager to the live [VauchiPlatform] instance so
+     * subsequent reads/writes flow through the core `app_preferences`
+     * row. Called once by `VauchiRepository.platform()` after the
+     * platform finishes lazy initialisation. Re-applies the theme
+     * immediately so Compose theme observers pick up any value just
+     * migrated from legacy SharedPreferences.
+     */
+    fun attachVauchi(vauchi: VauchiPlatform) {
+        this.vauchi = vauchi
+        applySelectedTheme(isDarkMode = false)
+    }
+
+    private fun loadPrefsOrFallback(): MobileAppPreferences {
+        val v = vauchi
+        if (v != null) {
+            try {
+                return v.appPreferences()
+            } catch (_: Exception) {
+                // Fall through to SharedPreferences-backed fallback.
+            }
+        }
+        return MobileAppPreferences(
+            themeId = prefs.getString(KEY_SELECTED_THEME, null),
+            languageCode = null,
+            followSystemTheme = prefs.getBoolean(KEY_FOLLOW_SYSTEM, true),
+            followSystemLanguage = true,
+        )
+    }
+
+    /**
      * Apply the currently selected theme.
      * @param isDarkMode Current system dark mode setting
      */
     fun applySelectedTheme(isDarkMode: Boolean) {
+        val p = loadPrefsOrFallback()
+        followSystem = p.followSystemTheme
+        selectedThemeId = p.themeId
         try {
-            currentTheme = if (!followSystem && selectedThemeId != null) {
-                getTheme(selectedThemeId!!)
-            } else {
-                val defaultId = getDefaultThemeId(isDarkMode)
-                getTheme(defaultId)
-            }
+            currentTheme =
+                if (!p.followSystemTheme && p.themeId != null) {
+                    getTheme(p.themeId!!)
+                } else {
+                    val defaultId = getDefaultThemeId(isDarkMode)
+                    getTheme(defaultId)
+                }
         } catch (e: UnsatisfiedLinkError) {
             currentTheme = null
         }
@@ -77,10 +124,11 @@ class ThemeManager(context: Context) {
     /**
      * Select a theme by ID.
      */
-    fun selectTheme(themeId: String, isDarkMode: Boolean) {
-        followSystem = false
-        prefs.edit { putBoolean(KEY_FOLLOW_SYSTEM, false) }
-        selectedThemeId = themeId
+    fun selectTheme(
+        themeId: String,
+        isDarkMode: Boolean,
+    ) {
+        persist(themeId = themeId, followSystemTheme = false)
         applySelectedTheme(isDarkMode)
     }
 
@@ -88,10 +136,35 @@ class ThemeManager(context: Context) {
      * Reset to follow system appearance.
      */
     fun resetToSystem(isDarkMode: Boolean) {
-        followSystem = true
-        prefs.edit { putBoolean(KEY_FOLLOW_SYSTEM, true) }
-        selectedThemeId = null
+        persist(themeId = null, followSystemTheme = true)
         applySelectedTheme(isDarkMode)
+    }
+
+    private fun persist(
+        themeId: String?,
+        followSystemTheme: Boolean,
+    ) {
+        val v = vauchi
+        if (v != null) {
+            try {
+                val current = v.appPreferences()
+                v.setAppPreferences(
+                    MobileAppPreferences(
+                        themeId = themeId,
+                        languageCode = current.languageCode,
+                        followSystemTheme = followSystemTheme,
+                        followSystemLanguage = current.followSystemLanguage,
+                    ),
+                )
+                return
+            } catch (_: Exception) {
+                // Fall through to SharedPreferences-backed fallback.
+            }
+        }
+        prefs.edit {
+            putBoolean(KEY_FOLLOW_SYSTEM, followSystemTheme)
+            if (themeId == null) remove(KEY_SELECTED_THEME) else putString(KEY_SELECTED_THEME, themeId)
+        }
     }
 
     /** Get dark themes */
@@ -110,11 +183,10 @@ class ThemeManager(context: Context) {
         @Volatile
         private var instance: ThemeManager? = null
 
-        fun getInstance(context: Context): ThemeManager {
-            return instance ?: synchronized(this) {
+        fun getInstance(context: Context): ThemeManager =
+            instance ?: synchronized(this) {
                 instance ?: ThemeManager(context.applicationContext).also { instance = it }
             }
-        }
     }
 }
 
