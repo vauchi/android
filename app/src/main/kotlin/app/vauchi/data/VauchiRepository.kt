@@ -789,23 +789,6 @@ class VauchiRepository(
         appEngine.setProposalTrusted(contactId, trusted)
     }
 
-    // Panic Shred operations
-
-    /**
-     * Execute emergency panic shred — destroys all data immediately
-     */
-    fun panicShred() = platform().panicShred()
-
-    fun softShred(): uniffi.vauchi_platform.MobileShredToken = platform().softShred()
-
-    fun cancelShred(token: uniffi.vauchi_platform.MobileShredToken) {
-        platform().cancelShred(token)
-    }
-
-    fun hardShred(token: uniffi.vauchi_platform.MobileShredToken): uniffi.vauchi_platform.MobileShredReport = platform().hardShred(token)
-
-    fun shredStatus(): uniffi.vauchi_platform.MobileShredStatus = platform().shredStatus()
-
     // Emergency Broadcast operations
 
     /**
