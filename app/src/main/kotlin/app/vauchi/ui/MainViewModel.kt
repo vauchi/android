@@ -23,25 +23,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uniffi.vauchi_platform.DeviceLinkSessionListener
 import uniffi.vauchi_platform.MobileApplyResult
 import uniffi.vauchi_platform.MobileBiometricUnlockOutcome
-import uniffi.vauchi_platform.MobileConsentRecord
 import uniffi.vauchi_platform.MobileConsentType
 import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactCard
-import uniffi.vauchi_platform.MobileDeletionInfo
-import uniffi.vauchi_platform.MobileDeletionState
-import uniffi.vauchi_platform.MobileDemoContact
-import uniffi.vauchi_platform.MobileDemoContactState
-import uniffi.vauchi_platform.MobileDeviceLinkSession
-import uniffi.vauchi_platform.MobileDuplicatePair
 import uniffi.vauchi_platform.MobileException
 import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileGdprExport
-import uniffi.vauchi_platform.MobileRecoveryClaim
 import uniffi.vauchi_platform.MobileRecoveryProgress
-import uniffi.vauchi_platform.MobileRecoveryVoucher
 import uniffi.vauchi_platform.MobileSocialNetwork
 import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.MobileUpdateStatus
@@ -124,42 +114,6 @@ class MainViewModel(
     private val _lastSyncTime = MutableStateFlow<Instant?>(null)
     val lastSyncTime: StateFlow<Instant?> = _lastSyncTime.asStateFlow()
 
-    // Demo contact state (for users with no contacts)
-    private val _demoContact = MutableStateFlow<MobileDemoContact?>(null)
-    val demoContact: StateFlow<MobileDemoContact?> = _demoContact.asStateFlow()
-
-    private val _demoContactState = MutableStateFlow<MobileDemoContactState?>(null)
-    val demoContactState: StateFlow<MobileDemoContactState?> = _demoContactState.asStateFlow()
-
-    // Visibility labels (for organizing contacts)
-    // Based on: features/visibility_labels.feature
-    private val _visibilityLabels = MutableStateFlow<List<MobileVisibilityLabel>>(emptyList())
-    val visibilityLabels: StateFlow<List<MobileVisibilityLabel>> = _visibilityLabels.asStateFlow()
-
-    private val _suggestedLabels = MutableStateFlow<List<String>>(emptyList())
-    val suggestedLabels: StateFlow<List<String>> = _suggestedLabels.asStateFlow()
-
-    // Accessibility settings
-    private val _reduceMotion = MutableStateFlow(false)
-    val reduceMotion: StateFlow<Boolean> = _reduceMotion.asStateFlow()
-
-    private val _highContrast = MutableStateFlow(false)
-    val highContrast: StateFlow<Boolean> = _highContrast.asStateFlow()
-
-    private val _largeTouchTargets = MutableStateFlow(false)
-    val largeTouchTargets: StateFlow<Boolean> = _largeTouchTargets.asStateFlow()
-
-    // Aha moments (progressive onboarding)
-    private val _currentAhaMoment = MutableStateFlow<uniffi.vauchi_platform.MobileAhaMoment?>(null)
-    val currentAhaMoment: StateFlow<uniffi.vauchi_platform.MobileAhaMoment?> = _currentAhaMoment.asStateFlow()
-
-    // GDPR state
-    private val _deletionState = MutableStateFlow<MobileDeletionInfo?>(null)
-    val deletionState: StateFlow<MobileDeletionInfo?> = _deletionState.asStateFlow()
-
-    private val _consentRecords = MutableStateFlow<List<MobileConsentRecord>>(emptyList())
-    val consentRecords: StateFlow<List<MobileConsentRecord>> = _consentRecords.asStateFlow()
-
     fun clearSnackbar() {
         _snackbarMessage.value = null
     }
@@ -174,7 +128,6 @@ class MainViewModel(
 
     init {
         checkIdentity()
-        loadAccessibilitySettingsSafely()
         observeNetworkStateForCore()
     }
 
@@ -198,28 +151,15 @@ class MainViewModel(
         }
     }
 
-    private fun loadAccessibilitySettingsSafely() {
-        try {
-            _reduceMotion.value = repository.getReduceMotion()
-            _highContrast.value = repository.getHighContrast()
-            _largeTouchTargets.value = repository.getLargeTouchTargets()
-        } catch (_: Exception) {
-            // Defaults already set; checkIdentity() will handle the error
-        }
-    }
-
     fun setReduceMotion(enabled: Boolean) {
-        _reduceMotion.value = enabled
         repository.setReduceMotion(enabled)
     }
 
     fun setHighContrast(enabled: Boolean) {
-        _highContrast.value = enabled
         repository.setHighContrast(enabled)
     }
 
     fun setLargeTouchTargets(enabled: Boolean) {
-        _largeTouchTargets.value = enabled
         repository.setLargeTouchTargets(enabled)
     }
 
@@ -327,8 +267,6 @@ class MainViewModel(
                     )
                 }
             _uiState.value = UiState.Ready(displayName, publicId, card, contactCount)
-            // Load demo contact state
-            loadDemoContact()
         } catch (e: DeviceNotSecureException) {
             _uiState.value =
                 UiState.Error(
@@ -641,46 +579,10 @@ class MainViewModel(
         }
     }
 
-    /**
-     * Returns the footer-button action id (`"delete_contact"` or
-     * `"archive_contact"`) for the given contact. Views dispatch on
-     * the returned id so they never branch on the imported-vs-exchanged
-     * distinction in the view layer (§1A pure-renderer rule).
-     */
-    suspend fun contactDetailFooterActionId(contactId: String): String =
-        withContext(Dispatchers.IO) {
-            repository.contactDetailFooterActionId(contactId)
-        }
-
-    /**
-     * G4 (ADR-021/043): typed contact-detail view-state.
-     */
-    suspend fun contactDetailViewState(contactId: String): uniffi.vauchi_platform.MobileContactDetailViewState =
-        withContext(Dispatchers.IO) {
-            repository.contactDetailViewState(contactId)
-        }
-
     suspend fun listArchivedContacts(): List<MobileContact> =
         withContext(Dispatchers.IO) {
             repository.listArchivedContacts()
         }
-
-    fun importContactsFromVcf(data: ByteArray) {
-        viewModelScope.launch {
-            try {
-                val result =
-                    withContext(Dispatchers.IO) {
-                        repository.importContactsFromVcf(data)
-                    }
-                loadUserData()
-                val msg = "${result.imported} contact(s) imported"
-                val extra = if (result.skipped > 0u) ", ${result.skipped} skipped" else ""
-                showMessage(msg + extra)
-            } catch (e: Exception) {
-                showMessage("Import failed: ${e.message}")
-            }
-        }
-    }
 
     suspend fun getContact(id: String): MobileContact? =
         try {
@@ -703,39 +605,6 @@ class MainViewModel(
             false
         }
 
-    suspend fun trustContactForRecovery(id: String): Boolean =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.trustContactForRecovery(id)
-            }
-            showMessage("Contact trusted for recovery")
-            true
-        } catch (e: Exception) {
-            showMessage("Failed to trust contact: ${e.message}")
-            false
-        }
-
-    suspend fun untrustContactForRecovery(id: String): Boolean =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.untrustContactForRecovery(id)
-            }
-            showMessage("Recovery trust removed")
-            true
-        } catch (e: Exception) {
-            showMessage("Failed to remove trust: ${e.message}")
-            false
-        }
-
-    suspend fun getOwnPublicKey(): String? =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.getPublicKey()
-            }
-        } catch (e: Exception) {
-            null
-        }
-
     suspend fun getOwnFingerprint(): String? =
         try {
             withContext(Dispatchers.IO) {
@@ -753,27 +622,6 @@ class MainViewModel(
         } catch (e: Exception) {
             null
         }
-
-    fun setFieldVisibility(
-        contactId: String,
-        fieldLabel: String,
-        visible: Boolean,
-    ) {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    if (visible) {
-                        repository.showFieldToContact(contactId, fieldLabel)
-                    } else {
-                        repository.hideFieldFromContact(contactId, fieldLabel)
-                    }
-                }
-                showMessage(if (visible) "Field shown to contact" else "Field hidden from contact")
-            } catch (e: Exception) {
-                showMessage("Failed to update visibility: ${e.message}")
-            }
-        }
-    }
 
     suspend fun isFieldVisibleToContact(
         contactId: String,
@@ -964,11 +812,9 @@ class MainViewModel(
     fun tryTriggerAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType) {
         viewModelScope.launch {
             try {
-                val moment =
-                    withContext(Dispatchers.IO) {
-                        repository.tryTriggerAhaMoment(momentType)
-                    }
-                _currentAhaMoment.value = moment
+                withContext(Dispatchers.IO) {
+                    repository.tryTriggerAhaMoment(momentType)
+                }
             } catch (e: Exception) {
                 // Silently fail - aha moments are non-critical
             }
@@ -981,19 +827,13 @@ class MainViewModel(
     ) {
         viewModelScope.launch {
             try {
-                val moment =
-                    withContext(Dispatchers.IO) {
-                        repository.tryTriggerAhaMomentWithContext(momentType, context)
-                    }
-                _currentAhaMoment.value = moment
+                withContext(Dispatchers.IO) {
+                    repository.tryTriggerAhaMomentWithContext(momentType, context)
+                }
             } catch (e: Exception) {
                 // Silently fail - aha moments are non-critical
             }
         }
-    }
-
-    fun dismissAhaMoment() {
-        _currentAhaMoment.value = null
     }
 
     fun hasSeenAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType): Boolean =
@@ -1001,13 +841,6 @@ class MainViewModel(
             repository.hasSeenAhaMoment(momentType)
         } catch (e: Exception) {
             true // Default to "seen" on error to avoid repeated triggers
-        }
-
-    fun ahaMomentsProgress(): Pair<Int, Int> =
-        try {
-            Pair(repository.ahaMomentsSeenCount().toInt(), repository.ahaMomentsTotalCount().toInt())
-        } catch (e: Exception) {
-            Pair(0, 0)
         }
 
     fun resetAhaMoments() {
@@ -1048,15 +881,6 @@ class MainViewModel(
     private val _isDuressEnabled = MutableStateFlow(false)
     val isDuressEnabled: StateFlow<Boolean> = _isDuressEnabled.asStateFlow()
 
-    fun loadDuressStatus() {
-        _isDuressEnabled.value =
-            try {
-                repository.isDuressEnabled()
-            } catch (e: Exception) {
-                false
-            }
-    }
-
     fun setupDuressPassword(pin: String) {
         viewModelScope.launch {
             try {
@@ -1089,15 +913,6 @@ class MainViewModel(
     private val _isPasswordEnabled = MutableStateFlow(false)
     val isPasswordEnabled: StateFlow<Boolean> = _isPasswordEnabled.asStateFlow()
 
-    fun loadPasswordState() {
-        _isPasswordEnabled.value =
-            try {
-                repository.isPasswordEnabled()
-            } catch (_: Exception) {
-                false
-            }
-    }
-
     fun setupAppPassword(password: String) {
         viewModelScope.launch {
             try {
@@ -1114,15 +929,6 @@ class MainViewModel(
     private val _emergencyConfigured = MutableStateFlow(false)
     val emergencyConfigured: StateFlow<Boolean> = _emergencyConfigured.asStateFlow()
 
-    fun loadEmergencyConfig() {
-        _emergencyConfigured.value =
-            try {
-                repository.getEmergencyConfig() != null
-            } catch (e: Exception) {
-                false
-            }
-    }
-
     fun configureEmergencyBroadcast(
         contactIds: List<String>,
         message: String,
@@ -1137,19 +943,6 @@ class MainViewModel(
                 showMessage("Emergency broadcast configured")
             } catch (e: Exception) {
                 showMessage("Failed to configure: ${e.message}")
-            }
-        }
-    }
-
-    fun sendEmergencyBroadcast() {
-        viewModelScope.launch {
-            try {
-                withContext<Unit>(Dispatchers.IO) {
-                    repository.sendEmergencyBroadcast()
-                }
-                showMessage("Emergency broadcast sent")
-            } catch (e: Exception) {
-                showMessage("Failed to send: ${e.message}")
             }
         }
     }
@@ -1188,15 +981,6 @@ class MainViewModel(
             null
         }
 
-    suspend fun getRecoveryProof(): String? =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.getRecoveryProof()
-            }
-        } catch (e: Exception) {
-            null
-        }
-
     // Demo contact operations
     // Based on: features/demo_contact.feature
 
@@ -1207,33 +991,11 @@ class MainViewModel(
     fun initDemoContactIfNeeded() {
         viewModelScope.launch {
             try {
-                val demo =
-                    withContext(Dispatchers.IO) {
-                        repository.initDemoContactIfNeeded()
-                    }
-                _demoContact.value = demo
-                _demoContactState.value = repository.getDemoContactState()
+                withContext(Dispatchers.IO) {
+                    repository.initDemoContactIfNeeded()
+                }
             } catch (e: Exception) {
                 // Silently fail - demo is optional
-            }
-        }
-    }
-
-    /**
-     * Load the current demo contact state
-     */
-    fun loadDemoContact() {
-        viewModelScope.launch {
-            try {
-                val demo =
-                    withContext(Dispatchers.IO) {
-                        repository.getDemoContact()
-                    }
-                _demoContact.value = demo
-                _demoContactState.value = repository.getDemoContactState()
-            } catch (e: Exception) {
-                _demoContact.value = null
-                _demoContactState.value = repository.getDemoContactState()
             }
         }
     }
@@ -1247,31 +1009,8 @@ class MainViewModel(
                 withContext(Dispatchers.IO) {
                     repository.dismissDemoContact()
                 }
-                _demoContact.value = null
-                _demoContactState.value = repository.getDemoContactState()
             } catch (e: Exception) {
                 showMessage("Failed to dismiss demo: ${e.message}")
-            }
-        }
-    }
-
-    /**
-     * Auto-remove demo contact after first real exchange.
-     * Called automatically after a successful exchange.
-     */
-    private fun autoRemoveDemoContact() {
-        viewModelScope.launch {
-            try {
-                val removed =
-                    withContext(Dispatchers.IO) {
-                        repository.autoRemoveDemoContact()
-                    }
-                if (removed) {
-                    _demoContact.value = null
-                    _demoContactState.value = repository.getDemoContactState()
-                }
-            } catch (e: Exception) {
-                // Silently fail
             }
         }
     }
@@ -1282,12 +1021,9 @@ class MainViewModel(
     fun restoreDemoContact() {
         viewModelScope.launch {
             try {
-                val demo =
-                    withContext(Dispatchers.IO) {
-                        repository.restoreDemoContact()
-                    }
-                _demoContact.value = demo
-                _demoContactState.value = repository.getDemoContactState()
+                withContext(Dispatchers.IO) {
+                    repository.restoreDemoContact()
+                }
                 showMessage("Demo contact restored")
             } catch (e: Exception) {
                 showMessage("Failed to restore demo: ${e.message}")
@@ -1301,12 +1037,9 @@ class MainViewModel(
     fun triggerDemoUpdate() {
         viewModelScope.launch {
             try {
-                val demo =
-                    withContext(Dispatchers.IO) {
-                        repository.triggerDemoUpdate()
-                    }
-                _demoContact.value = demo
-                _demoContactState.value = repository.getDemoContactState()
+                withContext(Dispatchers.IO) {
+                    repository.triggerDemoUpdate()
+                }
             } catch (e: Exception) {
                 // Silently fail
             }
@@ -1327,24 +1060,6 @@ class MainViewModel(
     // Based on: features/visibility_labels.feature
 
     /**
-     * Load all visibility labels
-     */
-    fun loadLabels() {
-        viewModelScope.launch {
-            try {
-                val labels =
-                    withContext(Dispatchers.IO) {
-                        repository.listLabels()
-                    }
-                _visibilityLabels.value = labels
-                _suggestedLabels.value = repository.getSuggestedLabels()
-            } catch (e: Exception) {
-                _visibilityLabels.value = emptyList()
-            }
-        }
-    }
-
-    /**
      * Create a new visibility label
      */
     fun createLabel(
@@ -1358,7 +1073,6 @@ class MainViewModel(
                     withContext(Dispatchers.IO) {
                         repository.createLabel(name)
                     }
-                loadLabels()
                 onSuccess(label)
                 showMessage("Label \"$name\" created")
             } catch (e: Exception) {
@@ -1392,7 +1106,6 @@ class MainViewModel(
                 withContext(Dispatchers.IO) {
                     repository.renameLabel(labelId, newName)
                 }
-                loadLabels()
                 onSuccess()
                 showMessage("Label renamed to \"$newName\"")
             } catch (e: Exception) {
@@ -1415,7 +1128,6 @@ class MainViewModel(
                 withContext(Dispatchers.IO) {
                     repository.deleteLabel(labelId)
                 }
-                loadLabels()
                 onSuccess()
                 showMessage("Label deleted")
             } catch (e: Exception) {
@@ -1425,223 +1137,8 @@ class MainViewModel(
         }
     }
 
-    /**
-     * Add contact to a label
-     */
-    fun addContactToLabel(
-        labelId: String,
-        contactId: String,
-        onSuccess: () -> Unit = {},
-    ) {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    repository.addContactToLabel(labelId, contactId)
-                }
-                loadLabels()
-                onSuccess()
-            } catch (e: Exception) {
-                showMessage("Failed to add contact to label: ${e.message}")
-            }
-        }
-    }
-
-    /**
-     * Remove contact from a label
-     */
-    fun removeContactFromLabel(
-        labelId: String,
-        contactId: String,
-        onSuccess: () -> Unit = {},
-    ) {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    repository.removeContactFromLabel(labelId, contactId)
-                }
-                loadLabels()
-                onSuccess()
-            } catch (e: Exception) {
-                showMessage("Failed to remove contact from label: ${e.message}")
-            }
-        }
-    }
-
-    /**
-     * Get all labels for a contact
-     */
-    fun getLabelsForContact(contactId: String): List<MobileVisibilityLabel> =
-        try {
-            repository.getLabelsForContact(contactId)
-        } catch (e: Exception) {
-            emptyList()
-        }
-
-    /**
-     * Set field visibility for a label
-     */
-    fun setLabelFieldVisibility(
-        labelId: String,
-        fieldId: String,
-        visible: Boolean,
-        onSuccess: () -> Unit = {},
-    ) {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    repository.setLabelFieldVisibility(labelId, fieldId, visible)
-                }
-                loadLabels()
-                onSuccess()
-            } catch (e: Exception) {
-                showMessage("Failed to update field visibility: ${e.message}")
-            }
-        }
-    }
-
     // MARK: - Device Management
     // Based on: features/device_management.feature
-
-    // MARK: - Device Linking Protocol
-
-    sealed class DeviceLinkState {
-        object Idle : DeviceLinkState()
-
-        object GeneratingQR : DeviceLinkState()
-
-        data class WaitingForRequest(
-            val qrData: String,
-            val expiresAt: ULong,
-        ) : DeviceLinkState()
-
-        object Expired : DeviceLinkState()
-
-        data class ConfirmingDevice(
-            val deviceName: String,
-            val confirmationCode: String,
-            val challenge: ByteArray,
-        ) : DeviceLinkState()
-
-        data class VerifyingProximity(
-            val challenge: ByteArray,
-            val confirmationCode: String,
-        ) : DeviceLinkState()
-
-        object Completing : DeviceLinkState()
-
-        object Success : DeviceLinkState()
-
-        data class Failed(
-            val error: String,
-        ) : DeviceLinkState()
-    }
-
-    private val _deviceLinkState = MutableStateFlow<DeviceLinkState>(DeviceLinkState.Idle)
-    val deviceLinkState: StateFlow<DeviceLinkState> = _deviceLinkState.asStateFlow()
-
-    private var currentSession: MobileDeviceLinkSession? = null
-
-    /**
-     * Listener bridge — forwards core's cycle-thread events onto the
-     * UI state flow. Holds a weak-ish reference (cancel resets the session,
-     * which detaches the listener slot) so the cycle thread can finish its
-     * `on_session_ended` emit without leaking the ViewModel.
-     */
-    private inner class DeviceLinkSessionBridge : DeviceLinkSessionListener {
-        override fun onQrReady(
-            qrData: String,
-            expiresAtUnix: ULong,
-        ) {
-            _deviceLinkState.value = DeviceLinkState.WaitingForRequest(qrData, expiresAtUnix)
-        }
-
-        override fun onConfirmationRequired(
-            deviceName: String,
-            confirmationCode: String,
-            identityFingerprint: String,
-            proximityChallenge: ByteArray,
-        ) {
-            _deviceLinkState.value =
-                DeviceLinkState.ConfirmingDevice(
-                    deviceName = deviceName,
-                    confirmationCode = confirmationCode,
-                    challenge = proximityChallenge,
-                )
-        }
-
-        override fun onRequestSent(confirmationCode: String) {
-            // Phase 1 responder-only — never fires from initiator cycle
-        }
-
-        override fun onCompleted(
-            deviceName: String,
-            deviceIndex: UInt,
-        ) {
-            _deviceLinkState.value = DeviceLinkState.Success
-        }
-
-        override fun onFailed(reason: String) {
-            _deviceLinkState.value =
-                if (reason == "qr_expired") DeviceLinkState.Expired else DeviceLinkState.Failed(reason)
-        }
-
-        override fun onSessionEnded() {
-            // Final emit — idempotent reset if neither success/failed/expired fired
-            when (_deviceLinkState.value) {
-                is DeviceLinkState.Success,
-                is DeviceLinkState.Failed,
-                is DeviceLinkState.Expired,
-                -> { /* terminal — leave as-is */ }
-
-                else -> {
-                    _deviceLinkState.value = DeviceLinkState.Idle
-                }
-            }
-        }
-    }
-
-    /**
-     * Start the device link protocol as initiator.
-     *
-     * Core's cycle thread owns QR generation, relay listening, and protocol
-     * transitions. This method just primes the session; the listener bridge
-     * receives all subsequent state changes asynchronously.
-     */
-    suspend fun startDeviceLinkInitiator() {
-        _deviceLinkState.value = DeviceLinkState.GeneratingQR
-        try {
-            val session =
-                withContext(Dispatchers.IO) {
-                    repository.createDeviceLinkSessionInitiator()
-                }
-            currentSession = session
-            session.setListener(DeviceLinkSessionBridge())
-            session.start()
-            // Listener callbacks will drive the next state transition
-        } catch (e: Exception) {
-            _deviceLinkState.value = DeviceLinkState.Failed(e.message ?: "Failed to start device link")
-        }
-    }
-
-    /**
-     * Cancel the device link protocol.
-     */
-    fun cancelDeviceLink() {
-        currentSession?.let { runCatching { it.cancel() } }
-        _deviceLinkState.value = DeviceLinkState.Idle
-        currentSession = null
-    }
-
-    /**
-     * Transition to expired state when the QR code times out.
-     *
-     * Retained for backward compatibility with the view layer; new code should
-     * rely on the listener's `on_failed("qr_expired")` callback instead. Core
-     * owns the expiry clock now (no frontend timer needed).
-     */
-    fun setDeviceLinkExpired() {
-        _deviceLinkState.value = DeviceLinkState.Expired
-    }
 
     // MARK: - GDPR Operations
 
@@ -1658,11 +1155,9 @@ class MainViewModel(
     fun scheduleIdentityDeletion() {
         viewModelScope.launch {
             try {
-                val info =
-                    withContext(Dispatchers.IO) {
-                        repository.scheduleIdentityDeletion()
-                    }
-                _deletionState.value = info
+                withContext(Dispatchers.IO) {
+                    repository.scheduleIdentityDeletion()
+                }
             } catch (e: Exception) {
                 showMessage("Schedule failed: ${e.message}")
             }
@@ -1676,26 +1171,8 @@ class MainViewModel(
                 withContext(Dispatchers.IO) {
                     repository.cancelIdentityDeletion()
                 }
-                _deletionState.value =
-                    withContext(Dispatchers.IO) {
-                        repository.getDeletionState()
-                    }
             } catch (e: Exception) {
                 showMessage("Cancel failed: ${e.message}")
-            }
-        }
-    }
-
-    /** Load current deletion state. */
-    fun loadDeletionState() {
-        viewModelScope.launch {
-            try {
-                _deletionState.value =
-                    withContext(Dispatchers.IO) {
-                        repository.getDeletionState()
-                    }
-            } catch (e: Exception) {
-                // Silently handle — state stays null
             }
         }
     }
@@ -1707,7 +1184,6 @@ class MainViewModel(
                 withContext(Dispatchers.IO) {
                     repository.grantConsent(type)
                 }
-                loadConsentRecords()
             } catch (e: Exception) {
                 showMessage("Grant failed: ${e.message}")
             }
@@ -1721,23 +1197,8 @@ class MainViewModel(
                 withContext(Dispatchers.IO) {
                     repository.revokeConsent(type)
                 }
-                loadConsentRecords()
             } catch (e: Exception) {
                 showMessage("Revoke failed: ${e.message}")
-            }
-        }
-    }
-
-    /** Load all consent records. */
-    fun loadConsentRecords() {
-        viewModelScope.launch {
-            try {
-                _consentRecords.value =
-                    withContext(Dispatchers.IO) {
-                        repository.getConsentRecords()
-                    }
-            } catch (e: Exception) {
-                // Silently handle
             }
         }
     }
