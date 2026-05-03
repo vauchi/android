@@ -65,11 +65,12 @@ class AccessibilityTest {
     // `core/vauchi-app/tests/reachability/groups.rs`.
 
     // Note: native DeliveryStatusScreen accessibility tests removed in
-    // 2026-04-28 Pure Humble UI retirement. Delivery status now renders
-    // through `CoreScreenView("DeliveryStatus")` against core's
-    // `DeliveryStatusEngine`, which emits ScreenModel a11y labels via
-    // ScreenAction.a11y / Component.a11y. The core-driven accessibility
-    // contract is exercised by `coreScreenView_appliesA11yLabelsFromModel`
+    // 2026-04-28 Pure Humble UI retirement. The Android wrapper itself
+    // was retired in `vauchi/android!371` (Phase 4a residual) — it had
+    // zero callers and was never wired into `coreScreenIdToVariant`,
+    // so the screen is unreachable from Android until a frontend route
+    // revives it. Core-side a11y for `DeliveryStatusEngine` continues
+    // to be exercised by `coreScreenView_appliesA11yLabelsFromModel`
     // below and by `core/vauchi-app/tests/reachability/delivery_status.rs`.
 
     // MARK: - Core-Driven Accessibility (ScreenRenderer)

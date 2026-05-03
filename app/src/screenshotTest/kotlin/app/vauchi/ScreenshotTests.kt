@@ -38,13 +38,14 @@ private const val VRT_DEVICE = "spec:width=360dp,height=800dp,dpi=320"
 // how the preview runtime is set up.
 
 // DeliveryStatus* preview tests removed in the 2026-04-28 Pure Humble
-// UI retirement: `DeliveryStatusScreen` now renders through
-// `CoreScreenView("DeliveryStatus")` against core's
-// `DeliveryStatusEngine`, exercised from the engine's reachability test
-// + golden fixtures. Same rationale as the ContactsScreen* removals
-// above — preview-time screenshots would need a real `PlatformAppEngine`
-// seeded with delivery records, which is not how the preview runtime
-// is set up.
+// UI retirement. The Android-side `DeliveryStatusScreen.kt` wrapper
+// itself was retired in `vauchi/android!371` (Phase 4a residual of
+// `2026-05-01-android-humble-ui-deep-retirement`) — it had zero
+// callers, and `coreScreenIdToVariant` never mapped `delivery_status`
+// so no core route reached it. Delivery-status behavior is exercised
+// in `core/vauchi-app/tests/reachability/delivery_status.rs` against
+// `DeliveryStatusEngine` until/unless a frontend route revives the
+// screen.
 
 // LabelsScreen* preview tests removed in the 2026-04-28 Pure Humble UI
 // retirement (Pair 2): `Screen.Labels` already renders through
