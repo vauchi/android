@@ -35,7 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import app.vauchi.ui.QrCodeAnalyzer
+import app.vauchi.ui.components.QrCodeAnalyzer
 import app.vauchi.ui.coreui.QrMode
 import app.vauchi.ui.coreui.UserAction
 import app.vauchi.util.generateQrBitmap

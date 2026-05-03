@@ -5,8 +5,6 @@ package app.vauchi.data
 
 import uniffi.vauchi_platform.DomainCommand
 import uniffi.vauchi_platform.DomainCommandResult
-import uniffi.vauchi_platform.MobileAhaMoment
-import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileApplyResult
 import uniffi.vauchi_platform.MobileAuthMode
 import uniffi.vauchi_platform.MobileConsentRecord
@@ -100,47 +98,6 @@ fun PlatformAppEngine.importBackup(
     password: String,
 ) {
     dispatchDomainCommand(DomainCommand.ImportBackup(backupData, password))
-}
-
-// ── Aha Moments (B7 batch 5) ──
-
-fun PlatformAppEngine.hasSeenAhaMoment(momentType: MobileAhaMomentType): Boolean {
-    val result = dispatchDomainCommand(DomainCommand.HasSeenAhaMoment(momentType))
-    return (result as? DomainCommandResult.Bool)?.value ?: unexpectedResult("HasSeenAhaMoment")
-}
-
-fun PlatformAppEngine.tryTriggerAhaMoment(momentType: MobileAhaMomentType): MobileAhaMoment? {
-    val result = dispatchDomainCommand(DomainCommand.TryTriggerAhaMoment(momentType))
-    val opt = result as? DomainCommandResult.AhaMomentOpt ?: unexpectedResult("TryTriggerAhaMoment")
-    return opt.moment
-}
-
-fun PlatformAppEngine.tryTriggerAhaMomentWithContext(
-    momentType: MobileAhaMomentType,
-    context: String,
-): MobileAhaMoment? {
-    val result =
-        dispatchDomainCommand(
-            DomainCommand.TryTriggerAhaMomentWithContext(momentType, context),
-        )
-    val opt =
-        result as? DomainCommandResult.AhaMomentOpt
-            ?: unexpectedResult("TryTriggerAhaMomentWithContext")
-    return opt.moment
-}
-
-fun PlatformAppEngine.ahaMomentsSeenCount(): UInt {
-    val result = dispatchDomainCommand(DomainCommand.AhaMomentsSeenCount)
-    return (result as? DomainCommandResult.Count)?.value ?: unexpectedResult("AhaMomentsSeenCount")
-}
-
-fun PlatformAppEngine.ahaMomentsTotalCount(): UInt {
-    val result = dispatchDomainCommand(DomainCommand.AhaMomentsTotalCount)
-    return (result as? DomainCommandResult.Count)?.value ?: unexpectedResult("AhaMomentsTotalCount")
-}
-
-fun PlatformAppEngine.resetAhaMoments() {
-    dispatchDomainCommand(DomainCommand.ResetAhaMoments)
 }
 
 // ── Demo Contact (B7 batch 5) ──

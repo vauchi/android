@@ -7,10 +7,6 @@ package app.vauchi.data
 // DONE: Content updates - isContentUpdatesSupported(), checkContentUpdates(),
 // applyContentUpdates(), reloadSocialNetworks() methods implemented.
 //
-// DONE: Aha moments - hasSeenAhaMoment(), tryTriggerAhaMoment(),
-// tryTriggerAhaMomentWithContext(), ahaMomentsSeenCount(), ahaMomentsTotalCount(),
-// resetAhaMoments() methods implemented for progressive onboarding hints.
-//
 // DONE: Demo contact - implemented initDemoContactIfNeeded(), getDemoContact(),
 // getDemoContactState(), isDemoUpdateAvailable(), triggerDemoUpdate(),
 // dismissDemoContact(), autoRemoveDemoContact(), restoreDemoContact().
@@ -637,43 +633,6 @@ class VauchiRepository(
      */
     fun reloadSocialNetworks(): List<uniffi.vauchi_platform.MobileSocialNetwork> =
         runCatching { appEngine.reloadSocialNetworks() }.getOrDefault(emptyList())
-
-    // Aha Moments operations (Progressive Onboarding)
-
-    /**
-     * Check if user has seen a specific aha moment
-     */
-    fun hasSeenAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType): Boolean =
-        runCatching { appEngine.hasSeenAhaMoment(momentType) }.getOrDefault(false)
-
-    /**
-     * Try to trigger an aha moment (returns null if already seen)
-     */
-    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType): uniffi.vauchi_platform.MobileAhaMoment? =
-        appEngine.tryTriggerAhaMoment(momentType)
-
-    /**
-     * Try to trigger an aha moment with context (returns null if already seen)
-     */
-    fun tryTriggerAhaMomentWithContext(
-        momentType: uniffi.vauchi_platform.MobileAhaMomentType,
-        context: String,
-    ): uniffi.vauchi_platform.MobileAhaMoment? = appEngine.tryTriggerAhaMomentWithContext(momentType, context)
-
-    /**
-     * Get count of seen aha moments
-     */
-    fun ahaMomentsSeenCount(): UInt = runCatching { appEngine.ahaMomentsSeenCount() }.getOrDefault(0u)
-
-    /**
-     * Get total count of aha moments
-     */
-    fun ahaMomentsTotalCount(): UInt = runCatching { appEngine.ahaMomentsTotalCount() }.getOrDefault(0u)
-
-    /**
-     * Reset all aha moments (for development/testing)
-     */
-    fun resetAhaMoments() = appEngine.resetAhaMoments()
 
     // Certificate Pinning operations
 

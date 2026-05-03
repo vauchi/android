@@ -808,54 +808,6 @@ class MainViewModel(
         }
     }
 
-    // Aha Moments operations (Progressive Onboarding)
-    fun tryTriggerAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType) {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    repository.tryTriggerAhaMoment(momentType)
-                }
-            } catch (e: Exception) {
-                // Silently fail - aha moments are non-critical
-            }
-        }
-    }
-
-    fun tryTriggerAhaMomentWithContext(
-        momentType: uniffi.vauchi_platform.MobileAhaMomentType,
-        context: String,
-    ) {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    repository.tryTriggerAhaMomentWithContext(momentType, context)
-                }
-            } catch (e: Exception) {
-                // Silently fail - aha moments are non-critical
-            }
-        }
-    }
-
-    fun hasSeenAhaMoment(momentType: uniffi.vauchi_platform.MobileAhaMomentType): Boolean =
-        try {
-            repository.hasSeenAhaMoment(momentType)
-        } catch (e: Exception) {
-            true // Default to "seen" on error to avoid repeated triggers
-        }
-
-    fun resetAhaMoments() {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    repository.resetAhaMoments()
-                }
-                showMessage("Tips reset")
-            } catch (e: Exception) {
-                showMessage("Failed to reset tips: ${e.message}")
-            }
-        }
-    }
-
     // Certificate Pinning operations
     fun isCertificatePinningEnabled(): Boolean =
         try {
