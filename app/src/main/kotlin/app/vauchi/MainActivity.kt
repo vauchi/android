@@ -50,14 +50,12 @@ import app.vauchi.ui.BleExchangeScreen
 import app.vauchi.ui.ContactDetailScreen
 import app.vauchi.ui.ExchangeMode
 import app.vauchi.ui.ExchangeModePicker
-import app.vauchi.ui.LanguageSettingsScreen
 import app.vauchi.ui.MainViewModel
 import app.vauchi.ui.MultiStageExchangeScreen
 import app.vauchi.ui.NfcExchangeScreen
 import app.vauchi.ui.QrDiagnosticScreen
 import app.vauchi.ui.RecoveryScreen
 import app.vauchi.ui.SyncState
-import app.vauchi.ui.ThemeSettingsScreen
 import app.vauchi.ui.UiState
 import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.CoreOnboardingScreen
@@ -206,8 +204,6 @@ enum class Screen {
     NfcExchange,
     BleExchange,
     Recovery,
-    ThemeSettings,
-    LanguageSettings,
     QrDiagnostic,
 
     // Hardware-presentation wrapper (orientation lock, brightness,
@@ -503,8 +499,11 @@ fun MainScreen(
             // covered by `coreScreenIdToVariant`. The local `Screen`
             // enum below handles only the still-native screens
             // (ExchangeModePicker, hardware-aware MultiStageExchange,
-            // NFC/BLE, Recovery, ThemeSettings, LanguageSettings, Help,
-            // QrDiagnostic, More) and the pre-Ready boot states (Home).
+            // NFC/BLE, Recovery, QrDiagnostic) and the pre-Ready boot
+            // states (Home). Theme + language pickers retired Phase
+            // 2a/A3a (`2026-05-01-android-humble-ui-deep-retirement`)
+            // — they now live as `Component::Dropdown`s inside the
+            // existing core-driven Settings screen.
             val coreVariant = coreScreen?.screenId?.let(::coreScreenIdToVariant)
             if (coreVariant != null && uiState is UiState.Ready) {
                 CoreScreenView(
@@ -637,18 +636,6 @@ fun MainScreen(
                         RecoveryScreen(
                             coreAppViewModel = coreAppViewModel,
                             onBack = { coreAppViewModel.navigateTo("More") },
-                        )
-                    }
-
-                    Screen.ThemeSettings -> {
-                        ThemeSettingsScreen(
-                            onBack = { coreAppViewModel.navigateTo("Settings") },
-                        )
-                    }
-
-                    Screen.LanguageSettings -> {
-                        LanguageSettingsScreen(
-                            onBack = { coreAppViewModel.navigateTo("Settings") },
                         )
                     }
 
