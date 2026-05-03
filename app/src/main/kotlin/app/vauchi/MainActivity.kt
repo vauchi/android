@@ -228,12 +228,15 @@ enum class Screen {
  * either don't map to a Pure Humble UI screen (native cases handled
  * by their dedicated [Screen] enum arms) or aren't recognised.
  *
- * The 7 ids covered here mirror the cases removed from `Screen` in
- * the 2026-04-30 Activity-enum-collapse Phase 1 — they all render
- * through the default `CoreScreenView` path. `MultiStageExchange`
- * stays native because it's a hardware-presentation wrapper
- * (orientation lock, brightness, keep-screen-on) around a
- * `CoreScreenView`, not a pure 1:1 shell.
+ * The original 7 ids mirror the cases removed from `Screen` in the
+ * 2026-04-30 Activity-enum-collapse Phase 1 — they all render through
+ * the default `CoreScreenView` path. `MultiStageExchange` stays
+ * native because it's a hardware-presentation wrapper (orientation
+ * lock, brightness, keep-screen-on) around a `CoreScreenView`, not a
+ * pure 1:1 shell. `decoy_contacts` was added in Phase 2c of
+ * `2026-05-01-android-humble-ui-deep-retirement` so the core
+ * DecoyContactsEngine renders when Settings → Decoy Contacts is
+ * tapped.
  */
 private fun coreScreenIdToVariant(id: String): String? =
     when (id) {
@@ -246,6 +249,7 @@ private fun coreScreenIdToVariant(id: String): String? =
         "device_replacement" -> "DeviceReplacement"
         "help" -> "Help"
         "more" -> "More"
+        "decoy_contacts" -> "DecoyContacts"
         else -> null
     }
 
