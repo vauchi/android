@@ -30,6 +30,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
 import android.util.Log
+import app.vauchi.util.LocalizationManager
+import app.vauchi.util.ThemeManager
+import uniffi.vauchi_platform.MobileAppPreferences
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileExchangeResult
 import uniffi.vauchi_platform.MobileExchangeSession
@@ -91,6 +94,17 @@ class VauchiRepository(
     companion object {
         private const val KEY_ENCRYPTED_STORAGE_KEY = "encrypted_storage_key"
 
+        // Phase 2a/A3a legacy SharedPreferences keys forwarded into the
+        // core `app_preferences` row by [migrateLegacyAppPreferences].
+        // See [ThemeManager] / [LocalizationManager] for the original
+        // names — kept here so the migration runs even when the
+        // managers are not yet instantiated.
+        private const val LEGACY_THEME_PREFS = "vauchi_theme_settings"
+        private const val LEGACY_LOCALE_PREFS = "vauchi_locale_settings"
+        private const val LEGACY_THEME_KEY = "selected_theme_id"
+        private const val LEGACY_LOCALE_KEY = "selected_locale_code"
+        private const val LEGACY_FOLLOW_SYSTEM_KEY = "follow_system"
+
         /**
          * Extract the 16-byte audio challenge from a wb:// QR data string.
          * QR binary layout: [MAGIC(4)][version(1)][pubkey(32)][exchkey(32)][token(32)][audio_challenge(16)][...]
@@ -143,8 +157,95 @@ class VauchiRepository(
             _vauchi.setPlatformKeychain(PlatformKeychainBridge(context))
             _appEngine = PlatformAppEngine(dataDir, relayUrl, storageKeyBytes)
             initialized = true
+
+            // Phase 2a/A3a — wire theme + language managers to the
+            // singleton AppPreferences row so the inline Settings
+            // dropdown becomes the single source of truth. Migrates any
+            // legacy SharedPreferences picks once, on first run after
+            // upgrade. See problem record
+            // 2026-05-01-android-humble-ui-deep-retirement.
+            migrateLegacyAppPreferences()
+            ThemeManager.getInstance(context).attachVauchi(_vauchi)
+            LocalizationManager.getInstance(context).attachVauchi(_vauchi)
         }
         return _vauchi
+    }
+
+    /**
+     * Forwards legacy theme + language picks stored in
+     * [ThemeManager]'s and [LocalizationManager]'s SharedPreferences to
+     * the core `app_preferences` row, then clears the legacy keys.
+     *
+     * Idempotent: only runs when the core row is at default
+     * (`follow_system_*` both true, both ids null) — i.e. the user has
+     * not yet picked through the new Settings dropdown. After migration
+     * the SharedPreferences keys are cleared so subsequent runs short-
+     * circuit on the default-row check.
+     *
+     * Safe to call before identity creation (storage-only).
+     */
+    private fun migrateLegacyAppPreferences() {
+        val current =
+            try {
+                _vauchi.appPreferences()
+            } catch (e: Exception) {
+                Log.e("VauchiRepository", "appPreferences() failed during migration", e)
+                return
+            }
+        val isDefault =
+            current.themeId == null &&
+                current.languageCode == null &&
+                current.followSystemTheme &&
+                current.followSystemLanguage
+        if (!isDefault) return
+
+        val legacyTheme =
+            context
+                .getSharedPreferences(LEGACY_THEME_PREFS, Context.MODE_PRIVATE)
+        val legacyLocale =
+            context
+                .getSharedPreferences(LEGACY_LOCALE_PREFS, Context.MODE_PRIVATE)
+        val themeId = legacyTheme.getString(LEGACY_THEME_KEY, null)
+        val followSystemTheme = legacyTheme.getBoolean(LEGACY_FOLLOW_SYSTEM_KEY, true)
+        val localeCode = legacyLocale.getString(LEGACY_LOCALE_KEY, null)
+        val followSystemLocale = legacyLocale.getBoolean(LEGACY_FOLLOW_SYSTEM_KEY, true)
+
+        val hasExplicitTheme = themeId != null || !followSystemTheme
+        val hasExplicitLocale = localeCode != null || !followSystemLocale
+        if (!hasExplicitTheme && !hasExplicitLocale) return
+
+        val migrated =
+            MobileAppPreferences(
+                themeId = themeId,
+                languageCode = localeCode,
+                followSystemTheme = followSystemTheme,
+                followSystemLanguage = followSystemLocale,
+            )
+        try {
+            _vauchi.setAppPreferences(migrated)
+        } catch (e: Exception) {
+            Log.e("VauchiRepository", "setAppPreferences() failed during migration", e)
+            return
+        }
+
+        legacyTheme
+            .edit()
+            .remove(LEGACY_THEME_KEY)
+            .remove(LEGACY_FOLLOW_SYSTEM_KEY)
+            .apply()
+        legacyLocale
+            .edit()
+            .remove(LEGACY_LOCALE_KEY)
+            .remove(LEGACY_FOLLOW_SYSTEM_KEY)
+            .apply()
+    }
+
+    /** Loads the singleton app_preferences row (theme + language). */
+    fun getAppPreferences(): MobileAppPreferences = platform().appPreferences()
+
+    /** Saves the singleton app_preferences row (theme + language). */
+    fun setAppPreferences(prefs: MobileAppPreferences) {
+        platform().setAppPreferences(prefs)
     }
 
     /**
