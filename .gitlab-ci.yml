@@ -111,7 +111,7 @@ workflow:
   cache: {}  # No GitLab cache — self-hosted runner has persistent ~/.gradle
 
 .android-docker-job:
-  image: cimg/android:2025.01
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/cimg/android:2025.01
   cache:
     <<: *gradle-cache
 
@@ -125,7 +125,7 @@ workflow:
 # automatically create a v{version} tag to trigger the release pipeline.
 auto-tag:version:
   stage: auto-tag
-  image: alpine:3.21
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.21
   tags: [docker]
   resource_group: auto-tag
   needs: []
@@ -173,7 +173,7 @@ auto-tag:version:
 # Automatically bump vauchi-platform dependency and create MR
 update:bindings-version:
   stage: update
-  image: alpine:3.21
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.21
   tags: [docker]
   rules:
     - if: ($CI_PIPELINE_SOURCE == "trigger" || $CI_PIPELINE_SOURCE == "pipeline" || $CI_PIPELINE_SOURCE == "api") && $BINDINGS_VERSION
@@ -302,7 +302,7 @@ check:removed-symbols:
 # allow_failure: true makes this a visibility gate, not a merge blocker.
 check:design-tokens:
   stage: lint
-  image: alpine:3.21
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.21
   tags: [docker]
   needs: []
   allow_failure: true
