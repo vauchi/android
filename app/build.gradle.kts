@@ -108,6 +108,13 @@ android {
             // bindings with these types, move files back to the main source set.
             kotlin.srcDir("src/binding-dependent/kotlin")
         }
+        sourceSets.getByName("test") {
+            // Unit tests that exercise classes from the binding-dependent source
+            // set (e.g. ExchangeCommandHandler). Mirrors the main-side conditional
+            // include so CI's `test:unit` (which runs without -PlocalBindings)
+            // does not see and fail to compile these tests.
+            kotlin.srcDir("src/test/binding-dependent/kotlin")
+        }
     }
 
     packaging {
