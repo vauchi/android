@@ -84,7 +84,11 @@ fun PreviewComponent(
                         onClick = {
                             onAction(UserAction.GroupViewSelected(groupName = variant.variantId))
                         },
-                        label = { Text(variant.displayName) },
+                        // Chip label is the variant identifier (was `group_name`
+                        // pre-Tier-1) — that's the tab label per the design spec.
+                        // `display_name` populates the card header instead, after
+                        // the user picks a variant.
+                        label = { Text(variant.variantId) },
                         modifier = Modifier.padding(end = 8.dp),
                     )
                 }
