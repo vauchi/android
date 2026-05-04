@@ -21,9 +21,11 @@ import uniffi.vauchi_platform.MobileExchangeSession
 class ExchangeCommandHandler(
     private val session: MobileExchangeSession,
     private val context: Context,
+    bleServiceFactory: (Context, (MobileExchangeHardwareEvent) -> Unit) -> BleExchangeService =
+        { ctx, cb -> BleExchangeService(ctx, cb) },
 ) {
     private val bleService =
-        BleExchangeService(context) { event ->
+        bleServiceFactory(context) { event ->
             try {
                 session.applyHardwareEvent(event)
                 drainAndDispatch()
