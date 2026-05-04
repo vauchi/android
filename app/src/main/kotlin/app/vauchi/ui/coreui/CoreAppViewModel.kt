@@ -446,7 +446,7 @@ class CoreAppViewModel(
                 // Card preview handled by NavigateTo — no separate action needed
             }
 
-            is ActionResult.StartDeviceLink, is ActionResult.StartBackupImport -> {
+            is ActionResult.StartDeviceLink -> {
                 // Handled by native Android flows
             }
 

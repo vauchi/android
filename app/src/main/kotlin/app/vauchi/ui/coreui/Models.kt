@@ -1774,8 +1774,6 @@ sealed class ActionResult {
 
     data object StartDeviceLink : ActionResult()
 
-    data object StartBackupImport : ActionResult()
-
     data class BackupExportComplete(
         val data: String,
     ) : ActionResult()
@@ -1905,7 +1903,6 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                 when (element.content) {
                     "Complete" -> ActionResult.Complete
                     "StartDeviceLink" -> ActionResult.StartDeviceLink
-                    "StartBackupImport" -> ActionResult.StartBackupImport
                     "RequestCamera" -> ActionResult.RequestCamera
                     "WipeComplete" -> ActionResult.WipeComplete
                     else -> ActionResult.Unknown
@@ -2075,10 +2072,6 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
 
             is ActionResult.StartDeviceLink -> {
                 jsonEncoder.encodeJsonElement(JsonPrimitive("StartDeviceLink"))
-            }
-
-            is ActionResult.StartBackupImport -> {
-                jsonEncoder.encodeJsonElement(JsonPrimitive("StartBackupImport"))
             }
 
             is ActionResult.BackupExportComplete -> {
