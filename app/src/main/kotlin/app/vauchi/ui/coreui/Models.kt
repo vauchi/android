@@ -178,25 +178,25 @@ sealed class Component {
     data class ToggleList(
         val id: String,
         val label: String,
-        val items: List<ToggleItem>,
+        val items: kotlin.collections.List<ToggleItem>,
         val a11y: A11y? = null,
     ) : Component()
 
     data class FieldList(
         val id: String,
-        val fields: List<FieldDisplay>,
+        val fields: kotlin.collections.List<Field>,
         val visibilityMode: VisibilityMode,
-        val availableGroups: List<String>,
+        val availableGroups: kotlin.collections.List<String>,
         val a11y: A11y? = null,
     ) : Component()
 
-    data class CardPreview(
+    data class Preview(
         val name: String,
-        val fields: List<FieldDisplay>,
-        val groupViews: List<GroupCardView>,
-        val selectedGroup: String? = null,
-        val visibleFields: List<FieldDisplay> = emptyList(),
-        val avatarData: List<Int>? = null,
+        val fields: kotlin.collections.List<Field>,
+        val variants: kotlin.collections.List<PreviewVariant>,
+        val selectedVariant: String? = null,
+        val visibleFields: kotlin.collections.List<Field> = emptyList(),
+        val avatarData: kotlin.collections.List<Int>? = null,
         val a11y: A11y? = null,
     ) : Component()
 
@@ -204,25 +204,25 @@ sealed class Component {
         val id: String,
         val icon: String? = null,
         val title: String,
-        val items: List<InfoItem>,
+        val items: kotlin.collections.List<InfoItem>,
         val a11y: A11y? = null,
     ) : Component()
 
-    data class ContactList(
+    data class List(
         val id: String,
-        val contacts: List<ContactItem>,
+        val items: kotlin.collections.List<Item>,
         val searchable: Boolean,
     ) : Component()
 
     data class SettingsGroup(
         val id: String,
         val label: String,
-        val items: List<SettingsItem>,
+        val items: kotlin.collections.List<SettingsItem>,
     ) : Component()
 
     data class ActionList(
         val id: String,
-        val items: List<ActionListItem>,
+        val items: kotlin.collections.List<ActionListItem>,
     ) : Component()
 
     data class StatusIndicator(
@@ -295,15 +295,15 @@ sealed class Component {
         val id: String,
         val label: String,
         val selected: String?,
-        val options: List<DropdownOption>,
+        val options: kotlin.collections.List<DropdownOption>,
         val a11y: A11y? = null,
     ) : Component()
 
     data class AvatarPreview(
         val id: String,
-        val imageData: List<Int>?,
+        val imageData: kotlin.collections.List<Int>?,
         val initials: String,
-        val bgColor: List<Int>?,
+        val bgColor: kotlin.collections.List<Int>?,
         val brightness: Float,
         val editable: Boolean,
         val a11y: A11y? = null,
@@ -358,19 +358,19 @@ private data class ToggleListContent(
 @Serializable
 private data class FieldListContent(
     val id: String,
-    val fields: List<FieldDisplay>,
+    val fields: List<Field>,
     @SerialName("visibility_mode") val visibilityMode: VisibilityMode,
     @SerialName("available_groups") val availableGroups: List<String>,
     val a11y: A11y? = null,
 )
 
 @Serializable
-private data class CardPreviewContent(
+private data class PreviewContent(
     val name: String,
-    val fields: List<FieldDisplay>,
-    @SerialName("group_views") val groupViews: List<GroupCardView>,
-    @SerialName("selected_group") val selectedGroup: String? = null,
-    @SerialName("visible_fields") val visibleFields: List<FieldDisplay> = emptyList(),
+    val fields: List<Field>,
+    val variants: List<PreviewVariant>,
+    @SerialName("selected_variant") val selectedVariant: String? = null,
+    @SerialName("visible_fields") val visibleFields: List<Field> = emptyList(),
     @SerialName("avatar_data") val avatarData: List<Int>? = null,
     val a11y: A11y? = null,
 )
@@ -385,9 +385,9 @@ private data class InfoPanelContent(
 )
 
 @Serializable
-private data class ContactListContent(
+private data class ListContent(
     val id: String,
-    val contacts: List<ContactItem>,
+    val items: List<Item>,
     val searchable: Boolean,
 )
 
@@ -568,14 +568,14 @@ internal object ComponentSerializer : KSerializer<Component> {
                         )
                     }
 
-                    "CardPreview" in element -> {
-                        val c: CardPreviewContent =
-                            jsonDecoder.json.decodeFromJsonElement(element["CardPreview"]!!)
-                        Component.CardPreview(
+                    "Preview" in element -> {
+                        val c: PreviewContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["Preview"]!!)
+                        Component.Preview(
                             name = c.name,
                             fields = c.fields,
-                            groupViews = c.groupViews,
-                            selectedGroup = c.selectedGroup,
+                            variants = c.variants,
+                            selectedVariant = c.selectedVariant,
                             visibleFields = c.visibleFields,
                             avatarData = c.avatarData,
                             a11y = c.a11y,
@@ -594,10 +594,10 @@ internal object ComponentSerializer : KSerializer<Component> {
                         )
                     }
 
-                    "ContactList" in element -> {
-                        val c: ContactListContent =
-                            jsonDecoder.json.decodeFromJsonElement(element["ContactList"]!!)
-                        Component.ContactList(id = c.id, contacts = c.contacts, searchable = c.searchable)
+                    "List" in element -> {
+                        val c: ListContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["List"]!!)
+                        Component.List(id = c.id, items = c.items, searchable = c.searchable)
                     }
 
                     "SettingsGroup" in element -> {
@@ -805,19 +805,19 @@ internal object ComponentSerializer : KSerializer<Component> {
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("FieldList" to inner)))
             }
 
-            is Component.CardPreview -> {
+            is Component.Preview -> {
                 val content =
-                    CardPreviewContent(
+                    PreviewContent(
                         name = value.name,
                         fields = value.fields,
-                        groupViews = value.groupViews,
-                        selectedGroup = value.selectedGroup,
+                        variants = value.variants,
+                        selectedVariant = value.selectedVariant,
                         visibleFields = value.visibleFields,
                         avatarData = value.avatarData,
                         a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
-                jsonEncoder.encodeJsonElement(JsonObject(mapOf("CardPreview" to inner)))
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("Preview" to inner)))
             }
 
             is Component.InfoPanel -> {
@@ -833,11 +833,11 @@ internal object ComponentSerializer : KSerializer<Component> {
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("InfoPanel" to inner)))
             }
 
-            is Component.ContactList -> {
+            is Component.List -> {
                 val content =
-                    ContactListContent(id = value.id, contacts = value.contacts, searchable = value.searchable)
+                    ListContent(id = value.id, items = value.items, searchable = value.searchable)
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
-                jsonEncoder.encodeJsonElement(JsonObject(mapOf("ContactList" to inner)))
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("List" to inner)))
             }
 
             is Component.SettingsGroup -> {
@@ -1054,7 +1054,7 @@ data class A11y(
 )
 
 @Serializable
-data class FieldDisplay(
+data class Field(
     val id: String,
     @SerialName("field_type") val fieldType: String,
     val label: String,
@@ -1157,10 +1157,10 @@ internal object UiFieldVisibilitySerializer : KSerializer<UiFieldVisibility> {
 }
 
 @Serializable
-data class GroupCardView(
-    @SerialName("group_name") val groupName: String,
+data class PreviewVariant(
+    @SerialName("variant_id") val variantId: String,
     @SerialName("display_name") val displayName: String,
-    @SerialName("visible_fields") val visibleFields: List<FieldDisplay>,
+    @SerialName("visible_fields") val visibleFields: List<Field>,
 )
 
 @Serializable
@@ -1171,13 +1171,12 @@ data class InfoItem(
 )
 
 @Serializable
-data class ContactItem(
+data class Item(
     val id: String,
     val name: String,
     val subtitle: String? = null,
     @SerialName("avatar_initials") val avatarInitials: String,
     val status: String? = null,
-    @SerialName("searchable_fields") val searchableFields: List<String> = emptyList(),
     val actions: List<ListItemAction> = emptyList(),
     val a11y: A11y? = null,
 )

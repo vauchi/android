@@ -27,7 +27,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.A11y
-import app.vauchi.ui.coreui.FieldDisplay
+import app.vauchi.ui.coreui.Field
 import app.vauchi.ui.coreui.UiFieldVisibility
 import app.vauchi.ui.coreui.UserAction
 import app.vauchi.ui.coreui.VisibilityMode
@@ -40,7 +40,7 @@ import app.vauchi.ui.coreui.VisibilityMode
  */
 @Composable
 fun FieldListComponent(
-    fields: List<FieldDisplay>,
+    fields: List<Field>,
     visibilityMode: VisibilityMode,
     availableGroups: List<String>,
     onAction: (UserAction) -> Unit,
@@ -72,7 +72,7 @@ fun FieldListComponent(
 
 @Composable
 private fun FieldRow(
-    field: FieldDisplay,
+    field: Field,
     visibilityMode: VisibilityMode,
     availableGroups: List<String>,
     onAction: (UserAction) -> Unit,

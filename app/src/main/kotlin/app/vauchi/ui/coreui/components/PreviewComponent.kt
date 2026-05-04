@@ -40,30 +40,32 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.A11y
 import app.vauchi.ui.coreui.DesignTokens
-import app.vauchi.ui.coreui.FieldDisplay
-import app.vauchi.ui.coreui.GroupCardView
+import app.vauchi.ui.coreui.Field
+import app.vauchi.ui.coreui.PreviewVariant
 import app.vauchi.ui.coreui.UserAction
 
 /**
- * Renders a core CardPreview component as a Material3 Card.
+ * Renders a core `Component.Preview` as a Material3 Card.
  *
- * Shows the contact card with name, fields, and optional group view selector.
+ * Shows the preview with name, fields, and optional variant selector.
  */
 @Composable
-fun CardPreviewComponent(
+fun PreviewComponent(
     name: String,
-    fields: List<FieldDisplay>,
-    groupViews: List<GroupCardView>,
-    selectedGroup: String?,
-    visibleFields: List<FieldDisplay>,
+    fields: List<Field>,
+    variants: List<PreviewVariant>,
+    selectedVariant: String?,
+    visibleFields: List<Field>,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
     avatarData: List<Int>? = null,
     a11y: A11y? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        // Group view selector chips
-        if (groupViews.isNotEmpty()) {
+        // Variant selector chips. Core's `UserAction::GroupViewSelected`
+        // (kept its old name in Tier 0; payload `group_name` carries the
+        // variant id on the wire).
+        if (variants.isNotEmpty()) {
             Row(
                 modifier =
                     Modifier
@@ -71,18 +73,18 @@ fun CardPreviewComponent(
                         .padding(bottom = 12.dp),
             ) {
                 FilterChip(
-                    selected = selectedGroup == null,
+                    selected = selectedVariant == null,
                     onClick = { onAction(UserAction.GroupViewSelected(groupName = null)) },
                     label = { Text("All") },
                     modifier = Modifier.padding(end = 8.dp),
                 )
-                groupViews.forEach { groupView ->
+                variants.forEach { variant ->
                     FilterChip(
-                        selected = selectedGroup == groupView.groupName,
+                        selected = selectedVariant == variant.variantId,
                         onClick = {
-                            onAction(UserAction.GroupViewSelected(groupName = groupView.groupName))
+                            onAction(UserAction.GroupViewSelected(groupName = variant.variantId))
                         },
-                        label = { Text(groupView.groupName) },
+                        label = { Text(variant.displayName) },
                         modifier = Modifier.padding(end = 8.dp),
                     )
                 }
@@ -96,8 +98,8 @@ fun CardPreviewComponent(
         val displayFields = visibleFields
 
         val displayName =
-            if (selectedGroup != null) {
-                groupViews.find { it.groupName == selectedGroup }?.displayName ?: name
+            if (selectedVariant != null) {
+                variants.find { it.variantId == selectedVariant }?.displayName ?: name
             } else {
                 name
             }
@@ -106,7 +108,7 @@ fun CardPreviewComponent(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .semantics { contentDescription = a11y?.label ?: "Card preview: $displayName" },
+                    .semantics { contentDescription = a11y?.label ?: "Preview: $displayName" },
             shape = RoundedCornerShape(16.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         ) {
@@ -172,7 +174,7 @@ fun CardPreviewComponent(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     displayFields.forEach { field ->
-                        CardFieldRow(field = field)
+                        PreviewFieldRow(field = field)
                     }
                 }
             }
@@ -181,7 +183,7 @@ fun CardPreviewComponent(
 }
 
 @Composable
-private fun CardFieldRow(field: FieldDisplay) {
+private fun PreviewFieldRow(field: Field) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =

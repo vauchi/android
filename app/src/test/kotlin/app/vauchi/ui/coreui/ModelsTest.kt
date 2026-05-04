@@ -193,31 +193,31 @@ class ModelsTest {
     }
 
     @Test
-    fun `deserialize CardPreview component`() {
+    fun `deserialize Preview component`() {
         val input =
             """
             {
-                "CardPreview": {
+                "Preview": {
                     "name": "Alice",
                     "fields": [],
-                    "group_views": [
+                    "variants": [
                         {
-                            "group_name": "Family",
+                            "variant_id": "Family",
                             "display_name": "Alice",
                             "visible_fields": []
                         }
                     ],
-                    "selected_group": null
+                    "selected_variant": null
                 }
             }
             """.trimIndent()
 
         val component = json.decodeFromString<Component>(input)
-        val preview = component as Component.CardPreview
+        val preview = component as Component.Preview
         assertEquals("Alice", preview.name)
-        assertEquals(1, preview.groupViews.size)
-        assertEquals("Family", preview.groupViews[0].groupName)
-        assertNull(preview.selectedGroup)
+        assertEquals(1, preview.variants.size)
+        assertEquals("Family", preview.variants[0].variantId)
+        assertNull(preview.selectedVariant)
     }
 
     @Test
@@ -651,10 +651,12 @@ class ModelsTest {
         assertEquals("c42", (result as ActionResult.PreviewAs).contactId)
     }
 
-    // ── ContactItem + ListItemAction wire format (core!637) ─────────
+    // ── Item + ListItemAction wire format (core!637 + Wire Humble G2) ─
 
     @Test
-    fun `deserialize ContactItem with actions`() {
+    fun `deserialize Item with actions`() {
+        // Wire Humble G2 (core 0.41.0) retired `searchable_fields` from the
+        // wire — it was an engine input that leaked through the boundary.
         val input =
             """
             {
@@ -663,34 +665,31 @@ class ModelsTest {
                 "subtitle": "alice@example.org",
                 "avatar_initials": "A",
                 "status": null,
-                "searchable_fields": ["alice@example.org", "+41 79 123 45 67"],
                 "actions": [
                     {"id": "archive", "label": "Archive", "kind": "archive", "destructive": false},
                     {"id": "delete", "label": "Delete", "kind": "delete", "destructive": true}
                 ]
             }
             """.trimIndent()
-        val contact = json.decodeFromString<ContactItem>(input)
-        assertEquals("c1", contact.id)
-        assertEquals("A", contact.avatarInitials)
-        assertEquals(listOf("alice@example.org", "+41 79 123 45 67"), contact.searchableFields)
-        assertEquals(2, contact.actions.size)
-        assertEquals("archive", contact.actions[0].id)
-        assertEquals(ListItemActionKind.Archive, contact.actions[0].kind)
-        assertEquals(false, contact.actions[0].destructive)
-        assertEquals(ListItemActionKind.Delete, contact.actions[1].kind)
-        assertEquals(true, contact.actions[1].destructive)
+        val item = json.decodeFromString<Item>(input)
+        assertEquals("c1", item.id)
+        assertEquals("A", item.avatarInitials)
+        assertEquals(2, item.actions.size)
+        assertEquals("archive", item.actions[0].id)
+        assertEquals(ListItemActionKind.Archive, item.actions[0].kind)
+        assertEquals(false, item.actions[0].destructive)
+        assertEquals(ListItemActionKind.Delete, item.actions[1].kind)
+        assertEquals(true, item.actions[1].destructive)
     }
 
     @Test
-    fun `deserialize legacy ContactItem without new fields`() {
-        // Fixtures written before core!637 omit `actions` + `searchable_fields`.
-        // Decoding must still succeed — the data class provides empty defaults.
+    fun `deserialize legacy Item without new fields`() {
+        // Fixtures written before core!637 omit `actions`. Decoding must
+        // still succeed — the data class provides an empty default.
         val input = """{"id":"c1","name":"Bob","avatar_initials":"B"}"""
-        val contact = json.decodeFromString<ContactItem>(input)
-        assertEquals("c1", contact.id)
-        assertTrue(contact.actions.isEmpty())
-        assertTrue(contact.searchableFields.isEmpty())
+        val item = json.decodeFromString<Item>(input)
+        assertEquals("c1", item.id)
+        assertTrue(item.actions.isEmpty())
     }
 
     @Test

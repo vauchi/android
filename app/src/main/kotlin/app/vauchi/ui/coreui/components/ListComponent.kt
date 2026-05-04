@@ -42,18 +42,18 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import app.vauchi.ui.coreui.ContactItem
+import app.vauchi.ui.coreui.Item
 import app.vauchi.ui.coreui.ListItemAction
 import app.vauchi.ui.coreui.ListItemActionKind
 import app.vauchi.ui.coreui.UserAction
 
 /**
- * Renders a core ContactList component as a searchable list of contacts.
+ * Renders a core `Component.List` as a searchable list of items.
  */
 @Composable
-fun ContactListComponent(
+fun ListComponent(
     componentId: String,
-    contacts: List<ContactItem>,
+    items: List<Item>,
     searchable: Boolean,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -79,16 +79,16 @@ fun ContactListComponent(
         // policy explicitly rejects). The exchange-verification ScreenModel
         // hit this on Samsung S7 (Compose throws IllegalStateException →
         // process crash) when the new contact appeared in the list.
-        // Performance trade-off is acceptable: contact lists in this
+        // Performance trade-off is acceptable: lists rendered through this
         // component are short (verification preview, group filters).
-        for (contact in contacts) {
-            ContactRow(
-                contact = contact,
+        for (item in items) {
+            ItemRow(
+                item = item,
                 onTap = {
                     onAction(
                         UserAction.ListItemSelected(
                             componentId = componentId,
-                            itemId = contact.id,
+                            itemId = item.id,
                         ),
                     )
                 },
@@ -96,7 +96,7 @@ fun ContactListComponent(
                     onAction(
                         UserAction.ListItemAction(
                             componentId = componentId,
-                            itemId = contact.id,
+                            itemId = item.id,
                             actionId = action.id,
                         ),
                     )
@@ -107,8 +107,8 @@ fun ContactListComponent(
 }
 
 @Composable
-private fun ContactRow(
-    contact: ContactItem,
+private fun ItemRow(
+    item: Item,
     onTap: () -> Unit,
     onAction: (ListItemAction) -> Unit,
 ) {
@@ -129,7 +129,7 @@ private fun ContactRow(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
-                    text = contact.avatarInitials,
+                    text = item.avatarInitials,
                     style = MaterialTheme.typography.titleSmall,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -141,10 +141,10 @@ private fun ContactRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = contact.name,
+                text = item.name,
                 style = MaterialTheme.typography.bodyLarge,
             )
-            contact.subtitle?.let {
+            item.subtitle?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodySmall,
@@ -153,7 +153,7 @@ private fun ContactRow(
             }
         }
 
-        contact.status?.let {
+        item.status?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.bodySmall,
@@ -161,13 +161,13 @@ private fun ContactRow(
             )
         }
 
-        if (contact.actions.isNotEmpty()) {
+        if (item.actions.isNotEmpty()) {
             Box {
                 IconButton(
                     onClick = { menuOpen = true },
                     modifier =
                         Modifier.semantics {
-                            contentDescription = "More actions for ${contact.name}"
+                            contentDescription = "More actions for ${item.name}"
                         },
                 ) {
                     Icon(Icons.Default.MoreVert, contentDescription = null)
@@ -176,7 +176,7 @@ private fun ContactRow(
                     expanded = menuOpen,
                     onDismissRequest = { menuOpen = false },
                 ) {
-                    contact.actions.forEach { action ->
+                    item.actions.forEach { action ->
                         DropdownMenuItem(
                             leadingIcon = {
                                 Icon(iconFor(action.kind), contentDescription = null)

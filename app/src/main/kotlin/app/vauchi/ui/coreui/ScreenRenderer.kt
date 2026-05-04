@@ -28,16 +28,16 @@ import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.components.ActionListComponent
 import app.vauchi.ui.coreui.components.AvatarPreviewComponent
 import app.vauchi.ui.coreui.components.BannerComponent
-import app.vauchi.ui.coreui.components.CardPreviewComponent
 import app.vauchi.ui.coreui.components.ConfirmationDialogComponent
-import app.vauchi.ui.coreui.components.ContactListComponent
 import app.vauchi.ui.coreui.components.DividerComponent
 import app.vauchi.ui.coreui.components.DropdownComponent
 import app.vauchi.ui.coreui.components.EditableTextComponent
 import app.vauchi.ui.coreui.components.FieldListComponent
 import app.vauchi.ui.coreui.components.InfoPanelComponent
 import app.vauchi.ui.coreui.components.InlineConfirmComponent
+import app.vauchi.ui.coreui.components.ListComponent
 import app.vauchi.ui.coreui.components.PinInputComponent
+import app.vauchi.ui.coreui.components.PreviewComponent
 import app.vauchi.ui.coreui.components.QrCodeComponent
 import app.vauchi.ui.coreui.components.SettingsGroupComponent
 import app.vauchi.ui.coreui.components.SliderComponent
@@ -198,12 +198,12 @@ fun ComponentRenderer(
             )
         }
 
-        is Component.CardPreview -> {
-            CardPreviewComponent(
+        is Component.Preview -> {
+            PreviewComponent(
                 name = component.name,
                 fields = component.fields,
-                groupViews = component.groupViews,
-                selectedGroup = component.selectedGroup,
+                variants = component.variants,
+                selectedVariant = component.selectedVariant,
                 visibleFields = component.visibleFields,
                 onAction = onAction,
                 modifier = modifier,
@@ -222,10 +222,10 @@ fun ComponentRenderer(
             )
         }
 
-        is Component.ContactList -> {
-            ContactListComponent(
+        is Component.List -> {
+            ListComponent(
                 componentId = component.id,
-                contacts = component.contacts,
+                items = component.items,
                 searchable = component.searchable,
                 onAction = onAction,
                 modifier = modifier,

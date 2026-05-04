@@ -10,20 +10,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import app.vauchi.ui.coreui.FieldDisplay
-import app.vauchi.ui.coreui.GroupCardView
+import app.vauchi.ui.coreui.Field
 import app.vauchi.ui.coreui.InfoItem
 import app.vauchi.ui.coreui.InputType
+import app.vauchi.ui.coreui.PreviewVariant
 import app.vauchi.ui.coreui.TextStyle
 import app.vauchi.ui.coreui.ToggleItem
 import app.vauchi.ui.coreui.UiFieldVisibility
 import app.vauchi.ui.coreui.UserAction
 import app.vauchi.ui.coreui.VisibilityMode
-import app.vauchi.ui.coreui.components.CardPreviewComponent
 import app.vauchi.ui.coreui.components.EditableTextComponent
 import app.vauchi.ui.coreui.components.FieldListComponent
 import app.vauchi.ui.coreui.components.InfoPanelComponent
 import app.vauchi.ui.coreui.components.InlineConfirmComponent
+import app.vauchi.ui.coreui.components.PreviewComponent
 import app.vauchi.ui.coreui.components.TextComponent
 import app.vauchi.ui.coreui.components.TextInputComponent
 import app.vauchi.ui.coreui.components.ToggleListComponent
@@ -213,21 +213,21 @@ fun FieldListComponentShowHideScreenshot() {
                 FieldListComponent(
                     fields =
                         listOf(
-                            FieldDisplay(
+                            Field(
                                 id = "field-1",
                                 fieldType = "email",
                                 label = "Email",
                                 value = "alice@example.com",
                                 visibility = UiFieldVisibility.Shown,
                             ),
-                            FieldDisplay(
+                            Field(
                                 id = "field-2",
                                 fieldType = "phone",
                                 label = "Phone",
                                 value = "+41 79 123 45 67",
                                 visibility = UiFieldVisibility.Hidden,
                             ),
-                            FieldDisplay(
+                            Field(
                                 id = "field-3",
                                 fieldType = "social",
                                 label = "GitHub",
@@ -258,14 +258,14 @@ fun FieldListComponentPerGroupScreenshot() {
                 FieldListComponent(
                     fields =
                         listOf(
-                            FieldDisplay(
+                            Field(
                                 id = "field-1",
                                 fieldType = "email",
                                 label = "Email",
                                 value = "alice@example.com",
                                 visibility = UiFieldVisibility.Groups(listOf("Family", "Friends")),
                             ),
-                            FieldDisplay(
+                            Field(
                                 id = "field-2",
                                 fieldType = "phone",
                                 label = "Phone",
@@ -283,33 +283,33 @@ fun FieldListComponentPerGroupScreenshot() {
 }
 
 // =============================================================
-// CardPreviewComponent
+// PreviewComponent
 // =============================================================
 
 @PreviewTest
 @Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
-fun CardPreviewComponentScreenshot() {
+fun PreviewComponentScreenshot() {
     VauchiTheme(dynamicColor = false) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 val testFields =
                     listOf(
-                        FieldDisplay(
+                        Field(
                             id = "field-1",
                             fieldType = "email",
                             label = "Email",
                             value = "alice@example.com",
                             visibility = UiFieldVisibility.Shown,
                         ),
-                        FieldDisplay(
+                        Field(
                             id = "field-2",
                             fieldType = "phone",
                             label = "Phone",
                             value = "+41 79 123 45 67",
                             visibility = UiFieldVisibility.Shown,
                         ),
-                        FieldDisplay(
+                        Field(
                             id = "field-3",
                             fieldType = "social",
                             label = "GitHub",
@@ -317,11 +317,11 @@ fun CardPreviewComponentScreenshot() {
                             visibility = UiFieldVisibility.Shown,
                         ),
                     )
-                CardPreviewComponent(
+                PreviewComponent(
                     name = "Alice",
                     fields = testFields,
-                    groupViews = emptyList(),
-                    selectedGroup = null,
+                    variants = emptyList(),
+                    selectedVariant = null,
                     visibleFields = testFields,
                     onAction = {},
                 )
@@ -333,20 +333,20 @@ fun CardPreviewComponentScreenshot() {
 @PreviewTest
 @Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
-fun CardPreviewComponentWithGroupsScreenshot() {
+fun PreviewComponentWithGroupsScreenshot() {
     VauchiTheme(dynamicColor = false) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 val testFields =
                     listOf(
-                        FieldDisplay(
+                        Field(
                             id = "field-1",
                             fieldType = "email",
                             label = "Email",
                             value = "alice@example.com",
                             visibility = UiFieldVisibility.Shown,
                         ),
-                        FieldDisplay(
+                        Field(
                             id = "field-2",
                             fieldType = "phone",
                             label = "Phone",
@@ -354,24 +354,24 @@ fun CardPreviewComponentWithGroupsScreenshot() {
                             visibility = UiFieldVisibility.Shown,
                         ),
                     )
-                CardPreviewComponent(
+                PreviewComponent(
                     name = "Alice",
                     fields = testFields,
-                    groupViews =
+                    variants =
                         listOf(
-                            GroupCardView(
-                                groupName = "Family",
+                            PreviewVariant(
+                                variantId = "Family",
                                 displayName = "Alice",
                                 visibleFields =
                                     listOf(
-                                        FieldDisplay(
+                                        Field(
                                             id = "field-1",
                                             fieldType = "email",
                                             label = "Email",
                                             value = "alice@example.com",
                                             visibility = UiFieldVisibility.Shown,
                                         ),
-                                        FieldDisplay(
+                                        Field(
                                             id = "field-2",
                                             fieldType = "phone",
                                             label = "Phone",
@@ -380,12 +380,12 @@ fun CardPreviewComponentWithGroupsScreenshot() {
                                         ),
                                     ),
                             ),
-                            GroupCardView(
-                                groupName = "Work",
+                            PreviewVariant(
+                                variantId = "Work",
                                 displayName = "Alice M.",
                                 visibleFields =
                                     listOf(
-                                        FieldDisplay(
+                                        Field(
                                             id = "field-1",
                                             fieldType = "email",
                                             label = "Email",
@@ -395,7 +395,7 @@ fun CardPreviewComponentWithGroupsScreenshot() {
                                     ),
                             ),
                         ),
-                    selectedGroup = null,
+                    selectedVariant = null,
                     visibleFields = testFields,
                     onAction = {},
                 )
@@ -407,15 +407,15 @@ fun CardPreviewComponentWithGroupsScreenshot() {
 @PreviewTest
 @Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
-fun CardPreviewComponentEmptyScreenshot() {
+fun PreviewComponentEmptyScreenshot() {
     VauchiTheme(dynamicColor = false) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                CardPreviewComponent(
+                PreviewComponent(
                     name = "Alice",
                     fields = emptyList(),
-                    groupViews = emptyList(),
-                    selectedGroup = null,
+                    variants = emptyList(),
+                    selectedVariant = null,
                     visibleFields = emptyList(),
                     onAction = {},
                 )
@@ -574,14 +574,14 @@ fun FieldListComponentShowHideDarkScreenshot() {
                 FieldListComponent(
                     fields =
                         listOf(
-                            FieldDisplay(
+                            Field(
                                 id = "field-1",
                                 fieldType = "email",
                                 label = "Email",
                                 value = "alice@example.com",
                                 visibility = UiFieldVisibility.Shown,
                             ),
-                            FieldDisplay(
+                            Field(
                                 id = "field-2",
                                 fieldType = "phone",
                                 label = "Phone",
@@ -601,20 +601,20 @@ fun FieldListComponentShowHideDarkScreenshot() {
 @PreviewTest
 @Preview(showSystemUi = true, device = VRT_DEVICE)
 @Composable
-fun CardPreviewComponentDarkScreenshot() {
+fun PreviewComponentDarkScreenshot() {
     VauchiTheme(darkTheme = true, dynamicColor = false) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 val testFields =
                     listOf(
-                        FieldDisplay(
+                        Field(
                             id = "field-1",
                             fieldType = "email",
                             label = "Email",
                             value = "alice@example.com",
                             visibility = UiFieldVisibility.Shown,
                         ),
-                        FieldDisplay(
+                        Field(
                             id = "field-2",
                             fieldType = "phone",
                             label = "Phone",
@@ -622,11 +622,11 @@ fun CardPreviewComponentDarkScreenshot() {
                             visibility = UiFieldVisibility.Shown,
                         ),
                     )
-                CardPreviewComponent(
+                PreviewComponent(
                     name = "Alice",
                     fields = testFields,
-                    groupViews = emptyList(),
-                    selectedGroup = null,
+                    variants = emptyList(),
+                    selectedVariant = null,
                     visibleFields = testFields,
                     onAction = {},
                 )
