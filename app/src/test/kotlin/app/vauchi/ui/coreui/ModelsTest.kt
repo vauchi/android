@@ -392,7 +392,7 @@ class ModelsTest {
     }
 
     @Test
-    fun `ActionResult.Commands deserialization`() {
+    fun `ActionResult Commands deserialization`() {
         val input = """{"Commands": {"commands": ["QrRequestScan", {"QrDisplay": {"data": "test-qr"}}]}}"""
         val result = json.decodeFromString<ActionResult>(input)
         assertTrue(result is ActionResult.Commands)
