@@ -221,8 +221,16 @@ class CoreAppViewModel(
                     withContext(Dispatchers.IO) {
                         appEngine.handleActionJson(actionJson = actionJson)
                     }
-                val result = json.decodeFromString<ActionResult>(resultJson)
-                applyResult(result)
+                // Phase 2b: handleActionJson returns
+                // `{"action_result": <ActionResult>, "commands": [<CommandDTO>]}`.
+                // The lifecycle commands carry brightness / idle-timer
+                // requests emitted by
+                // `WorkflowEngine::screen_entered/screen_exited`.
+                val envelope = json.decodeFromString<ActionResultEnvelope>(resultJson)
+                applyResult(envelope.actionResult)
+                if (envelope.commands.isNotEmpty()) {
+                    handleExchangeCommands(envelope.commands)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to handle action", e)
                 _error.value = "Action failed: ${e.message}"
@@ -267,8 +275,13 @@ class CoreAppViewModel(
                     withContext(Dispatchers.IO) {
                         appEngine.navigateToJson(screenJson = "\"$screenName\"")
                     }
-                _screen.value = json.decodeFromString<ScreenModel>(screenJson)
+                // Phase 2b envelope shape: `{"screen": ..., "commands": [...]}`.
+                val envelope = json.decodeFromString<ScreenEnvelope>(screenJson)
+                _screen.value = envelope.screen
                 loadAvailableScreens()
+                if (envelope.commands.isNotEmpty()) {
+                    handleExchangeCommands(envelope.commands)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to navigate to $screenName", e)
             }
@@ -301,8 +314,12 @@ class CoreAppViewModel(
                     withContext(Dispatchers.IO) {
                         appEngine.navigateToJson(screenJson = payload.toString())
                     }
-                _screen.value = json.decodeFromString<ScreenModel>(screenJson)
+                val envelope = json.decodeFromString<ScreenEnvelope>(screenJson)
+                _screen.value = envelope.screen
                 loadAvailableScreens()
+                if (envelope.commands.isNotEmpty()) {
+                    handleExchangeCommands(envelope.commands)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to navigate to $screenName with $paramKey=$paramValue", e)
             }
@@ -316,7 +333,11 @@ class CoreAppViewModel(
                     withContext(Dispatchers.IO) {
                         appEngine.navigateBackJson()
                     }
-                _screen.value = json.decodeFromString<ScreenModel>(screenJson)
+                val envelope = json.decodeFromString<ScreenEnvelope>(screenJson)
+                _screen.value = envelope.screen
+                if (envelope.commands.isNotEmpty()) {
+                    handleExchangeCommands(envelope.commands)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to navigate back", e)
             }
@@ -411,31 +432,8 @@ class CoreAppViewModel(
                 _openUrlEvent.value = result.url
             }
 
-            is ActionResult.ExchangeCommands -> {
-                // ADR-031: hardware exchange commands handled by exchange session.
-                // Image picking commands are dispatched to the UI layer.
-                for (cmd in result.commands) {
-                    when (cmd) {
-                        is ExchangeCommandDTO.ImagePickFromLibrary -> {
-                            _imagePickEvent.value = "library"
-                        }
-
-                        is ExchangeCommandDTO.ImageCaptureFromCamera -> {
-                            _imagePickEvent.value = "camera"
-                        }
-
-                        is ExchangeCommandDTO.ImagePickFromFile -> {
-                            // File picking not supported on Android — report unavailable
-                            sendHardwareEvent(
-                                MobileEvent.HardwareUnavailable("ImagePickFromFile"),
-                            )
-                        }
-
-                        else -> {
-                            // Other exchange commands handled by exchange session
-                        }
-                    }
-                }
+            is ActionResult.Commands -> {
+                handleExchangeCommands(result.commands)
             }
 
             is ActionResult.ShowFormDialog -> {
@@ -464,6 +462,46 @@ class CoreAppViewModel(
             is ActionResult.CompleteWith,
             is ActionResult.Unknown,
             -> { /* no-op */ }
+        }
+    }
+
+    /**
+     * Dispatch a list of [CommandDTO]s emitted by core. Called from
+     * [applyResult] for `ActionResult.Commands`, and from the Phase 2b
+     * envelope-drain path in [handleAction] / [navigateTo] /
+     * [navigateBack] / [navigateToScreenWithParam] so the
+     * lifecycle-emitted brightness / idle-timer commands reach the
+     * exchange session and image-pick affordances reach the UI.
+     *
+     * ADR-031: hardware exchange commands (BLE, NFC, Audio, brightness,
+     * idle-timer) are handled by the exchange session and the
+     * MobileCommandHandler. Image picking commands are
+     * dispatched to the UI layer via the `_imagePickEvent` flow.
+     */
+    private fun handleExchangeCommands(commands: List<CommandDTO>) {
+        for (cmd in commands) {
+            when (cmd) {
+                is CommandDTO.ImagePickFromLibrary -> {
+                    _imagePickEvent.value = "library"
+                }
+
+                is CommandDTO.ImageCaptureFromCamera -> {
+                    _imagePickEvent.value = "camera"
+                }
+
+                is CommandDTO.ImagePickFromFile -> {
+                    // File picking not supported on Android — report unavailable
+                    sendHardwareEvent(
+                        MobileEvent.HardwareUnavailable("ImagePickFromFile"),
+                    )
+                }
+
+                else -> {
+                    // Other exchange commands handled by exchange session /
+                    // CommandHandler (BLE, NFC, Audio, brightness,
+                    // idle-timer) via the existing dispatch path.
+                }
+            }
         }
     }
 

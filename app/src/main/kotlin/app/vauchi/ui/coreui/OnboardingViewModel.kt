@@ -192,7 +192,7 @@ class OnboardingViewModel : ViewModel() {
             is ActionResult.OpenEntryDetail,
             is ActionResult.RequestCamera,
             is ActionResult.WipeComplete,
-            is ActionResult.ExchangeCommands,
+            is ActionResult.Commands,
             is ActionResult.ShowFormDialog,
             is ActionResult.PreviewAs,
             is ActionResult.Unknown,
