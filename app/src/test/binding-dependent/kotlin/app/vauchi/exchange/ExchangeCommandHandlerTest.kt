@@ -19,13 +19,13 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
-import uniffi.vauchi_platform.MobileExchangeCommand
-import uniffi.vauchi_platform.MobileExchangeHardwareEvent
+import uniffi.vauchi_platform.MobileCommand
+import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.MobileExchangeSession
 
 /**
  * Unit tests for [ExchangeCommandHandler] — verifies that BLE-class
- * `MobileExchangeCommand` variants drained from the session route to the
+ * `MobileCommand` variants drained from the session route to the
  * correct [BleExchangeService] method, and that the unimplemented
  * `BleStartAdvertising` path reports `HardwareUnavailable("BLE-advertise")`
  * back to the session (Phase 2 audit reference; tracked as F9 in the BLE
@@ -65,7 +65,7 @@ class ExchangeCommandHandlerTest {
     fun `BleStartScanning routes to bleService startScanning with serviceUuid`() {
         val uuid = "0000180a-0000-1000-8000-00805f9b34fb"
         whenever(session.drainPendingCommands())
-            .thenReturn(listOf(MobileExchangeCommand.BleStartScanning(uuid)))
+            .thenReturn(listOf(MobileCommand.BleStartScanning(uuid)))
             .thenReturn(emptyList())
 
         handler.drainAndDispatch()
@@ -79,7 +79,7 @@ class ExchangeCommandHandlerTest {
     fun `BleConnect routes to bleService connect with deviceId`() {
         val deviceId = "AA:BB:CC:DD:EE:FF"
         whenever(session.drainPendingCommands())
-            .thenReturn(listOf(MobileExchangeCommand.BleConnect(deviceId)))
+            .thenReturn(listOf(MobileCommand.BleConnect(deviceId)))
             .thenReturn(emptyList())
 
         handler.drainAndDispatch()
@@ -94,7 +94,7 @@ class ExchangeCommandHandlerTest {
         val uuid = "00002a4d-0000-1000-8000-00805f9b34fb"
         val data = byteArrayOf(0x01, 0x02, 0x03)
         whenever(session.drainPendingCommands())
-            .thenReturn(listOf(MobileExchangeCommand.BleWriteCharacteristic(uuid, data)))
+            .thenReturn(listOf(MobileCommand.BleWriteCharacteristic(uuid, data)))
             .thenReturn(emptyList())
 
         handler.drainAndDispatch()
@@ -108,7 +108,7 @@ class ExchangeCommandHandlerTest {
     fun `BleReadCharacteristic routes to bleService readCharacteristic with uuid`() {
         val uuid = "00002a4d-0000-1000-8000-00805f9b34fb"
         whenever(session.drainPendingCommands())
-            .thenReturn(listOf(MobileExchangeCommand.BleReadCharacteristic(uuid)))
+            .thenReturn(listOf(MobileCommand.BleReadCharacteristic(uuid)))
             .thenReturn(emptyList())
 
         handler.drainAndDispatch()
@@ -121,7 +121,7 @@ class ExchangeCommandHandlerTest {
     @Test
     fun `BleDisconnect routes to bleService disconnect`() {
         whenever(session.drainPendingCommands())
-            .thenReturn(listOf(MobileExchangeCommand.BleDisconnect))
+            .thenReturn(listOf(MobileCommand.BleDisconnect))
             .thenReturn(emptyList())
 
         handler.drainAndDispatch()
@@ -140,7 +140,7 @@ class ExchangeCommandHandlerTest {
         whenever(session.drainPendingCommands())
             .thenReturn(
                 listOf(
-                    MobileExchangeCommand.BleStartAdvertising(
+                    MobileCommand.BleStartAdvertising(
                         serviceUuid = "0000180a-0000-1000-8000-00805f9b34fb",
                         payload = byteArrayOf(),
                     ),
@@ -149,12 +149,12 @@ class ExchangeCommandHandlerTest {
 
         handler.drainAndDispatch()
 
-        val captor = argumentCaptor<MobileExchangeHardwareEvent>()
+        val captor = argumentCaptor<MobileEvent>()
         verify(session, times(1)).applyHardwareEvent(captor.capture())
         val event = captor.firstValue
         assertTrue(
             "Expected HardwareUnavailable, got $event",
-            event is MobileExchangeHardwareEvent.HardwareUnavailable &&
+            event is MobileEvent.HardwareUnavailable &&
                 event.transport == "BLE-advertise",
         )
         verify(bleService, never()).startScanning(any())
@@ -169,12 +169,12 @@ class ExchangeCommandHandlerTest {
 
         handler.reportPermissionDenied("BLE")
 
-        val captor = argumentCaptor<MobileExchangeHardwareEvent>()
+        val captor = argumentCaptor<MobileEvent>()
         verify(session).applyHardwareEvent(captor.capture())
         val event = captor.firstValue
         assertTrue(
             "Expected PermissionDenied, got $event",
-            event is MobileExchangeHardwareEvent.PermissionDenied &&
+            event is MobileEvent.PermissionDenied &&
                 event.transport == "BLE",
         )
     }

@@ -6,7 +6,7 @@ package app.vauchi.deeplink
 import android.util.Log
 import app.vauchi.ui.coreui.CoreAppViewModel
 import uniffi.vauchi_platform.LinkResponderSessionListener
-import uniffi.vauchi_platform.MobileExchangeCommand
+import uniffi.vauchi_platform.MobileCommand
 import uniffi.vauchi_platform.MobileLinkResponderFailureReason
 import uniffi.vauchi_platform.MobileLinkResponderSession
 import uniffi.vauchi_platform.MobileLinkResponderState
@@ -86,7 +86,7 @@ class LinkResponderSessionService(
         // sub-state. This is the hook for a future progress indicator.
     }
 
-    override fun onCommands(commands: List<MobileExchangeCommand>) {
+    override fun onCommands(commands: List<MobileCommand>) {
         // TODO(2026-04-27 deep-link-responder Phase 2): dispatch
         // RelayEscrowDeposit / RelayEscrowCheck / RelayEscrowRetrieve
         // via a relay HTTP client. The existing Android

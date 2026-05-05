@@ -20,7 +20,7 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
-import uniffi.vauchi_platform.MobileExchangeHardwareEvent
+import uniffi.vauchi_platform.MobileEvent
 import java.util.UUID
 
 /**
@@ -32,7 +32,7 @@ import java.util.UUID
 @SuppressLint("MissingPermission") // Callers must check BLUETOOTH_CONNECT permission
 class BleExchangeService(
     private val context: Context,
-    private val eventCallback: (MobileExchangeHardwareEvent) -> Unit,
+    private val eventCallback: (MobileEvent) -> Unit,
 ) {
     companion object {
         private const val TAG = "BleExchange"
@@ -52,7 +52,7 @@ class BleExchangeService(
     fun startScanning(serviceUuid: String) {
         scanner = adapter?.bluetoothLeScanner
         if (scanner == null) {
-            eventCallback(MobileExchangeHardwareEvent.HardwareUnavailable("BLE"))
+            eventCallback(MobileEvent.HardwareUnavailable("BLE"))
             return
         }
 
@@ -85,7 +85,7 @@ class BleExchangeService(
                 val advData = result.scanRecord?.bytes ?: byteArrayOf()
 
                 eventCallback(
-                    MobileExchangeHardwareEvent.BleDeviceDiscovered(
+                    MobileEvent.BleDeviceDiscovered(
                         id = device.address,
                         rssi = rssi.toShort(),
                         advData = advData,
@@ -95,7 +95,7 @@ class BleExchangeService(
 
             override fun onScanFailed(errorCode: Int) {
                 eventCallback(
-                    MobileExchangeHardwareEvent.HardwareError("BLE", "Scan failed: code $errorCode"),
+                    MobileEvent.HardwareError("BLE", "Scan failed: code $errorCode"),
                 )
             }
         }
@@ -105,7 +105,7 @@ class BleExchangeService(
     fun connect(deviceId: String) {
         val device: BluetoothDevice =
             adapter?.getRemoteDevice(deviceId) ?: run {
-                eventCallback(MobileExchangeHardwareEvent.HardwareError("BLE", "Device $deviceId not found"))
+                eventCallback(MobileEvent.HardwareError("BLE", "Device $deviceId not found"))
                 return
             }
         gatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
@@ -157,12 +157,12 @@ class BleExchangeService(
             ) {
                 when (newState) {
                     BluetoothProfile.STATE_CONNECTED -> {
-                        eventCallback(MobileExchangeHardwareEvent.BleConnected(gatt.device.address))
+                        eventCallback(MobileEvent.BleConnected(gatt.device.address))
                         gatt.discoverServices()
                     }
 
                     BluetoothProfile.STATE_DISCONNECTED -> {
-                        eventCallback(MobileExchangeHardwareEvent.BleDisconnected("disconnected (status=$status)"))
+                        eventCallback(MobileEvent.BleDisconnected("disconnected (status=$status)"))
                         discoveredCharacteristics.clear()
                     }
                 }
@@ -173,7 +173,7 @@ class BleExchangeService(
                 status: Int,
             ) {
                 if (status != BluetoothGatt.GATT_SUCCESS) {
-                    eventCallback(MobileExchangeHardwareEvent.HardwareError("BLE", "Service discovery failed: $status"))
+                    eventCallback(MobileEvent.HardwareError("BLE", "Service discovery failed: $status"))
                     return
                 }
 
@@ -222,7 +222,7 @@ class BleExchangeService(
                 if (status == BluetoothGatt.GATT_SUCCESS) {
                     val uuid = characteristic.uuid.toString().lowercase()
                     eventCallback(
-                        MobileExchangeHardwareEvent.BleCharacteristicRead(
+                        MobileEvent.BleCharacteristicRead(
                             uuid = uuid,
                             data = value,
                         ),
@@ -237,7 +237,7 @@ class BleExchangeService(
             ) {
                 val uuid = characteristic.uuid.toString().lowercase()
                 eventCallback(
-                    MobileExchangeHardwareEvent.BleCharacteristicNotified(
+                    MobileEvent.BleCharacteristicNotified(
                         uuid = uuid,
                         data = value,
                     ),
@@ -251,7 +251,7 @@ class BleExchangeService(
             ) {
                 if (status != BluetoothGatt.GATT_SUCCESS) {
                     eventCallback(
-                        MobileExchangeHardwareEvent.HardwareError(
+                        MobileEvent.HardwareError(
                             "BLE",
                             "Write failed: status=$status",
                         ),

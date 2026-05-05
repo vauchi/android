@@ -7,8 +7,8 @@ import android.content.Context
 import android.util.Log
 import app.vauchi.ble.BleExchangeService
 import app.vauchi.proximity.AudioProximityService
-import uniffi.vauchi_platform.MobileExchangeCommand
-import uniffi.vauchi_platform.MobileExchangeHardwareEvent
+import uniffi.vauchi_platform.MobileCommand
+import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.MobileExchangeSession
 
 /**
@@ -21,7 +21,7 @@ import uniffi.vauchi_platform.MobileExchangeSession
 class ExchangeCommandHandler(
     private val session: MobileExchangeSession,
     private val context: Context,
-    bleServiceFactory: (Context, (MobileExchangeHardwareEvent) -> Unit) -> BleExchangeService =
+    bleServiceFactory: (Context, (MobileEvent) -> Unit) -> BleExchangeService =
         { ctx, cb -> BleExchangeService(ctx, cb) },
 ) {
     private val bleService =
@@ -52,68 +52,68 @@ class ExchangeCommandHandler(
         }
     }
 
-    private fun dispatch(command: MobileExchangeCommand) {
+    private fun dispatch(command: MobileCommand) {
         when (command) {
             // ── QR ──────────────────────────────────────────────────
-            is MobileExchangeCommand.QrDisplay -> {
+            is MobileCommand.QrDisplay -> {
                 // QR display handled by Compose view layer
             }
 
-            is MobileExchangeCommand.QrRequestScan -> {
+            is MobileCommand.QrRequestScan -> {
                 // Camera scanning handled by CameraX in the view layer
             }
 
             // ── Audio (ultrasonic proximity, ADR-031) ───────────────
-            is MobileExchangeCommand.AudioEmitChallenge -> {
+            is MobileCommand.AudioEmitChallenge -> {
                 emitAudioChallenge(command.samples, command.sampleRate)
             }
 
-            is MobileExchangeCommand.AudioListenForResponse -> {
+            is MobileCommand.AudioListenForResponse -> {
                 listenForAudioResponse(command.timeoutMs, command.sampleRate)
             }
 
-            is MobileExchangeCommand.AudioStop -> {
+            is MobileCommand.AudioStop -> {
                 audioService.stop()
             }
 
             // ── BLE (native Android) ──────────────────────────────────
-            is MobileExchangeCommand.BleStartScanning -> {
+            is MobileCommand.BleStartScanning -> {
                 bleService.startScanning(command.serviceUuid)
             }
 
-            is MobileExchangeCommand.BleStartAdvertising -> {
+            is MobileCommand.BleStartAdvertising -> {
                 // Android peripheral advertising not yet wired
                 reportUnavailable("BLE-advertise")
             }
 
-            is MobileExchangeCommand.BleConnect -> {
+            is MobileCommand.BleConnect -> {
                 bleService.connect(command.deviceId)
             }
 
-            is MobileExchangeCommand.BleWriteCharacteristic -> {
+            is MobileCommand.BleWriteCharacteristic -> {
                 bleService.writeCharacteristic(command.uuid, command.data)
             }
 
-            is MobileExchangeCommand.BleReadCharacteristic -> {
+            is MobileCommand.BleReadCharacteristic -> {
                 bleService.readCharacteristic(command.uuid)
             }
 
-            is MobileExchangeCommand.BleDisconnect -> {
+            is MobileCommand.BleDisconnect -> {
                 bleService.disconnect()
             }
 
             // ── NFC ─────────────────────────────────────────────────
-            is MobileExchangeCommand.NfcActivate -> {
+            is MobileCommand.NfcActivate -> {
                 // NFC handled separately via NfcReaderService (IsoDep)
                 reportUnavailable("NFC-command")
             }
 
-            is MobileExchangeCommand.NfcDeactivate -> {
+            is MobileCommand.NfcDeactivate -> {
                 // No-op
             }
 
             // ── USB cable (DirectSend) ───────────────────────────────
-            is MobileExchangeCommand.DirectSend -> {
+            is MobileCommand.DirectSend -> {
                 val service = DirectSendService()
                 if (!command.isInitiator) {
                     service.setContext(context)
@@ -126,7 +126,7 @@ class ExchangeCommandHandler(
                             override fun onPayloadReceived(data: ByteArray) {
                                 try {
                                     session.applyHardwareEvent(
-                                        MobileExchangeHardwareEvent.DirectPayloadReceived(
+                                        MobileEvent.DirectPayloadReceived(
                                             data = data,
                                         ),
                                     )
@@ -173,7 +173,7 @@ class ExchangeCommandHandler(
         audioService.receiveSignal(timeoutMs, sampleRate) { recordedSamples, recordedRate ->
             try {
                 session.applyHardwareEvent(
-                    MobileExchangeHardwareEvent.AudioSamplesRecorded(recordedSamples, recordedRate),
+                    MobileEvent.AudioSamplesRecorded(recordedSamples, recordedRate),
                 )
                 drainAndDispatch()
             } catch (e: Exception) {
@@ -226,7 +226,7 @@ class ExchangeCommandHandler(
     private fun reportUnavailable(transport: String) {
         try {
             session.applyHardwareEvent(
-                MobileExchangeHardwareEvent.HardwareUnavailable(transport),
+                MobileEvent.HardwareUnavailable(transport),
             )
             drainAndDispatch()
         } catch (e: Exception) {
@@ -240,7 +240,7 @@ class ExchangeCommandHandler(
     ) {
         try {
             session.applyHardwareEvent(
-                MobileExchangeHardwareEvent.HardwareError(transport, error),
+                MobileEvent.HardwareError(transport, error),
             )
             drainAndDispatch()
         } catch (e: Exception) {
@@ -251,7 +251,7 @@ class ExchangeCommandHandler(
     fun reportPermissionDenied(transport: String) {
         try {
             session.applyHardwareEvent(
-                MobileExchangeHardwareEvent.PermissionDenied(transport),
+                MobileEvent.PermissionDenied(transport),
             )
             drainAndDispatch()
         } catch (e: Exception) {

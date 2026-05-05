@@ -17,7 +17,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import uniffi.vauchi_platform.MobileExchangeHardwareEvent
+import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.MobileLocale
 import uniffi.vauchi_platform.MobileTabInfo
 import uniffi.vauchi_platform.PlatformAppEngine
@@ -95,17 +95,17 @@ class CoreAppViewModel(
      * Sends the image bytes back to core as an ImageReceived hardware event.
      */
     fun handleImageReceived(imageBytes: ByteArray) {
-        sendHardwareEvent(MobileExchangeHardwareEvent.ImageReceived(data = imageBytes))
+        sendHardwareEvent(MobileEvent.ImageReceived(data = imageBytes))
     }
 
     /**
      * Called when the user cancels the image picker.
      */
     fun handleImagePickCancelled() {
-        sendHardwareEvent(MobileExchangeHardwareEvent.ImagePickCancelled)
+        sendHardwareEvent(MobileEvent.ImagePickCancelled)
     }
 
-    private fun sendHardwareEvent(event: MobileExchangeHardwareEvent) {
+    private fun sendHardwareEvent(event: MobileEvent) {
         viewModelScope.launch {
             try {
                 val resultJson =
@@ -427,7 +427,7 @@ class CoreAppViewModel(
                         is ExchangeCommandDTO.ImagePickFromFile -> {
                             // File picking not supported on Android — report unavailable
                             sendHardwareEvent(
-                                MobileExchangeHardwareEvent.HardwareUnavailable("ImagePickFromFile"),
+                                MobileEvent.HardwareUnavailable("ImagePickFromFile"),
                             )
                         }
 
