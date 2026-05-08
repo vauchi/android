@@ -123,6 +123,21 @@ class CoreAppViewModel(
     }
 
     /**
+     * Orientation lock requests emitted by core's
+     * `Command::SetOrientationLock` (Phase 2c screen-presentation
+     * lifecycle). [OrientationLockRequest.Lock] clamps the Activity's
+     * `requestedOrientation` to the requested mask;
+     * [OrientationLockRequest.Restore] returns to the platform default.
+     * `null` means "no pending request".
+     */
+    private val _orientationLockRequest = MutableStateFlow<OrientationLockRequest?>(null)
+    val orientationLockRequest: StateFlow<OrientationLockRequest?> = _orientationLockRequest.asStateFlow()
+
+    fun consumeOrientationLockRequest() {
+        _orientationLockRequest.value = null
+    }
+
+    /**
      * Called by the Activity/Composable when the user picks or captures an image.
      * Sends the image bytes back to core as an ImageReceived hardware event.
      */
@@ -545,6 +560,16 @@ class CoreAppViewModel(
                     _idleTimerDisabledRequest.value = cmd.disabled
                 }
 
+                is CommandDTO.SetOrientationLock -> {
+                    // Phase 2c screen-presentation lifecycle command.
+                    // Surface to the Activity-side collector; the
+                    // collector owns `Activity.requestedOrientation`.
+                    _orientationLockRequest.value =
+                        cmd.orientation
+                            ?.let { OrientationLockRequest.Lock(it) }
+                            ?: OrientationLockRequest.Restore
+                }
+
                 else -> {
                     // BLE, NFC, Audio commands handled by the in-process
                     // ExchangeCommandHandler attached to the
@@ -573,4 +598,20 @@ sealed interface BrightnessRequest {
 
     /** Restore the platform-default brightness. */
     data object Restore : BrightnessRequest
+}
+
+/**
+ * Orientation lock request from core's `Command::SetOrientationLock`
+ * (Phase 2c screen-presentation lifecycle). Routed via
+ * [CoreAppViewModel.orientationLockRequest]; the Activity-side
+ * collector owns `Activity.requestedOrientation`.
+ */
+sealed interface OrientationLockRequest {
+    /** Clamp the Activity to [orientation]. */
+    data class Lock(
+        val orientation: OrientationDTO,
+    ) : OrientationLockRequest
+
+    /** Restore the platform-default orientation behaviour. */
+    data object Restore : OrientationLockRequest
 }

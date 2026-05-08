@@ -6,6 +6,7 @@ package app.vauchi
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -64,6 +65,8 @@ import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.CoreOnboardingScreen
 import app.vauchi.ui.coreui.CoreScreenView
 import app.vauchi.ui.coreui.MaterialIconName
+import app.vauchi.ui.coreui.OrientationDTO
+import app.vauchi.ui.coreui.OrientationLockRequest
 import app.vauchi.ui.coreui.UserAction
 import app.vauchi.ui.coreui.materialIconNameForCoreIcon
 import app.vauchi.ui.theme.VauchiTheme
@@ -388,6 +391,48 @@ fun MainScreen(
             false -> {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 coreAppViewModel.consumeIdleTimerDisabledRequest()
+            }
+
+            null -> {
+                Unit
+            }
+        }
+    }
+
+    // Phase 2c screen-presentation: dispatch core's
+    // `Command::SetOrientationLock` to the Activity. Mirrors the prior
+    // orientation `DisposableEffect` inside `FaceToFaceExchangeScreen`
+    // (now retired) but driven by core's
+    // `MultiStageExchangeEngine::screen_entered/screen_exited`. Any
+    // future screen with orientation needs gets the same behaviour
+    // for free.
+    var savedOrientation by remember { mutableStateOf<Int?>(null) }
+    val orientationRequest by coreAppViewModel.orientationLockRequest.collectAsState()
+    LaunchedEffect(orientationRequest) {
+        val activity = context as? Activity ?: return@LaunchedEffect
+        when (val req = orientationRequest) {
+            is OrientationLockRequest.Lock -> {
+                if (savedOrientation == null) {
+                    savedOrientation = activity.requestedOrientation
+                }
+                activity.requestedOrientation =
+                    when (req.orientation) {
+                        OrientationDTO.Portrait -> {
+                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                        }
+
+                        OrientationDTO.Landscape -> {
+                            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                        }
+                    }
+                coreAppViewModel.consumeOrientationLockRequest()
+            }
+
+            OrientationLockRequest.Restore -> {
+                activity.requestedOrientation =
+                    savedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                savedOrientation = null
+                coreAppViewModel.consumeOrientationLockRequest()
             }
 
             null -> {

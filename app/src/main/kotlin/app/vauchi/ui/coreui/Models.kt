@@ -1912,7 +1912,24 @@ sealed class CommandDTO {
         val useFront: Boolean,
     ) : CommandDTO()
 
+    /**
+     * Phase 2c screen-presentation command. `orientation == null`
+     * means "unlock to platform default"; non-null clamps the
+     * Activity's `requestedOrientation` to the requested mask. The
+     * Activity-side collector snapshots/restores around exchange
+     * sessions.
+     */
+    data class SetOrientationLock(
+        val orientation: OrientationDTO?,
+    ) : CommandDTO()
+
     data object Unknown : CommandDTO()
+}
+
+/** Mirrors `vauchi-core::Orientation` on the JSON wire. */
+enum class OrientationDTO {
+    Portrait,
+    Landscape,
 }
 
 internal object ActionResultSerializer : KSerializer<ActionResult> {
@@ -2355,6 +2372,17 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                         CommandDTO.SwitchCamera(
                             useFront = obj["use_front"]!!.jsonPrimitive.boolean,
                         )
+                    }
+
+                    "SetOrientationLock" in element -> {
+                        val obj = element["SetOrientationLock"] as JsonObject
+                        val orientation =
+                            obj["orientation"]
+                                ?.takeIf { it !is JsonNull }
+                                ?.jsonPrimitive
+                                ?.content
+                                ?.let { runCatching { OrientationDTO.valueOf(it) }.getOrNull() }
+                        CommandDTO.SetOrientationLock(orientation = orientation)
                     }
 
                     else -> {

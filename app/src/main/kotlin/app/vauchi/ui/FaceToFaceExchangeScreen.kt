@@ -4,8 +4,6 @@
 
 package app.vauchi.ui
 
-import android.app.Activity
-import android.content.pm.ActivityInfo
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.camera.core.CameraSelector
@@ -53,29 +51,19 @@ import java.util.concurrent.TimeUnit
  */
 @Composable
 fun MultiStageExchangeScreen(coreAppViewModel: CoreAppViewModel) {
-    val context = LocalContext.current
-
-    // Lock orientation to portrait during exchange. Restored on dispose.
-    DisposableEffect(Unit) {
-        val activity = context as? Activity
-        val previousOrientation = activity?.requestedOrientation
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        onDispose {
-            activity?.requestedOrientation =
-                previousOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
-    }
-
-    // Brightness + KEEP_SCREEN_ON moved to core 2026-05-08 (Phase 3 of
-    // `2026-05-04-exchange-command-screen-presentation`):
+    // Orientation + brightness + KEEP_SCREEN_ON now live in core
+    // (Phase 2b/2c of `2026-05-04-exchange-command-screen-presentation`):
     // `MultiStageExchangeEngine::screen_entered` emits
     // `Command::SetScreenBrightness(Some(0.65))` +
-    // `Command::SetIdleTimerDisabled(disabled: true)` on screen entry,
-    // `screen_exited` emits the inverse pair. `CoreAppViewModel`
-    // surfaces them via `brightnessRequest` / `idleTimerDisabledRequest`
+    // `Command::SetIdleTimerDisabled(disabled: true)` +
+    // `Command::SetOrientationLock(Some(Portrait))` on screen entry,
+    // `screen_exited` emits the inverse triple. `CoreAppViewModel`
+    // surfaces them via the `brightnessRequest`,
+    // `idleTimerDisabledRequest`, and `orientationLockRequest`
     // StateFlows; the Activity-side collector in `MainScreen` owns
-    // `Window.attributes.screenBrightness` + `FLAG_KEEP_SCREEN_ON`,
-    // including the snapshot/restore semantic.
+    // `Window.attributes.screenBrightness`, `FLAG_KEEP_SCREEN_ON`, and
+    // `Activity.requestedOrientation`, including the snapshot/restore
+    // semantics.
 
     // Forward system back to core as the engine-level cancel event.
     // Core decides the next screen via its routing layer; the Activity's
