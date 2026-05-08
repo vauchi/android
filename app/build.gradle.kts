@@ -115,6 +115,18 @@ android {
             // does not see and fail to compile these tests.
             kotlin.srcDir("src/test/binding-dependent/kotlin")
         }
+    } else {
+        // Without -PlocalBindings the published Maven AAR is the only intended
+        // source for native libs. `just bindings` writes a host-arch
+        // libvauchi_platform.so into src/main/jniLibs/ for screenshot tests
+        // and local iteration; if that file lags the pinned AAR's UniFFI
+        // surface, Gradle merges them and the loser of the dedup race ends up
+        // at runtime — producing a `UniFFI API checksum mismatch` crash on
+        // first JNI call. Excluding src/main/jniLibs/ from the variant when
+        // localBindings is off makes the AAR the single source of truth.
+        sourceSets.getByName("main") {
+            jniLibs.setSrcDirs(emptyList<Any>())
+        }
     }
 
     packaging {
