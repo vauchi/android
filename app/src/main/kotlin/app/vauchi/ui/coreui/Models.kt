@@ -21,6 +21,7 @@ import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
@@ -1889,6 +1890,28 @@ sealed class CommandDTO {
 
     data object ImagePickFromFile : CommandDTO()
 
+    /**
+     * Phase 2b screen-presentation command. `level == null` means
+     * "restore platform default"; the Activity-side collector
+     * snapshots the prior brightness on the first non-null value.
+     */
+    data class SetScreenBrightness(
+        val level: Float?,
+    ) : CommandDTO()
+
+    /** Phase 2b screen-presentation command. */
+    data class SetIdleTimerDisabled(
+        val disabled: Boolean,
+    ) : CommandDTO()
+
+    data class ShowShareSheet(
+        val url: String,
+    ) : CommandDTO()
+
+    data class SwitchCamera(
+        val useFront: Boolean,
+    ) : CommandDTO()
+
     data object Unknown : CommandDTO()
 }
 
@@ -2302,6 +2325,35 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                         val obj = element["AudioListenForResponse"] as JsonObject
                         CommandDTO.AudioListenForResponse(
                             timeoutMs = obj["timeout_ms"]!!.jsonPrimitive.long,
+                        )
+                    }
+
+                    "SetScreenBrightness" in element -> {
+                        val obj = element["SetScreenBrightness"] as JsonObject
+                        CommandDTO.SetScreenBrightness(
+                            level =
+                                obj["level"]?.jsonPrimitive?.takeIf { !it.isString }?.float,
+                        )
+                    }
+
+                    "SetIdleTimerDisabled" in element -> {
+                        val obj = element["SetIdleTimerDisabled"] as JsonObject
+                        CommandDTO.SetIdleTimerDisabled(
+                            disabled = obj["disabled"]!!.jsonPrimitive.boolean,
+                        )
+                    }
+
+                    "ShowShareSheet" in element -> {
+                        val obj = element["ShowShareSheet"] as JsonObject
+                        CommandDTO.ShowShareSheet(
+                            url = obj["url"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "SwitchCamera" in element -> {
+                        val obj = element["SwitchCamera"] as JsonObject
+                        CommandDTO.SwitchCamera(
+                            useFront = obj["use_front"]!!.jsonPrimitive.boolean,
                         )
                     }
 
