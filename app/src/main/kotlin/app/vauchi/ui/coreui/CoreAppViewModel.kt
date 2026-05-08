@@ -91,6 +91,38 @@ class CoreAppViewModel(
     }
 
     /**
+     * Screen brightness requests emitted by core's
+     * `Command::SetScreenBrightness` (Phase 2b screen-presentation
+     * lifecycle). [BrightnessRequest.Set] dims/brightens to the
+     * requested level (0.0–1.0); [BrightnessRequest.Restore] restores
+     * the platform default. The Activity-side collector snapshots the
+     * prior `Window.attributes.screenBrightness` on the first `Set`
+     * so the next `Restore` correctly reverts.
+     *
+     * `null` means "no pending request"; consumed by
+     * [consumeBrightnessRequest] after the collector applies it.
+     */
+    private val _brightnessRequest = MutableStateFlow<BrightnessRequest?>(null)
+    val brightnessRequest: StateFlow<BrightnessRequest?> = _brightnessRequest.asStateFlow()
+
+    fun consumeBrightnessRequest() {
+        _brightnessRequest.value = null
+    }
+
+    /**
+     * Idle-timer / keep-screen-on requests emitted by core's
+     * `Command::SetIdleTimerDisabled`. `true` means "disable the idle
+     * timer" (`FLAG_KEEP_SCREEN_ON`); `false` means restore default.
+     * `null` means "no pending request".
+     */
+    private val _idleTimerDisabledRequest = MutableStateFlow<Boolean?>(null)
+    val idleTimerDisabledRequest: StateFlow<Boolean?> = _idleTimerDisabledRequest.asStateFlow()
+
+    fun consumeIdleTimerDisabledRequest() {
+        _idleTimerDisabledRequest.value = null
+    }
+
+    /**
      * Called by the Activity/Composable when the user picks or captures an image.
      * Sends the image bytes back to core as an ImageReceived hardware event.
      */
@@ -496,10 +528,27 @@ class CoreAppViewModel(
                     )
                 }
 
+                is CommandDTO.SetScreenBrightness -> {
+                    // Phase 2b screen-presentation lifecycle command.
+                    // Mirrors `MultiStageExchangeEngine::screen_entered/exited`
+                    // in core. Surface to the Activity-side collector via
+                    // a typed StateFlow; the collector owns
+                    // `Window.attributes.screenBrightness` and the
+                    // snapshot/restore semantics.
+                    _brightnessRequest.value =
+                        cmd.level
+                            ?.let { BrightnessRequest.Set(it) }
+                            ?: BrightnessRequest.Restore
+                }
+
+                is CommandDTO.SetIdleTimerDisabled -> {
+                    _idleTimerDisabledRequest.value = cmd.disabled
+                }
+
                 else -> {
-                    // Other exchange commands handled by exchange session /
-                    // CommandHandler (BLE, NFC, Audio, brightness,
-                    // idle-timer) via the existing dispatch path.
+                    // BLE, NFC, Audio commands handled by the in-process
+                    // ExchangeCommandHandler attached to the
+                    // MobileExchangeSession.
                 }
             }
         }
@@ -508,4 +557,20 @@ class CoreAppViewModel(
     companion object {
         private const val TAG = "CoreAppVM"
     }
+}
+
+/**
+ * Screen-brightness request from core's `Command::SetScreenBrightness`
+ * (Phase 2b screen-presentation lifecycle). Routed via
+ * [CoreAppViewModel.brightnessRequest]; the Activity-side collector
+ * owns the platform call.
+ */
+sealed interface BrightnessRequest {
+    /** Set platform brightness to [level] (0.0–1.0). */
+    data class Set(
+        val level: Float,
+    ) : BrightnessRequest
+
+    /** Restore the platform-default brightness. */
+    data object Restore : BrightnessRequest
 }

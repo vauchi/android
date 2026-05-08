@@ -7,7 +7,6 @@ package app.vauchi.ui
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.util.Log
-import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.FocusMeteringAction
@@ -67,27 +66,16 @@ fun MultiStageExchangeScreen(coreAppViewModel: CoreAppViewModel) {
         }
     }
 
-    // Keep screen on + drop brightness to 65% (max brightness overexposes
-    // the scanning device's camera, washing out QR module contrast). Gray
-    // QR colors emitted by core compensate for the reduced luminance.
-    DisposableEffect(Unit) {
-        val activity = context as? Activity
-        val previousBrightness = activity?.window?.attributes?.screenBrightness ?: -1.0f
-        activity?.window?.let { window ->
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            val params = window.attributes
-            params.screenBrightness = 0.65f
-            window.attributes = params
-        }
-        onDispose {
-            activity?.window?.let { window ->
-                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                val params = window.attributes
-                params.screenBrightness = previousBrightness
-                window.attributes = params
-            }
-        }
-    }
+    // Brightness + KEEP_SCREEN_ON moved to core 2026-05-08 (Phase 3 of
+    // `2026-05-04-exchange-command-screen-presentation`):
+    // `MultiStageExchangeEngine::screen_entered` emits
+    // `Command::SetScreenBrightness(Some(0.65))` +
+    // `Command::SetIdleTimerDisabled(disabled: true)` on screen entry,
+    // `screen_exited` emits the inverse pair. `CoreAppViewModel`
+    // surfaces them via `brightnessRequest` / `idleTimerDisabledRequest`
+    // StateFlows; the Activity-side collector in `MainScreen` owns
+    // `Window.attributes.screenBrightness` + `FLAG_KEEP_SCREEN_ON`,
+    // including the snapshot/restore semantic.
 
     // Forward system back to core as the engine-level cancel event.
     // Core decides the next screen via its routing layer; the Activity's

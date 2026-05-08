@@ -4,11 +4,13 @@
 
 package app.vauchi
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
@@ -57,6 +59,7 @@ import app.vauchi.ui.QrDiagnosticScreen
 import app.vauchi.ui.RecoveryScreen
 import app.vauchi.ui.SyncState
 import app.vauchi.ui.UiState
+import app.vauchi.ui.coreui.BrightnessRequest
 import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.CoreOnboardingScreen
 import app.vauchi.ui.coreui.CoreScreenView
@@ -332,6 +335,64 @@ fun MainScreen(
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
             context.startActivity(intent)
             coreAppViewModel.consumeOpenUrlEvent()
+        }
+    }
+
+    // Phase 2b screen-presentation: dispatch core's
+    // `Command::SetScreenBrightness` / `Command::SetIdleTimerDisabled`
+    // to the Activity window. Mirrors the prior `DisposableEffect`
+    // inside `FaceToFaceExchangeScreen`, but driven by core's
+    // `MultiStageExchangeEngine::screen_entered/screen_exited` so any
+    // future screen with brightness needs (BleExchange, biometric,
+    // etc.) gets the same behaviour for free.
+    var savedBrightness by remember { mutableStateOf<Float?>(null) }
+    val brightnessRequest by coreAppViewModel.brightnessRequest.collectAsState()
+    LaunchedEffect(brightnessRequest) {
+        val activity = context as? Activity ?: return@LaunchedEffect
+        val window = activity.window ?: return@LaunchedEffect
+        when (val req = brightnessRequest) {
+            is BrightnessRequest.Set -> {
+                val params = window.attributes
+                if (savedBrightness == null) {
+                    savedBrightness = params.screenBrightness
+                }
+                params.screenBrightness = req.level.coerceIn(0f, 1f)
+                window.attributes = params
+                coreAppViewModel.consumeBrightnessRequest()
+            }
+
+            BrightnessRequest.Restore -> {
+                val params = window.attributes
+                params.screenBrightness =
+                    savedBrightness ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                window.attributes = params
+                savedBrightness = null
+                coreAppViewModel.consumeBrightnessRequest()
+            }
+
+            null -> {
+                Unit
+            }
+        }
+    }
+    val idleTimerRequest by coreAppViewModel.idleTimerDisabledRequest.collectAsState()
+    LaunchedEffect(idleTimerRequest) {
+        val activity = context as? Activity ?: return@LaunchedEffect
+        val window = activity.window ?: return@LaunchedEffect
+        when (idleTimerRequest) {
+            true -> {
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                coreAppViewModel.consumeIdleTimerDisabledRequest()
+            }
+
+            false -> {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                coreAppViewModel.consumeIdleTimerDisabledRequest()
+            }
+
+            null -> {
+                Unit
+            }
         }
     }
 
