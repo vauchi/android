@@ -246,17 +246,45 @@ enum class Screen {
  * tapped.
  */
 private fun coreScreenIdToVariant(id: String): String? =
-    when (id) {
-        "contacts" -> "Contacts"
-        "settings" -> "Settings"
-        "device_management" -> "DeviceManagement"
-        "groups" -> "Groups"
-        "archived_contacts" -> "ArchivedContacts"
-        "contact_duplicates" -> "ContactDuplicates"
-        "device_replacement" -> "DeviceReplacement"
-        "help" -> "Help"
-        "more" -> "More"
-        "decoy_contacts" -> "DecoyContacts"
+    when {
+        // 1:1 screen-id ↔ AppScreen variant mappings.
+        id == "contacts" -> "Contacts"
+
+        id == "settings" -> "Settings"
+
+        id == "device_management" -> "DeviceManagement"
+
+        id == "groups" -> "Groups"
+
+        id == "archived_contacts" -> "ArchivedContacts"
+
+        id == "contact_duplicates" -> "ContactDuplicates"
+
+        id == "device_replacement" -> "DeviceReplacement"
+
+        id == "help" -> "Help"
+
+        id == "more" -> "More"
+
+        id == "decoy_contacts" -> "DecoyContacts"
+
+        // Multi-state engines: each engine drives multiple `screen_id`s
+        // (e.g. DuressPinEngine cycles `duress_overview` →
+        // `duress_enter_pin` → `duress_confirm_pin` → `duress_alerts`)
+        // but all sub-states render via the same `CoreScreenView` for
+        // the parent `AppScreen` variant. Prefix-match so adding a new
+        // sub-state in core doesn't silently fall through to the
+        // legacy `Screen.Home` fallback (F2-NEW-4 was exactly that:
+        // `duress_overview` and `backup_choose` had no entry, so taps
+        // on the Settings rows landed on My Card instead of the
+        // requested screen — Decoy Contacts worked because it has
+        // only the single `decoy_contacts` id mapped above).
+        id.startsWith("duress_") -> "DuressPin"
+
+        id.startsWith("backup_") -> "Backup"
+
+        id.startsWith("sync_") -> "Sync"
+
         else -> null
     }
 
