@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import app.vauchi.data.AuthenticationRequiredException
 import app.vauchi.data.DeviceNotSecureException
 import app.vauchi.data.ExchangeSessionData
+import app.vauchi.data.KeyInvalidatedRecoveryRequired
 import app.vauchi.data.VauchiRepository
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NetworkMonitor
@@ -78,6 +79,19 @@ sealed class UiState {
 
     data class Error(
         val message: String,
+    ) : UiState()
+
+    /**
+     * The KeyStore master key was invalidated and the local encrypted state
+     * has been wiped. The user must pick a recovery path.
+     *
+     * @property hadData true when the user previously had a working
+     *   identity whose data was lost; false on a true fresh-install path
+     *   that hit an inherited invalidated alias (route silently to
+     *   onboarding via [MainViewModel.onRecoveryStartFresh]).
+     */
+    data class KeyInvalidatedRecovery(
+        val hadData: Boolean,
     ) : UiState()
 }
 
@@ -207,6 +221,14 @@ class MainViewModel(
             } catch (e: AuthenticationRequiredException) {
                 android.util.Log.e("Vauchi", "checkIdentity: auth required", e)
                 _uiState.value = UiState.AuthRequired
+            } catch (e: KeyInvalidatedRecoveryRequired) {
+                android.util.Log.e("Vauchi", "checkIdentity: key invalidated, hadData=${e.hadData}", e)
+                if (e.hadData) {
+                    _uiState.value = UiState.KeyInvalidatedRecovery(hadData = true)
+                } else {
+                    // True fresh install — wipe already done, route silently
+                    _uiState.value = UiState.Onboarding
+                }
             } catch (e: Exception) {
                 android.util.Log.e("Vauchi", "checkIdentity: ${e.javaClass.simpleName}: ${e.message}", e)
                 _uiState.value = UiState.Error(e.message ?: "Unknown error")
@@ -275,6 +297,10 @@ class MainViewModel(
         } catch (e: AuthenticationRequiredException) {
             android.util.Log.e("Vauchi", "loadUserData: auth required", e)
             _uiState.value = UiState.AuthRequired
+        } catch (e: KeyInvalidatedRecoveryRequired) {
+            android.util.Log.e("Vauchi", "loadUserData: key invalidated, hadData=${e.hadData}", e)
+            _uiState.value =
+                if (e.hadData) UiState.KeyInvalidatedRecovery(hadData = true) else UiState.Onboarding
         } catch (e: Exception) {
             android.util.Log.e("Vauchi", "loadUserData: ${e.javaClass.simpleName}: ${e.message}", e)
             _uiState.value = UiState.Error(e.message ?: "Failed to load user data")
@@ -285,6 +311,17 @@ class MainViewModel(
         viewModelScope.launch {
             loadUserData()
         }
+    }
+
+    /**
+     * User chose "Set up new identity" on the key-invalidated recovery
+     * screen. Storage state has already been wiped at the moment the
+     * recovery state was entered; re-run identity check so the next
+     * storage init (now clean) routes to onboarding.
+     */
+    fun onRecoveryStartFresh() {
+        _uiState.value = UiState.Loading
+        checkIdentity()
     }
 
     /** Re-run full initialization (identity check + load). Use after biometric auth. */

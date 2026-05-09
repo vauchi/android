@@ -53,6 +53,7 @@ import app.vauchi.ui.BleExchangeScreen
 import app.vauchi.ui.ContactDetailScreen
 import app.vauchi.ui.ExchangeMode
 import app.vauchi.ui.ExchangeModePicker
+import app.vauchi.ui.KeyInvalidatedRecoveryScreen
 import app.vauchi.ui.MainViewModel
 import app.vauchi.ui.MultiStageExchangeScreen
 import app.vauchi.ui.NfcExchangeScreen
@@ -692,6 +693,27 @@ fun MainScreen(
                                     message = state.message,
                                     onRetry = { viewModel.refresh() },
                                 )
+                            }
+
+                            is UiState.KeyInvalidatedRecovery -> {
+                                KeyInvalidatedRecoveryScreen(
+                                    onRestoreFromBackup = { showRestoreDialog = true },
+                                    onStartFresh = { viewModel.onRecoveryStartFresh() },
+                                )
+
+                                if (showRestoreDialog) {
+                                    RestoreIdentityDialog(
+                                        onDismiss = { showRestoreDialog = false },
+                                        onRestore = { backupData, password ->
+                                            coroutineScope.launch {
+                                                val success = viewModel.importFullBackup(backupData, password)
+                                                if (success) {
+                                                    showRestoreDialog = false
+                                                }
+                                            }
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
