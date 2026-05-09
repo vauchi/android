@@ -50,6 +50,7 @@ fun CoreScreenView(
     val toastUndoActionId by viewModel.toastUndoActionId.collectAsState()
     val alertMessage by viewModel.alertMessage.collectAsState()
     val imagePickEvent by viewModel.imagePickEvent.collectAsState()
+    val useFrontCamera by viewModel.useFrontCamera.collectAsState()
 
     val context = LocalContext.current
 
@@ -138,13 +139,17 @@ fun CoreScreenView(
     Box(modifier = modifier.fillMaxSize()) {
         val currentScreenModel = screen
         if (currentScreenModel != null) {
-            ScreenRenderer(
-                screen = currentScreenModel,
-                onAction = { action -> viewModel.handleAction(action) },
-                toastMessage = toastMessage,
-                toastUndoActionId = toastUndoActionId,
-                onToastDismiss = { viewModel.dismissToast() },
-            )
+            androidx.compose.runtime.CompositionLocalProvider(
+                LocalUseFrontCamera provides useFrontCamera,
+            ) {
+                ScreenRenderer(
+                    screen = currentScreenModel,
+                    onAction = { action -> viewModel.handleAction(action) },
+                    toastMessage = toastMessage,
+                    toastUndoActionId = toastUndoActionId,
+                    onToastDismiss = { viewModel.dismissToast() },
+                )
+            }
         } else {
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center),

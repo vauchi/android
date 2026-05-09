@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.vauchi.ui.components.QrCodeAnalyzer
+import app.vauchi.ui.coreui.LocalUseFrontCamera
 import app.vauchi.ui.coreui.QrMode
 import app.vauchi.ui.coreui.UserAction
 import app.vauchi.util.generateQrBitmap
@@ -139,6 +140,11 @@ private fun QrScanner(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val executor = remember { Executors.newSingleThreadExecutor() }
+    // Camera-selector preference flipped by core's `Command::SwitchCamera`
+    // (see [CoreAppViewModel.useFrontCamera]). Used both as the
+    // `CameraSelector` and as a `key` so flipping it recreates the
+    // PreviewView + binds CameraX with the new selector.
+    val useFrontCamera = LocalUseFrontCamera.current
 
     DisposableEffect(Unit) {
         onDispose { executor.shutdown() }
@@ -148,6 +154,7 @@ private fun QrScanner(
         modifier = modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp)),
         color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
+        androidx.compose.runtime.key(useFrontCamera) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
@@ -220,7 +227,11 @@ private fun QrScanner(
                             cameraProvider.unbindAll()
                             cameraProvider.bindToLifecycle(
                                 lifecycleOwner,
-                                CameraSelector.DEFAULT_BACK_CAMERA,
+                                if (useFrontCamera) {
+                                    CameraSelector.DEFAULT_FRONT_CAMERA
+                                } else {
+                                    CameraSelector.DEFAULT_BACK_CAMERA
+                                },
                                 preview,
                                 imageAnalyzer,
                             )
@@ -237,5 +248,6 @@ private fun QrScanner(
                 previewView
             },
         )
+        }
     }
 }

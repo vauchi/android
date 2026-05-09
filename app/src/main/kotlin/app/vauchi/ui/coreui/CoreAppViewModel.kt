@@ -138,6 +138,21 @@ class CoreAppViewModel(
     }
 
     /**
+     * Active camera-selector preference for `Component::QrCode`'s
+     * scan mode. Flips when core's `MultiStageExchangeEngine` emits
+     * `Command::SwitchCamera { use_front }` in response to the
+     * `switch_camera` action — the QR scanner Composable reads this
+     * StateFlow via [LocalUseFrontCamera] and re-binds CameraX with
+     * `DEFAULT_FRONT_CAMERA` / `DEFAULT_BACK_CAMERA` accordingly.
+     *
+     * Default `false` (back camera). Persists for the lifetime of the
+     * ViewModel (one camera-orientation choice across the screen
+     * navigations within a single core session).
+     */
+    private val _useFrontCamera = MutableStateFlow(false)
+    val useFrontCamera: StateFlow<Boolean> = _useFrontCamera.asStateFlow()
+
+    /**
      * Called by the Activity/Composable when the user picks or captures an image.
      * Sends the image bytes back to core as an ImageReceived hardware event.
      */
@@ -570,6 +585,15 @@ class CoreAppViewModel(
                             ?: OrientationLockRequest.Restore
                 }
 
+                is CommandDTO.SwitchCamera -> {
+                    // Camera-selector toggle from
+                    // `MultiStageExchangeEngine`'s `switch_camera`
+                    // action. The QR scanner Composable observes
+                    // [useFrontCamera] via `LocalUseFrontCamera` and
+                    // re-binds CameraX when the value changes.
+                    _useFrontCamera.value = cmd.useFront
+                }
+
                 else -> {
                     // BLE, NFC, Audio commands handled by the in-process
                     // ExchangeCommandHandler attached to the
@@ -599,6 +623,16 @@ sealed interface BrightnessRequest {
     /** Restore the platform-default brightness. */
     data object Restore : BrightnessRequest
 }
+
+/**
+ * Composition-local exposing the active camera-selector preference
+ * (front vs back) emitted by core's `Command::SwitchCamera`. Provided
+ * at the [CoreScreenView] root and consumed by `QrCodeComponent`'s
+ * scan-mode Composable. Default `false` (back camera) when no
+ * provider is found, matching CameraX's
+ * `CameraSelector.DEFAULT_BACK_CAMERA`.
+ */
+val LocalUseFrontCamera = androidx.compose.runtime.compositionLocalOf { false }
 
 /**
  * Orientation lock request from core's `Command::SetOrientationLock`
