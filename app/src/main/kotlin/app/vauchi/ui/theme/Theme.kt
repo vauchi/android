@@ -8,10 +8,14 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import app.vauchi.util.ThemeManager
 import app.vauchi.util.hexToColor
+import uniffi.vauchi_platform.MobileTheme
 
 /**
  * Build a Material3 [ColorScheme] from the current [ThemeManager] theme.
@@ -28,10 +32,9 @@ import app.vauchi.util.hexToColor
  * - border        -> outline
  */
 private fun buildColorScheme(
-    themeManager: ThemeManager,
+    theme: MobileTheme?,
     isDark: Boolean,
 ): ColorScheme {
-    val theme = themeManager.currentTheme
     if (theme == null) {
         return if (isDark) darkColorScheme() else lightColorScheme()
     }
@@ -52,8 +55,7 @@ private fun buildColorScheme(
     )
 }
 
-private fun buildStatusColors(themeManager: ThemeManager): StatusColors {
-    val theme = themeManager.currentTheme
+private fun buildStatusColors(theme: MobileTheme?): StatusColors {
     if (theme == null) {
         return StatusColors(
             success = Color(0xFF2E7D32),
@@ -78,10 +80,26 @@ fun VauchiTheme(
 ) {
     val context = LocalContext.current
     val themeManager = ThemeManager.getInstance(context)
-    themeManager.applySelectedTheme(darkTheme)
+    // Manager state is exposed as `StateFlow` (not `mutableStateOf`)
+    // because the manager is a process-wide singleton — `mutableStateOf`
+    // bound to a previous Compose runtime's snapshot system blew up
+    // on cold-start with "Reading a state that was created after the
+    // snapshot was taken" once the runtime was recreated (config
+    // change, force-stop+relaunch). `collectAsState` decouples the
+    // observation from any specific runtime.
+    val theme by themeManager.currentTheme.collectAsState()
 
-    val colorScheme = buildColorScheme(themeManager, darkTheme)
-    val statusColors = buildStatusColors(themeManager)
+    // `applySelectedTheme` writes the `MutableStateFlow`s. Wrapped in
+    // `SideEffect` so the write runs after composition commits; the
+    // next recomposition sees the new `theme` value. First-frame
+    // flash to default colors is acceptable; cold-start launch
+    // crash is not.
+    SideEffect {
+        themeManager.applySelectedTheme(darkTheme)
+    }
+
+    val colorScheme = buildColorScheme(theme, darkTheme)
+    val statusColors = buildStatusColors(theme)
 
     MaterialTheme(
         colorScheme = colorScheme,

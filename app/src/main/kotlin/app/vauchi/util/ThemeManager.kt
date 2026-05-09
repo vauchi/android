@@ -6,11 +6,11 @@ package app.vauchi.util
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.edit
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import uniffi.vauchi_platform.MobileAppPreferences
 import uniffi.vauchi_platform.MobileTheme
 import uniffi.vauchi_platform.MobileThemeMode
@@ -41,21 +41,36 @@ class ThemeManager(
     @Volatile
     private var vauchi: VauchiPlatform? = null
 
-    /** Currently selected theme */
-    var currentTheme: MobileTheme? by mutableStateOf(null)
-        private set
+    /**
+     * Currently selected theme.
+     *
+     * `MutableStateFlow` rather than `mutableStateOf` because this
+     * manager is a singleton with a process-wide lifetime: it is
+     * created on first `getInstance` (often from
+     * `VauchiRepository.platform()` on a background thread) and
+     * survives Activity recreation. Compose `mutableStateOf` is bound
+     * to the snapshot system of the runtime that read it first; once
+     * that runtime dies (config change, force-stop+relaunch) a fresh
+     * Compose runtime reading the same singleton's state hits
+     * "Reading a state that was created after the snapshot was
+     * taken" — exactly the crash filed alongside this fix. Using a
+     * `StateFlow` decouples the storage from any specific Compose
+     * runtime; consumers observe via `collectAsState()`.
+     */
+    private val _currentTheme = MutableStateFlow<MobileTheme?>(null)
+    val currentTheme: StateFlow<MobileTheme?> = _currentTheme.asStateFlow()
 
-    /** All available themes */
-    var availableThemes: List<MobileTheme> by mutableStateOf(emptyList())
-        private set
+    /** All available themes. */
+    private val _availableThemes = MutableStateFlow<List<MobileTheme>>(emptyList())
+    val availableThemes: StateFlow<List<MobileTheme>> = _availableThemes.asStateFlow()
 
-    /** Whether to follow system appearance */
-    var followSystem: Boolean by mutableStateOf(true)
-        private set
+    /** Whether to follow system appearance. */
+    private val _followSystem = MutableStateFlow(true)
+    val followSystem: StateFlow<Boolean> = _followSystem.asStateFlow()
 
     /** Selected theme ID (`null` when following system). */
-    var selectedThemeId: String? by mutableStateOf(null)
-        private set
+    private val _selectedThemeId = MutableStateFlow<String?>(null)
+    val selectedThemeId: StateFlow<String?> = _selectedThemeId.asStateFlow()
 
     init {
         loadThemes()
@@ -63,10 +78,10 @@ class ThemeManager(
 
     private fun loadThemes() {
         try {
-            availableThemes = getAvailableThemes()
+            _availableThemes.value = getAvailableThemes()
             applySelectedTheme(isDarkMode = false) // Will be updated when composable reads system setting
         } catch (e: UnsatisfiedLinkError) {
-            availableThemes = emptyList()
+            _availableThemes.value = emptyList()
         }
     }
 
@@ -106,10 +121,10 @@ class ThemeManager(
      */
     fun applySelectedTheme(isDarkMode: Boolean) {
         val p = loadPrefsOrFallback()
-        followSystem = p.followSystemTheme
-        selectedThemeId = p.themeId
+        _followSystem.value = p.followSystemTheme
+        _selectedThemeId.value = p.themeId
         try {
-            currentTheme =
+            _currentTheme.value =
                 if (!p.followSystemTheme && p.themeId != null) {
                     getTheme(p.themeId!!)
                 } else {
@@ -117,7 +132,7 @@ class ThemeManager(
                     getTheme(defaultId)
                 }
         } catch (e: UnsatisfiedLinkError) {
-            currentTheme = null
+            _currentTheme.value = null
         }
     }
 
@@ -167,13 +182,13 @@ class ThemeManager(
         }
     }
 
-    /** Get dark themes */
+    /** Get dark themes (snapshot of current `availableThemes` value). */
     val darkThemes: List<MobileTheme>
-        get() = availableThemes.filter { it.mode == MobileThemeMode.DARK }
+        get() = _availableThemes.value.filter { it.mode == MobileThemeMode.DARK }
 
-    /** Get light themes */
+    /** Get light themes (snapshot of current `availableThemes` value). */
     val lightThemes: List<MobileTheme>
-        get() = availableThemes.filter { it.mode == MobileThemeMode.LIGHT }
+        get() = _availableThemes.value.filter { it.mode == MobileThemeMode.LIGHT }
 
     companion object {
         private const val PREFS_NAME = "vauchi_theme_settings"
