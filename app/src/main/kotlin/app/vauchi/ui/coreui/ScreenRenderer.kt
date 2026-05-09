@@ -20,6 +20,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
@@ -114,10 +115,18 @@ fun ScreenRenderer(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Components
-            screen.components.forEach { component ->
-                ComponentRenderer(component = component, onAction = onAction)
-                Spacer(modifier = Modifier.height(12.dp))
+            // Components — key by id so Compose preserves slot identity
+            // (and any AndroidView state, like the QrScanner camera
+            // binding) across ScreenModel re-emissions. Without this,
+            // a sibling component whose data churns (e.g. the multipart
+            // QR's Display peer cycling every ~300 ms) tears down the
+            // scanner's PreviewView between recompositions and the
+            // camera surface goes black.
+            screen.components.forEachIndexed { index, component ->
+                key(componentSlotKey(component, index)) {
+                    ComponentRenderer(component = component, onAction = onAction)
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -147,6 +156,42 @@ fun ScreenRenderer(
 /**
  * Dispatches rendering to the appropriate component composable.
  */
+@Composable
+/**
+ * Stable key for a component slot. Most variants carry an `id` field
+ * (set by core for action routing); the two id-less singletons
+ * (`Divider`, `Unknown`) fall back to the variant tag plus the list
+ * index so two adjacent dividers don't collide.
+ */
+private fun componentSlotKey(
+    component: Component,
+    index: Int,
+): String =
+    when (component) {
+        is Component.ActionList -> "action_list:${component.id}"
+        is Component.AvatarPreview -> "avatar:${component.id}"
+        is Component.Banner -> "banner@$index"
+        is Component.ConfirmationDialog -> "confirm:${component.id}"
+        is Component.Dropdown -> "dropdown:${component.id}"
+        is Component.EditableText -> "editable:${component.id}"
+        is Component.FieldList -> "field_list:${component.id}"
+        is Component.InfoPanel -> "info:${component.id}"
+        is Component.InlineConfirm -> "inline_confirm:${component.id}"
+        is Component.List -> "list:${component.id}"
+        is Component.PinInput -> "pin:${component.id}"
+        is Component.Preview -> "preview:${component.name}"
+        is Component.QrCode -> "qr:${component.id}"
+        is Component.SettingsGroup -> "settings:${component.id}"
+        is Component.ShowToast -> "toast:${component.id}"
+        is Component.Slider -> "slider:${component.id}"
+        is Component.StatusIndicator -> "status:${component.id}"
+        is Component.Text -> "text:${component.id}"
+        is Component.TextInput -> "text_input:${component.id}"
+        is Component.ToggleList -> "toggle:${component.id}"
+        Component.Divider -> "divider@$index"
+        Component.Unknown -> "unknown@$index"
+    }
+
 @Composable
 fun ComponentRenderer(
     component: Component,

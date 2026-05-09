@@ -154,7 +154,15 @@ private fun QrScanner(
                 val previewView =
                     PreviewView(ctx).apply {
                         scaleType = PreviewView.ScaleType.FILL_CENTER
-                        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                        // PERFORMANCE = SurfaceView when supported (default).
+                        // The earlier COMPATIBLE pin used TextureView; on the
+                        // Samsung S7 (Exynos 8890, Android 8) TextureView in a
+                        // Compose verticalScroll Column would attach + start
+                        // streaming but never paint to screen — surface stayed
+                        // black. Pixel 3a (Adreno) was unaffected. Drop the
+                        // pin so SurfaceView is used wherever the platform
+                        // supports it; falls back to TextureView automatically
+                        // when the layout transforms it (none here).
                     }
 
                 val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
