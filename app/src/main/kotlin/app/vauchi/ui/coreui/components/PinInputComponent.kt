@@ -11,6 +11,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -31,11 +35,23 @@ fun PinInputComponent(
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // F2-NEW-6: hold the entered buffer locally so the field reflects
+    // the user's progress (masked dots when `masked = true`, plain
+    // digits otherwise) and forwards each keystroke to core. The
+    // previous shape pinned `value = ""` which left the field
+    // visually blank — users couldn't tell how many digits they had
+    // entered, and rapid input via `adb shell input text` (used by
+    // the device-test campaign) silently dropped digits when key
+    // events arrived faster than recomposition could surface them.
+    // Core stays authoritative for engine state because we forward
+    // the full buffer on every change.
+    var buffer by remember(componentId) { mutableStateOf("") }
     Column(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
-            value = "",
+            value = buffer,
             onValueChange = { newValue ->
                 val bounded = newValue.take(length)
+                buffer = bounded
                 onAction(UserAction.TextChanged(componentId = componentId, value = bounded))
             },
             label = { Text(label) },
