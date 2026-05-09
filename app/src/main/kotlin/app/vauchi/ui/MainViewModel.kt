@@ -427,6 +427,13 @@ class MainViewModel(
                 _syncState.value = SyncState.RateLimited(e.retryAfterSecs.toLong())
                 showMessage("Please wait ${e.retryAfterSecs}s before syncing again")
             } catch (e: Exception) {
+                // Logging-rules.md format: `[<Module>] Failed: <error_type_only>`.
+                // The exception class (e.g. `MobileException$Other`) is not PII;
+                // captures enough to triage without surfacing message contents.
+                // F2-MED-2 needed exactly this signal — the previous catch
+                // swallowed the exception class entirely, leaving only the
+                // user-facing toast as a diagnostic.
+                Log.e("Vauchi", "[Sync] Failed: ${e.javaClass.simpleName}", e)
                 val errorMsg =
                     if (!networkMonitor.isCurrentlyConnected()) {
                         "No internet connection"
