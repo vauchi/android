@@ -370,6 +370,36 @@ fun MainScreen(
         }
     }
 
+    // F2-NEW-7: surface the encrypted backup blob via Android's share
+    // sheet so the user can route it to a file (Files / Drive / email
+    // attachment / etc.). Without this, core's
+    // `PlatformAppEngine.export_full_backup` returned the hex blob,
+    // CoreAppViewModel staged it in `_backupExportData`, but no UI
+    // consumer existed — the backup→restore round-trip was unreachable
+    // through the shipping app. The blob is the encrypted backup
+    // password protected by the user's chosen passphrase, so sending
+    // it through the system share sheet is appropriate (the user
+    // chooses the destination; core has already applied the
+    // passphrase-derived encryption).
+    val backupExportData by coreAppViewModel.backupExportData.collectAsState()
+    LaunchedEffect(backupExportData) {
+        backupExportData?.let { hex ->
+            val intent =
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, "Vauchi backup")
+                    putExtra(Intent.EXTRA_TEXT, hex)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            val chooser =
+                Intent.createChooser(intent, "Save Vauchi backup").apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            context.startActivity(chooser)
+            coreAppViewModel.consumeBackupExportData()
+        }
+    }
+
     // Phase 2b screen-presentation: dispatch core's
     // `Command::SetScreenBrightness` / `Command::SetIdleTimerDisabled`
     // to the Activity window. Mirrors the prior `DisposableEffect`

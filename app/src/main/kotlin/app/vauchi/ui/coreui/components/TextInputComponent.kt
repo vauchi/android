@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.InputType
 import app.vauchi.ui.coreui.UserAction
@@ -73,6 +75,12 @@ fun TextInputComponent(
                     }
                 },
             singleLine = true,
+            visualTransformation =
+                if (inputType == InputType.Password) {
+                    PasswordVisualTransformation()
+                } else {
+                    VisualTransformation.None
+                },
             keyboardOptions =
                 KeyboardOptions(
                     keyboardType =
