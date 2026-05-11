@@ -4,6 +4,7 @@
 
 package app.vauchi.ui.coreui.components
 
+import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -19,12 +20,14 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -155,99 +159,138 @@ private fun QrScanner(
         color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         androidx.compose.runtime.key(useFrontCamera) {
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = { ctx ->
-                val previewView =
-                    PreviewView(ctx).apply {
-                        scaleType = PreviewView.ScaleType.FILL_CENTER
-                        // PERFORMANCE = SurfaceView when supported (default).
-                        // The earlier COMPATIBLE pin used TextureView; on the
-                        // Samsung S7 (Exynos 8890, Android 8) TextureView in a
-                        // Compose verticalScroll Column would attach + start
-                        // streaming but never paint to screen — surface stayed
-                        // black. Pixel 3a (Adreno) was unaffected. Drop the
-                        // pin so SurfaceView is used wherever the platform
-                        // supports it; falls back to TextureView automatically
-                        // when the layout transforms it (none here).
-                    }
+            // Bind-failure overlay state: set from the bindToLifecycle
+            // catch block when CameraX cannot acquire the camera (most
+            // commonly the recreate-on-flip race with the previous
+            // session). Scoped to the `key(useFrontCamera)` block so a
+            // subsequent successful flip starts with a clean slate.
+            val bindFailure = remember { mutableStateOf<String?>(null) }
+            androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+                AndroidView(
+                    modifier = Modifier.fillMaxSize(),
+                    factory = { ctx ->
+                        val previewView =
+                            PreviewView(ctx).apply {
+                                scaleType = PreviewView.ScaleType.FILL_CENTER
+                                // PERFORMANCE = SurfaceView when supported (default).
+                                // The earlier COMPATIBLE pin used TextureView; on the
+                                // Samsung S7 (Exynos 8890, Android 8) TextureView in a
+                                // Compose verticalScroll Column would attach + start
+                                // streaming but never paint to screen — surface stayed
+                                // black. Pixel 3a (Adreno) was unaffected. Drop the
+                                // pin so SurfaceView is used wherever the platform
+                                // supports it; falls back to TextureView automatically
+                                // when the layout transforms it (none here).
+                            }
 
-                val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-                cameraProviderFuture.addListener(
-                    {
-                        val cameraProvider = cameraProviderFuture.get()
+                        val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                        cameraProviderFuture.addListener(
+                            {
+                                val cameraProvider = cameraProviderFuture.get()
 
-                        // 240p via FaceToFaceExchangeScreen pattern — rxing
-                        // tryHarder hits ~9 ms decode at this resolution with
-                        // 100 % rate on V4-V10 multipart QRs.
-                        val resolutionSelector =
-                            ResolutionSelector
-                                .Builder()
-                                .setResolutionStrategy(
-                                    ResolutionStrategy(
-                                        android.util.Size(320, 240),
-                                        ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER,
-                                    ),
-                                ).build()
+                                // 240p via FaceToFaceExchangeScreen pattern — rxing
+                                // tryHarder hits ~9 ms decode at this resolution with
+                                // 100 % rate on V4-V10 multipart QRs.
+                                val resolutionSelector =
+                                    ResolutionSelector
+                                        .Builder()
+                                        .setResolutionStrategy(
+                                            ResolutionStrategy(
+                                                android.util.Size(320, 240),
+                                                ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER,
+                                            ),
+                                        ).build()
 
-                        val imageAnalyzer =
-                            ImageAnalysis
-                                .Builder()
-                                .setResolutionSelector(resolutionSelector)
-                                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                                .build()
-                                .also { analysis ->
-                                    analysis.setAnalyzer(
-                                        executor,
-                                        QrCodeAnalyzer(
-                                            onQrCodeDetected = { code ->
-                                                // Forward to core. exchange_qr.rs
-                                                // pattern-matches on TextChanged with
-                                                // the QR component id and routes the
-                                                // payload through QrScanned.
-                                                onAction(
-                                                    UserAction.TextChanged(
-                                                        componentId = componentId,
-                                                        value = code,
-                                                    ),
-                                                )
-                                            },
-                                        ),
+                                val imageAnalyzer =
+                                    ImageAnalysis
+                                        .Builder()
+                                        .setResolutionSelector(resolutionSelector)
+                                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                        .build()
+                                        .also { analysis ->
+                                            analysis.setAnalyzer(
+                                                executor,
+                                                QrCodeAnalyzer(
+                                                    onQrCodeDetected = { code ->
+                                                        // Forward to core. exchange_qr.rs
+                                                        // pattern-matches on TextChanged with
+                                                        // the QR component id and routes the
+                                                        // payload through QrScanned.
+                                                        onAction(
+                                                            UserAction.TextChanged(
+                                                                componentId = componentId,
+                                                                value = code,
+                                                            ),
+                                                        )
+                                                    },
+                                                ),
+                                            )
+                                        }
+
+                                val preview =
+                                    Preview
+                                        .Builder()
+                                        .setResolutionSelector(resolutionSelector)
+                                        .build()
+                                        .also { it.surfaceProvider = previewView.surfaceProvider }
+
+                                try {
+                                    cameraProvider.unbindAll()
+                                    cameraProvider.bindToLifecycle(
+                                        lifecycleOwner,
+                                        if (useFrontCamera) {
+                                            CameraSelector.DEFAULT_FRONT_CAMERA
+                                        } else {
+                                            CameraSelector.DEFAULT_BACK_CAMERA
+                                        },
+                                        preview,
+                                        imageAnalyzer,
                                     )
+                                    bindFailure.value = null
+                                } catch (e: Exception) {
+                                    // CameraX surface acquisition can fail mid-recompose
+                                    // (e.g., quick-resume from background, or — the
+                                    // user-visible symptom this surfacing fixes — the
+                                    // recreate-on-flip race where the previous
+                                    // session's camera hold has not finished releasing
+                                    // when the new session tries to claim it). The old
+                                    // code absorbed every such failure with no log and
+                                    // no UI signal, so the user saw a black PreviewView
+                                    // with no indication of cause. Same silent-failure
+                                    // class as the 2026-05-08 → 2026-05-11 dt-* sweep.
+                                    // Log the exception class (no PII per
+                                    // logging-rules.md) and surface a failure overlay
+                                    // so the next bind attempt has a starting point.
+                                    Log.e(
+                                        "Vauchi",
+                                        "[QrCamera] bindToLifecycle failed (" +
+                                            (if (useFrontCamera) "front" else "back") +
+                                            "): ${e.javaClass.simpleName}",
+                                    )
+                                    bindFailure.value =
+                                        "Camera failed to start (${e.javaClass.simpleName})"
                                 }
+                            },
+                            androidx.core.content.ContextCompat
+                                .getMainExecutor(ctx),
+                        )
 
-                        val preview =
-                            Preview
-                                .Builder()
-                                .setResolutionSelector(resolutionSelector)
-                                .build()
-                                .also { it.surfaceProvider = previewView.surfaceProvider }
-
-                        try {
-                            cameraProvider.unbindAll()
-                            cameraProvider.bindToLifecycle(
-                                lifecycleOwner,
-                                if (useFrontCamera) {
-                                    CameraSelector.DEFAULT_FRONT_CAMERA
-                                } else {
-                                    CameraSelector.DEFAULT_BACK_CAMERA
-                                },
-                                preview,
-                                imageAnalyzer,
-                            )
-                        } catch (_: Exception) {
-                            // CameraX surface acquisition can fail mid-recompose
-                            // (e.g., quick-resume from background). The next bind
-                            // attempt picks up the new surface; nothing to log.
-                        }
+                        previewView
                     },
-                    androidx.core.content.ContextCompat
-                        .getMainExecutor(ctx),
                 )
-
-                previewView
-            },
-        )
+                bindFailure.value?.let { msg ->
+                    Text(
+                        text = "Camera unavailable\n$msg",
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        modifier =
+                            Modifier
+                                .align(Alignment.Center)
+                                .padding(16.dp),
+                    )
+                }
+            }
         }
     }
 }
