@@ -12,6 +12,9 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 gradle/gradle-daemon-jvm.properties
 
+# Kotlin compiler error + session logs (transient, machine-local)
+.kotlin/
+
 # IDE
 .idea/
 *.iml
