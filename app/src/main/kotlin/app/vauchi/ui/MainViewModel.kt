@@ -236,13 +236,23 @@ class MainViewModel(
         }
     }
 
-    /** Called when core-driven onboarding completes — creates the identity from collected data. */
-    fun onCoreOnboardingComplete(displayName: String?) {
+    /**
+     * Called when core-driven onboarding completes — slice 32c moved
+     * the identity creation + groups + fields persistence into
+     * `AppEngine::handle_completion` (vauchi-app routing.rs), so this
+     * frontend hook no longer touches identity. It just flips the
+     * local onboarding-completed preference and refreshes UI state
+     * so MainActivity transitions from `UiState.Onboarding` to
+     * `UiState.Ready`.
+     *
+     * Calling `repository.createIdentity` here would double-create
+     * (or fail, depending on storage semantics) since PAE already
+     * wrote the identity inside core.
+     */
+    fun onCoreOnboardingComplete() {
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    val name = displayName ?: "User"
-                    repository.createIdentity(name)
                     repository.setOnboardingCompleted(true)
                 }
                 loadUserData()

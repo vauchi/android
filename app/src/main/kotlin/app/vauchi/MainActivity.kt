@@ -690,7 +690,8 @@ fun MainScreen(
 
                             is UiState.Onboarding -> {
                                 CoreOnboardingScreen(
-                                    onComplete = { displayName -> viewModel.onCoreOnboardingComplete(displayName) },
+                                    coreAppViewModel = coreAppViewModel,
+                                    onIdentityCreated = { viewModel.onCoreOnboardingComplete() },
                                 )
 
                                 if (showRestoreDialog) {
