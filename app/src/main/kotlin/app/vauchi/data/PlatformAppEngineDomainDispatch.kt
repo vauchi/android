@@ -12,6 +12,7 @@ import uniffi.vauchi_platform.MobileConsentStatus
 import uniffi.vauchi_platform.MobileConsentType
 import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactCard
+import uniffi.vauchi_platform.MobileContactDetailViewState
 import uniffi.vauchi_platform.MobileDeletionInfo
 import uniffi.vauchi_platform.MobileDeliveryRecord
 import uniffi.vauchi_platform.MobileDeliverySummary
@@ -571,4 +572,38 @@ fun PlatformAppEngine.getConsentStatus(consentType: MobileConsentType): MobileCo
     val result = dispatchDomainCommand(DomainCommand.GetConsentStatus(consentType))
     return (result as? DomainCommandResult.ConsentStatus)?.status
         ?: unexpectedResult("GetConsentStatus")
+}
+
+// ── Recovery Trust (B7 + slice 32g-B Phase 1) ──
+// The direct `pub fn trust_contact_for_recovery` / `untrust_contact_for_recovery`
+// methods on `impl PlatformAppEngine` retired in core 0.51.2
+// (`refactor: route recovery-trust through DomainCommand`, `513ab6f8`).
+// These wrappers route through the typed dispatch path. iOS still
+// calls `vauchi.trustContactForRecovery` (the legacy `VauchiPlatform`
+// surface, which stays under Phase B7 hybrid R3) — different
+// path, same semantics.
+
+fun PlatformAppEngine.trustContactForRecovery(contactId: String) {
+    dispatchDomainCommand(DomainCommand.TrustContactForRecovery(contactId))
+}
+
+fun PlatformAppEngine.untrustContactForRecovery(contactId: String) {
+    dispatchDomainCommand(DomainCommand.UntrustContactForRecovery(contactId))
+}
+
+// ── Contact Detail (slice 32g-B Phase 2) ──
+// `mobile_contact_detail.rs` impl block retired in core 0.51.2
+// (`refactor: retire mobile_*.rs contact-CRUD impl blocks`,
+// `5b415656`). The two read methods moved to `DomainCommand` dispatch.
+
+fun PlatformAppEngine.contactDetailFooterActionId(contactId: String): String {
+    val result = dispatchDomainCommand(DomainCommand.ContactDetailFooterActionId(contactId))
+    return (result as? DomainCommandResult.Text)?.value
+        ?: unexpectedResult("ContactDetailFooterActionId")
+}
+
+fun PlatformAppEngine.contactDetailViewState(contactId: String): MobileContactDetailViewState {
+    val result = dispatchDomainCommand(DomainCommand.ContactDetailViewState(contactId))
+    return (result as? DomainCommandResult.ContactDetailView)?.state
+        ?: unexpectedResult("ContactDetailViewState")
 }

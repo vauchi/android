@@ -499,7 +499,7 @@ class VauchiRepository(
      * the returned id so they never branch on the imported-vs-exchanged
      * distinction in the view layer (§1A pure-renderer rule).
      */
-    fun contactDetailFooterActionId(contactId: String) = platform().contactDetailFooterActionId(contactId)
+    fun contactDetailFooterActionId(contactId: String) = appEngine.contactDetailFooterActionId(contactId)
 
     /**
      * G4 (ADR-021/043): typed contact-detail view-state — frontends
@@ -507,7 +507,7 @@ class VauchiRepository(
      * raw MobileContact flags. Closes the iOS/Android Verify-button
      * divergence (audit V4).
      */
-    fun contactDetailViewState(contactId: String) = platform().contactDetailViewState(contactId)
+    fun contactDetailViewState(contactId: String) = appEngine.contactDetailViewState(contactId)
 
     fun listArchivedContacts() = appEngine.listArchivedContacts()
 
