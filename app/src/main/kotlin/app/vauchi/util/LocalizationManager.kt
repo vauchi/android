@@ -12,10 +12,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import androidx.core.content.pm.PackageInfoCompat
+import app.vauchi.data.getAppPreferences
+import app.vauchi.data.setAppPreferences
 import uniffi.vauchi_platform.MobileAppPreferences
 import uniffi.vauchi_platform.MobileLocale
 import uniffi.vauchi_platform.MobileLocaleInfo
-import uniffi.vauchi_platform.VauchiPlatform
+import uniffi.vauchi_platform.PlatformAppEngine
 import uniffi.vauchi_platform.getAvailableLocales
 import uniffi.vauchi_platform.getLocaleInfo
 import uniffi.vauchi_platform.getString
@@ -35,7 +37,7 @@ class LocalizationManager(
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     @Volatile
-    private var vauchi: VauchiPlatform? = null
+    private var appEngine: PlatformAppEngine? = null
 
     /** Currently selected locale */
     var currentLocale: MobileLocale by mutableStateOf(MobileLocale.ENGLISH)
@@ -59,23 +61,23 @@ class LocalizationManager(
     }
 
     /**
-     * Wire this manager to the live [VauchiPlatform] instance so
+     * Wire this manager to the live [PlatformAppEngine] instance so
      * subsequent reads/writes flow through the core `app_preferences`
      * row. Called once by `VauchiRepository.platform()` after the
      * platform finishes lazy initialisation. Re-applies the locale
      * immediately so observers pick up any value just migrated from
      * legacy SharedPreferences.
      */
-    fun attachVauchi(vauchi: VauchiPlatform) {
-        this.vauchi = vauchi
+    fun attachAppEngine(appEngine: PlatformAppEngine) {
+        this.appEngine = appEngine
         applySelectedLocale()
     }
 
     private fun loadPrefsOrFallback(): MobileAppPreferences {
-        val v = vauchi
-        if (v != null) {
+        val engine = appEngine
+        if (engine != null) {
             try {
-                return v.appPreferences()
+                return engine.getAppPreferences()
             } catch (_: Exception) {
                 // Fall through to SharedPreferences-backed fallback.
             }
@@ -204,11 +206,11 @@ class LocalizationManager(
         languageCode: String?,
         followSystemLanguage: Boolean,
     ) {
-        val v = vauchi
-        if (v != null) {
+        val engine = appEngine
+        if (engine != null) {
             try {
-                val current = v.appPreferences()
-                v.setAppPreferences(
+                val current = engine.getAppPreferences()
+                engine.setAppPreferences(
                     MobileAppPreferences(
                         themeId = current.themeId,
                         languageCode = languageCode,

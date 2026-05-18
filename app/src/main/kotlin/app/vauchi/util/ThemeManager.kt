@@ -8,13 +8,15 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.edit
+import app.vauchi.data.getAppPreferences
+import app.vauchi.data.setAppPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import uniffi.vauchi_platform.MobileAppPreferences
 import uniffi.vauchi_platform.MobileTheme
 import uniffi.vauchi_platform.MobileThemeMode
-import uniffi.vauchi_platform.VauchiPlatform
+import uniffi.vauchi_platform.PlatformAppEngine
 import uniffi.vauchi_platform.getAvailableThemes
 import uniffi.vauchi_platform.getDefaultThemeId
 import uniffi.vauchi_platform.getTheme
@@ -23,12 +25,12 @@ import uniffi.vauchi_platform.getTheme
  * Manages theme selection and application.
  *
  * Source of truth is the core `app_preferences` row, accessed through
- * [VauchiPlatform.appPreferences] / [VauchiPlatform.setAppPreferences].
+ * `DomainCommand::{Get,Set}AppPreferences` on `PlatformAppEngine`.
  * The Settings screen `Component::Dropdown` for theme writes the same
  * row via the AppEngine intercept, so this manager and the inline
  * dropdown stay in sync without a back-channel.
  *
- * Before [attachVauchi] runs (cold start, before VauchiRepository
+ * Before [attachAppEngine] runs (cold start, before VauchiRepository
  * initialises), the manager falls back to legacy SharedPreferences and
  * the system default theme — the Compose theme provider recomposes
  * once the row becomes available.
@@ -39,7 +41,7 @@ class ThemeManager(
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     @Volatile
-    private var vauchi: VauchiPlatform? = null
+    private var appEngine: PlatformAppEngine? = null
 
     /**
      * Currently selected theme.
@@ -86,23 +88,23 @@ class ThemeManager(
     }
 
     /**
-     * Wire this manager to the live [VauchiPlatform] instance so
+     * Wire this manager to the live [PlatformAppEngine] instance so
      * subsequent reads/writes flow through the core `app_preferences`
      * row. Called once by `VauchiRepository.platform()` after the
      * platform finishes lazy initialisation. Re-applies the theme
      * immediately so Compose theme observers pick up any value just
      * migrated from legacy SharedPreferences.
      */
-    fun attachVauchi(vauchi: VauchiPlatform) {
-        this.vauchi = vauchi
+    fun attachAppEngine(appEngine: PlatformAppEngine) {
+        this.appEngine = appEngine
         applySelectedTheme(isDarkMode = false)
     }
 
     private fun loadPrefsOrFallback(): MobileAppPreferences {
-        val v = vauchi
-        if (v != null) {
+        val engine = appEngine
+        if (engine != null) {
             try {
-                return v.appPreferences()
+                return engine.getAppPreferences()
             } catch (_: Exception) {
                 // Fall through to SharedPreferences-backed fallback.
             }
@@ -159,11 +161,11 @@ class ThemeManager(
         themeId: String?,
         followSystemTheme: Boolean,
     ) {
-        val v = vauchi
-        if (v != null) {
+        val engine = appEngine
+        if (engine != null) {
             try {
-                val current = v.appPreferences()
-                v.setAppPreferences(
+                val current = engine.getAppPreferences()
+                engine.setAppPreferences(
                     MobileAppPreferences(
                         themeId = themeId,
                         languageCode = current.languageCode,

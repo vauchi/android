@@ -162,8 +162,8 @@ class VauchiRepository(
             // upgrade. See problem record
             // 2026-05-01-android-humble-ui-deep-retirement.
             migrateLegacyAppPreferences()
-            ThemeManager.getInstance(context).attachVauchi(_vauchi)
-            LocalizationManager.getInstance(context).attachVauchi(_vauchi)
+            ThemeManager.getInstance(context).attachAppEngine(_appEngine)
+            LocalizationManager.getInstance(context).attachAppEngine(_appEngine)
         }
         return _vauchi
     }
@@ -184,9 +184,9 @@ class VauchiRepository(
     private fun migrateLegacyAppPreferences() {
         val current =
             try {
-                _vauchi.appPreferences()
+                _appEngine.getAppPreferences()
             } catch (e: Exception) {
-                Log.e("VauchiRepository", "appPreferences() failed during migration", e)
+                Log.e("VauchiRepository", "getAppPreferences() failed during migration", e)
                 return
             }
         val isDefault =
@@ -219,7 +219,7 @@ class VauchiRepository(
                 followSystemLanguage = followSystemLocale,
             )
         try {
-            _vauchi.setAppPreferences(migrated)
+            _appEngine.setAppPreferences(migrated)
         } catch (e: Exception) {
             Log.e("VauchiRepository", "setAppPreferences() failed during migration", e)
             return
@@ -238,11 +238,15 @@ class VauchiRepository(
     }
 
     /** Loads the singleton app_preferences row (theme + language). */
-    fun getAppPreferences(): MobileAppPreferences = platform().appPreferences()
+    fun getAppPreferences(): MobileAppPreferences {
+        platform() // ensure lazy init
+        return _appEngine.getAppPreferences()
+    }
 
     /** Saves the singleton app_preferences row (theme + language). */
     fun setAppPreferences(prefs: MobileAppPreferences) {
-        platform().setAppPreferences(prefs)
+        platform() // ensure lazy init
+        _appEngine.setAppPreferences(prefs)
     }
 
     /**
