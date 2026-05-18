@@ -367,17 +367,32 @@ class VauchiRepository(
 
     // Privacy toggles
 
-    fun isDeliveryReceiptsEnabled(): Boolean = platform().isDeliveryReceiptsEnabled()
+    fun isDeliveryReceiptsEnabled(): Boolean {
+        platform() // ensure lazy init
+        return _appEngine.isDeliveryReceiptsEnabled()
+    }
 
-    fun setDeliveryReceiptsEnabled(enabled: Boolean) = platform().setDeliveryReceiptsEnabled(enabled)
+    fun setDeliveryReceiptsEnabled(enabled: Boolean) {
+        platform() // ensure lazy init
+        _appEngine.setDeliveryReceiptsEnabled(enabled)
+    }
 
-    fun isSuppressPresenceEnabled(): Boolean = platform().isSuppressPresenceEnabled()
+    fun isSuppressPresenceEnabled(): Boolean {
+        platform() // ensure lazy init
+        return _appEngine.isSuppressPresenceEnabled()
+    }
 
-    fun setSuppressPresenceEnabled(enabled: Boolean) = platform().setSuppressPresenceEnabled(enabled)
+    fun setSuppressPresenceEnabled(enabled: Boolean) {
+        platform() // ensure lazy init
+        _appEngine.setSuppressPresenceEnabled(enabled)
+    }
 
     fun getSyncStatus(): uniffi.vauchi_platform.MobileSyncStatus = platform().getSyncStatus()
 
-    fun pendingUpdateCount(): UInt = platform().pendingUpdateCount()
+    fun pendingUpdateCount(): UInt {
+        platform() // ensure lazy init
+        return _appEngine.pendingUpdateCount()
+    }
 
     fun hasIdentity(): Boolean {
         platform() // ensure initialized
