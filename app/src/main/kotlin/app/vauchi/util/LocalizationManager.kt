@@ -12,9 +12,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import androidx.core.content.pm.PackageInfoCompat
-import app.vauchi.data.getAppPreferences
-import app.vauchi.data.setAppPreferences
-import uniffi.vauchi_platform.MobileAppPreferences
 import uniffi.vauchi_platform.MobileLocale
 import uniffi.vauchi_platform.MobileLocaleInfo
 import uniffi.vauchi_platform.PlatformAppEngine
@@ -29,12 +26,20 @@ import java.util.Locale
 
 /**
  * Manages localization/internationalization.
- * Integrates with vauchi-platform for string translations.
+ *
+ * Source of truth is the `vauchi_locale_settings` SharedPreferences
+ * store (OS-native, Category 1 — render-context). Core's
+ * `RenderContext` is informed of changes via `setRenderContextJson`
+ * so the Settings dropdown's `selected` value and locale-aware
+ * string lookup stay in sync (S4 of
+ * `2026-05-16-settings-storage-by-sensitivity`).
  */
 class LocalizationManager(
     context: Context,
 ) {
-    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val appContext: Context = context.applicationContext
+    private val prefs: SharedPreferences =
+        appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     @Volatile
     private var appEngine: PlatformAppEngine? = null
@@ -56,43 +61,26 @@ class LocalizationManager(
         private set
 
     init {
-        extractAndInitLocales(context)
+        extractAndInitLocales(appContext)
         loadLocales()
     }
 
     /**
      * Wire this manager to the live [PlatformAppEngine] instance so
-     * subsequent reads/writes flow through the core `app_preferences`
-     * row. Called once by `VauchiRepository.platform()` after the
-     * platform finishes lazy initialisation. Re-applies the locale
-     * immediately so observers pick up any value just migrated from
-     * legacy SharedPreferences.
+     * subsequent locale changes propagate to core's `RenderContext`.
+     * Called once by `VauchiRepository.platform()` after the platform
+     * finishes lazy initialisation. Re-applies the locale and pushes
+     * it to core so the Settings dropdown reflects what's on disk.
      */
     fun attachAppEngine(appEngine: PlatformAppEngine) {
         this.appEngine = appEngine
         applySelectedLocale()
-    }
-
-    private fun loadPrefsOrFallback(): MobileAppPreferences {
-        val engine = appEngine
-        if (engine != null) {
-            try {
-                return engine.getAppPreferences()
-            } catch (_: Exception) {
-                // Fall through to SharedPreferences-backed fallback.
-            }
-        }
-        return MobileAppPreferences(
-            themeId = null,
-            languageCode = prefs.getString(KEY_SELECTED_LOCALE, null),
-            followSystemTheme = true,
-            followSystemLanguage = prefs.getBoolean(KEY_FOLLOW_SYSTEM, true),
-        )
+        pushRenderContext(appContext, appEngine)
     }
 
     /**
-     * Extract locale JSON files from assets to internal storage and initialize
-     * the core i18n system. Runs once per install/update.
+     * Extract locale JSON files from assets to internal storage and
+     * initialize the core i18n system. Runs once per install/update.
      */
     private fun extractAndInitLocales(context: Context) {
         val localesDir = File(context.filesDir, "locales")
@@ -103,8 +91,8 @@ class LocalizationManager(
         if (versionFile.exists() && versionFile.readText().trim() == currentVersion) {
             try {
                 initLocales(localesDir.absolutePath)
-            } catch (e: UnsatisfiedLinkError) {
-                Log.e(TAG, "Failed to initialize locales: native library not found", e)
+            } catch (e: LinkageError) {
+                Log.e(TAG, "Failed to initialize locales: native library not loaded", e)
             }
             return
         }
@@ -124,8 +112,8 @@ class LocalizationManager(
             versionFile.writeText(currentVersion)
             try {
                 initLocales(localesDir.absolutePath)
-            } catch (e: UnsatisfiedLinkError) {
-                Log.e(TAG, "Failed to initialize locales: native library not found", e)
+            } catch (e: LinkageError) {
+                Log.e(TAG, "Failed to initialize locales: native library not loaded", e)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to extract locales: ${e.message}")
@@ -144,8 +132,8 @@ class LocalizationManager(
         availableLocales =
             try {
                 getAvailableLocales()
-            } catch (e: UnsatisfiedLinkError) {
-                Log.e(TAG, "Failed to get available locales: native library not found", e)
+            } catch (e: LinkageError) {
+                Log.e(TAG, "Failed to get available locales: native library not loaded", e)
                 emptyList()
             }
         applySelectedLocale()
@@ -155,22 +143,42 @@ class LocalizationManager(
      * Apply the currently selected locale.
      */
     fun applySelectedLocale() {
-        val p = loadPrefsOrFallback()
-        followSystem = p.followSystemLanguage
-        selectedLocaleCode = p.languageCode
+        followSystem = safeGetBoolean(KEY_FOLLOW_SYSTEM, true)
+        selectedLocaleCode = safeGetString(KEY_SELECTED_LOCALE, null)
         currentLocale =
             try {
-                if (!p.followSystemLanguage && p.languageCode != null) {
-                    parseLocaleCode(p.languageCode!!) ?: MobileLocale.ENGLISH
+                val explicit = selectedLocaleCode
+                if (!followSystem && explicit != null) {
+                    parseLocaleCode(explicit) ?: MobileLocale.ENGLISH
                 } else {
                     val systemLanguage = Locale.getDefault().language
                     parseLocaleCode(systemLanguage) ?: MobileLocale.ENGLISH
                 }
-            } catch (e: UnsatisfiedLinkError) {
-                Log.e(TAG, "Failed to apply selected locale: native library not found", e)
+            } catch (e: LinkageError) {
+                Log.e(TAG, "Failed to apply selected locale: native library not loaded", e)
                 MobileLocale.ENGLISH
             }
     }
+
+    private fun safeGetBoolean(
+        key: String,
+        default: Boolean,
+    ): Boolean =
+        try {
+            prefs.getBoolean(key, default)
+        } catch (_: ClassCastException) {
+            default
+        }
+
+    private fun safeGetString(
+        key: String,
+        default: String?,
+    ): String? =
+        try {
+            prefs.getString(key, default)
+        } catch (_: ClassCastException) {
+            default
+        }
 
     /**
      * Select a locale by code.
@@ -178,6 +186,7 @@ class LocalizationManager(
     fun selectLocale(code: String) {
         persist(languageCode = code, followSystemLanguage = false)
         applySelectedLocale()
+        pushRenderContext(appContext, appEngine)
     }
 
     /**
@@ -187,8 +196,8 @@ class LocalizationManager(
         val info =
             try {
                 getLocaleInfo(locale)
-            } catch (e: UnsatisfiedLinkError) {
-                Log.e(TAG, "Failed to get locale info: native library not found", e)
+            } catch (e: LinkageError) {
+                Log.e(TAG, "Failed to get locale info: native library not loaded", e)
                 MobileLocaleInfo(code = "en", name = "English", englishName = "English", isRtl = false)
             }
         selectLocale(info.code)
@@ -200,29 +209,13 @@ class LocalizationManager(
     fun resetToSystem() {
         persist(languageCode = null, followSystemLanguage = true)
         applySelectedLocale()
+        pushRenderContext(appContext, appEngine)
     }
 
     private fun persist(
         languageCode: String?,
         followSystemLanguage: Boolean,
     ) {
-        val engine = appEngine
-        if (engine != null) {
-            try {
-                val current = engine.getAppPreferences()
-                engine.setAppPreferences(
-                    MobileAppPreferences(
-                        themeId = current.themeId,
-                        languageCode = languageCode,
-                        followSystemTheme = current.followSystemTheme,
-                        followSystemLanguage = followSystemLanguage,
-                    ),
-                )
-                return
-            } catch (_: Exception) {
-                // Fall through to SharedPreferences-backed fallback.
-            }
-        }
         prefs.edit {
             putBoolean(KEY_FOLLOW_SYSTEM, followSystemLanguage)
             if (languageCode == null) remove(KEY_SELECTED_LOCALE) else putString(KEY_SELECTED_LOCALE, languageCode)
@@ -235,8 +228,8 @@ class LocalizationManager(
     fun t(key: String): String =
         try {
             getString(currentLocale, key)
-        } catch (e: UnsatisfiedLinkError) {
-            Log.e(TAG, "Failed to get string: native library not found", e)
+        } catch (e: LinkageError) {
+            Log.e(TAG, "Failed to get string: native library not loaded", e)
             key
         }
 
@@ -249,8 +242,8 @@ class LocalizationManager(
     ): String =
         try {
             getStringWithArgs(currentLocale, key, args)
-        } catch (e: UnsatisfiedLinkError) {
-            Log.e(TAG, "Failed to get string with args: native library not found", e)
+        } catch (e: LinkageError) {
+            Log.e(TAG, "Failed to get string with args: native library not loaded", e)
             key
         }
 
@@ -259,8 +252,8 @@ class LocalizationManager(
         get() =
             try {
                 getLocaleInfo(currentLocale)
-            } catch (e: UnsatisfiedLinkError) {
-                Log.e(TAG, "Failed to get current locale info: native library not found", e)
+            } catch (e: LinkageError) {
+                Log.e(TAG, "Failed to get current locale info: native library not loaded", e)
                 MobileLocaleInfo(code = "en", name = "English", englishName = "English", isRtl = false)
             }
 

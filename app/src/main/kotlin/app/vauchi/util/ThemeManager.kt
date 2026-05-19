@@ -8,12 +8,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.edit
-import app.vauchi.data.getAppPreferences
-import app.vauchi.data.setAppPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import uniffi.vauchi_platform.MobileAppPreferences
 import uniffi.vauchi_platform.MobileTheme
 import uniffi.vauchi_platform.MobileThemeMode
 import uniffi.vauchi_platform.PlatformAppEngine
@@ -24,21 +21,22 @@ import uniffi.vauchi_platform.getTheme
 /**
  * Manages theme selection and application.
  *
- * Source of truth is the core `app_preferences` row, accessed through
- * `DomainCommand::{Get,Set}AppPreferences` on `PlatformAppEngine`.
- * The Settings screen `Component::Dropdown` for theme writes the same
- * row via the AppEngine intercept, so this manager and the inline
- * dropdown stay in sync without a back-channel.
+ * Source of truth is the `vauchi_theme_settings` SharedPreferences
+ * store (OS-native, Category 1 — render-context). Core's
+ * `RenderContext` is informed of changes via `setRenderContextJson`
+ * so the Settings dropdown's `selected` value stays in sync (S4 of
+ * `2026-05-16-settings-storage-by-sensitivity`).
  *
  * Before [attachAppEngine] runs (cold start, before VauchiRepository
- * initialises), the manager falls back to legacy SharedPreferences and
- * the system default theme — the Compose theme provider recomposes
- * once the row becomes available.
+ * initialises), reads still resolve against SharedPreferences and
+ * Compose recomposes once the engine becomes available.
  */
 class ThemeManager(
     context: Context,
 ) {
-    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val appContext: Context = context.applicationContext
+    private val prefs: SharedPreferences =
+        appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     @Volatile
     private var appEngine: PlatformAppEngine? = null
@@ -81,59 +79,63 @@ class ThemeManager(
     private fun loadThemes() {
         try {
             _availableThemes.value = getAvailableThemes()
-            applySelectedTheme(isDarkMode = false) // Will be updated when composable reads system setting
-        } catch (e: UnsatisfiedLinkError) {
+        } catch (_: LinkageError) {
             _availableThemes.value = emptyList()
         }
+        applySelectedTheme(isDarkMode = false)
     }
 
     /**
      * Wire this manager to the live [PlatformAppEngine] instance so
-     * subsequent reads/writes flow through the core `app_preferences`
-     * row. Called once by `VauchiRepository.platform()` after the
-     * platform finishes lazy initialisation. Re-applies the theme
-     * immediately so Compose theme observers pick up any value just
-     * migrated from legacy SharedPreferences.
+     * subsequent theme changes propagate to core's `RenderContext`.
+     * Called once by `VauchiRepository.platform()` after the platform
+     * finishes lazy initialisation. Re-applies the theme and pushes
+     * it to core so the Settings dropdown reflects what's on disk.
      */
     fun attachAppEngine(appEngine: PlatformAppEngine) {
         this.appEngine = appEngine
         applySelectedTheme(isDarkMode = false)
+        pushRenderContext(appContext, appEngine)
     }
 
-    private fun loadPrefsOrFallback(): MobileAppPreferences {
-        val engine = appEngine
-        if (engine != null) {
-            try {
-                return engine.getAppPreferences()
-            } catch (_: Exception) {
-                // Fall through to SharedPreferences-backed fallback.
-            }
+    private fun safeGetBoolean(
+        key: String,
+        default: Boolean,
+    ): Boolean =
+        try {
+            prefs.getBoolean(key, default)
+        } catch (_: ClassCastException) {
+            default
         }
-        return MobileAppPreferences(
-            themeId = prefs.getString(KEY_SELECTED_THEME, null),
-            languageCode = null,
-            followSystemTheme = prefs.getBoolean(KEY_FOLLOW_SYSTEM, true),
-            followSystemLanguage = true,
-        )
-    }
+
+    private fun safeGetString(
+        key: String,
+        default: String?,
+    ): String? =
+        try {
+            prefs.getString(key, default)
+        } catch (_: ClassCastException) {
+            default
+        }
 
     /**
      * Apply the currently selected theme.
      * @param isDarkMode Current system dark mode setting
      */
     fun applySelectedTheme(isDarkMode: Boolean) {
-        val p = loadPrefsOrFallback()
-        _followSystem.value = p.followSystemTheme
-        _selectedThemeId.value = p.themeId
+        val followSystem = safeGetBoolean(KEY_FOLLOW_SYSTEM, true)
+        val themeId = safeGetString(KEY_SELECTED_THEME, null)
+        _followSystem.value = followSystem
+        _selectedThemeId.value = themeId
         try {
             _currentTheme.value =
-                if (!p.followSystemTheme && p.themeId != null) {
-                    getTheme(p.themeId!!)
+                if (!followSystem && themeId != null) {
+                    getTheme(themeId)
                 } else {
                     val defaultId = getDefaultThemeId(isDarkMode)
                     getTheme(defaultId)
                 }
-        } catch (e: UnsatisfiedLinkError) {
+        } catch (_: LinkageError) {
             _currentTheme.value = null
         }
     }
@@ -147,6 +149,7 @@ class ThemeManager(
     ) {
         persist(themeId = themeId, followSystemTheme = false)
         applySelectedTheme(isDarkMode)
+        pushRenderContext(appContext, appEngine)
     }
 
     /**
@@ -155,29 +158,13 @@ class ThemeManager(
     fun resetToSystem(isDarkMode: Boolean) {
         persist(themeId = null, followSystemTheme = true)
         applySelectedTheme(isDarkMode)
+        pushRenderContext(appContext, appEngine)
     }
 
     private fun persist(
         themeId: String?,
         followSystemTheme: Boolean,
     ) {
-        val engine = appEngine
-        if (engine != null) {
-            try {
-                val current = engine.getAppPreferences()
-                engine.setAppPreferences(
-                    MobileAppPreferences(
-                        themeId = themeId,
-                        languageCode = current.languageCode,
-                        followSystemTheme = followSystemTheme,
-                        followSystemLanguage = current.followSystemLanguage,
-                    ),
-                )
-                return
-            } catch (_: Exception) {
-                // Fall through to SharedPreferences-backed fallback.
-            }
-        }
         prefs.edit {
             putBoolean(KEY_FOLLOW_SYSTEM, followSystemTheme)
             if (themeId == null) remove(KEY_SELECTED_THEME) else putString(KEY_SELECTED_THEME, themeId)
