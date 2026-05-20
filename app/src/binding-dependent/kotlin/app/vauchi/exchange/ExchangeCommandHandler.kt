@@ -7,6 +7,7 @@ import android.content.Context
 import android.util.Log
 import app.vauchi.ble.BleExchangeService
 import app.vauchi.nfc.NfcReaderService
+import app.vauchi.nfc.VauchiHceService
 import app.vauchi.proximity.AudioProximityService
 import uniffi.vauchi_platform.MobileCommand
 import uniffi.vauchi_platform.MobileEvent
@@ -133,10 +134,20 @@ class ExchangeCommandHandler(
             }
 
             is MobileCommand.NfcSendApdu -> {
-                nfcService.sendApdu(command.data)
+                // Phase 3b: try the HCE responder's binder-block path
+                // first (single in-flight HCE session per OS guarantee).
+                // If no HCE deferred is pending, fall through to the
+                // initiator-side transceive shim (Phase 3a).
+                if (!VauchiHceService.fulfillPendingResponse(command.data)) {
+                    nfcService.sendApdu(command.data)
+                }
             }
 
             is MobileCommand.NfcDeactivate -> {
+                // Same precedence: HCE first, then initiator-side
+                // teardown. Both are idempotent; firing both is
+                // harmless when only one path is active.
+                VauchiHceService.clearActiveTransceiveContext()
                 nfcService.deactivate()
             }
 
