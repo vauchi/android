@@ -7,14 +7,39 @@ package app.vauchi.nfc
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
 import android.util.Log
+import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.MobileNfcExchangeResult
 import uniffi.vauchi_platform.MobileNfcHandshake
 
 /**
- * NFC reader (initiator) for the three-phase encrypted exchange.
+ * Drives NFC contact-exchange flows in two modes.
  *
- * Connects to a remote device running VauchiHceService via IsoDep,
- * drives the handshake protocol, and returns the exchange result.
+ * **Legacy mode** (`performExchange(tag:session:)`): owns the
+ * 3-phase handshake state-machine in Kotlin via `MobileNfcHandshake`.
+ * Used by `NfcExchangeScreen` until the view migrates to
+ * `CoreScreenView` over core's `exchange_nfc.rs` sub-flow
+ * (Phase 4 of the engine-graduation).
+ *
+ * **Transceive-shim mode** (`activate(payload:callback:)` +
+ * `onTagDiscovered(tag:)` + `sendApdu(data:)` + `deactivate()`):
+ * pure APDU transceive on the `ExchangeCommandHandler` dispatch
+ * path per ADR-031. Core's `NfcExchangeFlow`
+ * (`core/vauchi-app/src/ui/exchange_nfc.rs`) owns the handshake
+ * state-machine; this service just relays bytes in and
+ * `MobileEvent.NfcDataReceived` out.
+ *
+ * The two modes coexist on one class because the consumer
+ * (`NfcExchangeScreen` vs `ExchangeCommandHandler`) instantiates
+ * its own dedicated instance — no single instance ever runs both
+ * flows at once.
+ *
+ * Reader-mode lifecycle (Activity-level `enableReaderMode` +
+ * tag-discovery callback) stays in the screen layer for both modes.
+ * Legacy mode calls `performExchange(tag, session)` from the
+ * callback; transceive-shim mode calls `onTagDiscovered(tag)` —
+ * full plumbing into a production reader-mode lifecycle is gated
+ * on Phase 4 view retirement (which also requires core
+ * `ExchangeMode::Nfc` + `start_nfc_mode` entry path).
  */
 class NfcReaderService {
     companion object {
@@ -23,6 +48,12 @@ class NfcReaderService {
         /** Maximum transceive timeout (ms) */
         private const val TRANSCEIVE_TIMEOUT_MS = 5000
     }
+
+    // ── Transceive-shim state (ADR-031 — ExchangeCommandHandler consumer) ──
+
+    private var transceiveIsoDep: IsoDep? = null
+    private var transceiveCallback: ((MobileEvent) -> Unit)? = null
+    private var pendingActivatePayload: ByteArray? = null
 
     /**
      * Perform the full NFC exchange with a discovered tag.
@@ -161,6 +192,122 @@ class NfcReaderService {
         response.size >= 2 &&
             response[response.size - 2] == 0x90.toByte() &&
             response[response.size - 1] == 0x00.toByte()
+
+    // ── Transceive-shim API (ADR-031 — ExchangeCommandHandler consumer) ──
+
+    /**
+     * Stash the initial APDU + callback; the actual NFC reader-mode
+     * lifecycle (Activity-level [android.nfc.NfcAdapter.enableReaderMode])
+     * stays in the screen layer. The screen routes its tag-discovery
+     * callback to [onTagDiscovered] once a peer device taps; that's
+     * where [payload] gets transceived as the first APDU.
+     *
+     * Called from `ExchangeCommandHandler` on `MobileCommand.NfcActivate`.
+     * Idempotent against re-activation — replaces any in-flight callback
+     * and pending payload.
+     *
+     * On hardware-unavailable platforms (no NFC adapter, NFC disabled),
+     * the screen layer is responsible for surfacing
+     * [MobileEvent.HardwareUnavailable]; this service can't detect
+     * adapter state without an Activity reference.
+     */
+    fun activate(
+        payload: ByteArray,
+        callback: (MobileEvent) -> Unit,
+    ) {
+        transceiveCallback = callback
+        pendingActivatePayload = payload
+    }
+
+    /**
+     * Called by the screen layer when [android.nfc.NfcAdapter.ReaderCallback]
+     * fires with a discovered tag. Connects via IsoDep and transceives
+     * the pending activate payload. Response bytes surface via
+     * `callback(MobileEvent.NfcDataReceived(data:))`.
+     *
+     * The screen layer owns reader-mode enable/disable; this method is
+     * the bridge from a discovered [Tag] to the engine's hardware-event
+     * channel. Phase 4 view retirement collapses the screen's
+     * `performExchange(tag, session)` call into this method.
+     */
+    fun onTagDiscovered(tag: Tag) {
+        val callback = transceiveCallback ?: return
+        val isoDep =
+            IsoDep.get(tag) ?: run {
+                callback(MobileEvent.HardwareError("NFC", "tag does not support IsoDep"))
+                return
+            }
+        try {
+            isoDep.connect()
+            isoDep.timeout = TRANSCEIVE_TIMEOUT_MS
+        } catch (e: Exception) {
+            callback(MobileEvent.HardwareError("NFC", e.message ?: "connect failed"))
+            return
+        }
+        transceiveIsoDep = isoDep
+        val payload = pendingActivatePayload
+        if (payload != null) {
+            pendingActivatePayload = null
+            transceiveOn(isoDep, payload, callback)
+        }
+    }
+
+    /**
+     * Send [data] as an APDU on the currently-connected tag. Response
+     * bytes surface via `callback(MobileEvent.NfcDataReceived(data:))`.
+     *
+     * Called from `ExchangeCommandHandler` on `MobileCommand.NfcSendApdu`.
+     * Invoking before [onTagDiscovered] connected a tag is a programming
+     * error from core's perspective — reported as a hardware error so
+     * the engine can fail-fast rather than wedge.
+     */
+    fun sendApdu(data: ByteArray) {
+        val callback = transceiveCallback ?: return
+        val isoDep =
+            transceiveIsoDep ?: run {
+                callback(MobileEvent.HardwareError("NFC", "no tag connected"))
+                return
+            }
+        transceiveOn(isoDep, data, callback)
+    }
+
+    /**
+     * Close the IsoDep connection and clear all transceive state.
+     *
+     * Called from `ExchangeCommandHandler` on `MobileCommand.NfcDeactivate`.
+     * Idempotent — safe to call when no connection is open.
+     */
+    fun deactivate() {
+        try {
+            transceiveIsoDep?.close()
+        } catch (_: Exception) {
+        }
+        transceiveIsoDep = null
+        transceiveCallback = null
+        pendingActivatePayload = null
+    }
+
+    private fun transceiveOn(
+        isoDep: IsoDep,
+        data: ByteArray,
+        callback: (MobileEvent) -> Unit,
+    ) {
+        // Mirror iOS Phase 2: every outbound APDU wraps with
+        // INS_KEY_OFFER. The graduated responder (Phase 3b) will
+        // remove INS routing; until then, legacy HCE will misroute
+        // Phase-3 sends — Phase 3a stays wired-but-dead until both
+        // the responder side and a core `ExchangeMode::Nfc` entry
+        // path light up.
+        val apdu = buildApdu(VauchiHceService.INS_KEY_OFFER, data)
+        val response =
+            try {
+                isoDep.transceive(apdu)
+            } catch (e: Exception) {
+                callback(MobileEvent.HardwareError("NFC", e.message ?: "transceive failed"))
+                return
+            }
+        callback(MobileEvent.NfcDataReceived(response))
+    }
 }
 
 /** Outcome of an NFC exchange attempt. */
