@@ -5,7 +5,6 @@ package app.vauchi.data
 
 import uniffi.vauchi_platform.DomainCommand
 import uniffi.vauchi_platform.DomainCommandResult
-import uniffi.vauchi_platform.MobileAppPreferences
 import uniffi.vauchi_platform.MobileApplyResult
 import uniffi.vauchi_platform.MobileAuthMode
 import uniffi.vauchi_platform.MobileConsentRecord
@@ -643,19 +642,3 @@ fun PlatformAppEngine.contactDetailViewState(contactId: String): MobileContactDe
         ?: unexpectedResult("ContactDetailViewState")
 }
 
-// ── App Preferences (Phase 2a — mobile_app_preferences retirement) ──
-// Singleton theme + language row. Storage-only, no identity required
-// (Settings is reachable from the More tab before onboarding). Replaces
-// `VauchiPlatform.appPreferences` / `setAppPreferences`, retired in
-// core's slice
-// `_private/docs/problems/2026-05-18-phase-2a-mobile-app-preferences-retirement/`.
-
-fun PlatformAppEngine.getAppPreferences(): MobileAppPreferences {
-    val result = dispatchDomainCommand(DomainCommand.GetAppPreferences)
-    return (result as? DomainCommandResult.AppPreferences)?.prefs
-        ?: unexpectedResult("GetAppPreferences")
-}
-
-fun PlatformAppEngine.setAppPreferences(prefs: MobileAppPreferences) {
-    dispatchDomainCommand(DomainCommand.SetAppPreferences(prefs))
-}

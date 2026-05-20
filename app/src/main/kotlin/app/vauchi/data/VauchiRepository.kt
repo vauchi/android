@@ -28,7 +28,6 @@ import android.util.Base64
 import android.util.Log
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.ThemeManager
-import uniffi.vauchi_platform.MobileAppPreferences
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileExchangeResult
 import uniffi.vauchi_platform.MobileExchangeSession
@@ -96,12 +95,6 @@ class VauchiRepository(
         // SharedPreferences files [ThemeManager] / [LocalizationManager]
         // already use. The migration below copies any existing vault row
         // into these files exactly once per upgrade.
-        private const val NATIVE_THEME_PREFS = "vauchi_theme_settings"
-        private const val NATIVE_LOCALE_PREFS = "vauchi_locale_settings"
-        private const val NATIVE_THEME_KEY = "selected_theme_id"
-        private const val NATIVE_LOCALE_KEY = "selected_locale_code"
-        private const val NATIVE_FOLLOW_SYSTEM_KEY = "follow_system"
-        private const val KEY_RENDER_CONTEXT_MIGRATED = "render_context_migrated_v1"
 
         /**
          * Extract the 16-byte audio challenge from a wb:// QR data string.
@@ -156,65 +149,12 @@ class VauchiRepository(
             _appEngine = PlatformAppEngine(dataDir, relayUrl, storageKeyBytes)
             initialized = true
 
-            // S4 — copy any pre-existing render-context (theme + locale)
-            // from the legacy vault row into the OS-native
-            // SharedPreferences files the managers now read from. Runs
-            // once per upgrade, idempotent thereafter.
-            migrateVaultRenderContextToNative()
             ThemeManager.getInstance(context).attachAppEngine(_appEngine)
             LocalizationManager.getInstance(context).attachAppEngine(_appEngine)
         }
         return _vauchi
     }
 
-    /**
-     * One-shot migration: copies any pre-existing render-context (theme
-     * + locale) from the legacy vault `app_preferences` row into the
-     * OS-native SharedPreferences files used by [ThemeManager] /
-     * [LocalizationManager].
-     *
-     * Direction reversal of the pre-S4 migration (which forwarded the
-     * other way) per
-     * `2026-05-16-settings-storage-by-sensitivity-plan.md`.
-     *
-     * Idempotent: the [KEY_RENDER_CONTEXT_MIGRATED] flag short-circuits
-     * subsequent runs. Skips fields whose SharedPreferences entry
-     * already exists, so a roll-forward install that wrote the
-     * SharedPreferences first won't get clobbered.
-     *
-     * Safe to call before identity creation (storage-only).
-     */
-    private fun migrateVaultRenderContextToNative() {
-        if (prefs.getBoolean(KEY_RENDER_CONTEXT_MIGRATED, false)) return
-
-        val current =
-            try {
-                _appEngine.getAppPreferences()
-            } catch (e: Exception) {
-                Log.e("Vauchi", "[VauchiRepository.migrate] Failed: ${e.javaClass.simpleName}")
-                return
-            }
-
-        val themePrefs = context.getSharedPreferences(NATIVE_THEME_PREFS, Context.MODE_PRIVATE)
-        if (!themePrefs.contains(NATIVE_THEME_KEY) && !themePrefs.contains(NATIVE_FOLLOW_SYSTEM_KEY)) {
-            themePrefs.edit().apply {
-                putBoolean(NATIVE_FOLLOW_SYSTEM_KEY, current.followSystemTheme)
-                current.themeId?.let { putString(NATIVE_THEME_KEY, it) }
-                apply()
-            }
-        }
-
-        val localePrefs = context.getSharedPreferences(NATIVE_LOCALE_PREFS, Context.MODE_PRIVATE)
-        if (!localePrefs.contains(NATIVE_LOCALE_KEY) && !localePrefs.contains(NATIVE_FOLLOW_SYSTEM_KEY)) {
-            localePrefs.edit().apply {
-                putBoolean(NATIVE_FOLLOW_SYSTEM_KEY, current.followSystemLanguage)
-                current.languageCode?.let { putString(NATIVE_LOCALE_KEY, it) }
-                apply()
-            }
-        }
-
-        prefs.edit().putBoolean(KEY_RENDER_CONTEXT_MIGRATED, true).apply()
-    }
 
     /**
      * Shared PlatformAppEngine for core-driven screen rendering.
@@ -946,32 +886,6 @@ class VauchiRepository(
         return appEngine.restoreDemoContact()
     }
 
-    // Device Linking operations
-    // Device Linking Protocol operations (relay transport)
-
-    /**
-     * Start the device link protocol as initiator (primary device).
-     * Returns an initiator state machine that generates QR data and drives the protocol.
-     */
-    fun startDeviceLink() = platform().startDeviceLink()
-
-    fun startDeviceJoin(
-        qrData: String,
-        deviceName: String,
-    ) = platform().startDeviceJoin(qrData, deviceName)
-
-    /**
-     * Listen for an incoming device link request via the relay.
-     */
-    fun listenForDeviceLinkRequest(timeoutSecs: ULong) = platform().listenForDeviceLinkRequest(timeoutSecs)
-
-    /**
-     * Send a device link response back via the relay.
-     */
-    fun sendDeviceLinkResponse(
-        senderToken: String,
-        encryptedResponse: ByteArray,
-    ) = platform().sendDeviceLinkResponse(senderToken, encryptedResponse)
 
     /**
      * Create a new device-link orchestration session (Phase 1: initiator only).
