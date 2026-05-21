@@ -851,33 +851,31 @@ fun DeepLinkConsentDialog(
     onConfirm: () -> Unit,
     onDeny: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     AlertDialog(
         onDismissRequest = onDeny,
         icon = {
             Icon(
                 Icons.Default.Warning,
-                contentDescription = "Warning",
+                contentDescription = localizationManager.t("deep_link.icon_a11y"),
                 tint = MaterialTheme.colorScheme.primary,
             )
         },
         title = {
-            Text("Exchange Request")
+            Text(localizationManager.t("deep_link.title"))
         },
         text = {
-            Text(
-                "Someone shared an exchange link with you. " +
-                    "Do you want to proceed with the contact exchange?\n\n" +
-                    "Only accept if you trust the source of this link.",
-            )
+            Text(localizationManager.t("deep_link.body"))
         },
         confirmButton = {
             Button(onClick = onConfirm) {
-                Text("Accept Exchange")
+                Text(localizationManager.t("deep_link.accept"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDeny) {
-                Text("Decline")
+                Text(localizationManager.t("deep_link.decline"))
             }
         },
     )
