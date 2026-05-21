@@ -44,6 +44,16 @@ fun CoreScreenView(
     viewModel: CoreAppViewModel,
     screenName: String,
     modifier: Modifier = Modifier,
+    /**
+     * When `true` (default), the LaunchedEffect on mount calls
+     * `viewModel.navigateTo(screenName)`. Set to `false` when the
+     * caller has already navigated the engine to this screen — passing
+     * `true` in that case pushes the destination onto `nav_history`
+     * twice, and the next `navigateBack()` pops the destination itself
+     * and lands the user on the same screen. See problem record
+     * `2026-05-21-android-back-stack-and-bottom-nav-broken`.
+     */
+    navigateOnMount: Boolean = true,
 ) {
     val screen by viewModel.screen.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
@@ -128,11 +138,16 @@ fun CoreScreenView(
         }
     }
 
-    // Navigate to screenName when it changes (or on first composition)
+    // Navigate to screenName when it changes (or on first composition).
+    // Skip the navigateTo when `navigateOnMount = false` — the caller
+    // has already navigated and a second call would double-push to
+    // `nav_history`, breaking `navigateBack()`.
     LaunchedEffect(screenName) {
         if (currentScreen != screenName) {
             currentScreen = screenName
-            viewModel.navigateTo(screenName)
+            if (navigateOnMount) {
+                viewModel.navigateTo(screenName)
+            }
         }
     }
 

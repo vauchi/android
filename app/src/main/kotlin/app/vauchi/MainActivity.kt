@@ -552,6 +552,36 @@ fun MainScreen(
     val activeTabId = coreScreen?.screenId?.takeIf { it in TOP_LEVEL_SCREEN_IDS }
     val isTopLevel = activeTabId != null
 
+    // System BACK handling. Without an interceptor, every non-Home
+    // screen would finish the Activity and exit the app — see problem
+    // record `2026-05-21-android-back-stack-and-bottom-nav-broken`.
+    //
+    // Path A screens (Contacts, Groups, Settings, More, deep screens
+    // routed through `CoreScreenView`): forward to core's
+    // `navigateBack()` to pop the engine's nav history.
+    //
+    // Path B native screens (`Screen.ExchangeModePicker` and friends):
+    // route back to My Card. Setting `currentScreen` alone isn't
+    // enough — core may be on `contact_list`, which would make Path A
+    // win on the next recomposition; nudging the engine to `MyInfo`
+    // keeps the local enum and core state consistent.
+    //
+    // Screens that own their own back gesture (NfcTap, Ble, etc.)
+    // compose their own `BackHandler` lower in the tree; Compose
+    // dispatches to the inner-most handler so those still win.
+    val coreVariantForBack = coreScreen?.screenId?.let(::coreScreenIdToVariant)
+    val canGoBack =
+        uiState is UiState.Ready &&
+            (coreVariantForBack != null || currentScreen != Screen.Home)
+    androidx.activity.compose.BackHandler(enabled = canGoBack) {
+        if (coreVariantForBack != null) {
+            coreAppViewModel.navigateBack()
+        } else {
+            currentScreen = Screen.Home
+            coreAppViewModel.navigateTo("MyInfo")
+        }
+    }
+
     Scaffold(
         bottomBar = {
             if (isTopLevel && uiState is UiState.Ready && tabs.isNotEmpty()) {
@@ -620,6 +650,11 @@ fun MainScreen(
                     viewModel = coreAppViewModel,
                     screenName = coreVariant,
                     modifier = Modifier.fillMaxSize(),
+                    // Tab tap (or any other parent navigation) already
+                    // called `navigateTo` before this composes; letting
+                    // CoreScreenView call it again would double-push
+                    // the destination onto `nav_history` and trap BACK.
+                    navigateOnMount = false,
                 )
             } else {
                 when (currentScreen) {
