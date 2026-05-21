@@ -80,6 +80,25 @@ internal fun coreScreenIdToVariant(id: String): String? =
     }
 
 /**
+ * Fold an engine-emitted `ScreenModel.screen_id` to its canonical
+ * `AppScreen::screen_id()` form. Used by the bottom-nav pill match —
+ * core's `tab_info` returns `tab.id == AppScreen::screen_id()` (e.g.
+ * `"contacts"`) while the engine emits its own ScreenModel id (e.g.
+ * `"contact_list"`). Without folding, the pill never highlights for
+ * Contacts/Groups.
+ *
+ * Returns the input unchanged for ids that are already canonical or
+ * not recognised — callers can treat the output as "the id to compare
+ * against `tab.id`".
+ */
+internal fun canonicalScreenIdFor(engineEmittedId: String): String =
+    when (engineEmittedId) {
+        "contact_list" -> "contacts"
+        "groups_list" -> "groups"
+        else -> engineEmittedId
+    }
+
+/**
  * Core engine `screen_id`s for which the bottom navigation bar
  * should render. Includes both canonical `AppScreen::screen_id()`
  * values and the engine-emitted ids for engines that pick a

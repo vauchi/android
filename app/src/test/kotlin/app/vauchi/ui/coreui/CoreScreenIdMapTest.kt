@@ -98,4 +98,33 @@ class CoreScreenIdMapTest {
         assertTrue("contact_detail" !in TOP_LEVEL_SCREEN_IDS)
         assertTrue("duress_overview" !in TOP_LEVEL_SCREEN_IDS)
     }
+
+    // ───────────────────────── canonicalScreenIdFor ──────────────────────────
+
+    @Test
+    fun `canonicalScreenIdFor folds engine-emitted ids to AppScreen screen_id`() {
+        // The bottom-nav pill compares `tab.id` (which is
+        // `AppScreen::screen_id()`) against the currently-rendered
+        // `coreScreen.screenId` (the engine's emitted id). Without
+        // folding, the pill never highlights on Contacts/Groups even
+        // though we're rendering them.
+        assertEquals("contacts", canonicalScreenIdFor("contact_list"))
+        assertEquals("groups", canonicalScreenIdFor("groups_list"))
+    }
+
+    @Test
+    fun `canonicalScreenIdFor returns input unchanged for canonical ids`() {
+        assertEquals("my_info", canonicalScreenIdFor("my_info"))
+        assertEquals("exchange", canonicalScreenIdFor("exchange"))
+        assertEquals("more", canonicalScreenIdFor("more"))
+        assertEquals("contacts", canonicalScreenIdFor("contacts"))
+        assertEquals("groups", canonicalScreenIdFor("groups"))
+    }
+
+    @Test
+    fun `canonicalScreenIdFor returns input unchanged for unknown ids`() {
+        assertEquals("contact_detail", canonicalScreenIdFor("contact_detail"))
+        assertEquals("duress_overview", canonicalScreenIdFor("duress_overview"))
+        assertEquals("", canonicalScreenIdFor(""))
+    }
 }

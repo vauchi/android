@@ -70,6 +70,7 @@ import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
 import app.vauchi.ui.coreui.TOP_LEVEL_SCREEN_IDS
 import app.vauchi.ui.coreui.UserAction
+import app.vauchi.ui.coreui.canonicalScreenIdFor
 import app.vauchi.ui.coreui.coreScreenIdToVariant
 import app.vauchi.ui.coreui.materialIconNameForCoreIcon
 import app.vauchi.ui.theme.VauchiTheme
@@ -572,18 +573,26 @@ fun MainScreen(
                                 )
                             },
                             label = { Text(tab.label) },
-                            selected = activeTabId == tab.id,
+                            // `activeTabId` is the engine-emitted id (e.g.
+                            // `"contact_list"`); `tab.id` is the canonical
+                            // `AppScreen::screen_id()` (e.g. `"contacts"`).
+                            // Fold the engine id to its canonical form
+                            // before comparing or the pill never lights up.
+                            selected = canonicalScreenIdFor(activeTabId ?: "") == tab.id,
                             onClick = {
                                 // Native top-level cases (my_info -> Home,
-                                // exchange -> ExchangeModePicker, more -> More)
-                                // still need the local enum until their
-                                // per-pair retirement; everything else goes
-                                // through core's nav.
+                                // exchange -> ExchangeModePicker) still need
+                                // the local enum until their per-pair
+                                // retirement, **and** also need to nudge
+                                // core away from a deep screen — without the
+                                // `navigateTo` the engine stays on (say)
+                                // `contact_list` so Path A still wins and
+                                // the tap appears to do nothing.
                                 when (tab.id) {
                                     "my_info" -> currentScreen = Screen.Home
                                     "exchange" -> currentScreen = Screen.ExchangeModePicker
-                                    else -> coreAppViewModel.navigateTo(variant)
                                 }
+                                coreAppViewModel.navigateTo(variant)
                             },
                         )
                     }
