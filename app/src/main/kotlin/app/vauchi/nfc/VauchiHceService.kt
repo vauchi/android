@@ -16,36 +16,30 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.MobileExchangeSession
-import uniffi.vauchi_platform.MobileNfcHandshake
 
 /**
  * Android Host Card Emulation service for NFC contact exchange.
  *
- * Drives the responder (card side) of the 3-phase encrypted handshake.
- * Two modes coexist:
+ * Drives the responder (card side) of the 3-phase encrypted
+ * handshake via the transceive-shim path: pure APDU relay onto
+ * core's `ExchangeSession` per ADR-031. Core's `NfcExchangeFlow`
+ * owns the state machine; this service forwards inbound bytes as
+ * `Event.NfcDataReceived` and blocks the binder thread on a
+ * one-shot `CompletableDeferred<ByteArray>` that the matching
+ * `Command.NfcSendApdu` dispatch arm fulfills (Option 4 of
+ * `2026-05-20-nfc-hce-responder-sync-boundary` — in-ADR,
+ * binder-thread block on the existing event/command channel, no
+ * new UniFFI surface).
  *
- * **Legacy mode** (`activeSession: MobileNfcHandshake?`): the
- * 3-phase handshake state-machine lives in Kotlin via the
- * `MobileNfcHandshake` UniFFI Object. APDU routing branches on the
- * INS byte (`INS_KEY_OFFER` / `INS_GET_ENCRYPTED_CARD` /
- * `INS_ENCRYPTED_CARD`). Used by `NfcExchangeScreen` until Phase 4
- * view retirement migrates it to `CoreScreenView`.
+ * Single in-flight `TransceiveContext`: Android HCE is
+ * single-tap-at-a-time per device, so one global context suffices.
+ * `processCommandApdu` returns `SW_CONDITIONS_NOT_SATISFIED` when
+ * no context is registered (no active exchange).
  *
- * **Transceive-shim mode** (`activeTransceiveContext`): pure APDU
- * relay onto core's `ExchangeSession` per ADR-031. Core's
- * `NfcExchangeFlow` owns the state machine; this service forwards
- * inbound bytes as `Event.NfcDataReceived` and blocks the binder
- * thread on a one-shot `CompletableDeferred<ByteArray>` that the
- * matching `Command.NfcSendApdu` dispatch arm fulfills. Pattern is
- * Option 4 of `2026-05-20-nfc-hce-responder-sync-boundary` —
- * in-ADR, binder-thread block on the existing event/command
- * channel, no new UniFFI surface.
- *
- * Static discriminator: when `activeTransceiveContext != null`,
- * `processCommandApdu` takes the transceive-shim path; otherwise
- * it falls back to the legacy `activeSession` path. Android HCE
- * is single-tap-at-a-time per device, so a single global context
- * is sufficient.
+ * Legacy `activeSession: MobileNfcHandshake?` mode + the INS-routed
+ * `handleKeyOffer` / `handleGetEncryptedCard` / `handleEncryptedCard`
+ * dispatchers retired 2026-05-21 alongside `NfcExchangeScreen`
+ * (Phase 4) and `NfcTestActivity` (Phase 5 prep).
  */
 class VauchiHceService : HostApduService() {
     /**
@@ -82,15 +76,10 @@ class VauchiHceService : HostApduService() {
         private val SW_CONDITIONS_NOT_SATISFIED = byteArrayOf(0x69.toByte(), 0x85.toByte())
         private val SW_WRONG_DATA = byteArrayOf(0x6A.toByte(), 0x80.toByte())
 
+        // INS used by the NfcReaderService transceive-shim to wrap
+        // outbound APDUs. Legacy INS_GET_ENCRYPTED_CARD / INS_ENCRYPTED_CARD
+        // retired 2026-05-21 alongside the legacy responder dispatch.
         const val INS_KEY_OFFER: Byte = 0xE0.toByte()
-        const val INS_GET_ENCRYPTED_CARD: Byte = 0xE1.toByte()
-        const val INS_ENCRYPTED_CARD: Byte = 0xE2.toByte()
-
-        /**
-         * Legacy mode session. Set by the UI before exchange starts.
-         */
-        @Volatile
-        var activeSession: MobileNfcHandshake? = null
 
         /**
          * Transceive-shim mode context. Set by `NfcExchangeScreen` /
@@ -155,43 +144,21 @@ class VauchiHceService : HostApduService() {
         }
     }
 
-    /** Encrypted card bytes from Phase 2, held until reader fetches with INS_GET_ENCRYPTED_CARD */
-    private var pendingEncryptedCard: ByteArray? = null
-
     override fun processCommandApdu(
         commandApdu: ByteArray,
         extras: Bundle?,
     ): ByteArray {
         if (commandApdu.size < 4) return SW_WRONG_DATA
 
-        // SELECT AID is identical across both modes — return SW_OK
-        // before any state-machine dispatch.
+        // SELECT AID — handle outside the transceive-shim path so
+        // dead taps that never establish a TransceiveContext still
+        // get a clean SW_OK rather than an OS-side timeout.
         if (isSelectAid(commandApdu)) {
             return SW_OK
         }
 
-        // Transceive-shim mode takes precedence when active.
-        val ctx = activeTransceiveContext
-        if (ctx != null) {
-            return processViaTransceiveShim(ctx, commandApdu)
-        }
-
-        // Legacy mode (NfcExchangeScreen consumer until Phase 4
-        // view retirement).
-        val session = activeSession ?: return SW_CONDITIONS_NOT_SATISFIED
-        return try {
-            val ins = commandApdu[1]
-            val data = extractData(commandApdu)
-            when (ins) {
-                INS_KEY_OFFER -> handleKeyOffer(session, data)
-                INS_GET_ENCRYPTED_CARD -> handleGetEncryptedCard()
-                INS_ENCRYPTED_CARD -> handleEncryptedCard(session, data)
-                else -> SW_WRONG_DATA
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Legacy APDU dispatch failed: ${e.javaClass.simpleName}")
-            SW_CONDITIONS_NOT_SATISFIED
-        }
+        val ctx = activeTransceiveContext ?: return SW_CONDITIONS_NOT_SATISFIED
+        return processViaTransceiveShim(ctx, commandApdu)
     }
 
     /**
@@ -260,76 +227,4 @@ class VauchiHceService : HostApduService() {
         return apdu.sliceArray(5 until 5 + aidLen).contentEquals(VAUCHI_AID)
     }
 
-    private fun extractData(apdu: ByteArray): ByteArray {
-        if (apdu.size < 5) return ByteArray(0)
-        val lc = apdu[4].toInt() and 0xFF
-        if (lc != 0) {
-            // Short APDU: Lc is 1 byte
-            if (apdu.size < 5 + lc) return ByteArray(0)
-            return apdu.sliceArray(5 until 5 + lc)
-        } else if (apdu.size >= 7) {
-            // Extended APDU: Lc byte is 0x00, followed by 2-byte length
-            val extLen = ((apdu[5].toInt() and 0xFF) shl 8) or (apdu[6].toInt() and 0xFF)
-            if (apdu.size < 7 + extLen) return ByteArray(0)
-            return apdu.sliceArray(7 until 7 + extLen)
-        }
-        return ByteArray(0)
-    }
-
-    /**
-     * Phase 2a (Responder): Process key offer from reader.
-     * Returns key ack bytes + SW_OK. Encrypted card is stored for retrieval via INS_GET_ENCRYPTED_CARD.
-     * Split into two APDUs to stay under HCE response size limits (~261 bytes).
-     */
-    private fun handleKeyOffer(
-        session: MobileNfcHandshake,
-        data: ByteArray,
-    ): ByteArray {
-        Log.d(TAG, "Processing key offer, data size=${data.size}")
-        val ackResult = session.processKeyOffer(data)
-        Log.d(TAG, "Key offer processed, ack size=${ackResult.keyAckBytes.size}, card size=${ackResult.encryptedCardBytes.size}")
-
-        // Store encrypted card for next APDU
-        pendingEncryptedCard = ackResult.encryptedCardBytes
-
-        // Return only key ack + SW_OK
-        val ackBytes = ackResult.keyAckBytes
-        val response = ByteArray(ackBytes.size + 2)
-        System.arraycopy(ackBytes, 0, response, 0, ackBytes.size)
-        response[response.size - 2] = 0x90.toByte()
-        response[response.size - 1] = 0x00
-        Log.d(TAG, "Returning key ack response, size=${response.size}")
-        return response
-    }
-
-    /**
-     * Phase 2b (Responder): Return the encrypted card stored from Phase 2a.
-     */
-    private fun handleGetEncryptedCard(): ByteArray {
-        val card =
-            pendingEncryptedCard ?: run {
-                Log.w(TAG, "No pending encrypted card")
-                return SW_CONDITIONS_NOT_SATISFIED
-            }
-        pendingEncryptedCard = null
-        val response = ByteArray(card.size + 2)
-        System.arraycopy(card, 0, response, 0, card.size)
-        response[response.size - 2] = 0x90.toByte()
-        response[response.size - 1] = 0x00
-        Log.d(TAG, "Returning encrypted card, size=${response.size}")
-        return response
-    }
-
-    /**
-     * Phase 3 (Responder): Process encrypted card from reader.
-     * Completes the exchange on our side.
-     */
-    private fun handleEncryptedCard(
-        session: MobileNfcHandshake,
-        data: ByteArray,
-    ): ByteArray {
-        val result = session.processEncryptedCard(data)
-        Log.d(TAG, "Exchange complete")
-        return SW_OK
-    }
 }
