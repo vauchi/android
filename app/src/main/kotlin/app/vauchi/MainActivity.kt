@@ -883,6 +883,8 @@ fun DeepLinkConsentDialog(
 
 @Composable
 fun LoadingScreen() {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -890,7 +892,7 @@ fun LoadingScreen() {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Loading...")
+            Text(localizationManager.t("app.loading"))
         }
     }
 }
@@ -965,13 +967,14 @@ fun AuthenticationGate(
     onError: (String) -> Unit,
 ) {
     val activity = LocalContext.current as FragmentActivity
+    val localizationManager = remember(activity) { LocalizationManager.getInstance(activity) }
 
     LaunchedEffect(Unit) {
         val promptInfo =
             BiometricPrompt.PromptInfo
                 .Builder()
-                .setTitle("Unlock Vauchi")
-                .setSubtitle("Enter your device PIN, pattern, or biometric")
+                .setTitle(localizationManager.t("auth.unlock.title"))
+                .setSubtitle(localizationManager.t("auth.biometric_prompt_subtitle"))
                 .setAllowedAuthenticators(
                     BiometricManager.Authenticators.BIOMETRIC_STRONG or
                         BiometricManager.Authenticators.BIOMETRIC_WEAK or
@@ -1014,6 +1017,7 @@ fun ErrorScreen(
     onRetry: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     val isLockScreenError =
         message.contains("lock screen", ignoreCase = true) ||
             message.contains("device authentication", ignoreCase = true)
@@ -1029,7 +1033,7 @@ fun ErrorScreen(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
                 Icons.Default.Warning,
-                contentDescription = "Error",
+                contentDescription = localizationManager.t("a11y.error_icon"),
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.error,
             )
@@ -1037,11 +1041,11 @@ fun ErrorScreen(
             Text(
                 text =
                     if (isLockScreenError) {
-                        "Device Lock Required"
+                        localizationManager.t("auth.device_lock_required")
                     } else if (isCancelledError) {
-                        "Authentication Required"
+                        localizationManager.t("auth.required_title")
                     } else {
-                        "Something went wrong"
+                        localizationManager.t("error.generic")
                     },
                 style = MaterialTheme.typography.headlineMedium,
                 color = if (isCancelledError) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
@@ -1051,10 +1055,9 @@ fun ErrorScreen(
             Text(
                 text =
                     if (isLockScreenError) {
-                        "A device lock screen is required to use Vauchi. " +
-                            "PIN, pattern, fingerprint, or face unlock all qualify."
+                        localizationManager.t("auth.device_lock_required_body")
                     } else if (isCancelledError) {
-                        "Vauchi needs to verify your identity to unlock your encrypted contacts."
+                        localizationManager.t("auth.required_body")
                     } else {
                         message
                     },
@@ -1065,7 +1068,7 @@ fun ErrorScreen(
             if (isLockScreenError) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Vauchi encrypts your contacts — device authentication is required to access them.",
+                    text = localizationManager.t("auth.device_lock_required_note"),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1077,16 +1080,16 @@ fun ErrorScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Open Settings")
+                    Text(localizationManager.t("action.open_settings"))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedButton(
                     onClick = onRetry,
                     modifier = Modifier.fillMaxWidth().testTag("error.retry"),
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Retry")
+                    Icon(Icons.Default.Refresh, contentDescription = localizationManager.t("action.retry"))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Retry")
+                    Text(localizationManager.t("action.retry"))
                 }
             } else {
                 Spacer(modifier = Modifier.height(24.dp))
@@ -1102,6 +1105,8 @@ fun ErrorScreen(
 
 @Composable
 fun OfflineBanner() {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Row(
         modifier =
             Modifier
@@ -1112,13 +1117,13 @@ fun OfflineBanner() {
     ) {
         Icon(
             Icons.Default.Warning,
-            contentDescription = "Offline",
+            contentDescription = localizationManager.t("a11y.offline_icon"),
             modifier = Modifier.size(16.dp),
             tint = MaterialTheme.colorScheme.onErrorContainer,
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "You're offline",
+            text = localizationManager.t("sync.offline_banner"),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onErrorContainer,
         )
@@ -1133,18 +1138,20 @@ fun SyncStatusChip(
     onSync: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     val (text, color) =
         when {
             !isOnline -> {
-                "Offline" to MaterialTheme.colorScheme.outline
+                localizationManager.t("sync.status_offline") to MaterialTheme.colorScheme.outline
             }
 
             syncState is SyncState.Syncing -> {
-                "Syncing..." to MaterialTheme.colorScheme.primary
+                localizationManager.t("sync.syncing") to MaterialTheme.colorScheme.primary
             }
 
             syncState is SyncState.Error -> {
-                "Sync failed" to MaterialTheme.colorScheme.error
+                localizationManager.t("sync.error_failed") to MaterialTheme.colorScheme.error
             }
 
             syncState is SyncState.Success || lastSyncTime != null -> {
@@ -1156,11 +1163,11 @@ fun SyncStatusChip(
                                 .withZone(ZoneId.systemDefault())
                         formatter.format(it)
                     } ?: ""
-                "Synced $timeText" to MaterialTheme.colorScheme.primary
+                localizationManager.t("sync.synced_at").replace("{time}", timeText) to MaterialTheme.colorScheme.primary
             }
 
             else -> {
-                "Tap to sync" to MaterialTheme.colorScheme.outline
+                localizationManager.t("sync.tap_to_sync") to MaterialTheme.colorScheme.outline
             }
         }
 
@@ -1190,6 +1197,8 @@ fun RestoreIdentityDialog(
     onDismiss: () -> Unit,
     onRestore: (backupData: String, password: String) -> Unit,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     var backupData by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isRestoring by remember { mutableStateOf(false) }
@@ -1198,11 +1207,11 @@ fun RestoreIdentityDialog(
 
     AlertDialog(
         onDismissRequest = { if (!isRestoring) onDismiss() },
-        title = { Text("Restore Identity") },
+        title = { Text(localizationManager.t("backup.restore_identity")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    "Enter your backup data and password to restore your identity. This will replace any existing identity on this device.",
+                    localizationManager.t("backup.restore_body"),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1210,7 +1219,7 @@ fun RestoreIdentityDialog(
                 OutlinedTextField(
                     value = backupData,
                     onValueChange = { backupData = it },
-                    label = { Text("Backup Data") },
+                    label = { Text(localizationManager.t("backup.data_label")) },
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -1221,7 +1230,7 @@ fun RestoreIdentityDialog(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password") },
+                    label = { Text(localizationManager.t("backup.password")) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     enabled = !isRestoring,
@@ -1244,7 +1253,7 @@ fun RestoreIdentityDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text("Restore")
+                Text(localizationManager.t("action.restore"))
             }
         },
         dismissButton = {
@@ -1252,7 +1261,7 @@ fun RestoreIdentityDialog(
                 onClick = onDismiss,
                 enabled = !isRestoring,
             ) {
-                Text("Cancel")
+                Text(localizationManager.t("action.cancel"))
             }
         },
     )
