@@ -155,7 +155,6 @@ class VauchiRepository(
         return _vauchi
     }
 
-
     /**
      * Shared PlatformAppEngine for core-driven screen rendering.
      * Created alongside VauchiPlatform using the same credentials —
@@ -385,12 +384,6 @@ class VauchiRepository(
 
     /** Create a multi-stage exchange session with the real identity and card data. */
     fun createMultistageSession(): MobileMultiStageSession = platform().createMultistageSession()
-
-    /** Create an NFC initiator (reader) handshake session. */
-    fun createNfcInitiator() = platform().createNfcInitiator()
-
-    /** Create an NFC responder (HCE) handshake session. */
-    fun createNfcResponder() = platform().createNfcResponder()
 
     fun contactCount(): UInt = appEngine.contactCount()
 
@@ -885,7 +878,6 @@ class VauchiRepository(
         platform() // ensure initialized
         return appEngine.restoreDemoContact()
     }
-
 
     /**
      * Create a new device-link orchestration session (Phase 1: initiator only).
