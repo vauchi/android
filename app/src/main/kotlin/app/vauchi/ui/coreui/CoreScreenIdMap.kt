@@ -5,11 +5,17 @@
 package app.vauchi.ui.coreui
 
 /**
- * Map a snake_case core screen id (`AppScreen::screen_id()` output)
- * to the PascalCase `AppScreen` variant name that
+ * Map a core engine's emitted `ScreenModel.screen_id` to the
+ * PascalCase `AppScreen` variant name that
  * [CoreAppViewModel.navigateTo] accepts. Returns `null` for ids that
  * either don't map to a Pure Humble UI screen (native cases handled
- * by their dedicated [Screen] enum arms) or aren't recognised.
+ * by the [Screen] enum arms) or aren't recognised.
+ *
+ * Engine-emitted ids are not identical to `AppScreen::screen_id()` —
+ * each engine picks its own ScreenModel id, which is often the
+ * engine's own name (e.g. `ContactListEngine` emits `"contact_list"`
+ * while `AppScreen::Contacts.screen_id() == "contacts"`). This
+ * function recognises both forms.
  *
  * The original 7 ids mirror the cases removed from `Screen` in the
  * 2026-04-30 Activity-enum-collapse Phase 1 — they all render through
@@ -23,7 +29,7 @@ package app.vauchi.ui.coreui
  */
 internal fun coreScreenIdToVariant(id: String): String? =
     when {
-        // 1:1 screen-id ↔ AppScreen variant mappings.
+        // Canonical `AppScreen::screen_id()` ids.
         id == "contacts" -> "Contacts"
 
         id == "settings" -> "Settings"
@@ -43,6 +49,15 @@ internal fun coreScreenIdToVariant(id: String): String? =
         id == "more" -> "More"
 
         id == "decoy_contacts" -> "DecoyContacts"
+
+        // Engine-emitted ids (engines whose ScreenModel id differs
+        // from the canonical `AppScreen::screen_id()`). Without these
+        // entries the bottom nav unmounts on Contacts and Groups and
+        // the active-tab pill desyncs — see problem record
+        // `2026-05-21-android-back-stack-and-bottom-nav-broken`.
+        id == "contact_list" -> "Contacts"
+
+        id == "groups_list" -> "Groups"
 
         // Multi-state engines: each engine drives multiple `screen_id`s
         // (e.g. DuressPinEngine cycles `duress_overview` →
@@ -64,12 +79,23 @@ internal fun coreScreenIdToVariant(id: String): String? =
         else -> null
     }
 
-/** Top-level core screen ids that show the bottom navigation bar. */
+/**
+ * Core engine `screen_id`s for which the bottom navigation bar
+ * should render. Includes both canonical `AppScreen::screen_id()`
+ * values and the engine-emitted ids for engines that pick a
+ * different ScreenModel id than the canonical one (see
+ * [coreScreenIdToVariant]).
+ *
+ * Membership drives `isTopLevel` in MainActivity — when the active
+ * core screen is in this set, the 5-tab `NavigationBar` renders.
+ */
 internal val TOP_LEVEL_SCREEN_IDS =
     setOf(
+        // Canonical ids.
         "my_info",
-        "contacts",
         "exchange",
-        "groups",
         "more",
+        // Engine-emitted ids (see note in `coreScreenIdToVariant`).
+        "contact_list",
+        "groups_list",
     )
