@@ -56,7 +56,7 @@ import app.vauchi.ui.ExchangeModePicker
 import app.vauchi.ui.KeyInvalidatedRecoveryScreen
 import app.vauchi.ui.MainViewModel
 import app.vauchi.ui.MultiStageExchangeScreen
-import app.vauchi.ui.NfcExchangeScreen
+import app.vauchi.ui.NfcTapExchangeScreen
 import app.vauchi.ui.QrDiagnosticScreen
 import app.vauchi.ui.RecoveryScreen
 import app.vauchi.ui.SyncState
@@ -802,14 +802,7 @@ fun MainScreen(
                     }
 
                     Screen.NfcExchange -> {
-                        NfcExchangeScreen(
-                            viewModel = viewModel,
-                            onBack = { currentScreen = Screen.ExchangeModePicker },
-                            onDone = {
-                                viewModel.refresh()
-                                coreAppViewModel.navigateTo("Contacts")
-                            },
-                        )
+                        NfcTapExchangeScreen(coreAppViewModel = coreAppViewModel)
                     }
 
                     Screen.BleExchange -> {
