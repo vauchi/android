@@ -7,6 +7,7 @@ package app.vauchi.ui.coreui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -67,71 +68,86 @@ fun ScreenRenderer(
     onToastDismiss: () -> Unit = {},
 ) {
     Box(modifier = modifier) {
+        // Outer non-scrolling column splits the viewport into a
+        // scrolling content region (weight 1f) and a sticky action
+        // footer. The previous single-scroll layout put actions inside
+        // the verticalScroll, so on small viewports (e.g. Pixel 3a at
+        // the Groups onboarding step) "Skip" fell below the visible
+        // fold beneath "Continue" — the user had to scroll to find
+        // it. Sticky footer keeps every action above the fold without
+        // shrinking the content density. Repro:
+        // _private/docs/problems/2026-05-21-mobile-onboarding-final-step-
+        // and-skip-fold G1.
         Column(
             modifier =
                 Modifier
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .fillMaxSize()
+                    .padding(16.dp),
         ) {
-            // Progress indicator
-            screen.progress?.let { progress ->
-                LinearProgressIndicator(
-                    progress = {
-                        if (progress.totalSteps > 0) {
-                            progress.currentStep.toFloat() / progress.totalSteps.toFloat()
-                        } else {
-                            0f
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+            ) {
+                // Progress indicator
+                screen.progress?.let { progress ->
+                    LinearProgressIndicator(
+                        progress = {
+                            if (progress.totalSteps > 0) {
+                                progress.currentStep.toFloat() / progress.totalSteps.toFloat()
+                            } else {
+                                0f
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    progress.label?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // Title
+                Text(
+                    text = screen.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.semantics { heading() },
                 )
-                progress.label?.let {
+
+                // Subtitle
+                screen.subtitle?.let {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
+
                 Spacer(modifier = Modifier.height(16.dp))
-            }
 
-            // Title
-            Text(
-                text = screen.title,
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.semantics { heading() },
-            )
-
-            // Subtitle
-            screen.subtitle?.let {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Components — key by id so Compose preserves slot identity
-            // (and any AndroidView state, like the QrScanner camera
-            // binding) across ScreenModel re-emissions. Without this,
-            // a sibling component whose data churns (e.g. the multipart
-            // QR's Display peer cycling every ~300 ms) tears down the
-            // scanner's PreviewView between recompositions and the
-            // camera surface goes black.
-            screen.components.forEachIndexed { index, component ->
-                key(componentSlotKey(component, index)) {
-                    ComponentRenderer(component = component, onAction = onAction)
-                    Spacer(modifier = Modifier.height(12.dp))
+                // Components — key by id so Compose preserves slot identity
+                // (and any AndroidView state, like the QrScanner camera
+                // binding) across ScreenModel re-emissions. Without this,
+                // a sibling component whose data churns (e.g. the multipart
+                // QR's Display peer cycling every ~300 ms) tears down the
+                // scanner's PreviewView between recompositions and the
+                // camera surface goes black.
+                screen.components.forEachIndexed { index, component ->
+                    key(componentSlotKey(component, index)) {
+                        ComponentRenderer(component = component, onAction = onAction)
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Action buttons
+            // Sticky action footer — outside the verticalScroll above.
             screen.actions.forEach { action ->
                 ActionButton(action = action, onAction = onAction)
                 Spacer(modifier = Modifier.height(8.dp))
