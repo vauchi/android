@@ -82,12 +82,6 @@
           no manifest entry keeps the symbols alive.
         -->
 
-        <!-- NFC test activity (launch via ADB only) -->
-        <activity
-            android:name=".nfc.NfcTestActivity"
-            android:exported="false"
-            android:launchMode="singleTask" />
-
         <!-- NFC Host Card Emulation service for contact exchange (production) -->
         <service
             android:name=".nfc.VauchiHceService"
