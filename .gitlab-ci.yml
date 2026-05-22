@@ -410,6 +410,44 @@ lint:no-proprietary-deps:
           - "gradle/libs.versions.toml"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+# Gate for ADR-038: user-visible strings must route through
+# `localizationManager.t(<key>)`, not be hardcoded into Compose `Text(...)`,
+# `BiometricPrompt.setTitle/.setSubtitle(...)`, or `contentDescription =
+# "..."`. Catches the regression that audit 18 C1 surfaced
+# (`_private!2026-05-21-android-mainactivity-hardcoded-strings`).
+#
+# Pivoted from the original "Detekt rule" plan (G2) to a shell-based
+# pattern check to match the existing `lint:locale-key-coverage`
+# precedent — a custom Detekt module would add a separate Kotlin
+# compile + plugin packaging cost for a check expressible in 80 lines
+# of bash.
+#
+# Scoped to `app/src/main/kotlin/app/vauchi/MainActivity.kt` initially
+# (the audit's cited file). Expansion to the rest of `app/src/main/kotlin/`
+# is tracked as a follow-up; existing violations in sibling files
+# (`KeyInvalidatedRecoveryScreen.kt`, `RecoveryScreen.kt`,
+# `CoreScreenView.kt`, `ConfirmationDialogComponent.kt`,
+# `QRCountdownContent.kt`, etc.) need their own localization sweeps
+# before the gate's scope widens.
+lint:no-hardcoded-strings:
+  stage: lint
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.21
+  tags: [docker]
+  needs: []
+  before_script:
+    - apk add --no-cache bash ripgrep
+  script:
+    - bash scripts/check-no-hardcoded-strings.sh
+        app/src/main/kotlin/app/vauchi/MainActivity.kt
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+      changes:
+        compare_to: refs/heads/$CI_DEFAULT_BRANCH
+        paths:
+          - "app/src/main/kotlin/app/vauchi/MainActivity.kt"
+          - "scripts/check-no-hardcoded-strings.sh"
+          - ".gitlab-ci.yml"
+
 # ============================================================
 # Build Stage (MR: debug + lint, Tag: release)
 # ============================================================

@@ -920,6 +920,8 @@ fun ReadyScreen(
     lastSyncTime: Instant? = null,
     onSync: () -> Unit = {},
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -933,7 +935,7 @@ fun ReadyScreen(
                         modifier = Modifier.testTag("home.sync"),
                     )
                     IconButton(onClick = onSettings, modifier = Modifier.testTag("home.settings")) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        Icon(Icons.Default.Settings, contentDescription = localizationManager.t("a11y.settings_icon"))
                     }
                 },
             )
@@ -1094,9 +1096,9 @@ fun ErrorScreen(
             } else {
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(onClick = onRetry, modifier = Modifier.testTag("error.retry")) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Retry")
+                    Icon(Icons.Default.Refresh, contentDescription = localizationManager.t("action.retry"))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Retry")
+                    Text(localizationManager.t("action.retry"))
                 }
             }
         }
