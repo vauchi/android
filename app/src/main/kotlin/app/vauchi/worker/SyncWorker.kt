@@ -22,8 +22,6 @@ class SyncWorker(
     override suspend fun doWork(): Result {
         Log.d(TAG, "Starting background sync")
 
-        // Build the repository once, before the per-tick try block,
-        // so the catch arm can read core's max-retries constant.
         val repository =
             try {
                 VauchiRepository(applicationContext)
@@ -31,17 +29,14 @@ class SyncWorker(
                 Log.e(TAG, "Repository init failed: ${e.message}", e)
                 return Result.failure()
             }
-        val maxRetries =
-            runCatching { repository.appEngine.periodicSyncMaxRetries() }
-                .getOrDefault(3u)
+        val maxRetries = 3u
 
         return try {
             // Per-tick decision (gate on identity / OHTTP key, honour
             // throttle window) lives in core (audit
             // `2026-04-28-lifecycle-session-residue-umbrella` P2-C).
             // The worker shrinks to a single core call plus
-            // notification polling. The retry budget mirrors
-            // core's PERIODIC_SYNC_MAX_RETRIES.
+            // notification polling.
             repository.appEngine.periodicSyncTick()
 
             // Poll for pending notifications (E)
