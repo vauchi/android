@@ -28,11 +28,13 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.A11y
 import app.vauchi.ui.coreui.UserAction
+import app.vauchi.util.LocalizationManager
 
 /**
  * Renders a core AvatarPreview component.
@@ -53,6 +55,8 @@ fun AvatarPreviewComponent(
     modifier: Modifier = Modifier,
     a11y: A11y? = null,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     val bgColorValue =
         bgColor?.let { colorFromIntList(it) }
             ?: MaterialTheme.colorScheme.primary
@@ -155,7 +159,7 @@ fun AvatarPreviewComponent(
             ) {
                 Icon(
                     imageVector = Icons.Default.CameraAlt,
-                    contentDescription = "Edit avatar",
+                    contentDescription = localizationManager.t("a11y.edit_avatar"),
                     tint = Color.White,
                     modifier = Modifier.size(32.dp),
                 )

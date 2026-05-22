@@ -43,6 +43,7 @@ import app.vauchi.ui.components.QrCodeAnalyzer
 import app.vauchi.ui.coreui.LocalUseFrontCamera
 import app.vauchi.ui.coreui.QrMode
 import app.vauchi.ui.coreui.UserAction
+import app.vauchi.util.LocalizationManager
 import app.vauchi.util.generateQrBitmap
 import java.util.concurrent.Executors
 
@@ -73,6 +74,8 @@ fun QrCodeComponent(
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -107,6 +110,8 @@ private fun QrDisplay(
     data: String,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     // Recompute the bitmap whenever core hands us new payload bytes
     // (multipart QR rotates every ~300 ms during exchange).
     val bitmap = remember(data) { generateQrBitmap(data) }
@@ -119,7 +124,7 @@ private fun QrDisplay(
         if (bitmap != null) {
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = "QR code",
+                contentDescription = localizationManager.t("qr.a11y_label"),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit,
             )

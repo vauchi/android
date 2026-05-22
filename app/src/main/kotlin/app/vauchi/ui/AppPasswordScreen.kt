@@ -105,7 +105,7 @@ fun AppPasswordScreen(
     ) {
         Icon(
             imageVector = Icons.Default.Lock,
-            contentDescription = "App locked",
+            contentDescription = localizationManager.t("a11y.app_locked"),
             modifier = Modifier.size(48.dp),
             tint = MaterialTheme.colorScheme.primary,
         )

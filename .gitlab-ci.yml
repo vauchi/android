@@ -422,13 +422,17 @@ lint:no-proprietary-deps:
 # compile + plugin packaging cost for a check expressible in 80 lines
 # of bash.
 #
-# Scoped to `app/src/main/kotlin/app/vauchi/MainActivity.kt` initially
-# (the audit's cited file). Expansion to the rest of `app/src/main/kotlin/`
-# is tracked as a follow-up; existing violations in sibling files
-# (`KeyInvalidatedRecoveryScreen.kt`, `RecoveryScreen.kt`,
-# `CoreScreenView.kt`, `ConfirmationDialogComponent.kt`,
-# `QRCountdownContent.kt`, etc.) need their own localization sweeps
-# before the gate's scope widens.
+# Scope widened 2026-05-22 from MainActivity.kt only to the whole
+# `app/src/main/kotlin/app/vauchi/` tree after follow-up sweeps
+# localized the previously-flagged sibling files
+# (KeyInvalidatedRecoveryScreen.kt, RecoveryScreen.kt, CoreScreenView.kt,
+# ConfirmationDialogComponent.kt, QRCountdownContent.kt,
+# MultipartQRDisplay.kt, PermissionRationale.kt, AppPasswordScreen.kt,
+# SliderComponent.kt, AvatarPreviewComponent.kt, QrCodeComponent.kt,
+# EditableTextComponent.kt, PreviewComponent.kt, ListComponent.kt).
+# 22 hardcoded sites localized, 13 new locale keys + 8 reused keys
+# (action.ok/cancel/continue/search, qr.a11y_label, device_link.a11y_qr,
+# a11y.edit_field, recovery.tab_recover/tab_help_others).
 lint:no-hardcoded-strings:
   stage: lint
   image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.21
@@ -438,13 +442,13 @@ lint:no-hardcoded-strings:
     - apk add --no-cache bash ripgrep
   script:
     - bash scripts/check-no-hardcoded-strings.sh
-        app/src/main/kotlin/app/vauchi/MainActivity.kt
+        app/src/main/kotlin/app/vauchi
   rules:
     - if: $CI_MERGE_REQUEST_IID
       changes:
         compare_to: refs/heads/$CI_DEFAULT_BRANCH
         paths:
-          - "app/src/main/kotlin/app/vauchi/MainActivity.kt"
+          - "app/src/main/kotlin/**/*.kt"
           - "scripts/check-no-hardcoded-strings.sh"
           - ".gitlab-ci.yml"
 

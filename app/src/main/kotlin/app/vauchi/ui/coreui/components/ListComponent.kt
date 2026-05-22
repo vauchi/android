@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -46,6 +47,7 @@ import app.vauchi.ui.coreui.Item
 import app.vauchi.ui.coreui.ListItemAction
 import app.vauchi.ui.coreui.ListItemActionKind
 import app.vauchi.ui.coreui.UserAction
+import app.vauchi.util.LocalizationManager
 
 /**
  * Renders a core `Component.List` as a searchable list of items.
@@ -58,6 +60,8 @@ fun ListComponent(
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Column(modifier = modifier.fillMaxWidth()) {
         if (searchable) {
             OutlinedTextField(
@@ -65,7 +69,7 @@ fun ListComponent(
                 onValueChange = { query ->
                     onAction(UserAction.SearchChanged(componentId = componentId, query = query))
                 },
-                label = { Text("Search") },
+                label = { Text(localizationManager.t("action.search")) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             )
@@ -112,6 +116,8 @@ private fun ItemRow(
     onTap: () -> Unit,
     onAction: (ListItemAction) -> Unit,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     var menuOpen by remember { mutableStateOf(false) }
 
     Row(
@@ -167,7 +173,7 @@ private fun ItemRow(
                     onClick = { menuOpen = true },
                     modifier =
                         Modifier.semantics {
-                            contentDescription = "More actions for ${item.name}"
+                            contentDescription = localizationManager.t("a11y.more_actions_for").replace("{name}", item.name)
                         },
                 ) {
                     Icon(Icons.Default.MoreVert, contentDescription = null)

@@ -19,10 +19,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.UserAction
+import app.vauchi.util.LocalizationManager
 
 /**
  * Renders a core ConfirmationDialog component as a card with title,
@@ -38,6 +41,8 @@ fun ConfirmationDialogComponent(
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -70,7 +75,7 @@ fun ConfirmationDialogComponent(
                         onAction(UserAction.ActionPressed(actionId = "cancel"))
                     },
                 ) {
-                    Text("Cancel")
+                    Text(localizationManager.t("action.cancel"))
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))

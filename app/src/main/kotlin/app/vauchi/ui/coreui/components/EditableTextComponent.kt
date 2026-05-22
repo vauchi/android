@@ -18,12 +18,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.UserAction
+import app.vauchi.util.LocalizationManager
 
 /**
  * Renders a core EditableText component that toggles between display and edit mode.
@@ -38,6 +41,8 @@ fun EditableTextComponent(
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Column(modifier = modifier.padding(vertical = 4.dp)) {
         Text(
             text = label,
@@ -76,7 +81,7 @@ fun EditableTextComponent(
                     onClick = {
                         onAction(UserAction.ActionPressed(actionId = "$componentId:edit"))
                     },
-                    modifier = Modifier.semantics { contentDescription = "Edit $label" },
+                    modifier = Modifier.semantics { contentDescription = localizationManager.t("a11y.edit_field").replace("{label}", label) },
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,

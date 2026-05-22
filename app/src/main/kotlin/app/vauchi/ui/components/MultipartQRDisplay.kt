@@ -11,9 +11,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.vauchi.util.LocalizationManager
 import app.vauchi.util.generateQrBitmap
 import kotlinx.coroutines.delay
 
@@ -35,6 +37,8 @@ fun MultipartQRDisplay(
     qrSize: Int = 512,
     cycleDelayMs: Long = 333L,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     require(chunks.isNotEmpty()) { "chunks must not be empty" }
 
     var currentIndex by remember { mutableIntStateOf(0) }
@@ -64,7 +68,9 @@ fun MultipartQRDisplay(
         modifier =
             modifier
                 .semantics {
-                    contentDescription = "Multipart QR code display, showing part ${currentIndex + 1} of ${chunks.size}"
+                    contentDescription = localizationManager.t("qr.a11y_multipart_display")
+                        .replace("{current}", (currentIndex + 1).toString())
+                        .replace("{total}", chunks.size.toString())
                 },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -74,7 +80,9 @@ fun MultipartQRDisplay(
         if (bitmap != null) {
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = "QR code part ${currentIndex + 1} of ${chunks.size}",
+                contentDescription = localizationManager.t("qr.a11y_part_of")
+                    .replace("{current}", (currentIndex + 1).toString())
+                    .replace("{total}", chunks.size.toString()),
                 modifier = Modifier.size(250.dp),
             )
         } else {

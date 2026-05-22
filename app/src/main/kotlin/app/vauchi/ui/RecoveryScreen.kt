@@ -23,14 +23,18 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.CoreScreenView
+import app.vauchi.util.LocalizationManager
 
 @Composable
 fun RecoveryScreen(
     coreAppViewModel: CoreAppViewModel,
     onBack: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     var selectedTab by remember { mutableIntStateOf(0) }
 
     BackHandler(onBack = onBack)
@@ -40,12 +44,12 @@ fun RecoveryScreen(
             Tab(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
-                text = { Text("Recover") },
+                text = { Text(localizationManager.t("recovery.tab_recover")) },
             )
             Tab(
                 selected = selectedTab == 1,
                 onClick = { selectedTab = 1 },
-                text = { Text("Help Others") },
+                text = { Text(localizationManager.t("recovery.tab_help_others")) },
             )
         }
         when (selectedTab) {

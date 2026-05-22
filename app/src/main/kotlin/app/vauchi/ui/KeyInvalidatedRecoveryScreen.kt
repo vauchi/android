@@ -24,11 +24,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.vauchi.util.LocalizationManager
 
 /**
  * Shown after the storage layer detected an invalidated KeyStore master
@@ -57,6 +60,8 @@ fun KeyInvalidatedRecoveryScreen(
     onRestoreFromBackup: () -> Unit,
     onStartFresh: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Column(
         modifier =
             Modifier
@@ -117,7 +122,7 @@ fun KeyInvalidatedRecoveryScreen(
                             .fillMaxWidth()
                             .testTag("recovery.restore_backup"),
                 ) {
-                    Text("Restore from backup")
+                    Text(localizationManager.t("recovery.key_invalidated.restore_button"))
                 }
             }
         }
@@ -150,7 +155,7 @@ fun KeyInvalidatedRecoveryScreen(
                             .fillMaxWidth()
                             .testTag("recovery.start_fresh"),
                 ) {
-                    Text("Set up new identity")
+                    Text(localizationManager.t("recovery.key_invalidated.new_identity_button"))
                 }
             }
         }

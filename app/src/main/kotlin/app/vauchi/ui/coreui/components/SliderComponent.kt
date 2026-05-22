@@ -16,13 +16,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.A11y
 import app.vauchi.ui.coreui.UserAction
+import app.vauchi.util.LocalizationManager
 import kotlin.math.roundToInt
 
 /**
@@ -45,6 +48,8 @@ fun SliderComponent(
     modifier: Modifier = Modifier,
     a11y: A11y? = null,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Column(
         modifier =
             modifier
@@ -67,7 +72,7 @@ fun SliderComponent(
             minIcon?.let {
                 Icon(
                     imageVector = resolveIcon(it),
-                    contentDescription = "Minimum",
+                    contentDescription = localizationManager.t("a11y.slider_minimum"),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -102,7 +107,7 @@ fun SliderComponent(
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
                     imageVector = resolveIcon(it),
-                    contentDescription = "Maximum",
+                    contentDescription = localizationManager.t("a11y.slider_maximum"),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

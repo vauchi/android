@@ -80,7 +80,7 @@ fun QRCountdownContent(
         ) {
             Image(
                 bitmap = qrBitmap.asImageBitmap(),
-                contentDescription = "Device Link QR Code",
+                contentDescription = localizationManager.t("device_link.a11y_qr"),
                 modifier =
                     Modifier
                         .size(250.dp)
@@ -95,7 +95,7 @@ fun QRCountdownContent(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         modifier =
             Modifier.semantics {
-                contentDescription = "QR code expires in $remainingSeconds seconds"
+                contentDescription = localizationManager.t("qr.a11y_expires_in").replace("{seconds}", remainingSeconds.toString())
             },
     ) {
         Icon(
@@ -145,7 +145,7 @@ fun QRCountdownContent(
             modifier = Modifier.size(16.dp),
         )
         Spacer(modifier = Modifier.width(4.dp))
-        Text("Copy Link")
+        Text(localizationManager.t("device_link.copy_link"))
     }
 
     Text(

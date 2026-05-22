@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import app.vauchi.util.LocalizationManager
 
 /**
  * Manages a single permission request with rationale dialog.
@@ -59,6 +60,7 @@ fun rememberPermissionState(
     rationale: String,
 ): PermissionState {
     val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     val activity = context as? Activity
 
     var isGranted by remember {
@@ -133,6 +135,7 @@ fun rememberMultiplePermissionsState(
     rationale: String,
 ): MultiplePermissionsState {
     val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     val activity = context as? Activity
 
     var allGranted by remember {
@@ -184,6 +187,8 @@ fun rememberMultiplePermissionsState(
  */
 @Composable
 fun PermissionRationaleDialog(state: PermissionState) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     if (state.showRationale) {
         AlertDialog(
             onDismissRequest = { state.dismissRationale() },
@@ -191,7 +196,7 @@ fun PermissionRationaleDialog(state: PermissionState) {
             text = { Text(state.rationaleText) },
             confirmButton = {
                 TextButton(onClick = { state.dismissRationale() }) {
-                    Text("Continue")
+                    Text(localizationManager.t("action.continue"))
                 }
             },
         )
@@ -203,6 +208,8 @@ fun PermissionRationaleDialog(state: PermissionState) {
  */
 @Composable
 fun PermissionRationaleDialog(state: MultiplePermissionsState) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     if (state.showRationale) {
         AlertDialog(
             onDismissRequest = { state.dismissRationale() },
@@ -210,7 +217,7 @@ fun PermissionRationaleDialog(state: MultiplePermissionsState) {
             text = { Text(state.rationaleText) },
             confirmButton = {
                 TextButton(onClick = { state.dismissRationale() }) {
-                    Text("Continue")
+                    Text(localizationManager.t("action.continue"))
                 }
             },
         )

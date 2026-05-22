@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -43,6 +44,7 @@ import app.vauchi.ui.coreui.DesignTokens
 import app.vauchi.ui.coreui.Field
 import app.vauchi.ui.coreui.PreviewVariant
 import app.vauchi.ui.coreui.UserAction
+import app.vauchi.util.LocalizationManager
 
 /**
  * Renders a core `Component.Preview` as a Material3 Card.
@@ -61,6 +63,8 @@ fun PreviewComponent(
     avatarData: List<Int>? = null,
     a11y: A11y? = null,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Column(modifier = modifier.fillMaxWidth()) {
         // Variant selector chips. Core's `UserAction::GroupViewSelected`
         // (kept its old name in Tier 0; payload `group_name` carries the
@@ -75,7 +79,7 @@ fun PreviewComponent(
                 FilterChip(
                     selected = selectedVariant == null,
                     onClick = { onAction(UserAction.GroupViewSelected(groupName = null)) },
-                    label = { Text("All") },
+                    label = { Text(localizationManager.t("preview.filter_all")) },
                     modifier = Modifier.padding(end = 8.dp),
                 )
                 variants.forEach { variant ->
@@ -148,7 +152,7 @@ fun PreviewComponent(
                     if (avatarBitmap != null) {
                         Image(
                             bitmap = avatarBitmap.asImageBitmap(),
-                            contentDescription = "Avatar for $displayName",
+                            contentDescription = localizationManager.t("a11y.avatar_for").replace("{name}", displayName),
                             modifier =
                                 Modifier
                                     .fillMaxSize()

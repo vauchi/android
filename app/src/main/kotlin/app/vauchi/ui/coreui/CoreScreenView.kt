@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
+import app.vauchi.util.LocalizationManager
 import java.io.File
 
 /**
@@ -55,14 +56,14 @@ fun CoreScreenView(
      */
     navigateOnMount: Boolean = true,
 ) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     val screen by viewModel.screen.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
     val toastUndoActionId by viewModel.toastUndoActionId.collectAsState()
     val alertMessage by viewModel.alertMessage.collectAsState()
     val imagePickEvent by viewModel.imagePickEvent.collectAsState()
     val useFrontCamera by viewModel.useFrontCamera.collectAsState()
-
-    val context = LocalContext.current
 
     var currentScreen by remember { mutableStateOf<String?>(null) }
 
@@ -179,7 +180,7 @@ fun CoreScreenView(
                 text = { Text(message) },
                 confirmButton = {
                     TextButton(onClick = { viewModel.dismissAlert() }) {
-                        Text("OK")
+                        Text(localizationManager.t("action.ok"))
                     }
                 },
             )
