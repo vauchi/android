@@ -418,8 +418,6 @@ class VauchiRepository(
 
     fun listArchivedContacts() = appEngine.listArchivedContacts()
 
-    fun importContactsFromVcf(data: ByteArray) = platform().importContactsFromVcf(data)
-
     // Visibility operations
     fun hideFieldFromContact(
         contactId: String,
@@ -768,7 +766,6 @@ class VauchiRepository(
     fun getDeliveryRecordsForContact(contactId: String) = appEngine.getDeliveryRecordsForContact(contactId)
 
     fun getDeliverySummary(messageId: String) = appEngine.getDeliverySummary(messageId)
-
 
     // Demo contact operations
     // Based on: features/demo_contact.feature
