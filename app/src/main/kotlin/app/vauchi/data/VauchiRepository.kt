@@ -291,8 +291,6 @@ class VauchiRepository(
         _appEngine.setSuppressPresenceEnabled(enabled)
     }
 
-    fun getSyncStatus(): uniffi.vauchi_platform.MobileSyncStatus = platform().getSyncStatus()
-
     fun pendingUpdateCount(): UInt {
         platform() // ensure lazy init
         return _appEngine.pendingUpdateCount()
@@ -375,9 +373,6 @@ class VauchiRepository(
      * theyScannedOurQr → performKeyAgreement → completeCardExchange.
      */
     fun finalizeExchange(session: MobileExchangeSession): MobileExchangeResult = platform().finalizeExchange(session)
-
-    /** Create a multi-stage exchange session with the real identity and card data. */
-    fun createMultistageSession(): MobileMultiStageSession = platform().createMultistageSession()
 
     fun contactCount(): UInt = appEngine.contactCount()
 
@@ -471,31 +466,6 @@ class VauchiRepository(
      */
     fun deleteLabel(labelId: String) {
         appEngine.deleteLabel(labelId)
-    }
-
-    fun addContactToLabel(
-        labelId: String,
-        contactId: String,
-    ) {
-        appEngine.addContactToGroup(labelId, contactId)
-    }
-
-    fun removeContactFromLabel(
-        labelId: String,
-        contactId: String,
-    ) {
-        appEngine.removeContactFromGroup(labelId, contactId)
-    }
-
-    fun getLabelsForContact(contactId: String): List<uniffi.vauchi_platform.MobileVisibilityLabel> =
-        appEngine.getGroupsForContact(contactId)
-
-    fun setLabelFieldVisibility(
-        labelId: String,
-        fieldId: String,
-        visible: Boolean,
-    ) {
-        appEngine.setGroupFieldVisibility(labelId, fieldId, visible)
     }
 
     /**
@@ -713,12 +683,10 @@ class VauchiRepository(
     /**
      * Get emergency broadcast config
      */
-    fun getEmergencyConfig(): uniffi.vauchi_platform.MobileEmergencyConfig? = appEngine.getEmergencyConfig()
 
     /**
      * Send emergency broadcast
      */
-    fun sendEmergencyBroadcast(): uniffi.vauchi_platform.MobileBroadcastResult = appEngine.sendEmergencyBroadcast()
 
     /**
      * Disable emergency broadcast
@@ -729,11 +697,6 @@ class VauchiRepository(
 
     // Verification operations
     fun verifyContact(id: String) = appEngine.verifyContact(id)
-
-    fun getPublicKey(): String {
-        platform() // ensure initialized
-        return appEngine.getPublicId()
-    }
 
     fun getOwnFingerprint(): String = appEngine.getOwnFingerprint()
 
@@ -758,8 +721,6 @@ class VauchiRepository(
     fun addRecoveryVoucher(voucherB64: String) = appEngine.addRecoveryVoucher(voucherB64)
 
     fun getRecoveryStatus() = appEngine.getRecoveryStatus()
-
-    fun getRecoveryProof(): String? = appEngine.getRecoveryProof()
 
     fun verifyRecoveryProof(proofB64: String) = appEngine.verifyRecoveryProof(proofB64)
 
@@ -857,23 +818,10 @@ class VauchiRepository(
      * Core's cycle thread owns QR generation, request listening, state transitions,
      * and persistence. Frontend wires a `DeviceLinkSessionListener` for events.
      */
-    fun createDeviceLinkSessionInitiator() = appEngine.createDeviceLinkSessionInitiator()
 
     /**
      * Send a device link request via the relay and wait for a response.
      */
-    fun sendDeviceLinkRequest(
-        targetIdentity: String,
-        senderToken: String,
-        encryptedRequest: ByteArray,
-        timeoutSecs: ULong,
-    ): ByteArray =
-        platform().sendDeviceLinkRequest(
-            targetIdentity,
-            senderToken,
-            encryptedRequest,
-            timeoutSecs,
-        )
 
     // GDPR operations
     // Based on: features/privacy_compliance.feature
