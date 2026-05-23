@@ -239,12 +239,6 @@ class VauchiRepository(
         }
     }
 
-    /**
-     * Export current storage key (for backup purposes only).
-     * WARNING: Handle the returned data with extreme care.
-     */
-    fun exportStorageKey(): ByteArray = platform().exportStorageKey().map { it.toByte() }.toByteArray()
-
     fun getRelayUrl(): String = preferences.getRelayUrl()
 
     fun setRelayUrl(url: String) = preferences.setRelayUrl(url)
@@ -387,8 +381,6 @@ class VauchiRepository(
 
     fun contactCount(): UInt = appEngine.contactCount()
 
-    fun listContacts() = appEngine.listContacts()
-
     fun listContactsPaginated(
         offset: UInt,
         limit: UInt,
@@ -403,10 +395,6 @@ class VauchiRepository(
     // Contact lifecycle (reversible deletion + archival)
 
     fun softDeleteImportedContact(id: String) = appEngine.softDeleteImportedContact(id)
-
-    fun undoDeleteImportedContact(id: String) = appEngine.undoDeleteImportedContact(id)
-
-    fun hardDeleteImportedContact(id: String) = appEngine.hardDeleteImportedContact(id)
 
     fun archiveContact(id: String) = appEngine.archiveContact(id)
 

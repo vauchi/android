@@ -538,15 +538,6 @@ class MainViewModel(
             null
         }
 
-    suspend fun listContacts(): List<MobileContact> =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.listContacts()
-            }
-        } catch (e: Exception) {
-            emptyList()
-        }
-
     suspend fun listContactsPaginated(
         offset: UInt,
         limit: UInt,
@@ -606,12 +597,6 @@ class MainViewModel(
     suspend fun softDeleteImportedContact(id: String) {
         withContext(Dispatchers.IO) {
             repository.softDeleteImportedContact(id)
-        }
-    }
-
-    suspend fun undoDeleteImportedContact(id: String) {
-        withContext(Dispatchers.IO) {
-            repository.undoDeleteImportedContact(id)
         }
     }
 
