@@ -248,14 +248,6 @@ fun PlatformAppEngine.softDeleteImportedContact(id: String) {
     dispatchDomainCommand(DomainCommand.SoftDeleteImportedContact(id))
 }
 
-fun PlatformAppEngine.undoDeleteImportedContact(id: String) {
-    dispatchDomainCommand(DomainCommand.UndoDeleteImportedContact(id))
-}
-
-fun PlatformAppEngine.hardDeleteImportedContact(id: String) {
-    dispatchDomainCommand(DomainCommand.HardDeleteImportedContact(id))
-}
-
 fun PlatformAppEngine.archiveContact(id: String) {
     dispatchDomainCommand(DomainCommand.ArchiveContact(id))
 }
