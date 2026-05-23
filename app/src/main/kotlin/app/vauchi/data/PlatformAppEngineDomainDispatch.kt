@@ -424,18 +424,6 @@ fun PlatformAppEngine.getSuggestedLabels(): List<String> {
 
 // ── Delivery Records / Retry Queue (C4) ──
 
-fun PlatformAppEngine.getAllDeliveryRecords(): List<MobileDeliveryRecord> {
-    val result = dispatchDomainCommand(DomainCommand.GetAllDeliveryRecords)
-    return (result as? DomainCommandResult.DeliveryRecords)?.records
-        ?: unexpectedResult("GetAllDeliveryRecords")
-}
-
-fun PlatformAppEngine.getFailedDeliveryRecords(): List<MobileDeliveryRecord> {
-    val result = dispatchDomainCommand(DomainCommand.GetFailedDeliveryRecords)
-    return (result as? DomainCommandResult.DeliveryRecords)?.records
-        ?: unexpectedResult("GetFailedDeliveryRecords")
-}
-
 fun PlatformAppEngine.getDeliveryRecordsForContact(recipientId: String): List<MobileDeliveryRecord> {
     val result = dispatchDomainCommand(DomainCommand.GetDeliveryRecordsForContact(recipientId))
     return (result as? DomainCommandResult.DeliveryRecords)?.records
@@ -446,23 +434,6 @@ fun PlatformAppEngine.getDeliverySummary(messageId: String): MobileDeliverySumma
     val result = dispatchDomainCommand(DomainCommand.GetDeliverySummary(messageId))
     return (result as? DomainCommandResult.DeliverySummary)?.summary
         ?: unexpectedResult("GetDeliverySummary")
-}
-
-fun PlatformAppEngine.getDueRetries(): List<MobileRetryEntry> {
-    val result = dispatchDomainCommand(DomainCommand.GetDueRetries)
-    return (result as? DomainCommandResult.RetryEntries)?.entries
-        ?: unexpectedResult("GetDueRetries")
-}
-
-fun PlatformAppEngine.manualRetry(messageId: String): Boolean {
-    val result = dispatchDomainCommand(DomainCommand.ManualRetry(messageId))
-    return (result as? DomainCommandResult.Bool)?.value ?: unexpectedResult("ManualRetry")
-}
-
-fun PlatformAppEngine.countFailedDeliveries(): UInt {
-    val result = dispatchDomainCommand(DomainCommand.CountFailedDeliveries)
-    return (result as? DomainCommandResult.Count)?.value
-        ?: unexpectedResult("CountFailedDeliveries")
 }
 
 // ── Delivery flags + pending count (cf57f21e cascade follow-up) ──
@@ -591,21 +562,10 @@ fun PlatformAppEngine.revokeConsent(consentType: MobileConsentType) {
     dispatchDomainCommand(DomainCommand.RevokeConsent(consentType))
 }
 
-fun PlatformAppEngine.checkConsent(consentType: MobileConsentType): Boolean {
-    val result = dispatchDomainCommand(DomainCommand.CheckConsent(consentType))
-    return (result as? DomainCommandResult.Bool)?.value ?: unexpectedResult("CheckConsent")
-}
-
 fun PlatformAppEngine.getConsentRecords(): List<MobileConsentRecord> {
     val result = dispatchDomainCommand(DomainCommand.GetConsentRecords)
     return (result as? DomainCommandResult.ConsentRecords)?.records
         ?: unexpectedResult("GetConsentRecords")
-}
-
-fun PlatformAppEngine.getConsentStatus(consentType: MobileConsentType): MobileConsentStatus {
-    val result = dispatchDomainCommand(DomainCommand.GetConsentStatus(consentType))
-    return (result as? DomainCommandResult.ConsentStatus)?.status
-        ?: unexpectedResult("GetConsentStatus")
 }
 
 // ── Recovery Trust (B7 + slice 32g-B Phase 1) ──

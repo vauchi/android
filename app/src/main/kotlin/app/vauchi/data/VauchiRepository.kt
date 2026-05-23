@@ -765,22 +765,10 @@ class VauchiRepository(
 
     fun verifyRecoveryProof(proofB64: String) = appEngine.verifyRecoveryProof(proofB64)
 
-    // Delivery status operations
-    fun getAllDeliveryRecords() = appEngine.getAllDeliveryRecords()
-
-    /** G3 (ADR-021/043): pre-filtered failed-record list — frontends should
-     *  call this instead of `.filter { it.status == FAILED }` themselves. */
-    fun getFailedDeliveryRecords() = appEngine.getFailedDeliveryRecords()
-
     fun getDeliveryRecordsForContact(contactId: String) = appEngine.getDeliveryRecordsForContact(contactId)
 
     fun getDeliverySummary(messageId: String) = appEngine.getDeliverySummary(messageId)
 
-    fun getDueRetries() = appEngine.getDueRetries()
-
-    fun countFailedDeliveries(): UInt = appEngine.countFailedDeliveries()
-
-    fun manualRetry(messageId: String): Boolean = appEngine.manualRetry(messageId)
 
     // Demo contact operations
     // Based on: features/demo_contact.feature
@@ -934,21 +922,11 @@ class VauchiRepository(
     fun revokeConsent(consentType: uniffi.vauchi_platform.MobileConsentType) = appEngine.revokeConsent(consentType)
 
     /**
-     * Check if consent is granted for a specific type.
-     *
-     * @param consentType The type to check
-     * @return True if consent is currently granted
-     */
-    fun checkConsent(consentType: uniffi.vauchi_platform.MobileConsentType): Boolean = appEngine.checkConsent(consentType)
-
-    /**
      * Get all consent records.
      *
      * @return List of all consent records
      */
     fun getConsentRecords() = appEngine.getConsentRecords()
-
-    fun getConsentStatus(consentType: uniffi.vauchi_platform.MobileConsentType) = appEngine.getConsentStatus(consentType)
 
     /**
      * Handle app backgrounded event (C1 auto-lock).
