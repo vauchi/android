@@ -429,6 +429,25 @@ class ModelsTest {
     }
 
     @Test
+    fun `ActionResult BiometricUnlockOutcome Unlocked deserialization`() {
+        val input = """{"BiometricUnlockOutcome": {"outcome": "Unlocked"}}"""
+        val result = json.decodeFromString<ActionResult>(input)
+        assertTrue(result is ActionResult.BiometricUnlockOutcome)
+        assertEquals("Unlocked", (result as ActionResult.BiometricUnlockOutcome).outcome)
+    }
+
+    @Test
+    fun `ActionResult BiometricUnlockOutcome PromptForDuressPin deserialization`() {
+        val input = """{"BiometricUnlockOutcome": {"outcome": "PromptForDuressPin"}}"""
+        val result = json.decodeFromString<ActionResult>(input)
+        assertTrue(result is ActionResult.BiometricUnlockOutcome)
+        assertEquals(
+            "PromptForDuressPin",
+            (result as ActionResult.BiometricUnlockOutcome).outcome,
+        )
+    }
+
+    @Test
     fun `CommandDTO BleStartAdvertising deserialization`() {
         val input = """{"BleStartAdvertising": {"service_uuid": "1234-abcd", "payload": [1, 2, 3]}}"""
         val result = json.decodeFromString(CommandDTOSerializer, input)

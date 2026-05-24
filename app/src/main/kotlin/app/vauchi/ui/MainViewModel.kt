@@ -14,6 +14,7 @@ import app.vauchi.data.DeviceNotSecureException
 import app.vauchi.data.ExchangeSessionData
 import app.vauchi.data.KeyInvalidatedRecoveryRequired
 import app.vauchi.data.VauchiRepository
+import app.vauchi.ui.coreui.ActionResult
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NetworkMonitor
 import kotlinx.coroutines.Dispatchers
@@ -24,11 +25,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import uniffi.vauchi_platform.MobileApplyResult
-import uniffi.vauchi_platform.MobileBiometricUnlockOutcome
 import uniffi.vauchi_platform.MobileConsentType
 import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactCard
+import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.MobileException
 import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileGdprExport
@@ -334,28 +336,40 @@ class MainViewModel(
     }
 
     /** Re-run full initialization (identity check + load). Use after biometric auth. */
+    private val biometricJson = Json { ignoreUnknownKeys = true }
+
     fun retryInit() {
         viewModelScope.launch {
             // Core owns the post-biometric duress decision and the
-            // 300 ms constant-time floor that hides whether duress
-            // is configured (audit
+            // 300 ms constant-time floor that hides whether duress is
+            // configured (audit
             // `2026-04-28-lifecycle-session-residue-umbrella` P2-B).
-            // The call sleeps in Rust for ≥
-            // BIOMETRIC_UNLOCK_MIN_DURATION, so dispatch off the main
-            // thread.
+            // ADR-031: biometric success is reported as a hardware
+            // event; core consults its duress state (sleeping in Rust
+            // for ≥ BIOMETRIC_UNLOCK_MIN_DURATION) and returns the
+            // outcome as ActionResult.BiometricUnlockOutcome. Dispatch
+            // off the main thread.
             val outcome =
                 try {
-                    withContext(Dispatchers.IO) { appEngine.biometricUnlockCheck() }
+                    withContext(Dispatchers.IO) {
+                        appEngine.handleHardwareEvent(MobileEvent.BiometricUnlockSucceeded)
+                    }?.let { resultJson ->
+                        (biometricJson.decodeFromString<ActionResult>(resultJson)
+                            as? ActionResult.BiometricUnlockOutcome)?.outcome
+                    }
                 } catch (_: Exception) {
                     null
                 }
 
             when (outcome) {
-                MobileBiometricUnlockOutcome.PROMPT_FOR_DURESS_PIN -> {
+                "PromptForDuressPin" -> {
                     _uiState.value = UiState.AppPasswordRequired
                 }
 
-                MobileBiometricUnlockOutcome.UNLOCKED, null -> {
+                // "Unlocked", or null on a missing outcome / decode
+                // failure: proceed to the normal identity-check path,
+                // matching the prior behavior on a null biometric check.
+                else -> {
                     checkIdentity()
                 }
             }

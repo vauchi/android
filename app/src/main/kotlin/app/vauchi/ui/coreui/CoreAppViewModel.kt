@@ -521,6 +521,12 @@ class CoreAppViewModel(
                 loadScreen()
             }
 
+            is ActionResult.BiometricUnlockOutcome -> {
+                // Consumed by MainViewModel.retryInit(), which reports
+                // the biometric hardware event and decodes the outcome
+                // directly — it never flows through this screen pipeline.
+            }
+
             is ActionResult.CompleteWith,
             is ActionResult.Unknown,
             -> { /* no-op */ }

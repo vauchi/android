@@ -1822,6 +1822,17 @@ sealed class ActionResult {
         val contactId: String,
     ) : ActionResult()
 
+    /**
+     * ADR-031 biometric-unlock outcome, delivered after the frontend
+     * reports `MobileEvent.BiometricUnlockSucceeded`. `outcome` is
+     * core's `BiometricUnlockOutcome` serialized as a bare string:
+     * `"Unlocked"` (proceed) or `"PromptForDuressPin"` (present the
+     * app-password screen so the duress PIN can resolve the auth mode).
+     */
+    data class BiometricUnlockOutcome(
+        val outcome: String,
+    ) : ActionResult()
+
     data object Unknown : ActionResult()
 }
 
@@ -2062,6 +2073,13 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                         ActionResult.CompleteWith(destination = dest)
                     }
 
+                    "BiometricUnlockOutcome" in element -> {
+                        val obj = element["BiometricUnlockOutcome"] as JsonObject
+                        ActionResult.BiometricUnlockOutcome(
+                            outcome = obj["outcome"]!!.jsonPrimitive.content,
+                        )
+                    }
+
                     else -> {
                         ActionResult.Unknown
                     }
@@ -2249,6 +2267,19 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                         mapOf("destination" to JsonPrimitive(destStr)),
                     )
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("CompleteWith" to obj)))
+            }
+
+            is ActionResult.BiometricUnlockOutcome -> {
+                val obj =
+                    JsonObject(
+                        mapOf(
+                            "BiometricUnlockOutcome" to
+                                JsonObject(
+                                    mapOf("outcome" to JsonPrimitive(value.outcome)),
+                                ),
+                        ),
+                    )
+                jsonEncoder.encodeJsonElement(obj)
             }
 
             is ActionResult.Unknown -> {
