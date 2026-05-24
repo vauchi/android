@@ -674,34 +674,6 @@ class VauchiRepository(
         appEngine.setProposalTrusted(contactId, trusted)
     }
 
-    // Emergency Broadcast operations
-
-    /**
-     * Configure emergency broadcast
-     */
-    fun configureEmergencyBroadcast(
-        contactIds: List<String>,
-        message: String,
-        includeLocation: Boolean,
-    ) {
-        appEngine.configureEmergencyBroadcast(contactIds, message, includeLocation)
-    }
-
-    /**
-     * Get emergency broadcast config
-     */
-
-    /**
-     * Send emergency broadcast
-     */
-
-    /**
-     * Disable emergency broadcast
-     */
-    fun disableEmergencyBroadcast() {
-        appEngine.disableEmergencyBroadcast()
-    }
-
     // Verification operations
     fun verifyContact(id: String) = appEngine.verifyContact(id)
 
@@ -711,23 +683,6 @@ class VauchiRepository(
     fun trustContactForRecovery(id: String) = appEngine.trustContactForRecovery(id)
 
     fun untrustContactForRecovery(id: String) = appEngine.untrustContactForRecovery(id)
-
-    // Recovery operations.
-    //
-    // C7: Recovery uses direct typed methods on `PlatformAppEngine`
-    // (R3 hybrid B2 carve-out — these are not in the `DomainCommand`
-    // enum). Mirrors iOS commit `c2db048` C1+C5+C7 mega-MR.
-    //
-    // `createRecoveryClaim` + `createRecoveryVoucher` retained despite
-    // no production consumer: VauchiRepositoryFfiTest asserts the UniFFI
-    // passthroughs at the repository layer (android-test suite).
-    fun createRecoveryClaim(oldPkHex: String) = appEngine.createRecoveryClaim(oldPkHex)
-
-    fun createRecoveryVoucher(claimB64: String) = appEngine.createRecoveryVoucher(claimB64)
-
-    fun addRecoveryVoucher(voucherB64: String) = appEngine.addRecoveryVoucher(voucherB64)
-
-    fun getRecoveryStatus() = appEngine.getRecoveryStatus()
 
     fun verifyRecoveryProof(proofB64: String) = appEngine.verifyRecoveryProof(proofB64)
 

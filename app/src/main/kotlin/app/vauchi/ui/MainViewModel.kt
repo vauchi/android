@@ -32,7 +32,6 @@ import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileException
 import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileGdprExport
-import uniffi.vauchi_platform.MobileRecoveryProgress
 import uniffi.vauchi_platform.MobileSocialNetwork
 import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.MobileUpdateStatus
@@ -897,62 +896,6 @@ class MainViewModel(
             }
         }
     }
-
-    // Emergency Broadcast operations
-    private val _emergencyConfigured = MutableStateFlow(false)
-    val emergencyConfigured: StateFlow<Boolean> = _emergencyConfigured.asStateFlow()
-
-    fun configureEmergencyBroadcast(
-        contactIds: List<String>,
-        message: String,
-        includeLocation: Boolean,
-    ) {
-        viewModelScope.launch {
-            try {
-                withContext<Unit>(Dispatchers.IO) {
-                    repository.configureEmergencyBroadcast(contactIds, message, includeLocation)
-                }
-                _emergencyConfigured.value = true
-                showMessage("Emergency broadcast configured")
-            } catch (e: Exception) {
-                showMessage("Failed to configure: ${e.message}")
-            }
-        }
-    }
-
-    fun disableEmergencyBroadcast() {
-        viewModelScope.launch {
-            try {
-                withContext<Unit>(Dispatchers.IO) {
-                    repository.disableEmergencyBroadcast()
-                }
-                _emergencyConfigured.value = false
-                showMessage("Emergency broadcast disabled")
-            } catch (e: Exception) {
-                showMessage("Failed to disable: ${e.message}")
-            }
-        }
-    }
-
-    // Recovery operations
-    suspend fun addRecoveryVoucher(voucherB64: String): MobileRecoveryProgress? =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.addRecoveryVoucher(voucherB64)
-            }
-        } catch (e: Exception) {
-            showMessage("Failed to add voucher: ${e.message}")
-            null
-        }
-
-    suspend fun getRecoveryStatus(): MobileRecoveryProgress? =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.getRecoveryStatus()
-            }
-        } catch (e: Exception) {
-            null
-        }
 
     // Demo contact operations
     // Based on: features/demo_contact.feature
