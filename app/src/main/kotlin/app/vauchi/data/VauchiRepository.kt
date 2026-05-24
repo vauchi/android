@@ -28,6 +28,7 @@ import android.util.Base64
 import android.util.Log
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.ThemeManager
+import app.vauchi.util.pushDeviceCapabilities
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileExchangeResult
 import uniffi.vauchi_platform.MobileExchangeSession
@@ -151,6 +152,12 @@ class VauchiRepository(
 
             ThemeManager.getInstance(context).attachAppEngine(_appEngine)
             LocalizationManager.getInstance(context).attachAppEngine(_appEngine)
+
+            // Report this device's exchange-relevant hardware to core so the
+            // Exchange mode picker offers only modes the device can perform.
+            // Without this push core falls back to `DeviceCapabilities::default()`
+            // (all-false) — see `2026-05-23-exchange-capabilities-frontend-gap`.
+            pushDeviceCapabilities(context, _appEngine)
         }
         return _vauchi
     }
