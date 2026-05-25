@@ -70,11 +70,16 @@ internal fun coreScreenIdToVariant(id: String): String? =
         // on the Settings rows landed on My Card instead of the
         // requested screen — Decoy Contacts worked because it has
         // only the single `decoy_contacts` id mapped above).
+        // Match both the per-sub-state engine ids (prefix) and the bare
+        // canonical `AppScreen::screen_id()` core emits post
+        // zero-domain-vocab Tier-0 (c). `backup` / `sync` have no
+        // trailing underscore so the prefix arm misses them; `duress_pin`
+        // already matches `startsWith("duress_")`.
         id.startsWith("duress_") -> "DuressPin"
 
-        id.startsWith("backup_") -> "Backup"
+        id == "backup" || id.startsWith("backup_") -> "Backup"
 
-        id.startsWith("sync_") -> "Sync"
+        id == "sync" || id.startsWith("sync_") -> "Sync"
 
         else -> null
     }

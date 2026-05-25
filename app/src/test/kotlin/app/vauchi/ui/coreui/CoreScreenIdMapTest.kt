@@ -62,6 +62,22 @@ class CoreScreenIdMapTest {
     }
 
     @Test
+    fun `bare canonical multi-state ids map to their parent variant`() {
+        // Zero-domain-vocab Tier-0 (c) prereq: core is moving to emit the
+        // canonical `AppScreen::screen_id()` (e.g. "backup", "sync",
+        // "duress_pin") instead of the per-sub-state engine ids
+        // ("backup_choose", "sync_status", ...). The `startsWith("backup_")`
+        // / `startsWith("sync_")` arms miss the bare canonical ids because
+        // they have no trailing underscore — so without these the Backup
+        // and Sync screens would fall through to the native partition and
+        // break once core flips. `duress_pin` already matches
+        // `startsWith("duress_")`; pinned here so the contract is explicit.
+        assertEquals("Backup", coreScreenIdToVariant("backup"))
+        assertEquals("Sync", coreScreenIdToVariant("sync"))
+        assertEquals("DuressPin", coreScreenIdToVariant("duress_pin"))
+    }
+
+    @Test
     fun `unknown ids return null`() {
         assertNull(coreScreenIdToVariant("my_info"))
         assertNull(coreScreenIdToVariant("exchange"))
