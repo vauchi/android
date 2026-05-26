@@ -41,6 +41,6 @@ fun materialIconNameForCoreIcon(coreIcon: String): MaterialIconName =
 
 // `screenForCoreTabId` and `coreTabIdForScreen` removed in the
 // 2026-04-30 Activity-enum-collapse Phase 1. Top-level navigation is
-// now driven by `coreScreen.screenId` (membership in
-// `TOP_LEVEL_SCREEN_IDS` for nav-bar visibility, direct
-// `coreAppViewModel.navigateTo(variant)` calls for tab taps).
+// now driven by core: `currentTabId(MOBILE)` for nav-bar visibility +
+// pill selection, and `UserAction.NavigateToTab(tab.actionId)` for tab
+// taps (ADR-043 Am4 Tier-1).

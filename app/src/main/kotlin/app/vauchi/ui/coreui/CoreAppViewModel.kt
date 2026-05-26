@@ -20,6 +20,7 @@ import kotlinx.serialization.json.put
 import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.MobileLocale
 import uniffi.vauchi_platform.MobileTabInfo
+import uniffi.vauchi_platform.MobileTabLayout
 import uniffi.vauchi_platform.PlatformAppEngine
 
 /**
@@ -258,6 +259,17 @@ class CoreAppViewModel(
             }
         }
     }
+
+    /**
+     * Canonical id of the bottom-nav tab the active screen belongs to
+     * (ADR-043 Am4), or null for overlays. Drives bottom-nav visibility
+     * and pill selection — supersedes the local `canonicalScreenIdFor` /
+     * `TOP_LEVEL_SCREEN_IDS` fold now that core stamps canonical
+     * screen-ids. A cheap synchronous engine lookup (not IO); called
+     * during composition after a navigation has already settled the
+     * engine state.
+     */
+    fun currentTabId(): String? = runCatching { appEngine.currentTabId(layout = MobileTabLayout.MOBILE) }.getOrNull()
 
     fun loadScreen() {
         viewModelScope.launch {

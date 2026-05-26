@@ -67,9 +67,7 @@ import app.vauchi.ui.coreui.CoreScreenView
 import app.vauchi.ui.coreui.MaterialIconName
 import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
-import app.vauchi.ui.coreui.TOP_LEVEL_SCREEN_IDS
 import app.vauchi.ui.coreui.UserAction
-import app.vauchi.ui.coreui.canonicalScreenIdFor
 import app.vauchi.ui.coreui.coreScreenIdToVariant
 import app.vauchi.ui.coreui.materialIconNameForCoreIcon
 import app.vauchi.ui.theme.VauchiTheme
@@ -527,8 +525,16 @@ fun MainScreen(
     // landed on a core screen, OR by leaving `activeTabId` null when
     // currently on a non-top-level native screen — both behaviours
     // are unchanged from the pre-collapse mapping.
-    val activeTabId = coreScreen?.screenId?.takeIf { it in TOP_LEVEL_SCREEN_IDS }
-    val isTopLevel = activeTabId != null
+    // Canonical tab the active screen belongs to (ADR-043 Am4), from
+    // core's `current_tab_id` — supersedes the local `TOP_LEVEL_SCREEN_IDS`
+    // / `canonicalScreenIdFor` fold, which went stale once core started
+    // stamping canonical screen-ids (`contacts`/`groups`, not the
+    // engine-emitted `contact_list`/`groups_list`). The bottom bar shows
+    // only on tab *roots*: the active screen's own id equals its tab id.
+    // Sub-screens report their parent tab but are not roots, so the bar
+    // stays hidden there (unchanged behaviour).
+    val currentTab = coreAppViewModel.currentTabId()
+    val isTopLevel = currentTab != null && coreScreen?.screenId == currentTab
 
     // System BACK handling. Without an interceptor, every non-Home
     // screen would finish the Activity and exit the app — see problem
@@ -576,12 +582,10 @@ fun MainScreen(
                                 )
                             },
                             label = { Text(tab.label) },
-                            // `activeTabId` is the engine-emitted id (e.g.
-                            // `"contact_list"`); `tab.id` is the canonical
-                            // `AppScreen::screen_id()` (e.g. `"contacts"`).
-                            // Fold the engine id to its canonical form
-                            // before comparing or the pill never lights up.
-                            selected = canonicalScreenIdFor(activeTabId ?: "") == tab.id,
+                            // `currentTab` is the canonical tab id core
+                            // resolves for the active screen, so it compares
+                            // directly to `tab.id` — no engine-id fold needed.
+                            selected = currentTab == tab.id,
                             onClick = {
                                 // Native top-level cases (my_info -> Home,
                                 // exchange -> ExchangeModePicker) still need
@@ -595,10 +599,14 @@ fun MainScreen(
                                     "my_info" -> currentScreen = Screen.Home
                                     "exchange" -> currentScreen = Screen.ExchangeModePicker
                                 }
-                                // Navigate by the opaque canonical id core
-                                // published in tab_info (ADR-043 Am4); core's
-                                // navigate_to_json resolves it via from_screen_id.
-                                coreAppViewModel.navigateTo(tab.id)
+                                // Forward the opaque tab action_id as
+                                // `UserAction::NavigateToTab` (ADR-043 Am4) —
+                                // the typed action path, replacing the
+                                // `navigate_to_json` round-trip so that surface
+                                // can be retired (tier0-d Tier-0 cleanup).
+                                coreAppViewModel.handleAction(
+                                    UserAction.NavigateToTab(actionId = tab.actionId),
+                                )
                             },
                         )
                     }
