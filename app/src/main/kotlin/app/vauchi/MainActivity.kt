@@ -225,9 +225,8 @@ enum class Screen {
     // collapsed in Phase 1 — they render through the core-driven
     // dispatch above the `when (currentScreen)` block. ContactDetail
     // and LabelDetail were removed earlier (2026-04-28 audit
-    // follow-up); they navigate via
-    // `coreAppViewModel.navigateToScreenWithParam(...)` and observe
-    // `coreAppViewModel.screen` directly.
+    // follow-up); core resolves the navigation to NavigateTo(ScreenModel)
+    // in route_result and the frontend observes `coreAppViewModel.screen`.
 }
 
 /**
@@ -263,11 +262,9 @@ fun MainScreen(
     val isOnline by viewModel.isOnline.collectAsState()
     val lastSyncTime by viewModel.lastSyncTime.collectAsState()
     var currentScreen by remember { mutableStateOf(Screen.Home) }
-    // selectedContactId removed — ContactDetail is now driven by core via
-    // CoreAppViewModel.navigateToScreenWithParam("ContactDetail", "contact_id", …)
-    // selectedLabelId removed — same rationale as selectedContactId:
-    // GroupDetail navigation is driven by core via
-    // `coreAppViewModel.navigateToScreenWithParam(...)`.
+    // selectedContactId / selectedLabelId removed — contact-detail and
+    // group-detail navigation are resolved in core (route_result emits
+    // NavigateTo); the frontend just renders `coreAppViewModel.screen`.
     var showRestoreDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }

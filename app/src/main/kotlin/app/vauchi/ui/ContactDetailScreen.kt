@@ -26,8 +26,8 @@ import app.vauchi.ui.coreui.CoreScreenView
  * for delete. Verify Fingerprint action is gated via
  * `verify_button_visible(is_verified, trust_level_enum)`.
  *
- * Caller passes the contactId via [CoreAppViewModel.navigateToScreenWithParam]
- * — the engine is created with the parameterised AppScreen variant.
+ * Core resolves the navigation (route_result emits NavigateTo with the
+ * contact_id-parameterised AppScreen variant); the frontend renders it.
  */
 @Composable
 fun ContactDetailScreen(viewModel: CoreAppViewModel) {

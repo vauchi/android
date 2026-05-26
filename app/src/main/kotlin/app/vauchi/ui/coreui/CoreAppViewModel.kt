@@ -350,44 +350,6 @@ class CoreAppViewModel(
         }
     }
 
-    /**
-     * Navigate to a parameterized AppScreen variant — `{"ContactDetail":
-     * {"contact_id": "..."}}` and similar. Mirror of iOS
-     * `AppViewModel.navigateToScreen(["ContactDetail": ["contact_id": …]])`.
-     */
-    fun navigateToScreenWithParam(
-        screenName: String,
-        paramKey: String,
-        paramValue: String,
-    ) {
-        viewModelScope.launch {
-            try {
-                // Construct {"<screenName>": {"<paramKey>": "<paramValue>"}}
-                val payload =
-                    buildJsonObject {
-                        put(
-                            screenName,
-                            buildJsonObject {
-                                put(paramKey, JsonPrimitive(paramValue))
-                            },
-                        )
-                    }
-                val screenJson =
-                    withContext(Dispatchers.IO) {
-                        appEngine.navigateToJson(screenJson = payload.toString())
-                    }
-                val envelope = json.decodeFromString<ScreenEnvelope>(screenJson)
-                _screen.value = envelope.screen
-                loadAvailableScreens()
-                if (envelope.commands.isNotEmpty()) {
-                    handleExchangeCommands(envelope.commands)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to navigate to $screenName with $paramKey=$paramValue", e)
-            }
-        }
-    }
-
     fun navigateBack() {
         viewModelScope.launch {
             try {
@@ -469,18 +431,6 @@ class CoreAppViewModel(
                 _alertMessage.value = Pair(result.title, result.message)
             }
 
-            is ActionResult.OpenContact -> {
-                navigateToScreenWithParam("ContactDetail", "contact_id", result.contactId)
-            }
-
-            is ActionResult.EditContact -> {
-                navigateToScreenWithParam("ContactEdit", "contact_id", result.contactId)
-            }
-
-            is ActionResult.OpenEntryDetail -> {
-                navigateToScreenWithParam("EntryDetail", "field_id", result.fieldId)
-            }
-
             is ActionResult.OpenUrl -> {
                 _openUrlEvent.value = result.url
             }
@@ -518,6 +468,11 @@ class CoreAppViewModel(
                 // directly — it never flows through this screen pipeline.
             }
 
+            // Resolved to NavigateTo by AppEngine.route_result in core —
+            // frontends never observe these raw (ADR-043 Am4).
+            is ActionResult.OpenContact,
+            is ActionResult.EditContact,
+            is ActionResult.OpenEntryDetail,
             is ActionResult.CompleteWith,
             is ActionResult.Unknown,
             -> { /* no-op */ }
@@ -528,7 +483,7 @@ class CoreAppViewModel(
      * Dispatch a list of [CommandDTO]s emitted by core. Called from
      * [applyResult] for `ActionResult.Commands`, and from the Phase 2b
      * envelope-drain path in [handleAction] / [navigateTo] /
-     * [navigateBack] / [navigateToScreenWithParam] so the
+     * [navigateBack] so the
      * lifecycle-emitted brightness / idle-timer commands reach the
      * exchange session and image-pick affordances reach the UI.
      *
