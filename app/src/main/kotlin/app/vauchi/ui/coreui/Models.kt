@@ -1452,6 +1452,15 @@ sealed class UserAction {
         val valueMilli: Int,
     ) : UserAction()
 
+    /**
+     * Top-level tab tap (ADR-043 Am4). [actionId] is the opaque canonical
+     * id from `tabInfo()`; core resolves it to the canonical screen. Maps
+     * to `UserAction::NavigateToTab { action_id }`.
+     */
+    data class NavigateToTab(
+        val actionId: String,
+    ) : UserAction()
+
     /** Unknown action variant from deserialization — should not be sent to core. */
     data object Unknown : UserAction()
 }
@@ -1621,6 +1630,17 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                                         "component_id" to JsonPrimitive(value.componentId),
                                         "value_milli" to JsonPrimitive(value.valueMilli),
                                     ),
+                                ),
+                        ),
+                    )
+                }
+
+                is UserAction.NavigateToTab -> {
+                    JsonObject(
+                        mapOf(
+                            "NavigateToTab" to
+                                JsonObject(
+                                    mapOf("action_id" to JsonPrimitive(value.actionId)),
                                 ),
                         ),
                     )

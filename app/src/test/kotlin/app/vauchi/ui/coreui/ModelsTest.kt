@@ -292,6 +292,13 @@ class ModelsTest {
     }
 
     @Test
+    fun `serialize NavigateToTab`() {
+        val action = UserAction.NavigateToTab(actionId = "groups")
+        val serialized = json.encodeToString(UserAction.serializer(), action)
+        assertEquals("""{"NavigateToTab":{"action_id":"groups"}}""", serialized)
+    }
+
+    @Test
     fun `serialize TextChanged`() {
         val action = UserAction.TextChanged(componentId = "display_name", value = "Alice")
         val serialized = json.encodeToString(UserAction.serializer(), action)
