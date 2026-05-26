@@ -533,7 +533,11 @@ fun MainScreen(
     // only on tab *roots*: the active screen's own id equals its tab id.
     // Sub-screens report their parent tab but are not roots, so the bar
     // stays hidden there (unchanged behaviour).
-    val currentTab = coreAppViewModel.currentTabId()
+    // `remember` keyed on the screen id so the synchronous engine
+    // lookup runs only when navigation changes the screen — not on
+    // every recomposition (which would hammer the UniFFI mutex on
+    // the main thread).
+    val currentTab = remember(coreScreen?.screenId) { coreAppViewModel.currentTabId() }
     val isTopLevel = currentTab != null && coreScreen?.screenId == currentTab
 
     // System BACK handling. Without an interceptor, every non-Home
