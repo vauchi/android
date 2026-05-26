@@ -465,7 +465,7 @@ fun MainScreen(
 
                 // Activity-enum collapse: Contacts and Settings render
                 // through the default core-driven arm; navigate via core.
-                "contacts" -> coreAppViewModel.navigateTo("Contacts")
+                "contacts" -> coreAppViewModel.navigateTo("contacts")
 
                 "settings" -> coreAppViewModel.navigateTo("Settings")
             }
@@ -514,7 +514,7 @@ fun MainScreen(
     LaunchedEffect(uiState) {
         val state = uiState
         if (state is UiState.Ready && currentScreen == Screen.Home && state.contactCount > 0u) {
-            coreAppViewModel.navigateTo("Contacts")
+            coreAppViewModel.navigateTo("contacts")
         }
     }
 
@@ -556,7 +556,7 @@ fun MainScreen(
             coreAppViewModel.navigateBack()
         } else {
             currentScreen = Screen.Home
-            coreAppViewModel.navigateTo("MyInfo")
+            coreAppViewModel.navigateTo("my_info")
         }
     }
 
@@ -568,11 +568,6 @@ fun MainScreen(
                         // Route the tap through core's nav; the default
                         // `CoreScreenView` arm picks up the resulting
                         // `coreScreen.screenId` and renders.
-                        val variant =
-                            coreScreenIdToVariant(tab.id)
-                                ?: tab.id.split('_').joinToString("") {
-                                    it.replaceFirstChar(Char::uppercase)
-                                }
                         NavigationBarItem(
                             icon = {
                                 Icon(
@@ -600,7 +595,10 @@ fun MainScreen(
                                     "my_info" -> currentScreen = Screen.Home
                                     "exchange" -> currentScreen = Screen.ExchangeModePicker
                                 }
-                                coreAppViewModel.navigateTo(variant)
+                                // Navigate by the opaque canonical id core
+                                // published in tab_info (ADR-043 Am4); core's
+                                // navigate_to_json resolves it via from_screen_id.
+                                coreAppViewModel.navigateTo(tab.id)
                             },
                         )
                     }
@@ -765,7 +763,7 @@ fun MainScreen(
                             onBack = { currentScreen = Screen.ExchangeModePicker },
                             onDone = {
                                 viewModel.refresh()
-                                coreAppViewModel.navigateTo("Contacts")
+                                coreAppViewModel.navigateTo("contacts")
                             },
                         )
                     }
