@@ -319,6 +319,7 @@ fun PreviewComponentScreenshot() {
                     )
                 PreviewComponent(
                     name = "Alice",
+                    initials = "A",
                     fields = testFields,
                     variants = emptyList(),
                     selectedVariant = null,
@@ -356,6 +357,7 @@ fun PreviewComponentWithGroupsScreenshot() {
                     )
                 PreviewComponent(
                     name = "Alice",
+                    initials = "A",
                     fields = testFields,
                     variants =
                         listOf(
@@ -413,6 +415,7 @@ fun PreviewComponentEmptyScreenshot() {
             Column(modifier = Modifier.padding(16.dp)) {
                 PreviewComponent(
                     name = "Alice",
+                    initials = "A",
                     fields = emptyList(),
                     variants = emptyList(),
                     selectedVariant = null,
@@ -624,6 +627,7 @@ fun PreviewComponentDarkScreenshot() {
                     )
                 PreviewComponent(
                     name = "Alice",
+                    initials = "A",
                     fields = testFields,
                     variants = emptyList(),
                     selectedVariant = null,
