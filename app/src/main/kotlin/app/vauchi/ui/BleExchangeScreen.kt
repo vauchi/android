@@ -42,6 +42,7 @@ import kotlinx.coroutines.withContext
 import uniffi.vauchi_platform.MobileExchangeSession
 import uniffi.vauchi_platform.MobileExchangeState
 import uniffi.vauchi_platform.MobileQrEccLevel
+import uniffi.vauchi_platform.exchangeViewState
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** QR code colors: gray reduces screen glare at close face-to-face distance. */
@@ -410,22 +411,12 @@ private fun BleStateIndicator(
     state: MobileExchangeState,
     localizationManager: LocalizationManager,
 ) {
-    val label =
-        when (state) {
-            is MobileExchangeState.Idle -> localizationManager.t("exchange.waiting_peer")
-            is MobileExchangeState.DisplayingQr -> localizationManager.t("exchange.waiting_peer")
-            is MobileExchangeState.PeerScanned -> localizationManager.t("exchange.peer_found")
-            is MobileExchangeState.AwaitingKeyAgreement -> localizationManager.t("exchange.verifying")
-            is MobileExchangeState.AwaitingCardExchange -> localizationManager.t("exchange.transferring")
-            is MobileExchangeState.Complete -> localizationManager.t("exchange.contact_exchanged")
-            is MobileExchangeState.Failed -> localizationManager.t("exchange.failed_title")
-        }
-    val showProgress =
-        state is MobileExchangeState.Idle ||
-            state is MobileExchangeState.DisplayingQr ||
-            state is MobileExchangeState.PeerScanned ||
-            state is MobileExchangeState.AwaitingKeyAgreement ||
-            state is MobileExchangeState.AwaitingCardExchange
+    // Core owns the exchange-state → label/progress mapping (ADR-021/043
+    // Humble UI): render exchange_view_state instead of duplicating the table
+    // here. The frontend forwards the state and renders label_key + show_progress.
+    val viewState = exchangeViewState(state)
+    val label = localizationManager.t(viewState.labelKey)
+    val showProgress = viewState.showProgress
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (showProgress) {
