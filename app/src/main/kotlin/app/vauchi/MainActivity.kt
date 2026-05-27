@@ -74,7 +74,10 @@ import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import uniffi.vauchi_platform.MobileSyncIndicatorState
+import uniffi.vauchi_platform.MobileSyncStatusKind
 import uniffi.vauchi_platform.coreVersion
+import uniffi.vauchi_platform.syncStatusView
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -1130,34 +1133,56 @@ fun SyncStatusChip(
 ) {
     val context = LocalContext.current
     val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
+    // Offline is a network/platform signal the frontend owns (ADR-031); the
+    // sync-domain state → label/color mapping belongs to core (ADR-021/043).
+    // Collapse our richer SyncState onto core's indicator enum and render
+    // core's sync_status_view(label_key, kind) — no frontend status table.
     val (text, color) =
         when {
             !isOnline -> {
                 localizationManager.t("sync.status_offline") to MaterialTheme.colorScheme.outline
             }
 
-            syncState is SyncState.Syncing -> {
-                localizationManager.t("sync.syncing") to MaterialTheme.colorScheme.primary
-            }
-
-            syncState is SyncState.Error -> {
-                localizationManager.t("sync.error_failed") to MaterialTheme.colorScheme.error
-            }
-
-            syncState is SyncState.Success || lastSyncTime != null -> {
-                val timeText =
-                    lastSyncTime?.let {
-                        val formatter =
-                            DateTimeFormatter
-                                .ofPattern("HH:mm")
-                                .withZone(ZoneId.systemDefault())
-                        formatter.format(it)
-                    } ?: ""
-                localizationManager.t("sync.synced_at").replace("{time}", timeText) to MaterialTheme.colorScheme.primary
-            }
-
             else -> {
-                localizationManager.t("sync.tap_to_sync") to MaterialTheme.colorScheme.outline
+                val indicatorState =
+                    when {
+                        syncState is SyncState.Syncing -> {
+                            MobileSyncIndicatorState.SYNCING
+                        }
+
+                        syncState is SyncState.Error -> {
+                            MobileSyncIndicatorState.ERROR
+                        }
+
+                        syncState is SyncState.Success || lastSyncTime != null -> {
+                            MobileSyncIndicatorState.SYNCED
+                        }
+
+                        else -> {
+                            MobileSyncIndicatorState.NEVER_SYNCED
+                        }
+                    }
+                val view = syncStatusView(indicatorState)
+                val label =
+                    if (view.labelKey == "sync.synced_at") {
+                        val timeText =
+                            lastSyncTime?.let {
+                                DateTimeFormatter
+                                    .ofPattern("HH:mm")
+                                    .withZone(ZoneId.systemDefault())
+                                    .format(it)
+                            } ?: ""
+                        localizationManager.t(view.labelKey).replace("{time}", timeText)
+                    } else {
+                        localizationManager.t(view.labelKey)
+                    }
+                val statusColor =
+                    when (view.kind) {
+                        MobileSyncStatusKind.ACTIVE -> MaterialTheme.colorScheme.primary
+                        MobileSyncStatusKind.ERROR -> MaterialTheme.colorScheme.error
+                        MobileSyncStatusKind.NEUTRAL -> MaterialTheme.colorScheme.outline
+                    }
+                label to statusColor
             }
         }
 
