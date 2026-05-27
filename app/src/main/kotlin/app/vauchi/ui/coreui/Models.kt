@@ -193,6 +193,8 @@ sealed class Component {
 
     data class Preview(
         val name: String,
+        /** Core-derived avatar initials (B5): render this, never recompute name.take(1). */
+        val initials: String,
         val fields: kotlin.collections.List<Field>,
         val variants: kotlin.collections.List<PreviewVariant>,
         val selectedVariant: String? = null,
@@ -368,6 +370,9 @@ private data class FieldListContent(
 @Serializable
 private data class PreviewContent(
     val name: String,
+    // Core always emits initials (core 0.51.17+); default "" keeps older
+    // golden fixtures deserializing until they are regenerated with the field.
+    val initials: String = "",
     val fields: List<Field>,
     val variants: List<PreviewVariant>,
     @SerialName("selected_variant") val selectedVariant: String? = null,
@@ -574,6 +579,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                             jsonDecoder.json.decodeFromJsonElement(element["Preview"]!!)
                         Component.Preview(
                             name = c.name,
+                            initials = c.initials,
                             fields = c.fields,
                             variants = c.variants,
                             selectedVariant = c.selectedVariant,

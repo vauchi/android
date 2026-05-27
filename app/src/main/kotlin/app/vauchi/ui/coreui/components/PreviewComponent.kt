@@ -54,6 +54,7 @@ import app.vauchi.util.LocalizationManager
 @Composable
 fun PreviewComponent(
     name: String,
+    initials: String,
     fields: List<Field>,
     variants: List<PreviewVariant>,
     selectedVariant: String?,
@@ -161,7 +162,9 @@ fun PreviewComponent(
                         )
                     } else {
                         Text(
-                            displayName.take(1).uppercase(),
+                            // B5: core-derived avatar initials (Component.Preview.initials),
+                            // never recompute name.take(1) frontend-side (ADR-021/043).
+                            initials,
                             style = MaterialTheme.typography.headlineLarge,
                             color = Color.White,
                         )

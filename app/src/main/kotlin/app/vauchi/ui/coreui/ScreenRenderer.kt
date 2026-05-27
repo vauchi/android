@@ -262,6 +262,7 @@ fun ComponentRenderer(
         is Component.Preview -> {
             PreviewComponent(
                 name = component.name,
+                initials = component.initials,
                 fields = component.fields,
                 variants = component.variants,
                 selectedVariant = component.selectedVariant,
