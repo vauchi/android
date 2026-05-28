@@ -49,7 +49,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.BleExchangeScreen
-import app.vauchi.ui.ContactDetailScreen
 import app.vauchi.ui.ExchangeMode
 import app.vauchi.ui.ExchangeModePicker
 import app.vauchi.ui.KeyInvalidatedRecoveryScreen
