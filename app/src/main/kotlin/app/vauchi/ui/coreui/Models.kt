@@ -324,6 +324,37 @@ sealed class Component {
         val a11y: A11y? = null,
     ) : Component()
 
+    /**
+     * Chrome-positioned status chip — sync state, connectivity,
+     * backup-overdue, update-available. Distinct semantic role from
+     * [StatusIndicator] (body-positioned, operation-progress). Tappable
+     * when [actionId] is non-null; display-only otherwise.
+     *
+     * Added in core 0.51.21 / core!990. See: shell-purity investigation
+     * 2026-05-28.
+     */
+    data class Indicator(
+        val id: String,
+        val label: String,
+        val kind: IndicatorKind,
+        val actionId: String? = null,
+        val a11y: A11y? = null,
+    ) : Component()
+
+    /**
+     * Structured menu — multiple labeled sections of tappable items.
+     * Distinct from [ActionList] (flat menu); the section grouping is
+     * structural, not optional. Rows reuse [ActionListItem] so a single
+     * typed-item renderer handles flat + grouped variants.
+     *
+     * Added in core 0.51.21 / core!990. See: shell-purity investigation
+     * 2026-05-28.
+     */
+    data class SectionedActionList(
+        val id: String,
+        val sections: kotlin.collections.List<Section>,
+    ) : Component()
+
     data object Divider : Component()
 
     /** Unknown component from a newer core version — render as empty space. */
@@ -515,6 +546,21 @@ private data class SliderContent(
     @SerialName("min_icon") val minIcon: String? = null,
     @SerialName("max_icon") val maxIcon: String? = null,
     val a11y: A11y? = null,
+)
+
+@Serializable
+private data class IndicatorContent(
+    val id: String,
+    val label: String,
+    val kind: IndicatorKind,
+    @SerialName("action_id") val actionId: String? = null,
+    val a11y: A11y? = null,
+)
+
+@Serializable
+private data class SectionedActionListContent(
+    val id: String,
+    val sections: List<Section>,
 )
 
 internal object ComponentSerializer : KSerializer<Component> {
@@ -745,6 +791,24 @@ internal object ComponentSerializer : KSerializer<Component> {
                             maxIcon = c.maxIcon,
                             a11y = c.a11y,
                         )
+                    }
+
+                    "Indicator" in element -> {
+                        val c: IndicatorContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["Indicator"]!!)
+                        Component.Indicator(
+                            id = c.id,
+                            label = c.label,
+                            kind = c.kind,
+                            actionId = c.actionId,
+                            a11y = c.a11y,
+                        )
+                    }
+
+                    "SectionedActionList" in element -> {
+                        val c: SectionedActionListContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["SectionedActionList"]!!)
+                        Component.SectionedActionList(id = c.id, sections = c.sections)
                     }
 
                     // Unknown struct variant — core is newer than this shell
@@ -1005,6 +1069,26 @@ internal object ComponentSerializer : KSerializer<Component> {
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("Slider" to inner)))
+            }
+
+            is Component.Indicator -> {
+                val content =
+                    IndicatorContent(
+                        id = value.id,
+                        label = value.label,
+                        kind = value.kind,
+                        actionId = value.actionId,
+                        a11y = value.a11y,
+                    )
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("Indicator" to inner)))
+            }
+
+            is Component.SectionedActionList -> {
+                val content =
+                    SectionedActionListContent(id = value.id, sections = value.sections)
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("SectionedActionList" to inner)))
             }
 
             is Component.Unknown -> {
@@ -1382,6 +1466,40 @@ enum class Status {
     Failed,
     Warning,
 }
+
+/**
+ * Semantic color category for [Component.Indicator].
+ *
+ * Added in core 0.51.21 / core!990.
+ */
+@Serializable
+enum class IndicatorKind {
+    /** In-progress or freshly-confirmed — emphasis color. */
+    Active,
+
+    /** Failed / attention-required — error color. */
+    Error,
+
+    /** Idle / informational — muted color. */
+    Neutral,
+
+    /** Transient busy state — animated indicator. */
+    Busy,
+}
+
+/**
+ * A named section inside [Component.SectionedActionList]. Rows reuse
+ * [ActionListItem] so a single typed-item renderer handles flat +
+ * grouped variants.
+ *
+ * Added in core 0.51.21 / core!990.
+ */
+@Serializable
+data class Section(
+    val id: String,
+    val label: String,
+    val items: List<ActionListItem>,
+)
 
 @Serializable
 enum class QrMode {

@@ -35,12 +35,14 @@ import app.vauchi.ui.coreui.components.DividerComponent
 import app.vauchi.ui.coreui.components.DropdownComponent
 import app.vauchi.ui.coreui.components.EditableTextComponent
 import app.vauchi.ui.coreui.components.FieldListComponent
+import app.vauchi.ui.coreui.components.IndicatorComponent
 import app.vauchi.ui.coreui.components.InfoPanelComponent
 import app.vauchi.ui.coreui.components.InlineConfirmComponent
 import app.vauchi.ui.coreui.components.ListComponent
 import app.vauchi.ui.coreui.components.PinInputComponent
 import app.vauchi.ui.coreui.components.PreviewComponent
 import app.vauchi.ui.coreui.components.QrCodeComponent
+import app.vauchi.ui.coreui.components.SectionedActionListComponent
 import app.vauchi.ui.coreui.components.SettingsGroupComponent
 import app.vauchi.ui.coreui.components.SliderComponent
 import app.vauchi.ui.coreui.components.StatusIndicatorComponent
@@ -191,12 +193,14 @@ private fun componentSlotKey(
         is Component.Dropdown -> "dropdown:${component.id}"
         is Component.EditableText -> "editable:${component.id}"
         is Component.FieldList -> "field_list:${component.id}"
+        is Component.Indicator -> "indicator:${component.id}"
         is Component.InfoPanel -> "info:${component.id}"
         is Component.InlineConfirm -> "inline_confirm:${component.id}"
         is Component.List -> "list:${component.id}"
         is Component.PinInput -> "pin:${component.id}"
         is Component.Preview -> "preview:${component.name}"
         is Component.QrCode -> "qr:${component.id}"
+        is Component.SectionedActionList -> "sectioned_action_list:${component.id}"
         is Component.SettingsGroup -> "settings:${component.id}"
         is Component.ShowToast -> "toast:${component.id}"
         is Component.Slider -> "slider:${component.id}"
@@ -310,6 +314,26 @@ fun ComponentRenderer(
                 items = component.items,
                 onAction = onAction,
                 modifier = modifier,
+            )
+        }
+
+        is Component.SectionedActionList -> {
+            SectionedActionListComponent(
+                componentId = component.id,
+                sections = component.sections,
+                onAction = onAction,
+                modifier = modifier,
+            )
+        }
+
+        is Component.Indicator -> {
+            IndicatorComponent(
+                label = component.label,
+                kind = component.kind,
+                actionId = component.actionId,
+                onAction = onAction,
+                modifier = modifier,
+                a11y = component.a11y,
             )
         }
 
