@@ -58,7 +58,7 @@ import java.util.concurrent.Executors
  * Scan mode: opens a CameraX preview with [QrCodeAnalyzer] running
  * the rxing tryHarder pipeline on the Y-plane. Each detected payload
  * is reported back to core as `UserAction.TextChanged(componentId,
- * value)` — `core/vauchi-app/src/ui/exchange_qr.rs` interprets this
+ * value)` — `core/vauchi-app/src/ui/exchange/qr.rs` interprets this
  * as `QrActionOutcome::QrScanned { data }` for the ScanQr step.
  *
  * Replaces the long-standing placeholder ("QR Code" text label /
@@ -217,7 +217,7 @@ private fun QrScanner(
                                                 executor,
                                                 QrCodeAnalyzer(
                                                     onQrCodeDetected = { code ->
-                                                        // Forward to core. exchange_qr.rs
+                                                        // Forward to core. exchange/qr.rs
                                                         // pattern-matches on TextChanged with
                                                         // the QR component id and routes the
                                                         // payload through QrScanned.

@@ -43,7 +43,7 @@ class ExchangeCommandHandler(
      * matches one tap (activate → onTagDiscovered → sendApdu* →
      * deactivate). Per the 2026-05-19 NFC engine-graduation Phase 3a
      * plan, this dispatch path emits Event.NfcDataReceived back to core
-     * where NfcExchangeFlow (core/vauchi-app/src/ui/exchange_nfc.rs)
+     * where NfcExchangeFlow (core/vauchi-app/src/ui/exchange/nfc.rs)
      * drives the 3-phase handshake state machine. Service stays a
      * transceive shim per ADR-031 / ADR-043.
      *

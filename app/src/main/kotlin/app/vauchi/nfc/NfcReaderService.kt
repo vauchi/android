@@ -15,7 +15,7 @@ import uniffi.vauchi_platform.MobileEvent
  * `onTagDiscovered(tag:)` + `sendApdu(data:)` + `deactivate()`) — pure
  * APDU transceive on the `ExchangeCommandHandler` dispatch path per
  * ADR-031. Core's `NfcExchangeFlow`
- * (`core/vauchi-app/src/ui/exchange_nfc.rs`) owns the handshake
+ * (`core/vauchi-app/src/ui/exchange/nfc.rs`) owns the handshake
  * state-machine; this service just relays bytes in and
  * `MobileEvent.NfcDataReceived` out.
  *

@@ -19,7 +19,7 @@ import app.vauchi.ui.coreui.UserAction
  * Pure Humble UI shell — renders the NFC (TapTap) exchange via
  * [CoreScreenView] over the core-owned `ExchangeEngine`. The 3-phase
  * handshake state lives in core's `NfcExchangeFlow`
- * (`core/vauchi-app/src/ui/exchange_nfc.rs`); APDU dispatch routes
+ * (`core/vauchi-app/src/ui/exchange/nfc.rs`); APDU dispatch routes
  * through `ExchangeCommandHandler` to `NfcReaderService` (initiator) or
  * the `VauchiHceService` binder-block path (responder).
  *

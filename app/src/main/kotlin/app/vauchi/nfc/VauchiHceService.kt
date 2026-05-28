@@ -134,7 +134,7 @@ class VauchiHceService : HostApduService() {
             // If a binder thread is still waiting, unblock it with the
             // canonical OK SW so it returns cleanly to the OS rather
             // than timing out — Phase 3 terminal ACK is normally
-            // emitted by `exchange_nfc.rs:handle_ack_sent` before
+            // emitted by `exchange/nfc.rs:handle_ack_sent` before
             // `NfcDeactivate`, but defensive against early teardown.
             ctx.pendingResponse?.let { deferred ->
                 ctx.pendingResponse = null
