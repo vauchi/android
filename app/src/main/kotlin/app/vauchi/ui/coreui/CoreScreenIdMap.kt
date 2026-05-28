@@ -5,31 +5,54 @@
 package app.vauchi.ui.coreui
 
 /**
- * Map a core engine's emitted `ScreenModel.screen_id` to the
- * PascalCase `AppScreen` variant name that
- * [CoreAppViewModel.navigateTo] accepts. Returns `null` for ids that
- * either don't map to a Pure Humble UI screen (native cases handled
- * by the [Screen] enum arms) or aren't recognised.
+ * Map a core engine's emitted `ScreenModel.screen_id` to a non-null
+ * value when the screen should render through the default
+ * `CoreScreenView` path at `MainActivity.kt:638`. Returns `null` only
+ * for native-shell-owned screens (the exchange flow, plus the boot /
+ * onboarding `Screen.Home` and pure-native ExchangeModePicker).
+ *
+ * Two arm shapes, in `when` short-circuit order:
+ *
+ * 1. **Allow-list** (canonical `AppScreen::screen_id()` + a handful of
+ *    engine-emitted folds): RHS is the PascalCase `AppScreen` variant
+ *    name. Historical — left intact so existing callers and the
+ *    bottom-nav active-pill logic remain unchanged.
+ * 2. **Sub-screen echo arms** (added 2026-05-28 to close
+ *    `2026-05-25-contact-tap-opens-own-card`): RHS is the input `id`
+ *    itself. The value is decorative because the dispatch
+ *    (`MainActivity.kt:642`) passes `navigateOnMount = false` to the
+ *    `CoreScreenView` it constructs from this mapping — only the
+ *    *non-null-ness* selects the top-level `CoreScreenView` branch.
+ *    Without these, every engine-emitted sub-screen id (`contact_detail`,
+ *    `edit_fields`, `link_show_qr`, …) returned `null` and fell through
+ *    to `when (currentScreen) -> Screen.Home -> ReadyScreen ->
+ *    CoreScreenView(screenName="MyInfo", navigateOnMount=true)`, which
+ *    actively re-navigated the engine to My Card — visible to the user
+ *    as "tap a contact, land on My Card".
  *
  * Engine-emitted ids are not identical to `AppScreen::screen_id()` —
- * each engine picks its own ScreenModel id, which is often the
- * engine's own name (e.g. `ContactListEngine` emits `"contact_list"`
- * while `AppScreen::Contacts.screen_id() == "contacts"`). This
- * function recognises both forms.
+ * each engine picks its own ScreenModel id (e.g. `ContactListEngine`
+ * emits `"contact_list"` while `AppScreen::Contacts.screen_id() ==
+ * "contacts"`). The allow-list bridges both forms; the echo arms
+ * forward whatever id the engine stamped.
  *
- * The original 7 ids mirror the cases removed from `Screen` in the
- * 2026-04-30 Activity-enum-collapse Phase 1 — they all render through
- * the default `CoreScreenView` path. `MultiStageExchange` stays
- * native because it's a hardware-presentation wrapper (orientation
- * lock, brightness, keep-screen-on) around a `CoreScreenView`, not a
- * pure 1:1 shell. `decoy_contacts` was added in Phase 2c of
- * `2026-05-01-android-humble-ui-deep-retirement` so the core
- * DecoyContactsEngine renders when Settings → Decoy Contacts is
- * tapped.
+ * `exchange_*` screen_ids deliberately stay null: the multi-stage
+ * exchange runs inside the native `MultiStageExchangeScreen` /
+ * `NfcTapExchangeScreen` wrappers which install a `BackHandler` that
+ * emits `UserAction.ActionPressed("cancel")` to end the cycle thread.
+ * Echoing them here would unmount the wrapper, replacing engine-level
+ * cancel with `navigateBack()` (pop one nav-history step) — different
+ * semantics.
+ *
+ * The function is the planned-deletion target of
+ * `_private/docs/planning/todo/2026-05-27-corescreenidmap-rework-plan.md`
+ * once the dispatch inversion + back-handler refactor lands; the echo
+ * arms are the minimum-surface stopgap that closes the user-visible
+ * bug without that larger rework.
  */
 internal fun coreScreenIdToVariant(id: String): String? =
     when {
-        // Canonical `AppScreen::screen_id()` ids.
+        // ── Allow-list: canonical `AppScreen::screen_id()` ids ──
         id == "contacts" -> "Contacts"
 
         id == "settings" -> "Settings"
@@ -55,6 +78,9 @@ internal fun coreScreenIdToVariant(id: String): String? =
         // entries the bottom nav unmounts on Contacts and Groups and
         // the active-tab pill desyncs — see problem record
         // `2026-05-21-android-back-stack-and-bottom-nav-broken`.
+        // These must appear **before** the `id.startsWith("contact_")`
+        // / `id.startsWith("group")` echo arms below so the canonical
+        // fold wins via `when` short-circuit.
         id == "contact_list" -> "Contacts"
 
         id == "groups_list" -> "Groups"
@@ -70,16 +96,67 @@ internal fun coreScreenIdToVariant(id: String): String? =
         // on the Settings rows landed on My Card instead of the
         // requested screen — Decoy Contacts worked because it has
         // only the single `decoy_contacts` id mapped above).
-        // Match both the per-sub-state engine ids (prefix) and the bare
-        // canonical `AppScreen::screen_id()` core emits post
-        // zero-domain-vocab Tier-0 (c). `backup` / `sync` have no
-        // trailing underscore so the prefix arm misses them; `duress_pin`
-        // already matches `startsWith("duress_")`.
         id.startsWith("duress_") -> "DuressPin"
 
         id == "backup" || id.startsWith("backup_") -> "Backup"
 
         id == "sync" || id.startsWith("sync_") -> "Sync"
 
+        // ── Sub-screen echo arms (closes 2026-05-25-contact-tap-opens-own-card) ──
+        // RHS = the input `id`; the dispatch reads only the
+        // non-null-ness. Prefix groups follow the engine source layout
+        // in core/vauchi-app/src/ui/ — adding a new sub-state to one
+        // of these engines does not require an update here.
+        id.startsWith("contact_") -> id
+
+        // contact_detail, contact_visibility, contact_merge, contact_limit, contact_info, contact_not_found
+        id.startsWith("group_") -> id
+
+        // group_detail
+        id == "my_info_entry_detail" -> id
+
+        id.startsWith("edit_") -> id
+
+        // edit_fields, edit_visibility, edit_preview (ContactEditEngine)
+        id.startsWith("link_") -> id
+
+        // device_linking.rs — 13 link_* sub-screens
+        id.startsWith("replacement_") -> id
+
+        // device_replacement.rs
+        id.startsWith("recovery_") -> id
+
+        // recovery sub-screens (RecoveryScreen wraps a CoreScreenView)
+        id.startsWith("form_") -> id
+
+        // form_dialog.rs — add/edit field/name/relay_url
+        id.startsWith("shred_") -> id
+
+        // emergency_shred.rs
+        id in
+            setOf(
+                "social_graph",
+                "delivery_status",
+                "change_password",
+                "privacy_settings",
+                "activity_log",
+                "fingerprint_verify",
+                "default_name",
+                "groups_setup",
+                "what_next",
+                "duplicate_detection",
+                "lock_screen",
+                "delete_identity_summary",
+                "support",
+                "identity_check",
+                "link_choice",
+                "deep_link_consent",
+            ) -> id
+
+        // `exchange_*` and `my_info` deliberately fall through to null
+        // here: exchange_* renders through its native chrome wrappers;
+        // my_info renders through ReadyScreen (Screen.Home arm). Both
+        // own their dispatch via the local `Screen` enum, not via this
+        // map.
         else -> null
     }
