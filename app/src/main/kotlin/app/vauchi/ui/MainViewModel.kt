@@ -931,37 +931,6 @@ class MainViewModel(
     }
 
     /**
-     * Dismiss the demo contact manually
-     */
-    fun dismissDemoContact() {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    repository.dismissDemoContact()
-                }
-            } catch (e: Exception) {
-                showMessage("Failed to dismiss demo: ${e.message}")
-            }
-        }
-    }
-
-    /**
-     * Restore the demo contact from Settings
-     */
-    fun restoreDemoContact() {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    repository.restoreDemoContact()
-                }
-                showMessage("Demo contact restored")
-            } catch (e: Exception) {
-                showMessage("Failed to restore demo: ${e.message}")
-            }
-        }
-    }
-
-    /**
      * Trigger a demo update
      */
     fun triggerDemoUpdate() {
