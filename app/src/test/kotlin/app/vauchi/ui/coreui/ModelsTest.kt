@@ -748,4 +748,208 @@ class ModelsTest {
         assertEquals("c1", back.itemId)
         assertEquals("archive", back.actionId)
     }
+
+    // ── Indicator (core 0.51.21 / core!990) ─────────────────────────
+
+    @Test
+    fun `deserialize Indicator component with action_id (tappable)`() {
+        val input =
+            """
+            {
+                "Indicator": {
+                    "id": "sync",
+                    "label": "Synced 15:47",
+                    "kind": "Active",
+                    "action_id": "sync_now"
+                }
+            }
+            """.trimIndent()
+
+        val component = json.decodeFromString<Component>(input)
+        assertTrue(component is Component.Indicator)
+        val indicator = component as Component.Indicator
+        assertEquals("sync", indicator.id)
+        assertEquals("Synced 15:47", indicator.label)
+        assertEquals(IndicatorKind.Active, indicator.kind)
+        assertEquals("sync_now", indicator.actionId)
+        assertNull(indicator.a11y)
+    }
+
+    @Test
+    fun `deserialize Indicator component without action_id (display-only)`() {
+        val input =
+            """
+            {
+                "Indicator": {
+                    "id": "online",
+                    "label": "Offline",
+                    "kind": "Error"
+                }
+            }
+            """.trimIndent()
+
+        val component = json.decodeFromString<Component>(input)
+        assertTrue(component is Component.Indicator)
+        val indicator = component as Component.Indicator
+        assertEquals("online", indicator.id)
+        assertEquals("Offline", indicator.label)
+        assertEquals(IndicatorKind.Error, indicator.kind)
+        assertNull(indicator.actionId)
+    }
+
+    @Test
+    fun `deserialize Indicator component covers all kinds`() {
+        listOf(
+            "Active" to IndicatorKind.Active,
+            "Error" to IndicatorKind.Error,
+            "Neutral" to IndicatorKind.Neutral,
+            "Busy" to IndicatorKind.Busy,
+        ).forEach { (wire, expected) ->
+            val input = """{"Indicator":{"id":"x","label":"L","kind":"$wire"}}"""
+            val component = json.decodeFromString<Component>(input)
+            assertTrue(component is Component.Indicator)
+            assertEquals(expected, (component as Component.Indicator).kind)
+        }
+    }
+
+    @Test
+    fun `deserialize Indicator component with a11y`() {
+        val input =
+            """
+            {
+                "Indicator": {
+                    "id": "backup",
+                    "label": "Backup overdue",
+                    "kind": "Error",
+                    "action_id": "open_backup",
+                    "a11y": {"label": "Backup overdue", "hint": "Tap to open backup settings"}
+                }
+            }
+            """.trimIndent()
+
+        val component = json.decodeFromString<Component>(input)
+        assertTrue(component is Component.Indicator)
+        val indicator = component as Component.Indicator
+        assertEquals("Backup overdue", indicator.a11y?.label)
+        assertEquals("Tap to open backup settings", indicator.a11y?.hint)
+    }
+
+    // ── SectionedActionList (core 0.51.21 / core!990) ───────────────
+
+    @Test
+    fun `deserialize SectionedActionList component`() {
+        val input =
+            """
+            {
+                "SectionedActionList": {
+                    "id": "more",
+                    "sections": [
+                        {
+                            "id": "primary",
+                            "label": "Primary",
+                            "items": [
+                                {"id": "settings", "label": "Settings", "icon": "settings"},
+                                {"id": "profile", "label": "Profile", "detail": "Alice"}
+                            ]
+                        },
+                        {
+                            "id": "data",
+                            "label": "Data",
+                            "items": [
+                                {"id": "backup", "label": "Backup"}
+                            ]
+                        }
+                    ]
+                }
+            }
+            """.trimIndent()
+
+        val component = json.decodeFromString<Component>(input)
+        assertTrue(component is Component.SectionedActionList)
+        val list = component as Component.SectionedActionList
+        assertEquals("more", list.id)
+        assertEquals(2, list.sections.size)
+
+        val primary = list.sections[0]
+        assertEquals("primary", primary.id)
+        assertEquals("Primary", primary.label)
+        assertEquals(2, primary.items.size)
+        assertEquals("settings", primary.items[0].id)
+        assertEquals("Settings", primary.items[0].label)
+        assertEquals("settings", primary.items[0].icon)
+        assertEquals("profile", primary.items[1].id)
+        assertEquals("Alice", primary.items[1].detail)
+
+        val data = list.sections[1]
+        assertEquals("data", data.id)
+        assertEquals(1, data.items.size)
+        assertEquals("backup", data.items[0].id)
+    }
+
+    @Test
+    fun `deserialize SectionedActionList with empty sections`() {
+        val input = """{"SectionedActionList":{"id":"empty","sections":[]}}"""
+        val component = json.decodeFromString<Component>(input)
+        assertTrue(component is Component.SectionedActionList)
+        assertTrue((component as Component.SectionedActionList).sections.isEmpty())
+    }
+
+    // ── Roundtrip (serialize + deserialize) ─────────────────────────
+
+    @Test
+    fun `Indicator roundtrip preserves all fields`() {
+        val original =
+            Component.Indicator(
+                id = "sync",
+                label = "Synced",
+                kind = IndicatorKind.Active,
+                actionId = "sync_now",
+                a11y = A11y(label = "Sync status", hint = "Tap to sync"),
+            )
+        val encoded = json.encodeToString(Component.serializer(), original)
+        val decoded = json.decodeFromString(Component.serializer(), encoded)
+        assertEquals(original, decoded)
+    }
+
+    @Test
+    fun `Indicator roundtrip with null action_id omits the field`() {
+        // skip_serializing_if = "Option::is_none" on the Rust side means
+        // display-only indicators must serialize without the key.
+        val original =
+            Component.Indicator(
+                id = "online",
+                label = "Offline",
+                kind = IndicatorKind.Error,
+            )
+        val encoded = json.encodeToString(Component.serializer(), original)
+        assertTrue(
+            "action_id should be omitted when null, got: $encoded",
+            !encoded.contains("action_id"),
+        )
+        val decoded = json.decodeFromString(Component.serializer(), encoded)
+        assertEquals(original, decoded)
+    }
+
+    @Test
+    fun `SectionedActionList roundtrip preserves sections + items`() {
+        val original =
+            Component.SectionedActionList(
+                id = "more",
+                sections =
+                    listOf(
+                        Section(
+                            id = "primary",
+                            label = "Primary",
+                            items =
+                                listOf(
+                                    ActionListItem(id = "settings", label = "Settings", icon = "settings"),
+                                ),
+                        ),
+                        Section(id = "data", label = "Data", items = emptyList()),
+                    ),
+            )
+        val encoded = json.encodeToString(Component.serializer(), original)
+        val decoded = json.decodeFromString(Component.serializer(), encoded)
+        assertEquals(original, decoded)
+    }
 }
