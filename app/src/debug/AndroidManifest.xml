@@ -11,20 +11,23 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
-        <!-- Diagnostic activities: debug-only, launched via Settings (gated by BuildConfig.DEBUG) or ADB -->
+        <!-- Diagnostic activities: debug-only, launched via Settings (gated by BuildConfig.DEBUG) or ADB.
+             exported="true" so `adb shell am start` can drive them (their KDoc documents the
+             "es test" / "es mode" intent-extra invocations). Safe: this overlay is merged only
+             into the debug build variant and never ships in release APKs. -->
         <activity
             android:name=".diagnostic.DiagnosticActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="Ultrasonic Diagnostic" />
 
         <activity
             android:name=".diagnostic.BleDiagnosticActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="BLE Diagnostic" />
 
         <activity
             android:name=".diagnostic.QrDiagnosticActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="QR Diagnostic" />
 
         <activity
@@ -42,7 +45,7 @@
         <!-- NFC diagnostic activity -->
         <activity
             android:name=".diagnostic.NfcDiagnosticActivity"
-            android:exported="false"
+            android:exported="true"
             android:launchMode="singleTask"
             android:label="NFC Diagnostic" />
 
