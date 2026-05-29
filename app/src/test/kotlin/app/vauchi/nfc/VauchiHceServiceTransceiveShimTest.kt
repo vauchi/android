@@ -15,6 +15,12 @@
 // belongs to Phase 6 physical-device cycles per CC-23 — the
 // `processCommandApdu` path requires a real HCE OS callback that
 // neither Robolectric nor instrumentation can fake.
+//
+// Slice 32m migration: `TransceiveContext` no longer wraps the
+// retired `MobileExchangeSession`; it carries an `onApduReceived`
+// callback (the engine-driven owner is wired in the deferred
+// functional-NFC follow-up). These fulfill/clear tests never invoke
+// the callback, so a no-op `{}` suffices.
 
 package app.vauchi.nfc
 
@@ -26,9 +32,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
-import uniffi.vauchi_platform.MobileExchangeSession
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -40,8 +44,8 @@ class VauchiHceServiceTransceiveShimTest {
 
     /**
      * `fulfillPendingResponse` on a fresh state (no transceive
-     * context registered) must return false so `ExchangeCommandHandler`
-     * falls through to the initiator-side `NfcReaderService.sendApdu`.
+     * context registered) must return false so the initiator-side
+     * `NfcReaderService.sendApdu` path can take over.
      */
     @Test
     fun `fulfillPendingResponse without active context returns false`() {
@@ -61,10 +65,7 @@ class VauchiHceServiceTransceiveShimTest {
     @Test
     fun `fulfillPendingResponse with context but no pending deferred returns false`() {
         VauchiHceService.activeTransceiveContext =
-            VauchiHceService.TransceiveContext(
-                session = MOCK_EXCHANGE_SESSION,
-                drainAndDispatch = {},
-            )
+            VauchiHceService.TransceiveContext(onApduReceived = {})
 
         val ok = VauchiHceService.fulfillPendingResponse(byteArrayOf(0x90.toByte(), 0x00))
 
@@ -84,11 +85,7 @@ class VauchiHceServiceTransceiveShimTest {
      */
     @Test
     fun `fulfillPendingResponse completes deferred and clears slot`() {
-        val ctx =
-            VauchiHceService.TransceiveContext(
-                session = MOCK_EXCHANGE_SESSION,
-                drainAndDispatch = {},
-            )
+        val ctx = VauchiHceService.TransceiveContext(onApduReceived = {})
         val deferred = CompletableDeferred<ByteArray>()
         ctx.pendingResponse = deferred
         VauchiHceService.activeTransceiveContext = ctx
@@ -122,11 +119,7 @@ class VauchiHceServiceTransceiveShimTest {
      */
     @Test
     fun `clearActiveTransceiveContext releases waiting binder and is idempotent`() {
-        val ctx =
-            VauchiHceService.TransceiveContext(
-                session = MOCK_EXCHANGE_SESSION,
-                drainAndDispatch = {},
-            )
+        val ctx = VauchiHceService.TransceiveContext(onApduReceived = {})
         val deferred = CompletableDeferred<ByteArray>()
         ctx.pendingResponse = deferred
         VauchiHceService.activeTransceiveContext = ctx
@@ -153,16 +146,5 @@ class VauchiHceServiceTransceiveShimTest {
             "second clearActiveTransceiveContext must return false (no context active)",
             cleared2,
         )
-    }
-
-    companion object {
-        // Mockito-inline (bundled with mockito-core 5.x) can mock the
-        // UniFFI-generated `MobileExchangeSession` final class. The
-        // mock is never invoked in these tests — they exercise the
-        // fulfill / clear paths that don't reach session methods.
-        // The end-to-end path that does call
-        // session.applyHardwareEvent is covered at Phase 6 device
-        // cycles, not here.
-        private val MOCK_EXCHANGE_SESSION: MobileExchangeSession = mock()
     }
 }

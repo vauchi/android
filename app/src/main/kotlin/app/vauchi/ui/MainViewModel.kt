@@ -11,7 +11,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.vauchi.data.AuthenticationRequiredException
 import app.vauchi.data.DeviceNotSecureException
-import app.vauchi.data.ExchangeSessionData
 import app.vauchi.data.KeyInvalidatedRecoveryRequired
 import app.vauchi.data.VauchiRepository
 import app.vauchi.ui.coreui.ActionResult
@@ -354,8 +353,10 @@ class MainViewModel(
                     withContext(Dispatchers.IO) {
                         appEngine.handleHardwareEvent(MobileEvent.BiometricUnlockSucceeded)
                     }?.let { resultJson ->
-                        (biometricJson.decodeFromString<ActionResult>(resultJson)
-                            as? ActionResult.BiometricUnlockOutcome)?.outcome
+                        (
+                            biometricJson.decodeFromString<ActionResult>(resultJson)
+                                as? ActionResult.BiometricUnlockOutcome
+                        )?.outcome
                     }
                 } catch (_: Exception) {
                     null
@@ -524,32 +525,6 @@ class MainViewModel(
             }
         }
     }
-
-    // --- BLE exchange ---
-
-    /**
-     * Generate a QR-bootstrapped BLE exchange session.
-     *
-     * Returns [ExchangeSessionData] containing the session and the QR payload.
-     * The caller MUST hold onto the session and pass it to [finalizeBleExchange].
-     * Throws if no identity is available.
-     */
-    fun generateBleExchangeSession(): ExchangeSessionData = repository.generateExchangeQrWithSession()
-
-    /**
-     * Finalize a completed BLE exchange: save the received contact to storage.
-     *
-     * Returns the exchange result on success, null on failure.
-     */
-    fun finalizeBleExchange(session: uniffi.vauchi_platform.MobileExchangeSession): uniffi.vauchi_platform.MobileExchangeResult? =
-        try {
-            val result = repository.finalizeExchange(session)
-            Log.i("Vauchi", "BLE exchange: contact finalized")
-            result
-        } catch (e: Exception) {
-            Log.e("Vauchi", "BLE exchange: finalization failed: ${e.javaClass.simpleName}")
-            null
-        }
 
     suspend fun listContactsPaginated(
         offset: UInt,

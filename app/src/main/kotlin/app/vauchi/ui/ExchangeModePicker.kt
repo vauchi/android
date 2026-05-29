@@ -4,12 +4,10 @@
 
 package app.vauchi.ui
 
-import android.content.pm.PackageManager
 import android.nfc.NfcAdapter
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.*
@@ -25,15 +23,14 @@ import app.vauchi.util.LocalizationManager
 enum class ExchangeMode {
     QR,
     NFC,
-    BLE,
 }
 
 /**
- * Mode picker screen for the exchange tab. Shows three cards: QR Code (always available),
- * NFC (if device has NFC hardware), and Bluetooth LE (if device has BLE).
+ * Mode picker screen for the exchange tab. Shows two cards: QR Code (always
+ * available) and NFC (if device has NFC hardware).
  *
  * Tapping a card invokes [onModeSelected] with the chosen [ExchangeMode].
- * The caller handles navigation — NFC and BLE destinations are placeholders until Tasks 8/10.
+ * The caller handles navigation.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,10 +38,6 @@ fun ExchangeModePicker(onModeSelected: (ExchangeMode) -> Unit) {
     val context = LocalContext.current
     val localizationManager = remember { LocalizationManager.getInstance(context) }
     val hasNfc = remember { NfcAdapter.getDefaultAdapter(context) != null }
-    val hasBle =
-        remember {
-            context.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
-        }
 
     Scaffold(
         topBar = {
@@ -80,16 +73,6 @@ fun ExchangeModePicker(onModeSelected: (ExchangeMode) -> Unit) {
                 enabled = hasNfc,
                 testTag = "exchange_mode_nfc",
                 onClick = { onModeSelected(ExchangeMode.NFC) },
-            )
-
-            ExchangeModeCard(
-                icon = Icons.Default.Bluetooth,
-                title = localizationManager.t("exchange.mode.ble"),
-                subtitle = localizationManager.t("exchange.mode.ble_description"),
-                unavailableLabel = localizationManager.t("exchange.mode.unavailable"),
-                enabled = hasBle,
-                testTag = "exchange_mode_ble",
-                onClick = { onModeSelected(ExchangeMode.BLE) },
             )
         }
     }

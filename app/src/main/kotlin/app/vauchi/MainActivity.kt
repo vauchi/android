@@ -48,7 +48,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vauchi.ui.AppPasswordScreen
-import app.vauchi.ui.BleExchangeScreen
 import app.vauchi.ui.ExchangeMode
 import app.vauchi.ui.ExchangeModePicker
 import app.vauchi.ui.KeyInvalidatedRecoveryScreen
@@ -211,7 +210,6 @@ enum class Screen {
     // own Pure Humble UI pair, sequenced low-risk-first.
     ExchangeModePicker,
     NfcExchange,
-    BleExchange,
     Recovery,
     QrDiagnostic,
 
@@ -754,10 +752,6 @@ fun MainScreen(
                                     ExchangeMode.NFC -> {
                                         currentScreen = Screen.NfcExchange
                                     }
-
-                                    ExchangeMode.BLE -> {
-                                        currentScreen = Screen.BleExchange
-                                    }
                                 }
                             },
                         )
@@ -769,17 +763,6 @@ fun MainScreen(
 
                     Screen.NfcExchange -> {
                         NfcTapExchangeScreen(coreAppViewModel = coreAppViewModel)
-                    }
-
-                    Screen.BleExchange -> {
-                        BleExchangeScreen(
-                            viewModel = viewModel,
-                            onBack = { currentScreen = Screen.ExchangeModePicker },
-                            onDone = {
-                                viewModel.refresh()
-                                coreAppViewModel.navigateTo("contacts")
-                            },
-                        )
                     }
 
                     Screen.Recovery -> {

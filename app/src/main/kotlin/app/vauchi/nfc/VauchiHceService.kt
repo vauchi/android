@@ -14,8 +14,6 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import uniffi.vauchi_platform.MobileEvent
-import uniffi.vauchi_platform.MobileExchangeSession
 
 /**
  * Android Host Card Emulation service for NFC contact exchange.
@@ -31,6 +29,18 @@ import uniffi.vauchi_platform.MobileExchangeSession
  * binder-thread block on the existing event/command channel, no
  * new UniFFI surface).
  *
+ * Engine migration (slice 32m, `2026-05-29-nfc-exchange-mode-entry-wiring`):
+ * the legacy `MobileExchangeSession` was retired from core in 0.51.26, so
+ * [TransceiveContext] no longer holds a session. It now carries an
+ * `onApduReceived` callback whose owner drives the engine
+ * (`PlatformAppEngine.handleHardwareEvent(NfcDataReceived(apdu))`) and
+ * fulfills the binder block via [fulfillPendingResponse] with the
+ * returned `Command::NfcSendApdu` bytes. The binder-block scaffolding
+ * below is transport-only and stays intact; the production wiring that
+ * registers a live context (and the initiator-side reader-mode
+ * lifecycle) is deferred to the follow-up that wires functional NFC
+ * exchange end-to-end.
+ *
  * Single in-flight `TransceiveContext`: Android HCE is
  * single-tap-at-a-time per device, so one global context suffices.
  * `processCommandApdu` returns `SW_CONDITIONS_NOT_SATISFIED` when
@@ -43,15 +53,14 @@ import uniffi.vauchi_platform.MobileExchangeSession
  */
 class VauchiHceService : HostApduService() {
     /**
-     * State carried across the binder-thread block: the engine
-     * session that processes [MobileEvent.NfcDataReceived], the
-     * `ExchangeCommandHandler.drainAndDispatch` hook, and a slot
-     * for the in-flight `CompletableDeferred<ByteArray>` that
-     * `Command.NfcSendApdu` will fulfill.
+     * State carried across the binder-thread block: [onApduReceived] is
+     * invoked off the binder thread with each inbound APDU; its owner
+     * drives the engine (`PlatformAppEngine.handleHardwareEvent`) and
+     * fulfills [pendingResponse] via [fulfillPendingResponse] with the
+     * `Command.NfcSendApdu` bytes the engine emits.
      */
     class TransceiveContext(
-        val session: MobileExchangeSession,
-        val drainAndDispatch: () -> Unit,
+        val onApduReceived: (ByteArray) -> Unit,
     ) {
         @Volatile
         var pendingResponse: CompletableDeferred<ByteArray>? = null
@@ -82,10 +91,11 @@ class VauchiHceService : HostApduService() {
         const val INS_KEY_OFFER: Byte = 0xE0.toByte()
 
         /**
-         * Transceive-shim mode context. Set by `NfcExchangeScreen` /
-         * `ExchangeCommandHandler` before an HCE-driven exchange, cleared
+         * Transceive-shim mode context. Registered by the (deferred)
+         * NFC-exchange wiring before an HCE-driven exchange, cleared
          * after. When set, [processCommandApdu] routes via the
-         * binder-block pattern; when null, falls back to legacy mode.
+         * binder-block pattern; when null, returns
+         * `SW_CONDITIONS_NOT_SATISFIED` (no active exchange).
          */
         @Volatile
         var activeTransceiveContext: TransceiveContext? = null
@@ -99,7 +109,7 @@ class VauchiHceService : HostApduService() {
         const val BINDER_BLOCK_TIMEOUT_MS: Long = 110
 
         /**
-         * Worker scope for driving [MobileExchangeSession.applyHardwareEvent]
+         * Worker scope for driving [TransceiveContext.onApduReceived]
          * off the binder thread. Daemon by virtue of Dispatchers.IO —
          * does not block JVM shutdown.
          */
@@ -110,8 +120,9 @@ class VauchiHceService : HostApduService() {
          * Returns true if a pending response was waiting (HCE
          * transceive-shim path); false if no HCE flow is active
          * (caller falls through to the initiator-side
-         * `NfcReaderService.sendApdu`). Called from
-         * `ExchangeCommandHandler` on `MobileCommand.NfcSendApdu`.
+         * `NfcReaderService.sendApdu`). Called by the active context's
+         * `onApduReceived` owner when the engine emits
+         * `Command::NfcSendApdu`.
          */
         fun fulfillPendingResponse(bytes: ByteArray): Boolean {
             val ctx = activeTransceiveContext ?: return false
@@ -122,11 +133,11 @@ class VauchiHceService : HostApduService() {
         }
 
         /**
-         * Clear the active transceive context (called from
-         * `ExchangeCommandHandler` on `MobileCommand.NfcDeactivate`).
-         * Returns true if a context was cleared (signals to the caller
-         * that the HCE path was active); false if no context was set.
-         * Idempotent — safe to call when no context is registered.
+         * Clear the active transceive context (called when the engine
+         * emits `Command::NfcDeactivate`). Returns true if a context was
+         * cleared (signals to the caller that the HCE path was active);
+         * false if no context was set. Idempotent — safe to call when no
+         * context is registered.
          */
         fun clearActiveTransceiveContext(): Boolean {
             val ctx = activeTransceiveContext ?: return false
@@ -165,12 +176,11 @@ class VauchiHceService : HostApduService() {
      * Binder-thread block pattern (Option 4 of
      * `2026-05-20-nfc-hce-responder-sync-boundary`). The binder
      * thread that invoked this method blocks on a one-shot
-     * [CompletableDeferred] while a worker coroutine drives the
-     * engine through `applyHardwareEvent` →
-     * `drainPendingCommands` → `ExchangeCommandHandler.dispatch`.
-     * The matching `Command.NfcSendApdu` dispatch arm fulfills
-     * the deferred via [fulfillPendingResponse], unblocking this
-     * binder thread.
+     * [CompletableDeferred] while a worker coroutine invokes
+     * [TransceiveContext.onApduReceived], whose owner drives the
+     * engine (`handleHardwareEvent(NfcDataReceived)`). The engine's
+     * `Command.NfcSendApdu` bytes are routed back through
+     * [fulfillPendingResponse], unblocking this binder thread.
      *
      * On timeout / cancellation: return `SW_CONDITIONS_NOT_SATISFIED`
      * so the OS-side error path triggers cleanly rather than the
@@ -183,14 +193,13 @@ class VauchiHceService : HostApduService() {
         val deferred = CompletableDeferred<ByteArray>()
         ctx.pendingResponse = deferred
 
-        // Drive applyHardwareEvent + drain on a worker thread —
-        // the binder thread is about to runBlocking on the deferred,
-        // and the dispatcher must NOT run on this same thread or
-        // the fulfill call would deadlock against runBlocking.
+        // Drive the engine on a worker thread — the binder thread is
+        // about to runBlocking on the deferred, and the callback must
+        // NOT run on this same thread or the fulfill call would
+        // deadlock against runBlocking.
         workerScope.launch {
             try {
-                ctx.session.applyHardwareEvent(MobileEvent.NfcDataReceived(commandApdu))
-                ctx.drainAndDispatch()
+                ctx.onApduReceived(commandApdu)
             } catch (e: Exception) {
                 Log.e(TAG, "HCE event apply failed: ${e.javaClass.simpleName}")
                 deferred.completeExceptionally(e)
@@ -226,5 +235,4 @@ class VauchiHceService : HostApduService() {
         if (apdu.size < 5 + aidLen) return false
         return apdu.sliceArray(5 until 5 + aidLen).contentEquals(VAUCHI_AID)
     }
-
 }

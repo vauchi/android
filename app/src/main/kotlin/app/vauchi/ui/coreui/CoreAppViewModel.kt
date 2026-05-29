@@ -559,9 +559,12 @@ class CoreAppViewModel(
                 }
 
                 else -> {
-                    // BLE, NFC, Audio commands handled by the in-process
-                    // ExchangeCommandHandler attached to the
-                    // MobileExchangeSession.
+                    // BLE / NFC / Audio hardware commands: dispatch is
+                    // deferred to the follow-up that wires functional
+                    // NFC/BLE exchange onto the engine. The legacy
+                    // session-based dispatcher was retired in slice 32m
+                    // (`2026-05-29-nfc-exchange-mode-entry-wiring`).
+                    Log.d(TAG, "Unhandled exchange command (dispatch deferred): $cmd")
                 }
             }
         }

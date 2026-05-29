@@ -30,10 +30,7 @@ import app.vauchi.util.LocalizationManager
 import app.vauchi.util.ThemeManager
 import app.vauchi.util.pushDeviceCapabilities
 import uniffi.vauchi_platform.MobileContactCard
-import uniffi.vauchi_platform.MobileExchangeResult
-import uniffi.vauchi_platform.MobileExchangeSession
 import uniffi.vauchi_platform.MobileFieldType
-import uniffi.vauchi_platform.MobileMultiStageSession
 import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.PlatformAppEngine
 import uniffi.vauchi_platform.VauchiPlatform
@@ -63,16 +60,6 @@ data class ExchangeData(
         return result
     }
 }
-
-/**
- * Holds both the display data and the live session for a single exchange.
- * The session MUST be reused for processQr/finalize — creating a new session
- * generates different ephemeral keys and breaks key agreement.
- */
-data class ExchangeSessionData(
-    val exchangeData: ExchangeData,
-    val session: MobileExchangeSession,
-)
 
 /**
  * Repository class wrapping VauchiPlatform UniFFI bindings.
@@ -354,32 +341,6 @@ class VauchiRepository(
         platform() // ensure initialized
         return appEngine.removeField(label)
     }
-
-    /**
-     * Generate exchange QR data AND return the live session.
-     * The caller MUST hold onto the session and pass it to [finalizeExchange]
-     * — creating a new session generates different ephemeral keys.
-     */
-    fun generateExchangeQrWithSession(): ExchangeSessionData {
-        val session = platform().createQrExchangeManual()
-        val qrData = session.generateQr()
-        val expiresAt = System.currentTimeMillis() / 1000 + 300 // 5 minutes
-        val data =
-            ExchangeData(
-                qrData = qrData,
-                publicId = appEngine.getPublicId(),
-                expiresAt = expiresAt.toULong(),
-                audioChallenge = extractAudioChallenge(qrData),
-            )
-        return ExchangeSessionData(exchangeData = data, session = session)
-    }
-
-    /**
-     * Finalize an exchange using the SAME session that generated the QR.
-     * The session must have already been driven through processQr → confirmProximity →
-     * theyScannedOurQr → performKeyAgreement → completeCardExchange.
-     */
-    fun finalizeExchange(session: MobileExchangeSession): MobileExchangeResult = platform().finalizeExchange(session)
 
     fun contactCount(): UInt = appEngine.contactCount()
 
