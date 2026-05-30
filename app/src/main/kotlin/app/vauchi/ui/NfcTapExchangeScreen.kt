@@ -20,20 +20,23 @@ import app.vauchi.ui.coreui.UserAction
  * [CoreScreenView] over the core-owned `ExchangeEngine`. The 3-phase
  * handshake state lives in core's `NfcExchangeFlow`
  * (`core/vauchi-app/src/ui/exchange/nfc.rs`); APDU dispatch routes
- * through `ExchangeCommandHandler` to `NfcReaderService` (initiator) or
- * the `VauchiHceService` binder-block path (responder).
+ * through `CoreAppViewModel.handleExchangeCommands` → `dispatchNfcCommand`
+ * to `NfcReaderService` (initiator) or the `VauchiHceService`
+ * binder-block path (responder).
  *
  * Per ADR-021/043 this composable holds no domain state, makes no
  * navigation decisions, and references no domain types. It only:
  *
  * 1. Renders whatever core says via [CoreScreenView].
- * 2. Pre-selects TapTap on first composition by emitting the picker
- *    action `UserAction.ListItemSelected("category:fun", "mode:tap_tap")`
- *    — same action the mode picker fires when the user picks TapTap.
- *    The engine routes to `start_taptap_mode` (added in `core!890`),
- *    constructs the `NfcExchangeFlow`, and emits the initial
- *    `Command::NfcActivate { payload: key_offer }` for
- *    `ExchangeCommandHandler` to dispatch to `NfcReaderService.activate`.
+ * 2. Emits the chosen NFC role on first composition via
+ *    `UserAction.ListItemSelected("category:fun", modeItemId)`. The role
+ *    is picked in `ExchangeModePicker`: `"mode:tap_tap"` (Send) routes to
+ *    `start_taptap_mode`, which constructs an initiator `NfcExchangeFlow`
+ *    and emits `Command::NfcActivate { payload: key_offer }`;
+ *    `"mode:tap_tap_receive"` (Receive) routes to `start_nfc_receive_mode`,
+ *    which emits an empty `NfcActivate` so the frontend registers the HCE
+ *    responder and the lazy bootstrap spins up the responder flow on the
+ *    peer's first tap.
  * 3. Forwards the system back button as the engine-level cancel
  *    `UserAction`. Core decides the next screen; the Activity's
  *    screen-sync layer reflects the result.
