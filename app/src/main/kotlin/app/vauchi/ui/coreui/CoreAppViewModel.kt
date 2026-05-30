@@ -9,6 +9,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.vauchi.nfc.NfcReaderPort
 import app.vauchi.nfc.NfcReaderService
+import app.vauchi.nfc.NfcResponderPort
+import app.vauchi.nfc.VauchiHceResponder
 import app.vauchi.nfc.dispatchNfcCommand
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +40,7 @@ import uniffi.vauchi_platform.PlatformAppEngine
 class CoreAppViewModel(
     private val appEngine: PlatformAppEngine,
     private val nfcReader: NfcReaderPort = NfcReaderService(),
+    private val nfcResponder: NfcResponderPort = VauchiHceResponder(),
 ) : ViewModel() {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -569,7 +572,10 @@ class CoreAppViewModel(
                     // BLE / Audio and the HCE responder side remain deferred;
                     // initiator-vs-responder role negotiation is an open design
                     // question (`2026-05-29-nfc-exchange-mode-entry-wiring`).
-                    val handled = dispatchNfcCommand(cmd, nfcReader) { event -> sendHardwareEvent(event) }
+                    val handled =
+                        dispatchNfcCommand(cmd, nfcReader, nfcResponder) { event ->
+                            sendHardwareEvent(event)
+                        }
                     if (!handled) {
                         Log.d(TAG, "Unhandled exchange command (dispatch deferred): $cmd")
                     }
