@@ -7,6 +7,9 @@ package app.vauchi.ui.coreui
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.vauchi.nfc.NfcReaderPort
+import app.vauchi.nfc.NfcReaderService
+import app.vauchi.nfc.dispatchNfcCommand
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +37,7 @@ import uniffi.vauchi_platform.PlatformAppEngine
  */
 class CoreAppViewModel(
     private val appEngine: PlatformAppEngine,
+    private val nfcReader: NfcReaderPort = NfcReaderService(),
 ) : ViewModel() {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -559,12 +563,16 @@ class CoreAppViewModel(
                 }
 
                 else -> {
-                    // BLE / NFC / Audio hardware commands: dispatch is
-                    // deferred to the follow-up that wires functional
-                    // NFC/BLE exchange onto the engine. The legacy
-                    // session-based dispatcher was retired in slice 32m
-                    // (`2026-05-29-nfc-exchange-mode-entry-wiring`).
-                    Log.d(TAG, "Unhandled exchange command (dispatch deferred): $cmd")
+                    // NFC initiator command dispatch (T1.1). When core emits
+                    // NfcActivate/NfcSendApdu/NfcDeactivate, relay to the
+                    // reader and route its hardware events back to the engine.
+                    // BLE / Audio and the HCE responder side remain deferred;
+                    // initiator-vs-responder role negotiation is an open design
+                    // question (`2026-05-29-nfc-exchange-mode-entry-wiring`).
+                    val handled = dispatchNfcCommand(cmd, nfcReader) { event -> sendHardwareEvent(event) }
+                    if (!handled) {
+                        Log.d(TAG, "Unhandled exchange command (dispatch deferred): $cmd")
+                    }
                 }
             }
         }

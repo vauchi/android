@@ -31,7 +31,7 @@ import uniffi.vauchi_platform.MobileEvent
  * binding-side consumer of `MobileNfcHandshake` is core's mobile_nfc.rs
  * itself, retired in the Phase 5 core MR.
  */
-class NfcReaderService {
+class NfcReaderService : NfcReaderPort {
     companion object {
         private const val TAG = "NfcReader"
 
@@ -92,7 +92,7 @@ class NfcReaderService {
      * [MobileEvent.HardwareUnavailable]; this service can't detect
      * adapter state without an Activity reference.
      */
-    fun activate(
+    override fun activate(
         payload: ByteArray,
         callback: (MobileEvent) -> Unit,
     ) {
@@ -142,7 +142,7 @@ class NfcReaderService {
      * error from core's perspective — reported as a hardware error so
      * the engine can fail-fast rather than wedge.
      */
-    fun sendApdu(data: ByteArray) {
+    override fun sendApdu(data: ByteArray) {
         val callback = transceiveCallback ?: return
         val isoDep =
             transceiveIsoDep ?: run {
@@ -158,7 +158,7 @@ class NfcReaderService {
      * Called from `ExchangeCommandHandler` on `MobileCommand.NfcDeactivate`.
      * Idempotent — safe to call when no connection is open.
      */
-    fun deactivate() {
+    override fun deactivate() {
         try {
             transceiveIsoDep?.close()
         } catch (_: Exception) {
