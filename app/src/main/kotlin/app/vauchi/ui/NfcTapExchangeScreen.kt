@@ -45,13 +45,18 @@ import app.vauchi.ui.coreui.UserAction
  * commands).
  */
 @Composable
-fun NfcTapExchangeScreen(coreAppViewModel: CoreAppViewModel) {
-    // Pre-select TapTap on first composition so the picker is skipped.
-    LaunchedEffect(Unit) {
+fun NfcTapExchangeScreen(
+    coreAppViewModel: CoreAppViewModel,
+    modeItemId: String = "mode:tap_tap",
+) {
+    // Emit the chosen NFC role on first composition: "mode:tap_tap"
+    // (Send / initiator) or "mode:tap_tap_receive" (Receive / responder).
+    // The engine routes to start_taptap_mode or start_nfc_receive_mode.
+    LaunchedEffect(modeItemId) {
         coreAppViewModel.handleAction(
             UserAction.ListItemSelected(
                 componentId = "category:fun",
-                itemId = "mode:tap_tap",
+                itemId = modeItemId,
             ),
         )
     }
