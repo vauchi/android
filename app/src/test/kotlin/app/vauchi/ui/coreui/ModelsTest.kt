@@ -472,6 +472,17 @@ class ModelsTest {
     }
 
     @Test
+    fun `CommandDTO NfcSendApdu deserialization`() {
+        // Core emits Command::NfcSendApdu { data } in handshake phases 2/3
+        // (vauchi-app/src/ui/exchange/nfc.rs). Without this arm the responder's
+        // continuation APDUs decode to Unknown and the flow wedges after the tap.
+        val input = """{"NfcSendApdu": {"data": [0, 255, 16]}}"""
+        val result = json.decodeFromString(CommandDTOSerializer, input)
+        assertTrue(result is CommandDTO.NfcSendApdu)
+        assertEquals(listOf(0, 255, 16), (result as CommandDTO.NfcSendApdu).data)
+    }
+
+    @Test
     fun `CommandDTO BleWriteCharacteristic deserialization`() {
         val input = """{"BleWriteCharacteristic": {"uuid": "char-uuid", "data": [255, 0]}}"""
         val result = json.decodeFromString(CommandDTOSerializer, input)

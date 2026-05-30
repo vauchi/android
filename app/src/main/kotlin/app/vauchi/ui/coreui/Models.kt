@@ -2029,6 +2029,10 @@ sealed class CommandDTO {
 
     data object NfcDeactivate : CommandDTO()
 
+    data class NfcSendApdu(
+        val data: List<Int>,
+    ) : CommandDTO()
+
     data class AudioEmitChallenge(
         val data: List<Int>,
     ) : CommandDTO()
@@ -2503,6 +2507,13 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                         val obj = element["NfcActivate"] as JsonObject
                         CommandDTO.NfcActivate(
                             payload = obj["payload"]!!.jsonArray.map { it.jsonPrimitive.int },
+                        )
+                    }
+
+                    "NfcSendApdu" in element -> {
+                        val obj = element["NfcSendApdu"] as JsonObject
+                        CommandDTO.NfcSendApdu(
+                            data = obj["data"]!!.jsonArray.map { it.jsonPrimitive.int },
                         )
                     }
 
