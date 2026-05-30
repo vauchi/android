@@ -4,6 +4,7 @@
 
 package app.vauchi.nfc
 
+import android.nfc.Tag
 import app.vauchi.ui.coreui.CommandDTO
 import uniffi.vauchi_platform.MobileEvent
 
@@ -18,6 +19,9 @@ interface NfcReaderPort {
         payload: ByteArray,
         callback: (MobileEvent) -> Unit,
     )
+
+    /** Forward a tag discovered by the Activity's reader-mode callback (T1.2). */
+    fun onTagDiscovered(tag: Tag)
 
     fun sendApdu(data: ByteArray)
 
@@ -71,15 +75,18 @@ class VauchiHceResponder : NfcResponderPort {
  * ("Receive" — register the HCE context; each inbound APDU drives the
  * engine as `NfcDataReceived` via [onEvent], whose `NfcSendApdu` reply
  * returns through [NfcResponderPort.fulfill]); **non-empty** = initiator
- * ("Send" — reader-mode + transceive the key offer). An `NfcSendApdu`
- * first tries to fulfil an in-flight HCE block; if none is active we are
- * the initiator, so it transceives on the reader. Hardware events the
- * reader surfaces are routed to [onEvent].
+ * ("Send" — transceive the key offer and signal [onReaderMode]`(true)` so
+ * the Activity enables NFC reader-mode). An `NfcSendApdu` first tries to
+ * fulfil an in-flight HCE block; if none is active we are the initiator,
+ * so it transceives on the reader. `NfcDeactivate` tears down both sides
+ * and signals [onReaderMode]`(false)`. Hardware events the reader
+ * surfaces are routed to [onEvent].
  */
 fun dispatchNfcCommand(
     cmd: CommandDTO,
     reader: NfcReaderPort,
     responder: NfcResponderPort,
+    onReaderMode: (Boolean) -> Unit,
     onEvent: (MobileEvent) -> Unit,
 ): Boolean {
     when (cmd) {
@@ -88,6 +95,7 @@ fun dispatchNfcCommand(
                 responder.register { apdu -> onEvent(MobileEvent.NfcDataReceived(apdu)) }
             } else {
                 reader.activate(cmd.payload.toByteArrayFromInts(), onEvent)
+                onReaderMode(true)
             }
         }
 
@@ -101,6 +109,7 @@ fun dispatchNfcCommand(
         is CommandDTO.NfcDeactivate -> {
             responder.clear()
             reader.deactivate()
+            onReaderMode(false)
         }
 
         else -> {

@@ -4,6 +4,7 @@
 
 package app.vauchi.ui.coreui
 
+import android.nfc.Tag
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -143,6 +144,28 @@ class CoreAppViewModel(
 
     fun consumeOrientationLockRequest() {
         _orientationLockRequest.value = null
+    }
+
+    /**
+     * NFC reader-mode requests (T1.2). `true` asks the Activity to enable
+     * `NfcAdapter.enableReaderMode` (initiator/"Send" side) so a tapped
+     * peer surfaces via [onNfcTagDiscovered]; `false` disables it (on
+     * NfcDeactivate / exchange teardown). `null` means "no pending request".
+     */
+    private val _nfcReaderModeRequest = MutableStateFlow<Boolean?>(null)
+    val nfcReaderModeRequest: StateFlow<Boolean?> = _nfcReaderModeRequest.asStateFlow()
+
+    fun consumeNfcReaderModeRequest() {
+        _nfcReaderModeRequest.value = null
+    }
+
+    /**
+     * Forward a tag discovered by the Activity's reader-mode callback to
+     * the initiator reader (T1.2). The reader transceives the stashed
+     * activate payload and surfaces the peer's response as a hardware event.
+     */
+    fun onNfcTagDiscovered(tag: Tag) {
+        nfcReader.onTagDiscovered(tag)
     }
 
     /**
@@ -573,7 +596,12 @@ class CoreAppViewModel(
                     // initiator-vs-responder role negotiation is an open design
                     // question (`2026-05-29-nfc-exchange-mode-entry-wiring`).
                     val handled =
-                        dispatchNfcCommand(cmd, nfcReader, nfcResponder) { event ->
+                        dispatchNfcCommand(
+                            cmd,
+                            nfcReader,
+                            nfcResponder,
+                            onReaderMode = { enable -> _nfcReaderModeRequest.value = enable },
+                        ) { event ->
                             sendHardwareEvent(event)
                         }
                     if (!handled) {

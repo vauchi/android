@@ -4,6 +4,7 @@
 
 package app.vauchi.nfc
 
+import android.nfc.Tag
 import app.vauchi.ui.coreui.CommandDTO
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -14,12 +15,12 @@ import org.junit.Test
 import uniffi.vauchi_platform.MobileEvent
 
 /**
- * T1.1 + T1.3 — dispatch of NFC ExchangeCommands to the initiator
+ * T1.1 + T1.3 + T1.2 — dispatch of NFC ExchangeCommands to the initiator
  * ([NfcReaderPort]) and responder ([NfcResponderPort]) sides. The role
  * discriminator is the `NfcActivate` payload: empty = responder (register
- * HCE), non-empty = initiator (reader-mode + transceive); and an
- * `NfcSendApdu` fulfils an in-flight HCE binder block when one is active,
- * otherwise transceives on the reader.
+ * HCE), non-empty = initiator (reader-mode + transceive). The initiator
+ * path also signals the Activity to enable reader-mode (T1.2); deactivate
+ * signals disable.
  */
 class NfcCommandDispatchTest {
     private class FakeReader : NfcReaderPort {
@@ -35,6 +36,8 @@ class NfcCommandDispatchTest {
             activatedPayload = payload
             activatedCallback = callback
         }
+
+        override fun onTagDiscovered(tag: Tag) = Unit
 
         override fun sendApdu(data: ByteArray) {
             sentApdu = data
@@ -66,23 +69,34 @@ class NfcCommandDispatchTest {
         }
     }
 
+    // Collects reader-mode enable(true)/disable(false) signals.
+    private val readerModes = mutableListOf<Boolean>()
+
+    private fun dispatch(
+        cmd: CommandDTO,
+        reader: NfcReaderPort = FakeReader(),
+        responder: NfcResponderPort = FakeResponder(),
+        onEvent: (MobileEvent) -> Unit = {},
+    ): Boolean = dispatchNfcCommand(cmd, reader, responder, { readerModes.add(it) }, onEvent)
+
     // ── Initiator ("Send") — non-empty NfcActivate payload ──
 
     @Test
-    fun `NfcActivate with payload dispatches to reader activate (initiator)`() {
+    fun `NfcActivate with payload dispatches to reader activate and enables reader-mode`() {
         val reader = FakeReader()
         val responder = FakeResponder()
-        val handled = dispatchNfcCommand(CommandDTO.NfcActivate(listOf(0xAA, 0x01)), reader, responder) {}
+        val handled = dispatch(CommandDTO.NfcActivate(listOf(0xAA, 0x01)), reader, responder)
         assertTrue(handled)
         assertArrayEquals(byteArrayOf(0xAA.toByte(), 0x01), reader.activatedPayload)
         assertNull("responder not registered for initiator", responder.registeredOnApdu)
+        assertEquals("initiator enables reader-mode", listOf(true), readerModes)
     }
 
     @Test
     fun `initiator NfcActivate callback routes hardware events to onEvent`() {
         val reader = FakeReader()
         val events = mutableListOf<MobileEvent>()
-        dispatchNfcCommand(CommandDTO.NfcActivate(listOf(1)), reader, FakeResponder()) { events.add(it) }
+        dispatch(CommandDTO.NfcActivate(listOf(1)), reader) { events.add(it) }
         reader.activatedCallback!!.invoke(MobileEvent.NfcDataReceived(byteArrayOf(9, 8)))
         assertEquals(1, events.size)
         assertArrayEquals(byteArrayOf(9, 8), (events[0] as MobileEvent.NfcDataReceived).data)
@@ -91,22 +105,21 @@ class NfcCommandDispatchTest {
     // ── Responder ("Receive") — empty NfcActivate payload ──
 
     @Test
-    fun `NfcActivate with empty payload registers HCE responder (not reader)`() {
+    fun `NfcActivate with empty payload registers HCE responder without reader-mode`() {
         val reader = FakeReader()
         val responder = FakeResponder()
-        val handled = dispatchNfcCommand(CommandDTO.NfcActivate(emptyList()), reader, responder) {}
+        val handled = dispatch(CommandDTO.NfcActivate(emptyList()), reader, responder)
         assertTrue(handled)
         assertNull("initiator reader not activated for responder", reader.activatedPayload)
         assertTrue("responder context registered", responder.registeredOnApdu != null)
+        assertTrue("responder must NOT enable reader-mode", readerModes.isEmpty())
     }
 
     @Test
     fun `responder onApdu drives engine via NfcDataReceived event`() {
-        val reader = FakeReader()
         val responder = FakeResponder()
         val events = mutableListOf<MobileEvent>()
-        dispatchNfcCommand(CommandDTO.NfcActivate(emptyList()), reader, responder) { events.add(it) }
-        // An inbound HCE APDU must reach the engine as NfcDataReceived.
+        dispatch(CommandDTO.NfcActivate(emptyList()), responder = responder) { events.add(it) }
         responder.registeredOnApdu!!.invoke(byteArrayOf(7, 7))
         assertEquals(1, events.size)
         assertArrayEquals(byteArrayOf(7, 7), (events[0] as MobileEvent.NfcDataReceived).data)
@@ -118,39 +131,41 @@ class NfcCommandDispatchTest {
     fun `NfcSendApdu fulfils HCE block when responder active`() {
         val reader = FakeReader()
         val responder = FakeResponder(fulfillResult = true)
-        val handled = dispatchNfcCommand(CommandDTO.NfcSendApdu(listOf(1, 2, 3)), reader, responder) {}
-        assertTrue(handled)
+        dispatch(CommandDTO.NfcSendApdu(listOf(1, 2, 3)), reader, responder)
         assertArrayEquals(byteArrayOf(1, 2, 3), responder.fulfilledBytes)
         assertNull("reader must not transceive when HCE block fulfilled", reader.sentApdu)
+        assertTrue("NfcSendApdu must not touch reader-mode", readerModes.isEmpty())
     }
 
     @Test
     fun `NfcSendApdu transceives on reader when no HCE block active`() {
         val reader = FakeReader()
         val responder = FakeResponder(fulfillResult = false)
-        dispatchNfcCommand(CommandDTO.NfcSendApdu(listOf(255, 0, 16)), reader, responder) {}
+        dispatch(CommandDTO.NfcSendApdu(listOf(255, 0, 16)), reader, responder)
         assertArrayEquals(byteArrayOf(255.toByte(), 0, 16), reader.sentApdu)
     }
 
-    // ── Deactivate clears both sides ──
+    // ── Deactivate clears both sides and disables reader-mode ──
 
     @Test
-    fun `NfcDeactivate clears responder and deactivates reader`() {
+    fun `NfcDeactivate clears responder, deactivates reader, disables reader-mode`() {
         val reader = FakeReader()
         val responder = FakeResponder()
-        val handled = dispatchNfcCommand(CommandDTO.NfcDeactivate, reader, responder) {}
+        val handled = dispatch(CommandDTO.NfcDeactivate, reader, responder)
         assertTrue(handled)
         assertTrue(responder.cleared)
         assertTrue(reader.deactivated)
+        assertEquals("deactivate disables reader-mode", listOf(false), readerModes)
     }
 
     @Test
     fun `non-NFC command is not handled`() {
         val reader = FakeReader()
         val responder = FakeResponder()
-        val handled = dispatchNfcCommand(CommandDTO.AudioStop, reader, responder) {}
+        val handled = dispatch(CommandDTO.AudioStop, reader, responder)
         assertFalse(handled)
         assertNull(reader.activatedPayload)
         assertNull(responder.registeredOnApdu)
+        assertTrue(readerModes.isEmpty())
     }
 }

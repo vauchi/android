@@ -5,6 +5,7 @@
 package app.vauchi
 
 import android.app.Activity
+import android.nfc.NfcAdapter
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.net.Uri
@@ -423,6 +424,47 @@ fun MainScreen(
 
             null -> {
                 Unit
+            }
+        }
+    }
+
+    // T1.2 — NFC reader-mode lifecycle. Core's initiator ("Send") path
+    // emits Command::NfcActivate{non-empty}; the dispatcher requests
+    // reader-mode (true). Enabling NfcAdapter reader-mode here routes a
+    // tapped peer's tag to the engine via onNfcTagDiscovered; disabled on
+    // NfcDeactivate (false) and on dispose (defensive — user backs out
+    // mid-exchange). The HCE responder ("Receive") side needs no reader-mode.
+    val nfcReaderModeRequest by coreAppViewModel.nfcReaderModeRequest.collectAsState()
+    LaunchedEffect(nfcReaderModeRequest) {
+        val activity = context as? Activity ?: return@LaunchedEffect
+        val adapter = NfcAdapter.getDefaultAdapter(activity)
+        when (nfcReaderModeRequest) {
+            true -> {
+                adapter?.enableReaderMode(
+                    activity,
+                    NfcAdapter.ReaderCallback { tag -> coreAppViewModel.onNfcTagDiscovered(tag) },
+                    NfcAdapter.FLAG_READER_NFC_A or
+                        NfcAdapter.FLAG_READER_NFC_B or
+                        NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
+                    null,
+                )
+                coreAppViewModel.consumeNfcReaderModeRequest()
+            }
+
+            false -> {
+                adapter?.disableReaderMode(activity)
+                coreAppViewModel.consumeNfcReaderModeRequest()
+            }
+
+            null -> {
+                Unit
+            }
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            (context as? Activity)?.let { act ->
+                NfcAdapter.getDefaultAdapter(act)?.disableReaderMode(act)
             }
         }
     }

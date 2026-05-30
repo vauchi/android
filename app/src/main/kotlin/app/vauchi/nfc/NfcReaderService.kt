@@ -111,7 +111,7 @@ class NfcReaderService : NfcReaderPort {
      * channel. Phase 4 view retirement collapses the screen's
      * `performExchange(tag, session)` call into this method.
      */
-    fun onTagDiscovered(tag: Tag) {
+    override fun onTagDiscovered(tag: Tag) {
         val callback = transceiveCallback ?: return
         val isoDep =
             IsoDep.get(tag) ?: run {
