@@ -135,6 +135,11 @@ class VauchiRepository(
             _vauchi = VauchiPlatform.newWithSecureKey(dataDir, relayUrl, storageKeyBytes)
             _vauchi.setPlatformKeychain(PlatformKeychainBridge(context))
             _appEngine = PlatformAppEngine(dataDir, relayUrl, storageKeyBytes)
+            // B7 Phase 2: also wire the keychain to PlatformAppEngine so the
+            // core-driven shred DomainCommands (SoftShred / CancelShred /
+            // HardShred / PanicShred) can reach the platform keychain. The
+            // VauchiPlatform slot above stays for `widget_panic_shred`.
+            _appEngine.setPlatformKeychain(PlatformKeychainBridge(context))
             initialized = true
 
             ThemeManager.getInstance(context).attachAppEngine(_appEngine)
