@@ -410,6 +410,13 @@ class CoreAppViewModel(
         }
     }
 
+    // / Whether core has somewhere to go back to from the current screen —
+    // / either an AppScreen nav-history entry or an engine-internal step
+    // / (e.g. an exchange sub-flow). The shell drives its BackHandler from
+    // / this instead of a frontend-side screen-id map (ADR-043). Synchronous
+    // / like [currentTabId]; a quick engine lock.
+    fun canGoBack(): Boolean = runCatching { appEngine.canGoBack() }.getOrDefault(false)
+
     fun navigateBack() {
         viewModelScope.launch {
             try {

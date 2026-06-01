@@ -602,11 +602,18 @@ fun MainScreen(
     // compose their own `BackHandler` lower in the tree; Compose
     // dispatches to the inner-most handler so those still win.
     val coreVariantForBack = coreScreen?.screenId?.let(::coreScreenIdToVariant)
+    // Engine-internal back: some core flows (the exchange sub-flow steps)
+    // live under one core screen whose id isn't in coreScreenIdToVariant,
+    // so Path A would be skipped and the user trapped. Ask core directly —
+    // can_go_back() now reports engine-internal step history too. Routing
+    // back through navigateBack() lets core rewind a step or pop its
+    // nav-history as appropriate.
+    val coreCanGoBack = uiState is UiState.Ready && coreAppViewModel.canGoBack()
     val canGoBack =
         uiState is UiState.Ready &&
-            (coreVariantForBack != null || currentScreen != Screen.Home)
+            (coreCanGoBack || coreVariantForBack != null || currentScreen != Screen.Home)
     androidx.activity.compose.BackHandler(enabled = canGoBack) {
-        if (coreVariantForBack != null) {
+        if (coreCanGoBack || coreVariantForBack != null) {
             coreAppViewModel.navigateBack()
         } else {
             currentScreen = Screen.Home
