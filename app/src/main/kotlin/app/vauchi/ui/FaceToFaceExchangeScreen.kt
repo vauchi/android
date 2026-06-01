@@ -20,7 +20,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -51,7 +55,10 @@ import java.util.concurrent.TimeUnit
  *    own screen-sync layer follows.
  */
 @Composable
-fun MultiStageExchangeScreen(coreAppViewModel: CoreAppViewModel) {
+fun MultiStageExchangeScreen(
+    coreAppViewModel: CoreAppViewModel,
+    onCoreNavigatedAway: () -> Unit = {},
+) {
     // Orientation + brightness + KEEP_SCREEN_ON now live in core
     // (Phase 2b/2c of `2026-05-04-exchange-command-screen-presentation`):
     // `MultiStageExchangeEngine::screen_entered` emits
@@ -66,9 +73,30 @@ fun MultiStageExchangeScreen(coreAppViewModel: CoreAppViewModel) {
     // `Activity.requestedOrientation`, including the snapshot/restore
     // semantics.
 
+    // Follow core off this screen. Cancel (button or system back) routes
+    // through the engine's `navigate_back`, which changes core's screen —
+    // but this native shell lives in the Activity's local `Screen` enum,
+    // not the `CoreScreenView` dispatch (`coreScreenIdToVariant` returns
+    // null for `exchange_*`), so without this the local enum stays pinned
+    // and the screen looks frozen: Cancel/Back appear dead (Bug 2,
+    // `2026-05-30-exchange-screen-nav-visual-bugs`). Mirrors iOS's
+    // `FaceToFaceCoreShell.onChange { dismiss() }`. The latch guards the
+    // entry race where this mounts before core reaches its screen.
+    val coreScreen by coreAppViewModel.screen.collectAsState()
+    var entered by remember { mutableStateOf(false) }
+    LaunchedEffect(coreScreen?.screenId) {
+        val decision = exchangeExitDecision(
+            entered = entered,
+            coreScreenId = coreScreen?.screenId,
+            ownScreenId = "multi_stage_exchange",
+        )
+        entered = decision.entered
+        if (decision.shouldExit) onCoreNavigatedAway()
+    }
+
     // Forward system back to core as the engine-level cancel event.
-    // Core decides the next screen via its routing layer; the Activity's
-    // own screen sync layer reflects the result.
+    // Core decides the next screen via its routing layer; the observer
+    // above then follows core off this screen.
     BackHandler {
         coreAppViewModel.handleAction(UserAction.ActionPressed(actionId = "cancel"))
     }

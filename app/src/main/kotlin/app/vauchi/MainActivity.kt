@@ -5,10 +5,10 @@
 package app.vauchi
 
 import android.app.Activity
-import android.nfc.NfcAdapter
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.net.Uri
+import android.nfc.NfcAdapter
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -480,15 +480,17 @@ fun MainScreen(
     val coreScreen by coreAppViewModel.screen.collectAsState()
     val showDeepLinkConsent = coreScreen?.screenId == "deep_link_consent"
 
-    // Activity-enum-collapse Phase 1 dropped the `MultiStageExchange`
-    // case; it now renders through the default `CoreScreenView` arm
-    // driven directly by `coreScreen?.screenId`. The previous
-    // transitional `LaunchedEffect` mirror that synced
-    // `currentScreen` back into `Screen.ExchangeModePicker` when core
-    // navigated away from `multi_stage_exchange` is no longer needed:
-    // post-collapse, `currentScreen` is `Screen.ExchangeModePicker`
-    // anyway when entering the multi-stage flow, and the default arm
-    // follows core regardless of the enum value.
+    // NOTE (Bug 2, `2026-05-30-exchange-screen-nav-visual-bugs`): an
+    // earlier Activity-enum-collapse note claimed `MultiStageExchange`
+    // renders through the default `CoreScreenView` arm so no core→local
+    // mirror was needed. That was wrong — `coreScreenIdToVariant` returns
+    // null for `exchange_*` (see `CoreScreenIdMap`), so the multi-stage
+    // screen still renders through the local `when (currentScreen)` arm
+    // below. Dropping the mirror left Cancel/Back frozen: core's
+    // `navigate_back` changed core's screen but nothing popped the local
+    // enum. The follow-core logic now lives in `MultiStageExchangeScreen`
+    // itself (`onCoreNavigatedAway`), scoped to that composable's
+    // lifetime, mirroring iOS's `FaceToFaceCoreShell.onChange`.
 
     // --reset-for-testing: create test identity so app skips onboarding (DEBUG only)
     LaunchedEffect(resetForTesting, uiState) {
@@ -809,7 +811,18 @@ fun MainScreen(
                     }
 
                     Screen.MultiStageExchange -> {
-                        MultiStageExchangeScreen(coreAppViewModel = coreAppViewModel)
+                        MultiStageExchangeScreen(
+                            coreAppViewModel = coreAppViewModel,
+                            // When core navigates off multi_stage_exchange
+                            // (Cancel/Back → navigate_back, or completion),
+                            // follow it in the local enum. Without this the
+                            // enum stays pinned here and the screen looks
+                            // frozen (Bug 2,
+                            // `2026-05-30-exchange-screen-nav-visual-bugs`).
+                            onCoreNavigatedAway = {
+                                currentScreen = Screen.ExchangeModePicker
+                            },
+                        )
                     }
 
                     Screen.NfcExchange -> {
