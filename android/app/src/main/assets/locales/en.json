@@ -383,6 +383,8 @@
   "exchange.mode.qr": "QR Code",
   "exchange.mode.qr_description": "Scan each other's QR codes face-to-face",
   "exchange.mode.unavailable": "Not available on this device",
+  "exchange.nfc.choose_role": "Send or Receive?",
+  "exchange.nfc.choose_role_subtitle": "Choose this device's role for the NFC tap",
   "exchange.qr_code": "QR Code",
   "exchange.qr_detected": "QR Code Detected!",
   "exchange.qr_error": "Failed to generate QR code",

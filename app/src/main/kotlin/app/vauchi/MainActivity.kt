@@ -261,9 +261,6 @@ fun MainScreen(
     val isOnline by viewModel.isOnline.collectAsState()
     val lastSyncTime by viewModel.lastSyncTime.collectAsState()
     var currentScreen by remember { mutableStateOf(Screen.Home) }
-    // Which NFC role the user picked in the mode picker — selects the
-    // engine entry the NFC screen emits (Send vs Receive).
-    var nfcModeItemId by remember { mutableStateOf("mode:tap_tap") }
     // selectedContactId / selectedLabelId removed — contact-detail and
     // group-detail navigation are resolved in core (route_result emits
     // NavigateTo); the frontend just renders `coreAppViewModel.screen`.
@@ -796,13 +793,7 @@ fun MainScreen(
                                         currentScreen = Screen.MultiStageExchange
                                     }
 
-                                    ExchangeMode.NFC_SEND -> {
-                                        nfcModeItemId = "mode:tap_tap"
-                                        currentScreen = Screen.NfcExchange
-                                    }
-
-                                    ExchangeMode.NFC_RECEIVE -> {
-                                        nfcModeItemId = "mode:tap_tap_receive"
+                                    ExchangeMode.NFC -> {
                                         currentScreen = Screen.NfcExchange
                                     }
                                 }
@@ -826,10 +817,7 @@ fun MainScreen(
                     }
 
                     Screen.NfcExchange -> {
-                        NfcTapExchangeScreen(
-                            coreAppViewModel = coreAppViewModel,
-                            modeItemId = nfcModeItemId,
-                        )
+                        NfcTapExchangeScreen(coreAppViewModel = coreAppViewModel)
                     }
 
                     Screen.Recovery -> {

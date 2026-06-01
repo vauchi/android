@@ -28,15 +28,12 @@ import app.vauchi.ui.coreui.UserAction
  * navigation decisions, and references no domain types. It only:
  *
  * 1. Renders whatever core says via [CoreScreenView].
- * 2. Emits the chosen NFC role on first composition via
- *    `UserAction.ListItemSelected("category:fun", modeItemId)`. The role
- *    is picked in `ExchangeModePicker`: `"mode:tap_tap"` (Send) routes to
- *    `start_taptap_mode`, which constructs an initiator `NfcExchangeFlow`
- *    and emits `Command::NfcActivate { payload: key_offer }`;
- *    `"mode:tap_tap_receive"` (Receive) routes to `start_nfc_receive_mode`,
- *    which emits an empty `NfcActivate` so the frontend registers the HCE
- *    responder and the lazy bootstrap spins up the responder flow on the
- *    peer's first tap.
+ * 2. Enters the NFC exchange on first composition via
+ *    `UserAction.ListItemSelected("category:fun", "mode:tap_tap")`. Core
+ *    then presents the Send/Receive role choice
+ *    (`ExchangeStep::NfcRoleSelection`) as a `ScreenModel` this
+ *    `CoreScreenView` renders — the role choice is core-driven (ADR-043/044).
+ *    Send routes to `start_taptap_mode`, Receive to `start_nfc_receive_mode`.
  * 3. Forwards the system back button as the engine-level cancel
  *    `UserAction`. Core decides the next screen; the Activity's
  *    screen-sync layer reflects the result.
@@ -48,18 +45,16 @@ import app.vauchi.ui.coreui.UserAction
  * commands).
  */
 @Composable
-fun NfcTapExchangeScreen(
-    coreAppViewModel: CoreAppViewModel,
-    modeItemId: String = "mode:tap_tap",
-) {
-    // Emit the chosen NFC role on first composition: "mode:tap_tap"
-    // (Send / initiator) or "mode:tap_tap_receive" (Receive / responder).
-    // The engine routes to start_taptap_mode or start_nfc_receive_mode.
-    LaunchedEffect(modeItemId) {
+fun NfcTapExchangeScreen(coreAppViewModel: CoreAppViewModel) {
+    // Enter the NFC exchange on first composition by selecting TapTap. Core
+    // then presents the Send/Receive role choice
+    // (`ExchangeStep::NfcRoleSelection`) as a ScreenModel this CoreScreenView
+    // renders — the role choice is core-driven (ADR-043/044), not here.
+    LaunchedEffect(Unit) {
         coreAppViewModel.handleAction(
             UserAction.ListItemSelected(
                 componentId = "category:fun",
-                itemId = modeItemId,
+                itemId = "mode:tap_tap",
             ),
         )
     }

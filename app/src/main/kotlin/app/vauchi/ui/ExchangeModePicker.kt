@@ -22,17 +22,17 @@ import app.vauchi.util.LocalizationManager
 
 enum class ExchangeMode {
     QR,
-    NFC_SEND,
-    NFC_RECEIVE,
+    NFC,
 }
 
 /**
  * Mode picker screen for the exchange tab. Shows QR Code (always available)
- * plus two NFC roles when the device has NFC hardware: Send (initiator —
- * reader-mode) and Receive (responder — HCE). The role is an explicit
- * choice because a two-device NFC exchange needs exactly one of each
- * (see `2026-05-29-nfc-exchange-mode-entry-wiring`); the engine routes
- * Send → `start_taptap_mode`, Receive → `start_nfc_receive_mode`.
+ * and NFC (if the device has NFC hardware).
+ *
+ * The NFC **role** choice (Send / Receive) is NOT here — it is core-driven
+ * (`ExchangeStep::NfcRoleSelection`, ADR-043/044): tapping NFC enters the
+ * engine via `mode:tap_tap`, and core presents the Send/Receive choice as a
+ * `ScreenModel` the humble renderer draws.
  *
  * Tapping a card invokes [onModeSelected] with the chosen [ExchangeMode].
  * The caller handles navigation.
@@ -72,22 +72,12 @@ fun ExchangeModePicker(onModeSelected: (ExchangeMode) -> Unit) {
 
             ExchangeModeCard(
                 icon = Icons.Default.Nfc,
-                title = localizationManager.t("exchange.mode.nfc_send"),
-                subtitle = localizationManager.t("exchange.mode.nfc_send_description"),
+                title = localizationManager.t("exchange.mode.nfc"),
+                subtitle = localizationManager.t("exchange.mode.nfc_description"),
                 unavailableLabel = localizationManager.t("exchange.mode.unavailable"),
                 enabled = hasNfc,
-                testTag = "exchange_mode_nfc_send",
-                onClick = { onModeSelected(ExchangeMode.NFC_SEND) },
-            )
-
-            ExchangeModeCard(
-                icon = Icons.Default.Nfc,
-                title = localizationManager.t("exchange.mode.nfc_receive"),
-                subtitle = localizationManager.t("exchange.mode.nfc_receive_description"),
-                unavailableLabel = localizationManager.t("exchange.mode.unavailable"),
-                enabled = hasNfc,
-                testTag = "exchange_mode_nfc_receive",
-                onClick = { onModeSelected(ExchangeMode.NFC_RECEIVE) },
+                testTag = "exchange_mode_nfc",
+                onClick = { onModeSelected(ExchangeMode.NFC) },
             )
         }
     }

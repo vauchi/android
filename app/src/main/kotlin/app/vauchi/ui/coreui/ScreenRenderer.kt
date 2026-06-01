@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -28,6 +30,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.components.ActionListComponent
+import app.vauchi.util.LocalizationManager
 import app.vauchi.ui.coreui.components.AvatarPreviewComponent
 import app.vauchi.ui.coreui.components.BannerComponent
 import app.vauchi.ui.coreui.components.ConfirmationDialogComponent
@@ -60,6 +63,20 @@ import app.vauchi.ui.coreui.components.ToggleListComponent
  *
  * User interactions are forwarded back to core via [onAction].
  */
+private val I18N_KEY_PATTERN = Regex("^[a-z0-9_]+(\\.[a-z0-9_]+)+$")
+
+/**
+ * Resolve a core-provided string that may be an i18n key (ADR-038). The
+ * core-driven exchange screens emit dotted lowercase keys like
+ * "exchange.mode.nfc_send" for this humble renderer to localize; plain
+ * English labels (e.g. "Tap tap", "Continue") don't match the key shape and
+ * pass through unchanged. Core's get_string surfaces real misses as
+ * "Missing: <key>", so only key-shaped strings are looked up.
+ */
+internal fun isI18nKey(s: String): Boolean = I18N_KEY_PATTERN.matches(s)
+
+fun LocalizationManager.resolveCoreLabel(s: String): String = if (isI18nKey(s)) t(s) else s
+
 @Composable
 fun ScreenRenderer(
     screen: ScreenModel,
@@ -69,6 +86,8 @@ fun ScreenRenderer(
     toastUndoActionId: String? = null,
     onToastDismiss: () -> Unit = {},
 ) {
+    val context = LocalContext.current
+    val localizer = remember(context) { LocalizationManager.getInstance(context) }
     Box(modifier = modifier) {
         // Outer non-scrolling column splits the viewport into a
         // scrolling content region (weight 1f) and a sticky action
@@ -117,7 +136,7 @@ fun ScreenRenderer(
 
                 // Title
                 Text(
-                    text = screen.title,
+                    text = localizer.resolveCoreLabel(screen.title),
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.semantics { heading() },
                 )
@@ -126,7 +145,7 @@ fun ScreenRenderer(
                 screen.subtitle?.let {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = it,
+                        text = localizer.resolveCoreLabel(it),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -151,7 +170,10 @@ fun ScreenRenderer(
 
             // Sticky action footer — outside the verticalScroll above.
             screen.actions.forEach { action ->
-                ActionButton(action = action, onAction = onAction)
+                ActionButton(
+                    action = action.copy(label = localizer.resolveCoreLabel(action.label)),
+                    onAction = onAction,
+                )
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
@@ -218,6 +240,8 @@ fun ComponentRenderer(
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val localizer = remember(context) { LocalizationManager.getInstance(context) }
     when (component) {
         is Component.Text -> {
             TextComponent(
@@ -311,7 +335,12 @@ fun ComponentRenderer(
         is Component.ActionList -> {
             ActionListComponent(
                 componentId = component.id,
-                items = component.items,
+                items = component.items.map {
+                    it.copy(
+                        label = localizer.resolveCoreLabel(it.label),
+                        detail = it.detail?.let(localizer::resolveCoreLabel),
+                    )
+                },
                 onAction = onAction,
                 modifier = modifier,
             )
