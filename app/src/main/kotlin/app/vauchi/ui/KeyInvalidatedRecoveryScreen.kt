@@ -79,16 +79,12 @@ fun KeyInvalidatedRecoveryScreen(
             tint = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = "Couldn't unlock your data",
+            text = localizationManager.t("recovery.key_invalidated.title"),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
         )
         Text(
-            text =
-                "A change to your device's security keys (for example a new fingerprint, " +
-                    "a removed lock screen, or a system reset) made your previous Vauchi " +
-                    "data unreadable. Your contacts and identity are stored encrypted on " +
-                    "this device — without the original key they can't be recovered here.",
+            text = localizationManager.t("recovery.key_invalidated.body"),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -105,13 +101,11 @@ fun KeyInvalidatedRecoveryScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = "Restore from a backup",
+                    text = localizationManager.t("recovery.key_invalidated.restore_title"),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    text =
-                        "If you previously exported a backup file, you can restore your " +
-                            "identity and contacts here.",
+                    text = localizationManager.t("recovery.key_invalidated.restore_body"),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -136,15 +130,11 @@ fun KeyInvalidatedRecoveryScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = "Set up a new identity",
+                    text = localizationManager.t("recovery.key_invalidated.new_identity_title"),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    text =
-                        "Continue with a fresh identity. Previously-exchanged contacts will " +
-                            "need to exchange cards with you again. " +
-                            "If another device is still linked, you can re-link it from that " +
-                            "device's Settings → Linked Devices after onboarding.",
+                    text = localizationManager.t("recovery.key_invalidated.new_identity_body"),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
