@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -70,6 +71,18 @@ fun MultiStageExchangeScreen(coreAppViewModel: CoreAppViewModel) {
     // own screen sync layer reflects the result.
     BackHandler {
         coreAppViewModel.handleAction(UserAction.ActionPressed(actionId = "cancel"))
+    }
+
+    // Drive the multi-stage protocol while this screen is shown. The core
+    // cycle thread that used to advance the machine autonomously was
+    // retired in slice-32m T1.2c; post-retirement the machine only steps
+    // when the frontend polls core. Without this tick the own-QR never
+    // appears and the exchange stays at "Pending" (Bug 5,
+    // `2026-05-30-exchange-screen-nav-visual-bugs`). The LaunchedEffect is
+    // scoped to composition, so polling starts on entry and stops on exit
+    // — matching the retired thread's lifetime.
+    LaunchedEffect(Unit) {
+        pollLoop { coreAppViewModel.tickMultiStageExchange() }
     }
 
     CoreScreenView(
