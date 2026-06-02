@@ -49,8 +49,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vauchi.ui.AppPasswordScreen
-import app.vauchi.ui.ExchangeMode
-import app.vauchi.ui.ExchangeModePicker
 import app.vauchi.ui.KeyInvalidatedRecoveryScreen
 import app.vauchi.ui.MainViewModel
 import app.vauchi.ui.MultiStageExchangeScreen
@@ -67,7 +65,6 @@ import app.vauchi.ui.coreui.MaterialIconName
 import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
 import app.vauchi.ui.coreui.UserAction
-import app.vauchi.ui.coreui.coreScreenIdToVariant
 import app.vauchi.ui.coreui.materialIconNameForCoreIcon
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
@@ -199,6 +196,11 @@ class MainActivity : FragmentActivity() {
     }
 }
 
+// Core screen_ids the shell renders with a NATIVE composable (hardware
+// wrappers + the MyInfo TopAppBar chrome). Everything else renders via
+// the generic CoreScreenView (dispatch inversion — CoreScreenIdMap rework).
+private val NATIVE_SCREEN_IDS = setOf("my_info", "multi_stage_exchange", "exchange_nfc_role")
+
 enum class Screen {
     // Pre-Ready boot/auth states. Home renders one of:
     // LoadingScreen / CoreOnboardingScreen / AuthenticationGate /
@@ -209,7 +211,6 @@ enum class Screen {
     // Native screens awaiting per-pair retirement (Phase 2+ of
     // `2026-04-30-android-activity-enum-collapse`). Each one is its
     // own Pure Humble UI pair, sequenced low-risk-first.
-    ExchangeModePicker,
     NfcExchange,
     Recovery,
     QrDiagnostic,
@@ -501,7 +502,7 @@ fun MainScreen(
     LaunchedEffect(navigateTo, uiState) {
         if (navigateTo != null && uiState is UiState.Ready) {
             when (navigateTo) {
-                "exchange" -> currentScreen = Screen.ExchangeModePicker
+                "exchange" -> coreAppViewModel.navigateToTabById("exchange")
 
                 "home" -> currentScreen = Screen.Home
 
@@ -584,6 +585,19 @@ fun MainScreen(
     val currentTab = remember(coreScreen?.screenId) { coreAppViewModel.currentTabId() }
     val isTopLevel = currentTab != null && coreScreen?.screenId == currentTab
 
+    // Follow-core: the native exchange wrappers (multi-stage QR, NFC tap)
+    // are reached by core navigating to their screen_id; mirror that into
+    // the local `currentScreen` so the matching `when` arm renders. Replaces
+    // the retired ExchangeModePicker.onModeSelected sets. Leaving a native
+    // wrapper resets to Home so the inverted CoreScreenView branch takes over.
+    LaunchedEffect(coreScreen?.screenId) {
+        when (coreScreen?.screenId) {
+            "multi_stage_exchange" -> currentScreen = Screen.MultiStageExchange
+            "exchange_nfc_role" -> currentScreen = Screen.NfcExchange
+            else -> if (currentScreen == Screen.MultiStageExchange) currentScreen = Screen.Home
+        }
+    }
+
     // System BACK handling. Without an interceptor, every non-Home
     // screen would finish the Activity and exit the app — see problem
     // record `2026-05-21-android-back-stack-and-bottom-nav-broken`.
@@ -601,23 +615,20 @@ fun MainScreen(
     // Screens that own their own back gesture (NfcTap, Ble, etc.)
     // compose their own `BackHandler` lower in the tree; Compose
     // dispatches to the inner-most handler so those still win.
-    val coreVariantForBack = coreScreen?.screenId?.let(::coreScreenIdToVariant)
-    // Engine-internal back: some core flows (the exchange sub-flow steps)
-    // live under one core screen whose id isn't in coreScreenIdToVariant,
-    // so Path A would be skipped and the user trapped. Ask core directly —
-    // can_go_back() now reports engine-internal step history too. Routing
-    // back through navigateBack() lets core rewind a step or pop its
-    // nav-history as appropriate.
+    // System BACK: core owns nav_history + engine-internal step history,
+    // so gate on can_go_back() (CoreScreenIdMap rework — no frontend
+    // screen-id map). At a non-Home native screen with nothing to pop,
+    // fall back to My Card.
     val coreCanGoBack = uiState is UiState.Ready && coreAppViewModel.canGoBack()
     val canGoBack =
         uiState is UiState.Ready &&
-            (coreCanGoBack || coreVariantForBack != null || currentScreen != Screen.Home)
+            (coreCanGoBack || currentScreen != Screen.Home)
     androidx.activity.compose.BackHandler(enabled = canGoBack) {
-        if (coreCanGoBack || coreVariantForBack != null) {
+        if (coreCanGoBack) {
             coreAppViewModel.navigateBack()
         } else {
             currentScreen = Screen.Home
-            coreAppViewModel.navigateTo("my_info")
+            coreAppViewModel.navigateToTabById("my_info")
         }
     }
 
@@ -652,7 +663,6 @@ fun MainScreen(
                                 // the tap appears to do nothing.
                                 when (tab.id) {
                                     "my_info" -> currentScreen = Screen.Home
-                                    "exchange" -> currentScreen = Screen.ExchangeModePicker
                                 }
                                 // Forward the opaque tab action_id as
                                 // `UserAction::NavigateToTab` (ADR-043 Am4) —
@@ -683,16 +693,19 @@ fun MainScreen(
             // 2a/A3a (`2026-05-01-android-humble-ui-deep-retirement`)
             // — they now live as `Component::Dropdown`s inside the
             // existing core-driven Settings screen.
-            val coreVariant = coreScreen?.screenId?.let(::coreScreenIdToVariant)
-            if (coreVariant != null && uiState is UiState.Ready) {
+            // Dispatch inversion (CoreScreenIdMap rework): render every core
+            // screen via CoreScreenView by default; only the closed
+            // NATIVE_SCREEN_IDS set (hardware wrappers + MyInfo chrome) falls
+            // through to the local `when (currentScreen)` below. ADR-043: the
+            // frontend no longer interprets screen_ids via a domain map.
+            val sid = coreScreen?.screenId
+            if (sid != null && sid !in NATIVE_SCREEN_IDS && uiState is UiState.Ready) {
                 CoreScreenView(
                     viewModel = coreAppViewModel,
-                    screenName = coreVariant,
+                    screenName = sid,
                     modifier = Modifier.fillMaxSize(),
-                    // Tab tap (or any other parent navigation) already
-                    // called `navigateTo` before this composes; letting
-                    // CoreScreenView call it again would double-push
-                    // the destination onto `nav_history` and trap BACK.
+                    // Core already navigated here (typed UserActions /
+                    // navigateBack); navigateOnMount would double-push.
                     navigateOnMount = false,
                 )
             } else {
@@ -792,22 +805,6 @@ fun MainScreen(
                         }
                     }
 
-                    Screen.ExchangeModePicker -> {
-                        ExchangeModePicker(
-                            onModeSelected = { mode ->
-                                when (mode) {
-                                    ExchangeMode.QR -> {
-                                        currentScreen = Screen.MultiStageExchange
-                                    }
-
-                                    ExchangeMode.NFC -> {
-                                        currentScreen = Screen.NfcExchange
-                                    }
-                                }
-                            },
-                        )
-                    }
-
                     Screen.MultiStageExchange -> {
                         MultiStageExchangeScreen(
                             coreAppViewModel = coreAppViewModel,
@@ -818,7 +815,7 @@ fun MainScreen(
                             // frozen (Bug 2,
                             // `2026-05-30-exchange-screen-nav-visual-bugs`).
                             onCoreNavigatedAway = {
-                                currentScreen = Screen.ExchangeModePicker
+                                currentScreen = Screen.Home
                             },
                         )
                     }
@@ -830,7 +827,7 @@ fun MainScreen(
                     Screen.Recovery -> {
                         RecoveryScreen(
                             coreAppViewModel = coreAppViewModel,
-                            onBack = { coreAppViewModel.navigateTo("More") },
+                            onBack = { coreAppViewModel.navigateToTabById("more") },
                         )
                     }
 
@@ -841,10 +838,10 @@ fun MainScreen(
                         // the condition evaluates to a compile-time false.
                         if (BuildConfig.DEBUG) {
                             QrDiagnosticScreen(
-                                onBack = { coreAppViewModel.navigateTo("Settings") },
+                                onBack = { coreAppViewModel.handleAction(UserAction.ActionPressed("open_settings")) },
                             )
                         } else {
-                            coreAppViewModel.navigateTo("Settings")
+                            coreAppViewModel.handleAction(UserAction.ActionPressed("open_settings"))
                         }
                     }
 
@@ -989,6 +986,10 @@ fun ReadyScreen(
                 viewModel = coreAppViewModel,
                 screenName = "MyInfo",
                 modifier = Modifier.fillMaxSize(),
+                // Core is already on my_info when ReadyScreen renders
+                // (my_info is in NATIVE_SCREEN_IDS); navigateOnMount would
+                // re-issue navigate_to_json.
+                navigateOnMount = false,
             )
         }
     }
