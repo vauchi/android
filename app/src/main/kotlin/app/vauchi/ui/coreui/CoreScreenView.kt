@@ -43,18 +43,11 @@ import java.io.File
 @Composable
 fun CoreScreenView(
     viewModel: CoreAppViewModel,
-    screenName: String,
+    // Render-target label (kept for call-site readability). CoreScreenView no
+    // longer navigates — core is already on the screen by the time it renders
+    // (dispatch inversion); it only renders viewModel.screen.
+    @Suppress("UNUSED_PARAMETER") screenName: String,
     modifier: Modifier = Modifier,
-    /**
-     * When `true` (default), the LaunchedEffect on mount calls
-     * `viewModel.navigateTo(screenName)`. Set to `false` when the
-     * caller has already navigated the engine to this screen — passing
-     * `true` in that case pushes the destination onto `nav_history`
-     * twice, and the next `navigateBack()` pops the destination itself
-     * and lands the user on the same screen. See problem record
-     * `2026-05-21-android-back-stack-and-bottom-nav-broken`.
-     */
-    navigateOnMount: Boolean = true,
 ) {
     val context = LocalContext.current
     val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
@@ -64,8 +57,6 @@ fun CoreScreenView(
     val alertMessage by viewModel.alertMessage.collectAsState()
     val imagePickEvent by viewModel.imagePickEvent.collectAsState()
     val useFrontCamera by viewModel.useFrontCamera.collectAsState()
-
-    var currentScreen by remember { mutableStateOf<String?>(null) }
 
     // Image picker launcher (library)
     val imagePickerLauncher =
@@ -136,19 +127,6 @@ fun CoreScreenView(
             }
 
             else -> { /* consumed or null */ }
-        }
-    }
-
-    // Navigate to screenName when it changes (or on first composition).
-    // Skip the navigateTo when `navigateOnMount = false` — the caller
-    // has already navigated and a second call would double-push to
-    // `nav_history`, breaking `navigateBack()`.
-    LaunchedEffect(screenName) {
-        if (currentScreen != screenName) {
-            currentScreen = screenName
-            if (navigateOnMount) {
-                viewModel.navigateTo(screenName)
-            }
         }
     }
 

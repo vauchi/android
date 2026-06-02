@@ -708,9 +708,6 @@ fun MainScreen(
                     viewModel = coreAppViewModel,
                     screenName = sid,
                     modifier = Modifier.fillMaxSize(),
-                    // Core already navigated here (typed UserActions /
-                    // navigateBack); navigateOnMount would double-push.
-                    navigateOnMount = false,
                 )
             } else {
                 when (currentScreen) {
@@ -990,10 +987,6 @@ fun ReadyScreen(
                 viewModel = coreAppViewModel,
                 screenName = "MyInfo",
                 modifier = Modifier.fillMaxSize(),
-                // Core is already on my_info when ReadyScreen renders
-                // (my_info is in NATIVE_SCREEN_IDS); navigateOnMount would
-                // re-issue navigate_to_json.
-                navigateOnMount = false,
             )
         }
     }

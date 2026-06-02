@@ -390,26 +390,6 @@ class CoreAppViewModel(
         }
     }
 
-    fun navigateTo(screenName: String) {
-        viewModelScope.launch {
-            try {
-                val screenJson =
-                    withContext(Dispatchers.IO) {
-                        appEngine.navigateToJson(screenJson = "\"$screenName\"")
-                    }
-                // Phase 2b envelope shape: `{"screen": ..., "commands": [...]}`.
-                val envelope = json.decodeFromString<ScreenEnvelope>(screenJson)
-                _screen.value = envelope.screen
-                loadAvailableScreens()
-                if (envelope.commands.isNotEmpty()) {
-                    handleExchangeCommands(envelope.commands)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to navigate to $screenName", e)
-            }
-        }
-    }
-
     /**
      * Forward a bottom-nav tab navigation by canonical tab id (`"contacts"`,
      * `"my_info"`, `"more"`, …), looking up the opaque `actionId` from the
