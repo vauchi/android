@@ -410,6 +410,23 @@ class CoreAppViewModel(
         }
     }
 
+    /**
+     * Forward a bottom-nav tab navigation by canonical tab id (`"contacts"`,
+     * `"my_info"`, `"more"`, …), looking up the opaque `actionId` from the
+     * live [tabs] list and dispatching [UserAction.NavigateToTab]. Replaces
+     * `navigateTo(screenName)` → `navigate_to_json` for tab targets so the
+     * frontend stops constructing core screen names (ADR-043 Am4 §1;
+     * CoreScreenIdMap rework).
+     */
+    fun navigateToTabById(canonicalId: String) {
+        val actionId = _tabs.value.firstOrNull { it.id == canonicalId }?.actionId
+        if (actionId == null) {
+            Log.e(TAG, "navigateToTabById: no tab for id=$canonicalId")
+            return
+        }
+        handleAction(UserAction.NavigateToTab(actionId = actionId))
+    }
+
     // / Whether core has somewhere to go back to from the current screen —
     // / either an AppScreen nav-history entry or an engine-internal step
     // / (e.g. an exchange sub-flow). The shell drives its BackHandler from

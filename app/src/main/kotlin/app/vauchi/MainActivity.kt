@@ -507,9 +507,9 @@ fun MainScreen(
 
                 // Activity-enum collapse: Contacts and Settings render
                 // through the default core-driven arm; navigate via core.
-                "contacts" -> coreAppViewModel.navigateTo("contacts")
+                "contacts" -> coreAppViewModel.navigateToTabById("contacts")
 
-                "settings" -> coreAppViewModel.navigateTo("Settings")
+                "settings" -> coreAppViewModel.handleAction(UserAction.ActionPressed("open_settings"))
             }
             onNavigateConsumed()
         }
@@ -556,7 +556,7 @@ fun MainScreen(
     LaunchedEffect(uiState) {
         val state = uiState
         if (state is UiState.Ready && currentScreen == Screen.Home && state.contactCount > 0u) {
-            coreAppViewModel.navigateTo("contacts")
+            coreAppViewModel.navigateToTabById("contacts")
         }
     }
 
@@ -727,7 +727,7 @@ fun MainScreen(
                             is UiState.Ready -> {
                                 ReadyScreen(
                                     coreAppViewModel = coreAppViewModel,
-                                    onSettings = { coreAppViewModel.navigateTo("Settings") },
+                                    onSettings = { coreAppViewModel.handleAction(UserAction.ActionPressed("open_settings")) },
                                     syncState = syncState,
                                     isOnline = isOnline,
                                     lastSyncTime = lastSyncTime,
