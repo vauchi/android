@@ -190,6 +190,15 @@ class VauchiHceService : HostApduService() {
         ctx: TransceiveContext,
         commandApdu: ByteArray,
     ): ByteArray {
+        // Strip the ISO 7816-4 APDU header — the reader wraps the core
+        // payload as `CLA INS P1 P2 Lc <data> [Le]`, but core's
+        // `parse_exchange_payload` expects the bare magic-prefixed payload.
+        // Passing the raw APDU made the magic check see `00 E0 00 00…`
+        // instead of `VNFC` → "Invalid NFC payload format" (the diagnostic
+        // HCE already extracted; this one did not —
+        // 2026-06-03-nfc-phase2-apdu-chunking).
+        val payload = extractApduData(commandApdu)
+        if (payload.isEmpty()) return SW_WRONG_DATA
         val deferred = CompletableDeferred<ByteArray>()
         ctx.pendingResponse = deferred
 
@@ -199,7 +208,7 @@ class VauchiHceService : HostApduService() {
         // deadlock against runBlocking.
         workerScope.launch {
             try {
-                ctx.onApduReceived(commandApdu)
+                ctx.onApduReceived(payload)
             } catch (e: Exception) {
                 Log.e(TAG, "HCE event apply failed: ${e.javaClass.simpleName}")
                 deferred.completeExceptionally(e)
@@ -234,5 +243,25 @@ class VauchiHceService : HostApduService() {
         val aidLen = apdu[4].toInt() and 0xFF
         if (apdu.size < 5 + aidLen) return false
         return apdu.sliceArray(5 until 5 + aidLen).contentEquals(VAUCHI_AID)
+    }
+
+    /**
+     * Extract the command-data field from an ISO 7816-4 APDU
+     * (`CLA INS P1 P2 Lc <data> [Le]`), returning the bare payload core's
+     * parser expects. Handles short (1-byte Lc at index 4) and extended
+     * (Lc == 0 then 2-byte length at indices 5..6) encodings; returns empty
+     * on a malformed/short frame. Mirrors `NfcDiagnosticHceService.extractData`.
+     */
+    private fun extractApduData(apdu: ByteArray): ByteArray {
+        if (apdu.size < 5) return ByteArray(0)
+        val lc = apdu[4].toInt() and 0xFF
+        return if (lc != 0) {
+            if (apdu.size < 5 + lc) ByteArray(0) else apdu.sliceArray(5 until 5 + lc)
+        } else if (apdu.size >= 7) {
+            val extLen = ((apdu[5].toInt() and 0xFF) shl 8) or (apdu[6].toInt() and 0xFF)
+            if (apdu.size < 7 + extLen) ByteArray(0) else apdu.sliceArray(7 until 7 + extLen)
+        } else {
+            ByteArray(0)
+        }
     }
 }
