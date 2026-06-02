@@ -615,14 +615,18 @@ fun MainScreen(
     // Screens that own their own back gesture (NfcTap, Ble, etc.)
     // compose their own `BackHandler` lower in the tree; Compose
     // dispatches to the inner-most handler so those still win.
-    // System BACK: core owns nav_history + engine-internal step history,
-    // so gate on can_go_back() (CoreScreenIdMap rework — no frontend
-    // screen-id map). At a non-Home native screen with nothing to pop,
-    // fall back to My Card.
+    // System BACK. Deep core screens pop via can_go_back()/navigateBack().
+    // Core marks the bottom-nav tab roots (my_info, contacts, exchange,
+    // groups, more) as back-stoppers, so can_go_back() is false there — but
+    // a *secondary* tab root must still go Home (My Card), not exit the app
+    // (the regression the old `coreVariantForBack != null` gate prevented).
+    // `currentTab` is core's tab id for the active screen; only the home tab
+    // (and the boot states) leave BACK to the OS.
     val coreCanGoBack = uiState is UiState.Ready && coreAppViewModel.canGoBack()
+    val onSecondaryTab = currentTab != null && currentTab != "my_info"
     val canGoBack =
         uiState is UiState.Ready &&
-            (coreCanGoBack || currentScreen != Screen.Home)
+            (coreCanGoBack || onSecondaryTab || currentScreen != Screen.Home)
     androidx.activity.compose.BackHandler(enabled = canGoBack) {
         if (coreCanGoBack) {
             coreAppViewModel.navigateBack()
