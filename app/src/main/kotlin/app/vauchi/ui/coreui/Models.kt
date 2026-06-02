@@ -1119,6 +1119,11 @@ enum class InputType {
 
 @Serializable
 enum class VisibilityMode {
+    // No visibility column — display fields read-only. Mirrors core's
+    // `VisibilityMode::ReadOnly` (vauchi-app/src/ui/component/mod.rs).
+    // Missing here caused a kotlinx SerializationException on any screen
+    // emitting ReadOnly, wedging the UI (group-selection Skip/Continue).
+    ReadOnly,
     ShowHide,
     PerGroup,
 }
