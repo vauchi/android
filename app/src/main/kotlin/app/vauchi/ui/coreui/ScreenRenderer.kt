@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -24,13 +22,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.components.ActionListComponent
-import app.vauchi.util.LocalizationManager
 import app.vauchi.ui.coreui.components.AvatarPreviewComponent
 import app.vauchi.ui.coreui.components.BannerComponent
 import app.vauchi.ui.coreui.components.ConfirmationDialogComponent
@@ -53,6 +52,7 @@ import app.vauchi.ui.coreui.components.TextComponent
 import app.vauchi.ui.coreui.components.TextInputComponent
 import app.vauchi.ui.coreui.components.ToastOverlay
 import app.vauchi.ui.coreui.components.ToggleListComponent
+import app.vauchi.util.LocalizationManager
 
 /**
  * Generic screen renderer that maps a core [ScreenModel] to Compose UI.
@@ -109,7 +109,16 @@ fun ScreenRenderer(
                 modifier =
                     Modifier
                         .weight(1f)
-                        .verticalScroll(rememberScrollState()),
+                        .then(
+                            // Fixed-layout screens (e.g. the QR exchange)
+                            // must not scroll or reflow — a moving QR breaks
+                            // the peer camera's lock. See ScreenLayout.
+                            if (screen.layout == ScreenLayout.Fixed) {
+                                Modifier
+                            } else {
+                                Modifier.verticalScroll(rememberScrollState())
+                            },
+                        ),
             ) {
                 // Progress indicator
                 screen.progress?.let { progress ->
@@ -230,6 +239,7 @@ private fun componentSlotKey(
         is Component.Text -> "text:${component.id}"
         is Component.TextInput -> "text_input:${component.id}"
         is Component.ToggleList -> "toggle:${component.id}"
+        is Component.Row -> "row:${component.id}"
         Component.Divider -> "divider@$index"
         Component.Unknown -> "unknown@$index"
     }
@@ -335,15 +345,36 @@ fun ComponentRenderer(
         is Component.ActionList -> {
             ActionListComponent(
                 componentId = component.id,
-                items = component.items.map {
-                    it.copy(
-                        label = localizer.resolveCoreLabel(it.label),
-                        detail = it.detail?.let(localizer::resolveCoreLabel),
-                    )
-                },
+                items =
+                    component.items.map {
+                        it.copy(
+                            label = localizer.resolveCoreLabel(it.label),
+                            detail = it.detail?.let(localizer::resolveCoreLabel),
+                        )
+                    },
                 onAction = onAction,
                 modifier = modifier,
             )
+        }
+
+        is Component.Row -> {
+            // Horizontal container: the first child (e.g. the camera
+            // preview) flexes to fill; later children (e.g. the action
+            // buttons) take their natural width and shrink the preview.
+            androidx.compose.foundation.layout.Row(
+                modifier = modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Weight every child so each is width-bounded — a child
+                // that fills its max width internally (e.g. ActionList)
+                // then fills only its weighted slice instead of
+                // overflowing and overlapping the preview.
+                component.items.forEach { child ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        ComponentRenderer(component = child, onAction = onAction)
+                    }
+                }
+            }
         }
 
         is Component.SectionedActionList -> {

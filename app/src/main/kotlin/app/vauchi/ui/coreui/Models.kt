@@ -122,6 +122,7 @@ data class ScreenModel(
     val actions: List<ScreenAction>,
     val progress: Progress? = null,
     val tokens: DesignTokens = DesignTokens.DEFAULT,
+    val layout: ScreenLayout = ScreenLayout.Scroll,
 )
 
 @Serializable
@@ -144,6 +145,17 @@ enum class ActionStyle {
     Primary,
     Secondary,
     Destructive,
+}
+
+/**
+ * Whether the renderer scrolls the screen content or renders a fixed,
+ * non-scrolling layout sized to the viewport. Absent on the wire when
+ * `Scroll` (the default), so the field defaults to `Scroll`.
+ */
+@Serializable
+enum class ScreenLayout {
+    Scroll,
+    Fixed,
 }
 
 // ── Component ───────────────────────────────────────────────────────
@@ -226,6 +238,12 @@ sealed class Component {
     data class ActionList(
         val id: String,
         val items: kotlin.collections.List<ActionListItem>,
+    ) : Component()
+
+    /** Horizontal container — lays its children out in a single row. */
+    data class Row(
+        val id: String,
+        val items: kotlin.collections.List<Component>,
     ) : Component()
 
     data class StatusIndicator(
@@ -439,6 +457,12 @@ private data class SettingsGroupContent(
 private data class ActionListContent(
     val id: String,
     val items: List<ActionListItem>,
+)
+
+@Serializable
+private data class RowContent(
+    val id: String,
+    val items: List<Component>,
 )
 
 @Serializable
@@ -663,6 +687,12 @@ internal object ComponentSerializer : KSerializer<Component> {
                         val c: ActionListContent =
                             jsonDecoder.json.decodeFromJsonElement(element["ActionList"]!!)
                         Component.ActionList(id = c.id, items = c.items)
+                    }
+
+                    "Row" in element -> {
+                        val c: RowContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["Row"]!!)
+                        Component.Row(id = c.id, items = c.items)
                     }
 
                     "StatusIndicator" in element -> {
@@ -922,6 +952,12 @@ internal object ComponentSerializer : KSerializer<Component> {
                 val content = ActionListContent(id = value.id, items = value.items)
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("ActionList" to inner)))
+            }
+
+            is Component.Row -> {
+                val content = RowContent(id = value.id, items = value.items)
+                val inner = jsonEncoder.json.encodeToJsonElement(content)
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("Row" to inner)))
             }
 
             is Component.StatusIndicator -> {
