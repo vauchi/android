@@ -490,6 +490,28 @@ class ModelsTest {
         assertEquals("char-uuid", (result as CommandDTO.BleWriteCharacteristic).uuid)
     }
 
+    @Test
+    fun `CommandDTO SetScreenBrightness deserialization with value`() {
+        val input = """{"SetScreenBrightness": {"level": 0.65}}"""
+        val result = json.decodeFromString(CommandDTOSerializer, input)
+        assertTrue(result is CommandDTO.SetScreenBrightness)
+        assertEquals(0.65f, (result as CommandDTO.SetScreenBrightness).level)
+    }
+
+    @Test
+    fun `CommandDTO SetScreenBrightness deserialization with null level`() {
+        // Core emits SetScreenBrightness { level: None } -> {"level": null} to
+        // restore automatic brightness (e.g. when leaving the exchange screen).
+        // Regression: the null guard checked isString instead of JsonNull, so
+        // Float.parseFloat("null") threw NumberFormatException and aborted the
+        // whole action handler — wedging every Android exchange at "Waiting for
+        // peer". Device-tested 2026-06-03 (Pixel 3a / Samsung S7).
+        val input = """{"SetScreenBrightness": {"level": null}}"""
+        val result = json.decodeFromString(CommandDTOSerializer, input)
+        assertTrue(result is CommandDTO.SetScreenBrightness)
+        assertEquals(null, (result as CommandDTO.SetScreenBrightness).level)
+    }
+
     // ── Full round-trip ─────────────────────────────────────────────
 
     @Test

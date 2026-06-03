@@ -2576,7 +2576,7 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                         val obj = element["SetScreenBrightness"] as JsonObject
                         CommandDTO.SetScreenBrightness(
                             level =
-                                obj["level"]?.jsonPrimitive?.takeIf { !it.isString }?.float,
+                                obj["level"]?.takeIf { it !is JsonNull }?.jsonPrimitive?.float,
                         )
                     }
 
