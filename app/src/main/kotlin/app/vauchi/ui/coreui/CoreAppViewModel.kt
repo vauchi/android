@@ -184,6 +184,43 @@ class CoreAppViewModel(
     val useFrontCamera: StateFlow<Boolean> = _useFrontCamera.asStateFlow()
 
     /**
+     * TapHoverShake accelerometer-capture requests. `true` asks the Activity to
+     * start streaming `Sensor.TYPE_ACCELEROMETER` readings (core emitted
+     * `Command.AccelerometerStart` on the shake stage); `false` stops them
+     * (`AccelerometerStop` / teardown). `null` means "no pending request". The
+     * ViewModel has no `Context`, so the Activity owns the sensor (the same
+     * split as the NFC reader-mode request).
+     */
+    private val _accelerometerActiveRequest = MutableStateFlow<Boolean?>(null)
+    val accelerometerActiveRequest: StateFlow<Boolean?> =
+        _accelerometerActiveRequest.asStateFlow()
+
+    fun consumeAccelerometerRequest() {
+        _accelerometerActiveRequest.value = null
+    }
+
+    /**
+     * Forward one accelerometer reading captured by the Activity back to core
+     * as a hardware event. Core accumulates the local shake envelope and
+     * cross-correlates the peer's (`MultiStageSession`).
+     */
+    fun onAccelerometerData(
+        timestampMs: Long,
+        xMilliG: Int,
+        yMilliG: Int,
+        zMilliG: Int,
+    ) {
+        sendHardwareEvent(
+            MobileEvent.AccelerometerData(
+                timestampMs = timestampMs.toULong(),
+                xMilliG = xMilliG,
+                yMilliG = yMilliG,
+                zMilliG = zMilliG,
+            ),
+        )
+    }
+
+    /**
      * Called by the Activity/Composable when the user picks or captures an image.
      * Sends the image bytes back to core as an ImageReceived hardware event.
      */
@@ -608,6 +645,17 @@ class CoreAppViewModel(
                     // [useFrontCamera] via `LocalUseFrontCamera` and
                     // re-binds CameraX when the value changes.
                     _useFrontCamera.value = cmd.useFront
+                }
+
+                is CommandDTO.AccelerometerStart -> {
+                    // Ask the Activity to start streaming accelerometer readings
+                    // for the shake stage; it owns the SensorManager and routes
+                    // each reading back via [onAccelerometerData].
+                    _accelerometerActiveRequest.value = true
+                }
+
+                is CommandDTO.AccelerometerStop -> {
+                    _accelerometerActiveRequest.value = false
                 }
 
                 else -> {

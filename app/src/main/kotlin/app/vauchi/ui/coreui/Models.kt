@@ -2084,6 +2084,10 @@ sealed class CommandDTO {
 
     data object AudioStop : CommandDTO()
 
+    data object AccelerometerStart : CommandDTO()
+
+    data object AccelerometerStop : CommandDTO()
+
     data object ImagePickFromLibrary : CommandDTO()
 
     data object ImageCaptureFromCamera : CommandDTO()
@@ -2491,6 +2495,8 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                     "BleDisconnect" -> CommandDTO.BleDisconnect
                     "NfcDeactivate" -> CommandDTO.NfcDeactivate
                     "AudioStop" -> CommandDTO.AudioStop
+                    "AccelerometerStart" -> CommandDTO.AccelerometerStart
+                    "AccelerometerStop" -> CommandDTO.AccelerometerStop
                     "ImagePickFromLibrary" -> CommandDTO.ImagePickFromLibrary
                     "ImageCaptureFromCamera" -> CommandDTO.ImageCaptureFromCamera
                     "ImagePickFromFile" -> CommandDTO.ImagePickFromFile

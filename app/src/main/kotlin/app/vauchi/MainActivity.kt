@@ -48,6 +48,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.vauchi.proximity.AccelerometerProximityService
 import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.KeyInvalidatedRecoveryScreen
 import app.vauchi.ui.MainViewModel
@@ -385,6 +386,35 @@ fun MainScreen(
                 Unit
             }
         }
+    }
+
+    // TapHoverShake shake co-location: start/stop accelerometer streaming on
+    // core's `Command::AccelerometerStart`/`Stop`. The service samples
+    // `TYPE_ACCELEROMETER` and routes each reading back through the ViewModel as
+    // `Event::AccelerometerData`; core builds + correlates the envelope.
+    val accelerometerRequest by coreAppViewModel.accelerometerActiveRequest.collectAsState()
+    LaunchedEffect(accelerometerRequest) {
+        val service = AccelerometerProximityService.getInstance(context)
+        when (accelerometerRequest) {
+            true -> {
+                service.start { timestampMs, xMilliG, yMilliG, zMilliG ->
+                    coreAppViewModel.onAccelerometerData(timestampMs, xMilliG, yMilliG, zMilliG)
+                }
+                coreAppViewModel.consumeAccelerometerRequest()
+            }
+
+            false -> {
+                service.stop()
+                coreAppViewModel.consumeAccelerometerRequest()
+            }
+
+            null -> Unit
+        }
+    }
+    // Defensive: never leave the sensor registered if the screen is torn down
+    // without an explicit AccelerometerStop (e.g. process death of the exchange).
+    DisposableEffect(Unit) {
+        onDispose { AccelerometerProximityService.getInstance(context).stop() }
     }
 
     // Phase 2c screen-presentation: dispatch core's
