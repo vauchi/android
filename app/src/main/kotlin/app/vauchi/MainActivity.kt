@@ -56,7 +56,6 @@ import app.vauchi.ui.MultiStageExchangeScreen
 import app.vauchi.ui.NfcTapExchangeScreen
 import app.vauchi.ui.QrDiagnosticScreen
 import app.vauchi.ui.RecoveryScreen
-import app.vauchi.ui.SyncState
 import app.vauchi.ui.UiState
 import app.vauchi.ui.coreui.BrightnessRequest
 import app.vauchi.ui.coreui.CoreAppViewModel
@@ -71,13 +70,7 @@ import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import uniffi.vauchi_platform.MobileSyncIndicatorState
-import uniffi.vauchi_platform.MobileSyncStatusKind
 import uniffi.vauchi_platform.coreVersion
-import uniffi.vauchi_platform.syncStatusView
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 class MainActivity : FragmentActivity() {
     /** Mutable state for deep link URI, observed by Compose. */
@@ -259,9 +252,7 @@ fun MainScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
-    val syncState by viewModel.syncState.collectAsState()
     val isOnline by viewModel.isOnline.collectAsState()
-    val lastSyncTime by viewModel.lastSyncTime.collectAsState()
     var currentScreen by remember { mutableStateOf(Screen.Home) }
     // selectedContactId / selectedLabelId removed — contact-detail and
     // group-detail navigation are resolved in core (route_result emits
@@ -775,10 +766,7 @@ fun MainScreen(
                                 ReadyScreen(
                                     coreAppViewModel = coreAppViewModel,
                                     onSettings = { coreAppViewModel.handleAction(UserAction.ActionPressed("open_settings")) },
-                                    syncState = syncState,
                                     isOnline = isOnline,
-                                    lastSyncTime = lastSyncTime,
-                                    onSync = { viewModel.sync() },
                                 )
                             }
 
@@ -981,10 +969,7 @@ fun LoadingScreen() {
 fun ReadyScreen(
     coreAppViewModel: CoreAppViewModel,
     onSettings: () -> Unit,
-    syncState: SyncState = SyncState.Idle,
     isOnline: Boolean = true,
-    lastSyncTime: Instant? = null,
-    onSync: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
@@ -993,13 +978,12 @@ fun ReadyScreen(
             TopAppBar(
                 title = { Text("Vauchi") },
                 actions = {
-                    SyncStatusChip(
-                        syncState = syncState,
-                        isOnline = isOnline,
-                        lastSyncTime = lastSyncTime,
-                        onSync = onSync,
-                        modifier = Modifier.testTag("home.sync"),
-                    )
+                    // Sync status + trigger is core-driven: every top-level
+                    // screen carries a `Component.Indicator(id="sync")` injected
+                    // by core's `apply_sync_chrome_overlay` (tap → `sync_now`).
+                    // The old app-bar `SyncStatusChip` duplicated it, so it was
+                    // removed (2026-06-05-screen-ux-declutter). Humble UI: core
+                    // owns sync presentation; the shell keeps only the gear.
                     IconButton(onClick = onSettings, modifier = Modifier.testTag("home.settings")) {
                         Icon(Icons.Default.Settings, contentDescription = localizationManager.t("a11y.settings_icon"))
                     }
@@ -1198,88 +1182,6 @@ fun OfflineBanner() {
     }
 }
 
-@Composable
-fun SyncStatusChip(
-    syncState: SyncState,
-    isOnline: Boolean,
-    lastSyncTime: Instant?,
-    onSync: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
-    // Offline is a network/platform signal the frontend owns (ADR-031); the
-    // sync-domain state → label/color mapping belongs to core (ADR-021/043).
-    // Collapse our richer SyncState onto core's indicator enum and render
-    // core's sync_status_view(label_key, kind) — no frontend status table.
-    val (text, color) =
-        when {
-            !isOnline -> {
-                localizationManager.t("sync.status_offline") to MaterialTheme.colorScheme.outline
-            }
-
-            else -> {
-                val indicatorState =
-                    when {
-                        syncState is SyncState.Syncing -> {
-                            MobileSyncIndicatorState.SYNCING
-                        }
-
-                        syncState is SyncState.Error -> {
-                            MobileSyncIndicatorState.ERROR
-                        }
-
-                        syncState is SyncState.Success || lastSyncTime != null -> {
-                            MobileSyncIndicatorState.SYNCED
-                        }
-
-                        else -> {
-                            MobileSyncIndicatorState.NEVER_SYNCED
-                        }
-                    }
-                val view = syncStatusView(indicatorState)
-                val label =
-                    if (view.labelKey == "sync.synced_at") {
-                        val timeText =
-                            lastSyncTime?.let {
-                                DateTimeFormatter
-                                    .ofPattern("HH:mm")
-                                    .withZone(ZoneId.systemDefault())
-                                    .format(it)
-                            } ?: ""
-                        localizationManager.t(view.labelKey).replace("{time}", timeText)
-                    } else {
-                        localizationManager.t(view.labelKey)
-                    }
-                val statusColor =
-                    when (view.kind) {
-                        MobileSyncStatusKind.ACTIVE -> MaterialTheme.colorScheme.primary
-                        MobileSyncStatusKind.ERROR -> MaterialTheme.colorScheme.error
-                        MobileSyncStatusKind.NEUTRAL -> MaterialTheme.colorScheme.outline
-                    }
-                label to statusColor
-            }
-        }
-
-    TextButton(
-        onClick = { if (isOnline && syncState !is SyncState.Syncing) onSync() },
-        enabled = isOnline && syncState !is SyncState.Syncing,
-        modifier = modifier,
-    ) {
-        if (syncState is SyncState.Syncing) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-        }
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = color,
-        )
-    }
-}
 
 // Restore Identity Dialog
 @Composable
