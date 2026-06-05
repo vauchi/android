@@ -408,7 +408,9 @@ fun MainScreen(
                 coreAppViewModel.consumeAccelerometerRequest()
             }
 
-            null -> Unit
+            null -> {
+                Unit
+            }
         }
     }
     // Defensive: never leave the sensor registered if the screen is torn down
@@ -595,7 +597,7 @@ fun MainScreen(
     // tab id is core's published `screenId` (when it's one of the
     // top-level set), since core owns the navigation state of record
     // post-collapse. Native screens still in the local enum (Home,
-    // ExchangeModePicker, More, etc.) keep their selection by
+    // MultiStageExchange, NfcExchange, etc.) keep their selection by
     // delegating through `coreScreen?.screenId` after navigation has
     // landed on a core screen, OR by leaving `activeTabId` null when
     // currently on a non-top-level native screen — both behaviours
@@ -636,7 +638,7 @@ fun MainScreen(
     // routed through `CoreScreenView`): forward to core's
     // `navigateBack()` to pop the engine's nav history.
     //
-    // Path B native screens (`Screen.ExchangeModePicker` and friends):
+    // Path B native screens (`Screen.MultiStageExchange` and friends):
     // route back to My Card. Setting `currentScreen` alone isn't
     // enough — core may be on `contact_list`, which would make Path A
     // win on the next recomposition; nudging the engine to `MyInfo`
@@ -687,8 +689,9 @@ fun MainScreen(
                             // directly to `tab.id` — no engine-id fold needed.
                             selected = currentTab == tab.id,
                             onClick = {
-                                // Native top-level cases (my_info -> Home,
-                                // exchange -> ExchangeModePicker) still need
+                                // Native top-level cases (my_info -> Home;
+                                // exchange now routes through core's
+                                // `exchange_mode_selection`) still need
                                 // the local enum until their per-pair
                                 // retirement, **and** also need to nudge
                                 // core away from a deep screen — without the
@@ -721,8 +724,8 @@ fun MainScreen(
             // it has navigated to one of the 7 Pure Humble UI screens
             // covered by `coreScreenIdToVariant`. The local `Screen`
             // enum below handles only the still-native screens
-            // (ExchangeModePicker, hardware-aware MultiStageExchange,
-            // NFC/BLE, Recovery, QrDiagnostic) and the pre-Ready boot
+            // (hardware-aware MultiStageExchange, NFC, Recovery,
+            // QrDiagnostic) and the pre-Ready boot
             // states (Home). Theme + language pickers retired Phase
             // 2a/A3a (`2026-05-01-android-humble-ui-deep-retirement`)
             // — they now live as `Component::Dropdown`s inside the
