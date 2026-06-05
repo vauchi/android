@@ -13,20 +13,29 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.Cable
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContactPage
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VpnKey
@@ -140,22 +149,59 @@ private fun InfoItemRow(item: InfoItem) {
 internal fun resolveIcon(name: String): ImageVector =
     when (name.lowercase()) {
         "shield" -> Icons.Default.Shield
+
         "lock" -> Icons.Default.Lock
+
         "security" -> Icons.Default.Security
+
         "info" -> Icons.Default.Info
+
         "check", "check_circle" -> Icons.Default.CheckCircle
+
         "warning" -> Icons.Default.Warning
+
         "visibility_off" -> Icons.Default.VisibilityOff
+
         "refresh" -> Icons.Default.Refresh
+
         "people" -> Icons.Default.People
+
         "group" -> Icons.Default.Group
+
         "card" -> Icons.Default.ContactPage
+
         "eye" -> Icons.Default.Visibility
+
         "server" -> Icons.Default.Dns
+
         "key" -> Icons.Default.VpnKey
+
         "backup" -> Icons.Default.Backup
+
         "devices" -> Icons.Default.Devices
+
         "share" -> Icons.Default.Share
+
         "edit" -> Icons.Default.Edit
+
+        // Exchange mode glyphs (mode-selection list).
+        "qrcode" -> Icons.Default.QrCodeScanner
+
+        "nfc" -> Icons.Default.Nfc
+
+        "bump" -> Icons.Default.Sensors
+
+        "shake" -> Icons.Default.Vibration
+
+        "sparkles" -> Icons.Default.AutoAwesome
+
+        "tap" -> Icons.Default.TouchApp
+
+        "gesture" -> Icons.Default.Gesture
+
+        "link" -> Icons.Default.Link
+
+        "cable" -> Icons.Default.Cable
+
         else -> Icons.Default.Info
     }

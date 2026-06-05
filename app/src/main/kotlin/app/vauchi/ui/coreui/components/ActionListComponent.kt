@@ -65,18 +65,21 @@ fun ActionListComponent(
                     Spacer(modifier = Modifier.width(12.dp))
                 }
 
-                Text(
-                    text = item.label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f),
-                )
-
-                item.detail?.let {
+                // Label on top, optional detail as a secondary subtitle line —
+                // gives instruction-style details (e.g. exchange-mode "what you
+                // do" copy) room to read instead of cramming them on the right.
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = item.label,
+                        style = MaterialTheme.typography.bodyLarge,
                     )
+                    item.detail?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
