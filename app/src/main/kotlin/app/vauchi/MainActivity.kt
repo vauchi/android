@@ -52,6 +52,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.vauchi.ble.BleCentral
+import app.vauchi.ble.BleCommand
+import app.vauchi.ble.BlePeripheral
 import app.vauchi.proximity.AccelerometerProximityService
 import app.vauchi.proximity.AudioProximityService
 import app.vauchi.ui.AppPasswordScreen
@@ -494,7 +497,14 @@ fun MainScreen(
     DisposableEffect(Unit) {
         onDispose {
             (context as? Activity)?.let { act ->
-                NfcAdapter.getDefaultAdapter(act)?.disableReaderMode(act)
+                // disableReaderMode throws IllegalStateException when the
+                // Activity is already destroyed (rapid relaunch / config
+                // change) — guard so teardown never crashes the app.
+                try {
+                    NfcAdapter.getDefaultAdapter(act)?.disableReaderMode(act)
+                } catch (e: IllegalStateException) {
+                    Log.w("MainActivity", "NFC disableReaderMode on dispose: ${e.javaClass.simpleName}")
+                }
             }
         }
     }
@@ -557,6 +567,37 @@ fun MainScreen(
     }
     DisposableEffect(Unit) {
         onDispose { AudioProximityService.getInstance(context).stop() }
+    }
+
+    // BLE exchange (Bump / Shake / Magic) - slice S1: discovery. The Activity
+    // owns the radio; core's BLE commands arrive over a buffered SharedFlow and
+    // dispatch to BleCentral (scan) / BlePeripheral (advertise). Connect + GATT
+    // land in S2/S3. See 2026-06-06-android-ble-execution.
+    val bleCentral = remember { BleCentral(context) }
+    val blePeripheral = remember { BlePeripheral(context) }
+    LaunchedEffect(Unit) {
+        coreAppViewModel.bleCommands.collect { cmd ->
+            when (cmd) {
+                is BleCommand.StartScan -> {
+                    bleCentral
+                        .startScanning(cmd.serviceUuid) { id, rssi, advData ->
+                            coreAppViewModel.onBleDeviceDiscovered(id, rssi, advData)
+                        }?.let { Log.w("MainActivity", "BLE scan: $it") }
+                }
+
+                is BleCommand.StartAdvertise -> {
+                    blePeripheral
+                        .startAdvertising(cmd.serviceUuid, cmd.payload)
+                        ?.let { Log.w("MainActivity", "BLE advertise: $it") }
+                }
+            }
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            bleCentral.stopScanning()
+            blePeripheral.stopAdvertising()
+        }
     }
 
     // Deep link consent gate (SP-9). The state machine + URL parser
@@ -1247,7 +1288,6 @@ fun OfflineBanner() {
         )
     }
 }
-
 
 // Restore Identity Dialog
 @Composable

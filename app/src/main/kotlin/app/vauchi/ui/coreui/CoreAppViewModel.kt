@@ -8,6 +8,7 @@ import android.nfc.Tag
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.vauchi.ble.BleCommand
 import app.vauchi.exchange.ExchangeModePermissions
 import app.vauchi.nfc.NfcReaderPort
 import app.vauchi.nfc.NfcReaderService
@@ -15,8 +16,11 @@ import app.vauchi.nfc.NfcResponderPort
 import app.vauchi.nfc.VauchiHceResponder
 import app.vauchi.nfc.dispatchNfcCommand
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -244,6 +248,26 @@ class CoreAppViewModel(
 
     fun consumeAudioStopRequest() {
         _audioStopRequest.value = false
+    }
+
+    /**
+     * BLE work items (Bump / Shake / Magic). Core emits BLE `Command`s; the
+     * Activity owns the radio (BluetoothManager needs a Context) and dispatches
+     * to BleCentral / BlePeripheral. A buffered SharedFlow (not a latest-only
+     * StateFlow) preserves the rapid command sequence of a handshake.
+     */
+    private val _bleCommands = MutableSharedFlow<BleCommand>(extraBufferCapacity = 64)
+    val bleCommands: SharedFlow<BleCommand> = _bleCommands.asSharedFlow()
+
+    /** A peripheral advertising the vauchi service was discovered by the scan. */
+    fun onBleDeviceDiscovered(
+        id: String,
+        rssi: Short,
+        advData: ByteArray,
+    ) {
+        sendHardwareEvent(
+            MobileEvent.BleDeviceDiscovered(id = id, rssi = rssi, advData = advData),
+        )
     }
 
     /**
@@ -740,6 +764,19 @@ class CoreAppViewModel(
 
                 is CommandDTO.AudioStop -> {
                     _audioStopRequest.value = true
+                }
+
+                is CommandDTO.BleStartScanning -> {
+                    _bleCommands.tryEmit(BleCommand.StartScan(cmd.serviceUuid))
+                }
+
+                is CommandDTO.BleStartAdvertising -> {
+                    _bleCommands.tryEmit(
+                        BleCommand.StartAdvertise(
+                            serviceUuid = cmd.serviceUuid,
+                            payload = cmd.payload.map { it.toByte() }.toByteArray(),
+                        ),
+                    )
                 }
 
                 else -> {
