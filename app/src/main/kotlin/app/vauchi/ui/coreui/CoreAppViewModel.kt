@@ -813,6 +813,19 @@ class CoreAppViewModel(
                     _bleCommands.tryEmit(BleCommand.Disconnect)
                 }
 
+                is CommandDTO.BleWriteCharacteristic -> {
+                    _bleCommands.tryEmit(
+                        BleCommand.Write(
+                            uuid = cmd.uuid,
+                            data = cmd.data.map { it.toByte() }.toByteArray(),
+                        ),
+                    )
+                }
+
+                is CommandDTO.BleReadCharacteristic -> {
+                    _bleCommands.tryEmit(BleCommand.Read(cmd.uuid))
+                }
+
                 else -> {
                     // NFC initiator command dispatch (T1.1). When core emits
                     // NfcActivate/NfcSendApdu/NfcDeactivate, relay to the

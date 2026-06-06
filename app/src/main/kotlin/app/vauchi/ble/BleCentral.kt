@@ -49,14 +49,13 @@ interface BleCentralListener {
 }
 
 /**
- * BLE central (initiator) — scanning (S1) + connect/GATT client (S2).
+ * BLE central (initiator) — scanning (S1), connect/GATT client (S2), and
+ * characteristic write/read (S3).
  *
- * Executes `BleStartScanning` (scan, filtered on the vauchi service UUID) and
- * `BleConnect` (GATT connect → discover services → enable notifications →
- * `BleConnected`). Characteristic write/read data flow lands in S3. The caller
- * (Activity) owns lifecycle + the runtime Bluetooth permissions.
- *
- * See `_private/docs/problems/2026-06-06-android-ble-execution/`.
+ * GATT allows only one outstanding operation at a time, so writes and reads are
+ * serialized through [opQueue] (each drained when the matching callback fires).
+ * The caller (Activity) owns lifecycle + the runtime Bluetooth permissions. See
+ * `_private/docs/problems/2026-06-06-android-ble-execution/`.
  */
 @SuppressLint("MissingPermission")
 class BleCentral(
@@ -72,14 +71,31 @@ class BleCentral(
             ?.takeIf { it.isEnabled }
 
     private var scanCallback: ScanCallback? = null
+    private val discovered = mutableSetOf<String>()
     private var gatt: BluetoothGatt? = null
     private val notifyQueue = ArrayDeque<BluetoothGattCharacteristic>()
+
+    private sealed interface GattOp {
+        data class Write(
+            val uuid: String,
+            val data: ByteArray,
+        ) : GattOp
+
+        data class Read(
+            val uuid: String,
+        ) : GattOp
+    }
+
+    private val opLock = Any()
+    private val opQueue = ArrayDeque<GattOp>()
+    private var opInFlight = false
 
     // ── Scanning (S1) ────────────────────────────────────────────────────────
 
     fun startScanning(serviceUuid: String): String? {
         val s = scanner ?: return "BLE scanner unavailable (adapter off?)"
         stopScanning()
+        discovered.clear()
         val filter =
             ScanFilter
                 .Builder()
@@ -93,8 +109,14 @@ class BleCentral(
                     callbackType: Int,
                     result: ScanResult,
                 ) {
+                    val address = result.device.address
+                    // Report each peer once. A continuous low-latency scan
+                    // reports the same device repeatedly; without this, core
+                    // emits a BleConnect per result and churns the connection
+                    // (seen mid-transfer as multiple GATT conn_ids).
+                    if (!discovered.add(address)) return
                     val advData = result.scanRecord?.bytes ?: ByteArray(0)
-                    listener.onDeviceDiscovered(result.device.address, result.rssi.toShort(), advData)
+                    listener.onDeviceDiscovered(address, result.rssi.toShort(), advData)
                 }
 
                 override fun onScanFailed(errorCode: Int) {
@@ -123,12 +145,6 @@ class BleCentral(
 
     // ── Connect / GATT client (S2) ───────────────────────────────────────────
 
-    /**
-     * Connect to [deviceId] (a BLE MAC address from a prior discovery). Stops
-     * scanning first, then connects, requests a larger MTU, discovers services,
-     * and enables notifications on every NOTIFY characteristic before reporting
-     * [BleCentralListener.onConnected].
-     */
     fun connect(deviceId: String): String? {
         val adapter = adapter() ?: return "BLE adapter off"
         stopScanning()
@@ -140,7 +156,7 @@ class BleCentral(
                 return "Invalid device id: $deviceId"
             }
         return try {
-            gatt = device.connectGatt(context, false, gattCallback, BluetoothDevice_TRANSPORT_LE)
+            gatt = device.connectGatt(context, false, gattCallback, TRANSPORT_LE)
             null
         } catch (e: SecurityException) {
             "Missing BLUETOOTH_CONNECT permission"
@@ -151,6 +167,10 @@ class BleCentral(
         val g = gatt ?: return
         gatt = null
         notifyQueue.clear()
+        synchronized(opLock) {
+            opQueue.clear()
+            opInFlight = false
+        }
         try {
             g.disconnect()
             g.close()
@@ -158,6 +178,74 @@ class BleCentral(
             Log.w(TAG, "disconnect: ${e.javaClass.simpleName}")
         }
     }
+
+    // ── Characteristic write / read (S3) ─────────────────────────────────────
+
+    /** Queue a GATT write to [uuid] (initiator → responder). */
+    fun writeCharacteristic(
+        uuid: String,
+        data: ByteArray,
+    ) {
+        enqueue(GattOp.Write(uuid, data))
+    }
+
+    /** Queue a GATT read of [uuid]; result arrives via onCharacteristicRead. */
+    fun readCharacteristic(uuid: String) {
+        enqueue(GattOp.Read(uuid))
+    }
+
+    private fun enqueue(op: GattOp) {
+        synchronized(opLock) { opQueue.add(op) }
+        processNextOp()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun processNextOp() {
+        val g = gatt ?: return
+        val op =
+            synchronized(opLock) {
+                if (opInFlight) return
+                val next = opQueue.poll() ?: return
+                opInFlight = true
+                next
+            }
+        val service = g.getService(BleUuids.uuid(BleUuids.SERVICE))
+        val ch = service?.getCharacteristic(BleUuids.uuid(opUuid(op)))
+        if (ch == null) {
+            Log.w(TAG, "op on unknown characteristic ${opUuid(op)}")
+            finishOp()
+            return
+        }
+        val ok =
+            when (op) {
+                is GattOp.Write -> {
+                    ch.writeType =
+                        if (op.uuid in BleUuids.writeWithResponse) {
+                            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                        } else {
+                            BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+                        }
+                    ch.value = op.data
+                    g.writeCharacteristic(ch)
+                }
+
+                is GattOp.Read -> {
+                    g.readCharacteristic(ch)
+                }
+            }
+        if (!ok) finishOp()
+    }
+
+    private fun finishOp() {
+        synchronized(opLock) { opInFlight = false }
+        processNextOp()
+    }
+
+    private fun opUuid(op: GattOp): String =
+        when (op) {
+            is GattOp.Write -> op.uuid
+            is GattOp.Read -> op.uuid
+        }
 
     private val gattCallback =
         object : BluetoothGattCallback() {
@@ -168,8 +256,6 @@ class BleCentral(
             ) {
                 when (newState) {
                     BluetoothProfile.STATE_CONNECTED -> {
-                        // Larger MTU first (best-effort); discovery happens in
-                        // onMtuChanged so the negotiated size is in place.
                         if (!g.requestMtu(REQUESTED_MTU)) g.discoverServices()
                     }
 
@@ -209,7 +295,6 @@ class BleCentral(
                 enableNextNotification(g)
             }
 
-            @Suppress("DEPRECATION")
             override fun onDescriptorWrite(
                 g: BluetoothGatt,
                 descriptor: BluetoothGattDescriptor,
@@ -241,6 +326,15 @@ class BleCentral(
                         characteristic.value ?: ByteArray(0),
                     )
                 }
+                finishOp()
+            }
+
+            override fun onCharacteristicWrite(
+                g: BluetoothGatt,
+                characteristic: BluetoothGattCharacteristic,
+                status: Int,
+            ) {
+                finishOp()
             }
         }
 
@@ -248,7 +342,6 @@ class BleCentral(
     private fun enableNextNotification(g: BluetoothGatt) {
         val ch = notifyQueue.poll()
         if (ch == null) {
-            // All notify characteristics subscribed — the link is ready.
             listener.onConnected(g.device.address)
             return
         }
@@ -267,6 +360,6 @@ class BleCentral(
         const val REQUESTED_MTU = 247
 
         // BluetoothDevice.TRANSPORT_LE inlined to avoid an extra import.
-        const val BluetoothDevice_TRANSPORT_LE = 2
+        const val TRANSPORT_LE = 2
     }
 }

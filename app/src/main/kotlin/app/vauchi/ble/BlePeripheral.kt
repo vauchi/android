@@ -20,6 +20,7 @@ import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
+import java.util.ArrayDeque
 
 /**
  * Receives BLE peripheral-side events; the Activity forwards these to
@@ -38,16 +39,13 @@ interface BlePeripheralListener {
 }
 
 /**
- * BLE peripheral (responder) — advertising (S1) + GATT server (S2).
+ * BLE peripheral (responder) — advertising (S1), GATT server (S2), and
+ * notifying the central (S3).
  *
- * Executes `BleStartAdvertising` by standing up a GATT server exposing the
- * vauchi exchange characteristics and advertising the service UUID
- * (connectable). When a central connects it reports `onConnected`; central
- * writes surface as `onCharacteristicReceived` (→ `BleCharacteristicNotified`
- * in core). Notifying the central (`BleWriteCharacteristic` on the peripheral)
- * and read responses land in S3.
- *
- * See `_private/docs/problems/2026-06-06-android-ble-execution/`.
+ * Notifications are serialized through [notifyQueue] (one in flight, drained on
+ * `onNotificationSent`) since chunked card data fires many in a row. Assumes a
+ * single connected central (the exchange peer). See
+ * `_private/docs/problems/2026-06-06-android-ble-execution/`.
  */
 @SuppressLint("MissingPermission")
 class BlePeripheral(
@@ -67,6 +65,15 @@ class BlePeripheral(
     private var gattServer: BluetoothGattServer? = null
     private var payload: ByteArray = ByteArray(0)
     private val subscribers = mutableSetOf<BluetoothDevice>()
+
+    private data class PendingNotify(
+        val uuid: String,
+        val data: ByteArray,
+    )
+
+    private val notifyLock = Any()
+    private val notifyQueue = ArrayDeque<PendingNotify>()
+    private var notifyInFlight = false
 
     fun startAdvertising(
         serviceUuid: String,
@@ -118,6 +125,10 @@ class BlePeripheral(
             }
         }
         subscribers.clear()
+        synchronized(notifyLock) {
+            notifyQueue.clear()
+            notifyInFlight = false
+        }
         try {
             gattServer?.close()
         } catch (e: Exception) {
@@ -173,21 +184,39 @@ class BlePeripheral(
         return ch
     }
 
-    /** Notify a subscribed central on [uuid] with [data] (peripheral → central). S3. */
-    @Suppress("DEPRECATION")
+    /** Notify the connected central on [uuid] with [data] (peripheral → central). */
     fun notify(
         uuid: String,
         data: ByteArray,
-    ): Boolean {
-        val server = gattServer ?: return false
-        val service = server.getService(BleUuids.uuid(BleUuids.SERVICE)) ?: return false
-        val ch = service.getCharacteristic(BleUuids.uuid(uuid)) ?: return false
-        ch.value = data
-        var ok = false
-        subscribers.forEach { device ->
-            ok = server.notifyCharacteristicChanged(device, ch, false) || ok
+    ) {
+        synchronized(notifyLock) { notifyQueue.add(PendingNotify(uuid, data)) }
+        processNextNotify()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun processNextNotify() {
+        val server = gattServer ?: return
+        val pending =
+            synchronized(notifyLock) {
+                if (notifyInFlight) return
+                val next = notifyQueue.poll() ?: return
+                notifyInFlight = true
+                next
+            }
+        val service = server.getService(BleUuids.uuid(BleUuids.SERVICE))
+        val ch = service?.getCharacteristic(BleUuids.uuid(pending.uuid))
+        val device = subscribers.firstOrNull()
+        if (ch == null || device == null) {
+            finishNotify()
+            return
         }
-        return ok
+        ch.value = pending.data
+        if (!server.notifyCharacteristicChanged(device, ch, false)) finishNotify()
+    }
+
+    private fun finishNotify() {
+        synchronized(notifyLock) { notifyInFlight = false }
+        processNextNotify()
     }
 
     private val gattServerCallback =
@@ -231,7 +260,8 @@ class BlePeripheral(
                 offset: Int,
                 characteristic: BluetoothGattCharacteristic,
             ) {
-                val value = if (characteristic.uuid == BleUuids.uuid(BleUuids.EXCHANGE_PAYLOAD)) payload else ByteArray(0)
+                val value =
+                    if (characteristic.uuid == BleUuids.uuid(BleUuids.EXCHANGE_PAYLOAD)) payload else ByteArray(0)
                 val slice = if (offset < value.size) value.copyOfRange(offset, value.size) else ByteArray(0)
                 gattServer?.sendResponse(device, requestId, 0 /* GATT_SUCCESS */, offset, slice)
             }
@@ -245,11 +275,16 @@ class BlePeripheral(
                 offset: Int,
                 value: ByteArray,
             ) {
-                // Central enabled/disabled notifications — already tracked via
-                // the connection; just ack.
                 if (responseNeeded) {
                     gattServer?.sendResponse(device, requestId, 0 /* GATT_SUCCESS */, offset, value)
                 }
+            }
+
+            override fun onNotificationSent(
+                device: BluetoothDevice,
+                status: Int,
+            ) {
+                finishNotify()
             }
         }
 

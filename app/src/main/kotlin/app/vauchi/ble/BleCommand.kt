@@ -35,4 +35,19 @@ sealed interface BleCommand {
 
     /** `Command::BleDisconnect` — tear down the current connection. */
     data object Disconnect : BleCommand
+
+    /**
+     * `Command::BleWriteCharacteristic` — send [data] on [uuid]. Routed by the
+     * UUID: a responder-notify characteristic ([BleUuids.peripheralNotifyChars])
+     * is a peripheral notify; otherwise a central GATT write.
+     */
+    data class Write(
+        val uuid: String,
+        val data: ByteArray,
+    ) : BleCommand
+
+    /** `Command::BleReadCharacteristic` — central reads [uuid]. */
+    data class Read(
+        val uuid: String,
+    ) : BleCommand
 }

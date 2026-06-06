@@ -62,5 +62,14 @@ object BleUuids {
     val writeWithResponse: Set<String> =
         setOf(CARD_EXCHANGE, CHALLENGE, HANDSHAKE_WRITE)
 
+    /**
+     * Routing for `Command::BleWriteCharacteristic` — the UUID encodes the
+     * direction (handshake machine: initiator writes …894/…896, responder
+     * notifies …895/…897). A notify-char write means "the responder
+     * (peripheral) pushes to the central"; anything else is the initiator
+     * (central) doing a GATT write.
+     */
+    val peripheralNotifyChars: Set<String> = setOf(HANDSHAKE_NOTIFY, DATA_NOTIFY)
+
     fun uuid(s: String): UUID = UUID.fromString(s)
 }

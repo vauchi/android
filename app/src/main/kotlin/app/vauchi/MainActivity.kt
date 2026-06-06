@@ -57,6 +57,7 @@ import app.vauchi.ble.BleCentralListener
 import app.vauchi.ble.BleCommand
 import app.vauchi.ble.BlePeripheral
 import app.vauchi.ble.BlePeripheralListener
+import app.vauchi.ble.BleUuids
 import app.vauchi.proximity.AccelerometerProximityService
 import app.vauchi.proximity.AudioProximityService
 import app.vauchi.ui.AppPasswordScreen
@@ -632,6 +633,15 @@ fun MainScreen(
                         ?.let { Log.w("MainActivity", "BLE connect: $it") }
 
                 BleCommand.Disconnect -> bleCentral.disconnect()
+
+                is BleCommand.Write ->
+                    if (cmd.uuid in BleUuids.peripheralNotifyChars) {
+                        blePeripheral.notify(cmd.uuid, cmd.data)
+                    } else {
+                        bleCentral.writeCharacteristic(cmd.uuid, cmd.data)
+                    }
+
+                is BleCommand.Read -> bleCentral.readCharacteristic(cmd.uuid)
             }
         }
     }
