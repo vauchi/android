@@ -12,6 +12,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,6 +21,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.vauchi.util.LocalizationManager
 
 /**
@@ -74,6 +78,24 @@ fun rememberPermissionState(
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             isGranted = granted
         }
+
+    // Re-check on resume so a grant made via the system dialog or the OS
+    // Settings screen is reflected even when the launcher callback does not
+    // re-fire. Fixes the scanner staying on the permission prompt after the
+    // user grants. See _private/docs/problems/2026-06-06-exchange-ritual-flow/.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, permission) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    isGranted =
+                        ContextCompat.checkSelfPermission(context, permission) ==
+                        PackageManager.PERMISSION_GRANTED
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val onRequest: () -> Unit = {
         if (isGranted) {
@@ -151,6 +173,23 @@ fun rememberMultiplePermissionsState(
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
             allGranted = results.values.all { it }
         }
+
+    // Re-check on resume (see single-permission variant above).
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, permissions) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    allGranted =
+                        permissions.all {
+                            ContextCompat.checkSelfPermission(context, it) ==
+                                PackageManager.PERMISSION_GRANTED
+                        }
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val onRequest: () -> Unit = {
         if (allGranted) {

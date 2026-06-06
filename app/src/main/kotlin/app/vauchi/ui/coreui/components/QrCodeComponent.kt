@@ -13,6 +13,7 @@ import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -22,11 +23,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -39,7 +42,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import app.vauchi.ui.components.PermissionRationaleDialog
 import app.vauchi.ui.components.QrCodeAnalyzer
+import app.vauchi.ui.components.rememberPermissionState
 import app.vauchi.ui.coreui.LocalUseFrontCamera
 import app.vauchi.ui.coreui.QrMode
 import app.vauchi.ui.coreui.UserAction
@@ -157,6 +162,32 @@ private fun QrScanner(
 
     DisposableEffect(Unit) {
         onDispose { executor.shutdown() }
+    }
+
+    // Gate the CameraX bind behind the CAMERA runtime permission. The
+    // scanner previously bound the camera unconditionally, so on a fresh
+    // install (permission ungranted) the preview was a dead black box with
+    // no prompt and no recovery path — see
+    // _private/docs/problems/2026-06-06-exchange-ritual-flow/ (B1).
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
+    val cameraPermission =
+        rememberPermissionState(
+            permission = android.Manifest.permission.CAMERA,
+            title = localizationManager.t("permission.camera.title"),
+            rationale = localizationManager.t("permission.camera.rationale"),
+        )
+    LaunchedEffect(Unit) { cameraPermission.request() }
+    PermissionRationaleDialog(cameraPermission)
+
+    if (!cameraPermission.isGranted) {
+        CameraPermissionPrompt(
+            title = cameraPermission.rationaleTitle,
+            rationale = cameraPermission.rationaleText,
+            grantLabel = localizationManager.t("permission.camera.grant"),
+            onGrant = { cameraPermission.request() },
+            modifier = modifier,
+        )
+        return
     }
 
     Surface(
@@ -295,6 +326,51 @@ private fun QrScanner(
                                 .padding(16.dp),
                     )
                 }
+            }
+        }
+    }
+}
+
+
+/**
+ * Shown in place of the camera preview when the CAMERA permission has not
+ * been granted. Replaces the previous silent black box with an explicit
+ * rationale + grant affordance; the system permission dialog itself is
+ * driven by [rememberPermissionState].
+ */
+@Composable
+private fun CameraPermissionPrompt(
+    title: String,
+    rationale: String,
+    grantLabel: String,
+    onGrant: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp)),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = rationale,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onGrant) {
+                Text(grantLabel)
             }
         }
     }
