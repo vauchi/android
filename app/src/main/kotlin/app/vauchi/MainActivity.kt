@@ -53,8 +53,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vauchi.ble.BleCentral
+import app.vauchi.ble.BleCentralListener
 import app.vauchi.ble.BleCommand
 import app.vauchi.ble.BlePeripheral
+import app.vauchi.ble.BlePeripheralListener
 import app.vauchi.proximity.AccelerometerProximityService
 import app.vauchi.proximity.AudioProximityService
 import app.vauchi.ui.AppPasswordScreen
@@ -573,29 +575,70 @@ fun MainScreen(
     // owns the radio; core's BLE commands arrive over a buffered SharedFlow and
     // dispatch to BleCentral (scan) / BlePeripheral (advertise). Connect + GATT
     // land in S2/S3. See 2026-06-06-android-ble-execution.
-    val bleCentral = remember { BleCentral(context) }
-    val blePeripheral = remember { BlePeripheral(context) }
+    val bleCentral =
+        remember {
+            BleCentral(
+                context,
+                object : BleCentralListener {
+                    override fun onDeviceDiscovered(id: String, rssi: Short, advData: ByteArray) =
+                        coreAppViewModel.onBleDeviceDiscovered(id, rssi, advData)
+
+                    override fun onConnected(deviceId: String) =
+                        coreAppViewModel.onBleConnected(deviceId)
+
+                    override fun onDisconnected(reason: String) =
+                        coreAppViewModel.onBleDisconnected(reason)
+
+                    override fun onCharacteristicNotified(uuid: String, data: ByteArray) =
+                        coreAppViewModel.onBleCharacteristicNotified(uuid, data)
+
+                    override fun onCharacteristicRead(uuid: String, data: ByteArray) =
+                        coreAppViewModel.onBleCharacteristicRead(uuid, data)
+                },
+            )
+        }
+    val blePeripheral =
+        remember {
+            BlePeripheral(
+                context,
+                object : BlePeripheralListener {
+                    override fun onConnected(deviceId: String) =
+                        coreAppViewModel.onBleConnected(deviceId)
+
+                    override fun onDisconnected(reason: String) =
+                        coreAppViewModel.onBleDisconnected(reason)
+
+                    override fun onCharacteristicReceived(uuid: String, data: ByteArray) =
+                        coreAppViewModel.onBleCharacteristicNotified(uuid, data)
+                },
+            )
+        }
     LaunchedEffect(Unit) {
         coreAppViewModel.bleCommands.collect { cmd ->
             when (cmd) {
-                is BleCommand.StartScan -> {
+                is BleCommand.StartScan ->
                     bleCentral
-                        .startScanning(cmd.serviceUuid) { id, rssi, advData ->
-                            coreAppViewModel.onBleDeviceDiscovered(id, rssi, advData)
-                        }?.let { Log.w("MainActivity", "BLE scan: $it") }
-                }
+                        .startScanning(cmd.serviceUuid)
+                        ?.let { Log.w("MainActivity", "BLE scan: $it") }
 
-                is BleCommand.StartAdvertise -> {
+                is BleCommand.StartAdvertise ->
                     blePeripheral
                         .startAdvertising(cmd.serviceUuid, cmd.payload)
                         ?.let { Log.w("MainActivity", "BLE advertise: $it") }
-                }
+
+                is BleCommand.Connect ->
+                    bleCentral
+                        .connect(cmd.deviceId)
+                        ?.let { Log.w("MainActivity", "BLE connect: $it") }
+
+                BleCommand.Disconnect -> bleCentral.disconnect()
             }
         }
     }
     DisposableEffect(Unit) {
         onDispose {
             bleCentral.stopScanning()
+            bleCentral.disconnect()
             blePeripheral.stopAdvertising()
         }
     }

@@ -27,4 +27,12 @@ sealed interface BleCommand {
         val serviceUuid: String,
         val payload: ByteArray,
     ) : BleCommand
+
+    /** `Command::BleConnect` — central connects to a discovered peripheral. */
+    data class Connect(
+        val deviceId: String,
+    ) : BleCommand
+
+    /** `Command::BleDisconnect` — tear down the current connection. */
+    data object Disconnect : BleCommand
 }

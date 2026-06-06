@@ -5,7 +5,14 @@
 package app.vauchi.ble
 
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
+import android.bluetooth.BluetoothGattServer
+import android.bluetooth.BluetoothGattServerCallback
+import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
@@ -13,45 +20,65 @@ import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
-import java.util.UUID
 
 /**
- * BLE peripheral (responder) side of the vauchi exchange — slice S1:
- * advertising.
- *
- * Executes core's `Command::BleStartAdvertising` by advertising the vauchi
- * service UUID so the peer's central can discover us. The exchange [payload]
- * (174 bytes) does not fit a 31-byte advertisement; it is served later via the
- * `CHAR_EXCHANGE_PAYLOAD` GATT characteristic once a connection is up (S2/S3).
- * For S1 we advertise connectable so the discovery handshake works end to end.
- *
- * The GATT server (characteristics, connection callbacks) lands in S2. See
- * `_private/docs/problems/2026-06-06-android-ble-execution/`.
+ * Receives BLE peripheral-side events; the Activity forwards these to
+ * `CoreAppViewModel.onBle*`.
  */
+interface BlePeripheralListener {
+    fun onConnected(deviceId: String)
+
+    fun onDisconnected(reason: String)
+
+    /** A connected central wrote to one of our characteristics (received data). */
+    fun onCharacteristicReceived(
+        uuid: String,
+        data: ByteArray,
+    )
+}
+
+/**
+ * BLE peripheral (responder) — advertising (S1) + GATT server (S2).
+ *
+ * Executes `BleStartAdvertising` by standing up a GATT server exposing the
+ * vauchi exchange characteristics and advertising the service UUID
+ * (connectable). When a central connects it reports `onConnected`; central
+ * writes surface as `onCharacteristicReceived` (→ `BleCharacteristicNotified`
+ * in core). Notifying the central (`BleWriteCharacteristic` on the peripheral)
+ * and read responses land in S3.
+ *
+ * See `_private/docs/problems/2026-06-06-android-ble-execution/`.
+ */
+@SuppressLint("MissingPermission")
 class BlePeripheral(
     private val context: Context,
+    private val listener: BlePeripheralListener,
 ) {
-    private val advertiser: BluetoothLeAdvertiser?
-        get() {
-            val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-            return manager?.adapter?.takeIf { it.isEnabled }?.bluetoothLeAdvertiser
-        }
+    private fun adapter() =
+        (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)
+            ?.adapter
+            ?.takeIf { it.isEnabled }
 
+    private val bluetoothManager: BluetoothManager?
+        get() = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+
+    private var advertiser: BluetoothLeAdvertiser? = null
     private var advertiseCallback: AdvertiseCallback? = null
+    private var gattServer: BluetoothGattServer? = null
+    private var payload: ByteArray = ByteArray(0)
+    private val subscribers = mutableSetOf<BluetoothDevice>()
 
-    /**
-     * Start advertising [serviceUuid] (connectable). [payload] is retained for
-     * the S2/S3 GATT-server payload characteristic. Returns an error string if
-     * advertising could not start, else `null`.
-     */
-    @SuppressLint("MissingPermission")
     fun startAdvertising(
         serviceUuid: String,
-        @Suppress("UNUSED_PARAMETER") payload: ByteArray,
+        payload: ByteArray,
     ): String? {
-        val adv = advertiser ?: return "BLE advertiser unavailable (adapter off?)"
+        val adapter = adapter() ?: return "BLE adapter off"
+        this.payload = payload
         stopAdvertising()
+        openGattServer(serviceUuid)
 
+        val adv = adapter.bluetoothLeAdvertiser ?: return "BLE advertiser unavailable"
+        advertiser = adv
         val settings =
             AdvertiseSettings
                 .Builder()
@@ -63,7 +90,7 @@ class BlePeripheral(
             AdvertiseData
                 .Builder()
                 .setIncludeDeviceName(false)
-                .addServiceUuid(ParcelUuid(UUID.fromString(serviceUuid)))
+                .addServiceUuid(ParcelUuid(BleUuids.uuid(serviceUuid)))
                 .build()
         val cb =
             object : AdvertiseCallback() {
@@ -81,17 +108,150 @@ class BlePeripheral(
         }
     }
 
-    /** Stop advertising; safe to call when not advertising. */
-    @SuppressLint("MissingPermission")
     fun stopAdvertising() {
-        val cb = advertiseCallback ?: return
-        advertiseCallback = null
-        try {
-            advertiser?.stopAdvertising(cb)
-        } catch (e: Exception) {
-            Log.w(TAG, "stopAdvertising: ${e.javaClass.simpleName}")
+        advertiseCallback?.let { cb ->
+            advertiseCallback = null
+            try {
+                advertiser?.stopAdvertising(cb)
+            } catch (e: Exception) {
+                Log.w(TAG, "stopAdvertising: ${e.javaClass.simpleName}")
+            }
         }
+        subscribers.clear()
+        try {
+            gattServer?.close()
+        } catch (e: Exception) {
+            Log.w(TAG, "gattServer close: ${e.javaClass.simpleName}")
+        }
+        gattServer = null
     }
+
+    private fun openGattServer(serviceUuid: String) {
+        val manager = bluetoothManager ?: return
+        val server = manager.openGattServer(context, gattServerCallback) ?: return
+        gattServer = server
+
+        val service =
+            BluetoothGattService(
+                BleUuids.uuid(serviceUuid),
+                BluetoothGattService.SERVICE_TYPE_PRIMARY,
+            )
+        BleUuids.allCharacteristics.forEach { uuid ->
+            service.addCharacteristic(buildCharacteristic(uuid))
+        }
+        server.addService(service)
+    }
+
+    private fun buildCharacteristic(uuid: String): BluetoothGattCharacteristic {
+        var props = 0
+        var perms = 0
+        if (uuid == BleUuids.EXCHANGE_PAYLOAD) {
+            props = props or BluetoothGattCharacteristic.PROPERTY_READ
+            perms = perms or BluetoothGattCharacteristic.PERMISSION_READ
+        }
+        if (uuid in BleUuids.writeWithResponse) {
+            props = props or BluetoothGattCharacteristic.PROPERTY_WRITE
+            perms = perms or BluetoothGattCharacteristic.PERMISSION_WRITE
+        }
+        if (uuid == BleUuids.DATA_WRITE) {
+            props = props or BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE
+            perms = perms or BluetoothGattCharacteristic.PERMISSION_WRITE
+        }
+        if (uuid in BleUuids.notifyCharacteristics) {
+            props = props or BluetoothGattCharacteristic.PROPERTY_NOTIFY
+            perms = perms or BluetoothGattCharacteristic.PERMISSION_READ
+        }
+        val ch = BluetoothGattCharacteristic(BleUuids.uuid(uuid), props, perms)
+        if (uuid in BleUuids.notifyCharacteristics) {
+            ch.addDescriptor(
+                BluetoothGattDescriptor(
+                    BleUuids.uuid(BleUuids.CCC_DESCRIPTOR),
+                    BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE,
+                ),
+            )
+        }
+        return ch
+    }
+
+    /** Notify a subscribed central on [uuid] with [data] (peripheral → central). S3. */
+    @Suppress("DEPRECATION")
+    fun notify(
+        uuid: String,
+        data: ByteArray,
+    ): Boolean {
+        val server = gattServer ?: return false
+        val service = server.getService(BleUuids.uuid(BleUuids.SERVICE)) ?: return false
+        val ch = service.getCharacteristic(BleUuids.uuid(uuid)) ?: return false
+        ch.value = data
+        var ok = false
+        subscribers.forEach { device ->
+            ok = server.notifyCharacteristicChanged(device, ch, false) || ok
+        }
+        return ok
+    }
+
+    private val gattServerCallback =
+        object : BluetoothGattServerCallback() {
+            override fun onConnectionStateChange(
+                device: BluetoothDevice,
+                status: Int,
+                newState: Int,
+            ) {
+                when (newState) {
+                    BluetoothProfile.STATE_CONNECTED -> {
+                        subscribers.add(device)
+                        listener.onConnected(device.address)
+                    }
+
+                    BluetoothProfile.STATE_DISCONNECTED -> {
+                        subscribers.remove(device)
+                        listener.onDisconnected("central disconnected: $status")
+                    }
+                }
+            }
+
+            override fun onCharacteristicWriteRequest(
+                device: BluetoothDevice,
+                requestId: Int,
+                characteristic: BluetoothGattCharacteristic,
+                preparedWrite: Boolean,
+                responseNeeded: Boolean,
+                offset: Int,
+                value: ByteArray,
+            ) {
+                listener.onCharacteristicReceived(characteristic.uuid.toString(), value)
+                if (responseNeeded) {
+                    gattServer?.sendResponse(device, requestId, 0 /* GATT_SUCCESS */, offset, value)
+                }
+            }
+
+            override fun onCharacteristicReadRequest(
+                device: BluetoothDevice,
+                requestId: Int,
+                offset: Int,
+                characteristic: BluetoothGattCharacteristic,
+            ) {
+                val value = if (characteristic.uuid == BleUuids.uuid(BleUuids.EXCHANGE_PAYLOAD)) payload else ByteArray(0)
+                val slice = if (offset < value.size) value.copyOfRange(offset, value.size) else ByteArray(0)
+                gattServer?.sendResponse(device, requestId, 0 /* GATT_SUCCESS */, offset, slice)
+            }
+
+            override fun onDescriptorWriteRequest(
+                device: BluetoothDevice,
+                requestId: Int,
+                descriptor: BluetoothGattDescriptor,
+                preparedWrite: Boolean,
+                responseNeeded: Boolean,
+                offset: Int,
+                value: ByteArray,
+            ) {
+                // Central enabled/disabled notifications — already tracked via
+                // the connection; just ack.
+                if (responseNeeded) {
+                    gattServer?.sendResponse(device, requestId, 0 /* GATT_SUCCESS */, offset, value)
+                }
+            }
+        }
 
     private companion object {
         const val TAG = "BlePeripheral"

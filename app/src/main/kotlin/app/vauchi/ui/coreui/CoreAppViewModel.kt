@@ -270,6 +270,32 @@ class CoreAppViewModel(
         )
     }
 
+    /** A GATT connection (central or peripheral side) was established. */
+    fun onBleConnected(deviceId: String) {
+        sendHardwareEvent(MobileEvent.BleConnected(deviceId = deviceId))
+    }
+
+    /** The GATT connection dropped. */
+    fun onBleDisconnected(reason: String) {
+        sendHardwareEvent(MobileEvent.BleDisconnected(reason = reason))
+    }
+
+    /** Data received from the peer (central notification / peripheral write). */
+    fun onBleCharacteristicNotified(
+        uuid: String,
+        data: ByteArray,
+    ) {
+        sendHardwareEvent(MobileEvent.BleCharacteristicNotified(uuid = uuid, data = data))
+    }
+
+    /** A characteristic read completed (central side). */
+    fun onBleCharacteristicRead(
+        uuid: String,
+        data: ByteArray,
+    ) {
+        sendHardwareEvent(MobileEvent.BleCharacteristicRead(uuid = uuid, data = data))
+    }
+
     /**
      * Forward ultrasonic samples captured by the Activity back to core as a
      * hardware event (response to `AudioListenForResponse`). Core matches the
@@ -777,6 +803,14 @@ class CoreAppViewModel(
                             payload = cmd.payload.map { it.toByte() }.toByteArray(),
                         ),
                     )
+                }
+
+                is CommandDTO.BleConnect -> {
+                    _bleCommands.tryEmit(BleCommand.Connect(cmd.deviceId))
+                }
+
+                is CommandDTO.BleDisconnect -> {
+                    _bleCommands.tryEmit(BleCommand.Disconnect)
                 }
 
                 else -> {
