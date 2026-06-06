@@ -61,6 +61,22 @@ stages:
   - security
   - deploy
 
+# Always-on gate for docs-only MRs. Every other job is change-gated to
+# code paths, so a documentation-only MR (e.g. the README banner reframe
+# in !493) matches none of them and produces an empty pipeline — which
+# GitLab marks "failed" and, with only_allow_merge_if_pipeline_succeeds,
+# blocks the merge. This job runs on every MR so docs changes get a
+# runnable, passing pipeline.
+docs:gate:
+  stage: lint
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.21
+  tags: [docker]
+  needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - echo "Non-code change — code gates intentionally skipped; docs MR may merge."
+
 variables:
   ANDROID_COMPILE_SDK: "35"
   ANDROID_BUILD_TOOLS: "35.0.0"
