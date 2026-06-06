@@ -78,6 +78,7 @@ class BlePeripheral(
     fun startAdvertising(
         serviceUuid: String,
         payload: ByteArray,
+        token: ByteArray,
     ): String? {
         val adapter = adapter() ?: return "BLE adapter off"
         this.payload = payload
@@ -99,6 +100,15 @@ class BlePeripheral(
                 .setIncludeDeviceName(false)
                 .addServiceUuid(ParcelUuid(BleUuids.uuid(serviceUuid)))
                 .build()
+        // Scan response carries the role-tiebreak token so the peer's scanner
+        // can decide who initiates (avoids a symmetric double-connect).
+        val scanResponse =
+            AdvertiseData
+                .Builder()
+                .addServiceData(
+                    ParcelUuid(BleUuids.uuid(BleUuids.SERVICE_DATA_UUID)),
+                    token,
+                ).build()
         val cb =
             object : AdvertiseCallback() {
                 override fun onStartFailure(errorCode: Int) {
@@ -107,7 +117,7 @@ class BlePeripheral(
             }
         advertiseCallback = cb
         return try {
-            adv.startAdvertising(settings, data, cb)
+            adv.startAdvertising(settings, data, scanResponse, cb)
             null
         } catch (e: SecurityException) {
             advertiseCallback = null

@@ -72,6 +72,15 @@ class BleCentral(
 
     private var scanCallback: ScanCallback? = null
     private val discovered = mutableSetOf<String>()
+
+    /**
+     * Our own role-tiebreak token (set by the Activity from the advertise
+     * payload). On discovery we connect only if our token is smaller than the
+     * peer's; otherwise we stay responder (peripheral) and let the peer's
+     * central connect to us. Avoids a symmetric double-connect. Null until
+     * advertising is set up — then we report unconditionally (legacy fallback).
+     */
+    var ourToken: ByteArray? = null
     private var gatt: BluetoothGatt? = null
     private val notifyQueue = ArrayDeque<BluetoothGattCharacteristic>()
 
@@ -110,11 +119,28 @@ class BleCentral(
                     result: ScanResult,
                 ) {
                     val address = result.device.address
-                    // Report each peer once. A continuous low-latency scan
-                    // reports the same device repeatedly; without this, core
-                    // emits a BleConnect per result and churns the connection
-                    // (seen mid-transfer as multiple GATT conn_ids).
+                    val peerToken =
+                        result.scanRecord?.getServiceData(
+                            ParcelUuid(UUID.fromString(BleUuids.SERVICE_DATA_UUID)),
+                        )
+                    val ours = ourToken
+                    // Need both tokens to decide the role; an early adv-only
+                    // result (no scan response yet) carries no peer token — wait
+                    // for a token-bearing one.
+                    if (ours != null && peerToken == null) return
+                    // Report each peer once (a continuous low-latency scan repeats
+                    // the same device; without this core emits a BleConnect per
+                    // result and churns the connection).
                     if (!discovered.add(address)) return
+                    if (ours != null && peerToken != null &&
+                        BleUuids.compareTokens(ours, peerToken) >= 0
+                    ) {
+                        // We lose the tiebreak — stay responder (peripheral). Stop
+                        // scanning; the peer's central connects to our GATT server.
+                        Log.d(TAG, "BLE role: responder (peer initiates)")
+                        stopScanning()
+                        return
+                    }
                     val advData = result.scanRecord?.bytes ?: ByteArray(0)
                     listener.onDeviceDiscovered(address, result.rssi.toShort(), advData)
                 }

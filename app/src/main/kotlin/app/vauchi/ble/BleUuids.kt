@@ -42,6 +42,37 @@ object BleUuids {
     /** Client Characteristic Configuration descriptor (enables notifications). */
     const val CCC_DESCRIPTOR = "00002902-0000-1000-8000-00805f9b34fb"
 
+    /**
+     * 16-bit service-data key carrying the role-tiebreak token in the scan
+     * response. Both peers advertise + scan symmetrically; the device whose
+     * token compares smaller becomes the initiator (central) and the other
+     * stays responder (peripheral) — avoiding a double connect.
+     */
+    const val SERVICE_DATA_UUID = "0000fe00-0000-1000-8000-00805f9b34fb"
+
+    private val rng = java.security.SecureRandom()
+
+    /**
+     * A fresh random 16-byte role-tiebreak token. Two independently-generated
+     * tokens are effectively never equal, so exactly one peer wins the compare
+     * and becomes the initiator — robust regardless of the advertise payload's
+     * structure (an identity-derived slice turned out identical between peers).
+     */
+    fun randomToken(): ByteArray = ByteArray(16).also { rng.nextBytes(it) }
+
+    /** Lexicographic byte-array compare: negative if [a] < [b]. */
+    fun compareTokens(
+        a: ByteArray,
+        b: ByteArray,
+    ): Int {
+        val n = minOf(a.size, b.size)
+        for (i in 0 until n) {
+            val d = (a[i].toInt() and 0xff) - (b[i].toInt() and 0xff)
+            if (d != 0) return d
+        }
+        return a.size - b.size
+    }
+
     /** All exchange characteristics the peripheral's GATT server exposes. */
     val allCharacteristics: List<String> =
         listOf(
