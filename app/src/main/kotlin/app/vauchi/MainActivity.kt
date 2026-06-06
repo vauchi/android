@@ -7,14 +7,17 @@ package app.vauchi
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.nfc.NfcAdapter
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.view.WindowManager
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
@@ -40,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
@@ -490,6 +494,32 @@ fun MainScreen(
             (context as? Activity)?.let { act ->
                 NfcAdapter.getDefaultAdapter(act)?.disableReaderMode(act)
             }
+        }
+    }
+
+    // Permissions step (Group -> Mode -> Permissions -> Ritual): when the
+    // ViewModel surfaces the OS permissions a freshly-selected mode needs
+    // (camera / microphone / Bluetooth, per ExchangeModePermissions), request
+    // any not already granted before the ritual screen. The camera is also
+    // gated at the QR scanner itself; requesting up front keeps the ritual a
+    // fast, uninterrupted handshake.
+    val modePermissionRequest by coreAppViewModel.modePermissionRequest.collectAsState()
+    val modePermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions(),
+        ) { coreAppViewModel.consumeModePermissionRequest() }
+    LaunchedEffect(modePermissionRequest) {
+        val perms = modePermissionRequest
+        if (perms.isEmpty()) return@LaunchedEffect
+        val ungranted =
+            perms.filter {
+                ContextCompat.checkSelfPermission(context, it) !=
+                    PackageManager.PERMISSION_GRANTED
+            }
+        if (ungranted.isEmpty()) {
+            coreAppViewModel.consumeModePermissionRequest()
+        } else {
+            modePermissionLauncher.launch(ungranted.toTypedArray())
         }
     }
 

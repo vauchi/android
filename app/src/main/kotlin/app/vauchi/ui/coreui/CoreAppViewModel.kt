@@ -8,6 +8,7 @@ import android.nfc.Tag
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.vauchi.exchange.ExchangeModePermissions
 import app.vauchi.nfc.NfcReaderPort
 import app.vauchi.nfc.NfcReaderService
 import app.vauchi.nfc.NfcResponderPort
@@ -200,6 +201,23 @@ class CoreAppViewModel(
     }
 
     /**
+     * Per-mode permission requests. When the user selects an exchange mode, the
+     * Android permissions that mode's ritual needs (camera / microphone /
+     * Bluetooth, per [ExchangeModePermissions]) are surfaced here so the
+     * Activity can request them up front — the "Permissions" step of the
+     * Group → Mode → Permissions → Ritual flow. Empty means "no pending
+     * request"; the ViewModel has no `Context`, so the Activity owns the
+     * launcher (the same split as the accelerometer / NFC reader-mode requests).
+     */
+    private val _modePermissionRequest = MutableStateFlow<List<String>>(emptyList())
+    val modePermissionRequest: StateFlow<List<String>> =
+        _modePermissionRequest.asStateFlow()
+
+    fun consumeModePermissionRequest() {
+        _modePermissionRequest.value = emptyList()
+    }
+
+    /**
      * Forward one accelerometer reading captured by the Activity back to core
      * as a hardware event. Core accumulates the local shake envelope and
      * cross-correlates the peer's (`MultiStageSession`).
@@ -373,6 +391,15 @@ class CoreAppViewModel(
     }
 
     fun handleAction(action: UserAction) {
+        // Permissions step: when a mode is picked, surface the OS permissions
+        // its ritual needs so the Activity can request them up front, before the
+        // ritual screen. See _private/docs/problems/2026-06-06-exchange-ritual-flow/.
+        if (action is UserAction.ListItemSelected && action.itemId.startsWith("mode:")) {
+            val perms = ExchangeModePermissions.forMode(action.itemId)
+            if (perms.isNotEmpty()) {
+                _modePermissionRequest.value = perms
+            }
+        }
         viewModelScope.launch {
             try {
                 val actionJson = json.encodeToString(UserAction.serializer(), action)
