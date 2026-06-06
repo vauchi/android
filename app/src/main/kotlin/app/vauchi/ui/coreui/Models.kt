@@ -2075,11 +2075,13 @@ sealed class CommandDTO {
     ) : CommandDTO()
 
     data class AudioEmitChallenge(
-        val data: List<Int>,
+        val samples: List<Float>,
+        val sampleRate: UInt,
     ) : CommandDTO()
 
     data class AudioListenForResponse(
         val timeoutMs: Long,
+        val sampleRate: UInt,
     ) : CommandDTO()
 
     data object AudioStop : CommandDTO()
@@ -2567,7 +2569,8 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                     "AudioEmitChallenge" in element -> {
                         val obj = element["AudioEmitChallenge"] as JsonObject
                         CommandDTO.AudioEmitChallenge(
-                            data = obj["data"]!!.jsonArray.map { it.jsonPrimitive.int },
+                            samples = obj["samples"]!!.jsonArray.map { it.jsonPrimitive.float },
+                            sampleRate = obj["sample_rate"]!!.jsonPrimitive.int.toUInt(),
                         )
                     }
 
@@ -2575,6 +2578,7 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                         val obj = element["AudioListenForResponse"] as JsonObject
                         CommandDTO.AudioListenForResponse(
                             timeoutMs = obj["timeout_ms"]!!.jsonPrimitive.long,
+                            sampleRate = obj["sample_rate"]!!.jsonPrimitive.int.toUInt(),
                         )
                     }
 

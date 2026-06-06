@@ -218,6 +218,49 @@ class CoreAppViewModel(
     }
 
     /**
+     * Ultrasonic audio-proximity requests (multi-stage modes: Hover / Magic /
+     * TapHoverShake). Core emits `Command::AudioEmitChallenge` /
+     * `AudioListenForResponse` / `AudioStop`; the Activity owns the
+     * AudioRecord/AudioTrack (AudioProximityService needs a Context) — the same
+     * split as the accelerometer / NFC requests. `null`/`false` = no request.
+     */
+    private val _audioEmitRequest = MutableStateFlow<AudioEmitRequest?>(null)
+    val audioEmitRequest: StateFlow<AudioEmitRequest?> = _audioEmitRequest.asStateFlow()
+
+    private val _audioListenRequest = MutableStateFlow<AudioListenRequest?>(null)
+    val audioListenRequest: StateFlow<AudioListenRequest?> =
+        _audioListenRequest.asStateFlow()
+
+    private val _audioStopRequest = MutableStateFlow(false)
+    val audioStopRequest: StateFlow<Boolean> = _audioStopRequest.asStateFlow()
+
+    fun consumeAudioEmitRequest() {
+        _audioEmitRequest.value = null
+    }
+
+    fun consumeAudioListenRequest() {
+        _audioListenRequest.value = null
+    }
+
+    fun consumeAudioStopRequest() {
+        _audioStopRequest.value = false
+    }
+
+    /**
+     * Forward ultrasonic samples captured by the Activity back to core as a
+     * hardware event (response to `AudioListenForResponse`). Core matches the
+     * captured response against the emitted challenge to verify co-presence.
+     */
+    fun onAudioSamplesRecorded(
+        samples: List<Float>,
+        sampleRate: UInt,
+    ) {
+        sendHardwareEvent(
+            MobileEvent.AudioSamplesRecorded(samples = samples, sampleRate = sampleRate),
+        )
+    }
+
+    /**
      * Forward one accelerometer reading captured by the Activity back to core
      * as a hardware event. Core accumulates the local shake envelope and
      * cross-correlates the peer's (`MultiStageSession`).
@@ -685,6 +728,20 @@ class CoreAppViewModel(
                     _accelerometerActiveRequest.value = false
                 }
 
+                is CommandDTO.AudioEmitChallenge -> {
+                    _audioEmitRequest.value =
+                        AudioEmitRequest(samples = cmd.samples, sampleRate = cmd.sampleRate)
+                }
+
+                is CommandDTO.AudioListenForResponse -> {
+                    _audioListenRequest.value =
+                        AudioListenRequest(timeoutMs = cmd.timeoutMs, sampleRate = cmd.sampleRate)
+                }
+
+                is CommandDTO.AudioStop -> {
+                    _audioStopRequest.value = true
+                }
+
                 else -> {
                     // NFC initiator command dispatch (T1.1). When core emits
                     // NfcActivate/NfcSendApdu/NfcDeactivate, relay to the
@@ -720,6 +777,25 @@ class CoreAppViewModel(
  * [CoreAppViewModel.brightnessRequest]; the Activity-side collector
  * owns the platform call.
  */
+/**
+ * Ultrasonic emit request from core's `Command::AudioEmitChallenge`. The
+ * Activity plays [samples] at [sampleRate] via AudioProximityService.
+ */
+data class AudioEmitRequest(
+    val samples: List<Float>,
+    val sampleRate: UInt,
+)
+
+/**
+ * Ultrasonic listen request from core's `Command::AudioListenForResponse`. The
+ * Activity records for [timeoutMs] ms at [sampleRate] and reports the captured
+ * samples back via [CoreAppViewModel.onAudioSamplesRecorded].
+ */
+data class AudioListenRequest(
+    val timeoutMs: Long,
+    val sampleRate: UInt,
+)
+
 sealed interface BrightnessRequest {
     /** Set platform brightness to [level] (0.0–1.0). */
     data class Set(

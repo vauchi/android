@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.vauchi.proximity.AccelerometerProximityService
+import app.vauchi.proximity.AudioProximityService
 import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.KeyInvalidatedRecoveryScreen
 import app.vauchi.ui.MainViewModel
@@ -74,6 +75,7 @@ import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import uniffi.vauchi_platform.coreVersion
 
 class MainActivity : FragmentActivity() {
@@ -521,6 +523,40 @@ fun MainScreen(
         } else {
             modePermissionLauncher.launch(ungranted.toTypedArray())
         }
+    }
+
+    // Ultrasonic audio proximity (Hover / Magic / TapHoverShake). Core emits
+    // AudioEmitChallenge / AudioListenForResponse / AudioStop; the Activity owns
+    // AudioProximityService (AudioRecord/AudioTrack need a Context) - the same
+    // split as the accelerometer requests.
+    val audioEmitRequest by coreAppViewModel.audioEmitRequest.collectAsState()
+    LaunchedEffect(audioEmitRequest) {
+        val req = audioEmitRequest ?: return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            AudioProximityService.getInstance(context).emitSignal(req.samples, req.sampleRate)
+        }
+        coreAppViewModel.consumeAudioEmitRequest()
+    }
+    val audioListenRequest by coreAppViewModel.audioListenRequest.collectAsState()
+    LaunchedEffect(audioListenRequest) {
+        val req = audioListenRequest ?: return@LaunchedEffect
+        AudioProximityService.getInstance(context).receiveSignal(
+            req.timeoutMs.toULong(),
+            req.sampleRate,
+        ) { samples, recordedRate ->
+            coreAppViewModel.onAudioSamplesRecorded(samples, recordedRate)
+        }
+        coreAppViewModel.consumeAudioListenRequest()
+    }
+    val audioStopRequest by coreAppViewModel.audioStopRequest.collectAsState()
+    LaunchedEffect(audioStopRequest) {
+        if (audioStopRequest) {
+            AudioProximityService.getInstance(context).stop()
+            coreAppViewModel.consumeAudioStopRequest()
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose { AudioProximityService.getInstance(context).stop() }
     }
 
     // Deep link consent gate (SP-9). The state machine + URL parser
