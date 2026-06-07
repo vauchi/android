@@ -78,7 +78,6 @@ class BlePeripheral(
     fun startAdvertising(
         serviceUuid: String,
         payload: ByteArray,
-        token: ByteArray,
     ): String? {
         val adapter = adapter() ?: return "BLE adapter off"
         this.payload = payload
@@ -100,14 +99,18 @@ class BlePeripheral(
                 .setIncludeDeviceName(false)
                 .addServiceUuid(ParcelUuid(BleUuids.uuid(serviceUuid)))
                 .build()
-        // Scan response carries the role-tiebreak token so the peer's scanner
-        // can decide who initiates (avoids a symmetric double-connect).
+        // Scan response carries core's role-tiebreak token (ADR-043) so the
+        // peer's core can compare it against its own and decide who initiates.
+        // Core's `payload` is the identity-derived token; advertise a
+        // BLE-fitting prefix (the full token can exceed the 31-byte scan
+        // response, and a prefix tiebreaks distinct identities correctly).
+        val advToken = payload.copyOf(minOf(payload.size, BleUuids.ADV_TOKEN_MAX))
         val scanResponse =
             AdvertiseData
                 .Builder()
                 .addServiceData(
                     ParcelUuid(BleUuids.uuid(BleUuids.SERVICE_DATA_UUID)),
-                    token,
+                    advToken,
                 ).build()
         val cb =
             object : AdvertiseCallback() {

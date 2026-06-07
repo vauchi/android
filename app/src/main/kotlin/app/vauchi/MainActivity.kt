@@ -622,15 +622,13 @@ fun MainScreen(
                         .startScanning(cmd.serviceUuid)
                         ?.let { Log.w("MainActivity", "BLE scan: $it") }
 
-                is BleCommand.StartAdvertise -> {
-                    // Random per-session tiebreak token: the scanner compares it
-                    // against the peer's to pick exactly one initiator.
-                    val token = BleUuids.randomToken()
-                    bleCentral.ourToken = token
+                is BleCommand.StartAdvertise ->
+                    // Core owns the tiebreak (ADR-043): cmd.payload is this
+                    // device's identity-derived token; advertise it so the peer's
+                    // core can compare and decide who connects.
                     blePeripheral
-                        .startAdvertising(cmd.serviceUuid, cmd.payload, token)
+                        .startAdvertising(cmd.serviceUuid, cmd.payload)
                         ?.let { Log.w("MainActivity", "BLE advertise: $it") }
-                }
 
                 is BleCommand.Connect ->
                     bleCentral

@@ -43,35 +43,24 @@ object BleUuids {
     const val CCC_DESCRIPTOR = "00002902-0000-1000-8000-00805f9b34fb"
 
     /**
-     * 16-bit service-data key carrying the role-tiebreak token in the scan
-     * response. Both peers advertise + scan symmetrically; the device whose
-     * token compares smaller becomes the initiator (central) and the other
-     * stays responder (peripheral) — avoiding a double connect.
+     * Service-data slot carrying this device's role-tiebreak token in the
+     * advertisement. Core owns the tiebreak (ADR-043): the token is core's
+     * `BleStartAdvertising.payload` (identity-derived), advertised here so the
+     * peer's core can compare it against its own and decide who connects. The
+     * android side no longer compares tokens — it just advertises ours and
+     * delivers the peer's to core in `BleDeviceDiscovered.adv_data`.
      */
     const val SERVICE_DATA_UUID = "0000fe00-0000-1000-8000-00805f9b34fb"
 
-    private val rng = java.security.SecureRandom()
-
     /**
-     * A fresh random 16-byte role-tiebreak token. Two independently-generated
-     * tokens are effectively never equal, so exactly one peer wins the compare
-     * and becomes the initiator — robust regardless of the advertise payload's
-     * structure (an identity-derived slice turned out identical between peers).
+     * Max token bytes to advertise. A BLE scan response is 31 bytes; the
+     * service-data AD header (length + type + 16-bit UUID) takes 4, leaving
+     * ample room for a prefix of core's token. 16 bytes of an identity-derived
+     * token is collision-free for the tiebreak, and core's full-vs-prefix
+     * compare resolves on the first differing byte (within this prefix) for any
+     * two distinct identities.
      */
-    fun randomToken(): ByteArray = ByteArray(16).also { rng.nextBytes(it) }
-
-    /** Lexicographic byte-array compare: negative if [a] < [b]. */
-    fun compareTokens(
-        a: ByteArray,
-        b: ByteArray,
-    ): Int {
-        val n = minOf(a.size, b.size)
-        for (i in 0 until n) {
-            val d = (a[i].toInt() and 0xff) - (b[i].toInt() and 0xff)
-            if (d != 0) return d
-        }
-        return a.size - b.size
-    }
+    const val ADV_TOKEN_MAX = 16
 
     /** All exchange characteristics the peripheral's GATT server exposes. */
     val allCharacteristics: List<String> =
