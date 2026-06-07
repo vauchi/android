@@ -27,7 +27,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import uniffi.vauchi_platform.MobileApplyResult
 import uniffi.vauchi_platform.MobileConsentType
-import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.MobileException
@@ -526,19 +525,6 @@ class MainViewModel(
         }
     }
 
-    suspend fun listContactsPaginated(
-        offset: UInt,
-        limit: UInt,
-    ): List<MobileContact> =
-        withContext(Dispatchers.IO) {
-            repository.listContactsPaginated(offset, limit)
-        }
-
-    suspend fun searchContacts(query: String): List<MobileContact> =
-        withContext(Dispatchers.IO) {
-            repository.searchContacts(query)
-        }
-
     fun removeContact(id: String) {
         viewModelScope.launch {
             try {
@@ -552,11 +538,6 @@ class MainViewModel(
             }
         }
     }
-
-    suspend fun listHiddenContacts(): List<MobileContact> =
-        withContext(Dispatchers.IO) {
-            repository.listHiddenContacts()
-        }
 
     suspend fun hideContact(id: String) {
         withContext(Dispatchers.IO) {
@@ -587,20 +568,6 @@ class MainViewModel(
             repository.softDeleteImportedContact(id)
         }
     }
-
-    suspend fun listArchivedContacts(): List<MobileContact> =
-        withContext(Dispatchers.IO) {
-            repository.listArchivedContacts()
-        }
-
-    suspend fun getContact(id: String): MobileContact? =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.getContact(id)
-            }
-        } catch (e: Exception) {
-            null
-        }
 
     suspend fun verifyContact(id: String): Boolean =
         try {
