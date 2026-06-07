@@ -98,6 +98,8 @@ class BleCentral(
     private val opLock = Any()
     private val opQueue = ArrayDeque<GattOp>()
     private var opInFlight = false
+    private val opHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var inflightRetries = 0
 
     // ── Scanning (S1) ────────────────────────────────────────────────────────
 
@@ -225,7 +227,6 @@ class BleCentral(
         processNextOp()
     }
 
-    @Suppress("DEPRECATION")
     private fun processNextOp() {
         val g = gatt ?: return
         val op =
@@ -235,10 +236,19 @@ class BleCentral(
                 opInFlight = true
                 next
             }
+        inflightRetries = 0
+        executeOp(g, op)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun executeOp(
+        g: BluetoothGatt,
+        op: GattOp,
+    ) {
         val service = g.getService(BleUuids.uuid(BleUuids.SERVICE))
         val ch = service?.getCharacteristic(BleUuids.uuid(opUuid(op)))
         if (ch == null) {
-            Log.w(TAG, "op on unknown characteristic ${opUuid(op)}")
+            Log.w(TAG, "GATT op on unknown characteristic ${opUuid(op)}")
             finishOp()
             return
         }
@@ -259,10 +269,25 @@ class BleCentral(
                     g.readCharacteristic(ch)
                 }
             }
-        if (!ok) finishOp()
+        val kind = if (op is GattOp.Write) "write" else "read"
+        Log.d(TAG, "GATT $kind ${opUuid(op)} ok=$ok try=$inflightRetries")
+        if (!ok) {
+            // Old GATT stacks (Galaxy S7 / Android 8) transiently reject an op
+            // right after connection setup (writeCharacteristic returns false).
+            // Retry with backoff instead of dropping it — previously the S7-as-
+            // central KeyOffer was silently lost here.
+            if (inflightRetries < MAX_OP_RETRIES) {
+                inflightRetries++
+                opHandler.postDelayed({ gatt?.let { executeOp(it, op) } }, OP_RETRY_MS)
+            } else {
+                Log.w(TAG, "GATT op failed after $inflightRetries retries: ${opUuid(op)}")
+                finishOp()
+            }
+        }
     }
 
     private fun finishOp() {
+        inflightRetries = 0
         synchronized(opLock) { opInFlight = false }
         processNextOp()
     }
@@ -360,6 +385,7 @@ class BleCentral(
                 characteristic: BluetoothGattCharacteristic,
                 status: Int,
             ) {
+                Log.d(TAG, "onCharacteristicWrite ${characteristic.uuid} status=$status")
                 finishOp()
             }
         }
@@ -384,6 +410,8 @@ class BleCentral(
     private companion object {
         const val TAG = "BleCentral"
         const val REQUESTED_MTU = 247
+        const val MAX_OP_RETRIES = 8
+        const val OP_RETRY_MS = 60L
 
         // BluetoothDevice.TRANSPORT_LE inlined to avoid an extra import.
         const val TRANSPORT_LE = 2
