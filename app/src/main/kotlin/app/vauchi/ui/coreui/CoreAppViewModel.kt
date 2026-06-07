@@ -18,8 +18,8 @@ import app.vauchi.nfc.dispatchNfcCommand
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -353,9 +353,14 @@ class CoreAppViewModel(
                     withContext(Dispatchers.IO) {
                         appEngine.handleHardwareEvent(event = event)
                     }
-                if (resultJson != null) {
-                    val result = json.decodeFromString<ActionResult>(resultJson)
-                    applyResult(result)
+                // core 0.51.44+: handleHardwareEvent returns the
+                // `{"action_result": <ActionResult>|null, "commands": [<CommandDTO>]}`
+                // envelope so hardware events deliver the Commands they produce
+                // (KeyOffer / data writes / lifecycle hooks) — previously stranded.
+                val envelope = json.decodeFromString<HardwareEventEnvelope>(resultJson)
+                envelope.actionResult?.let { applyResult(it) }
+                if (envelope.commands.isNotEmpty()) {
+                    handleExchangeCommands(envelope.commands)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send hardware event", e)
@@ -861,6 +866,7 @@ class CoreAppViewModel(
  * [CoreAppViewModel.brightnessRequest]; the Activity-side collector
  * owns the platform call.
  */
+
 /**
  * Ultrasonic emit request from core's `Command::AudioEmitChallenge`. The
  * Activity plays [samples] at [sampleRate] via AudioProximityService.

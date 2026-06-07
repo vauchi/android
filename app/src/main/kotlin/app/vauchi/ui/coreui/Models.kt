@@ -2672,6 +2672,22 @@ data class ActionResultEnvelope(
     val commands: List<CommandDTO>,
 )
 
+/**
+ * Envelope returned by `PlatformAppEngine.handleHardwareEvent` (core 0.51.44+):
+ * `{"action_result": <ActionResult>|null, "commands": [<CommandDTO>]}`.
+ *
+ * Unlike [ActionResultEnvelope], `actionResult` is nullable — `null` when the
+ * event only advanced an engine-held machine (e.g. a multi-stage tick).
+ * `commands` carries every `Command` the event produced so the frontend can
+ * execute it on the hardware (previously stranded in core's pending queue).
+ */
+@Serializable
+data class HardwareEventEnvelope(
+    @SerialName("action_result")
+    val actionResult: ActionResult? = null,
+    val commands: List<CommandDTO> = emptyList(),
+)
+
 // ── OnboardingData ──────────────────────────────────────────────────
 
 @Serializable
