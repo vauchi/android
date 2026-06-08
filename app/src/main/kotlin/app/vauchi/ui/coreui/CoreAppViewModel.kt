@@ -251,6 +251,29 @@ class CoreAppViewModel(
     }
 
     /**
+     * One-shot location capture for the exchange "where we met" annotation
+     * (ADR-051 capture-at-exchange). Core emits `Command::LocationRequest` at
+     * in-person exchange finalize; the Activity owns the request (LocationManager
+     * + the runtime permission both need a Context) — the same split as audio /
+     * accelerometer. Value = the requested timeout in ms; `null` = no request.
+     */
+    private val _locationRequest = MutableStateFlow<Long?>(null)
+    val locationRequest: StateFlow<Long?> = _locationRequest.asStateFlow()
+
+    fun consumeLocationRequest() {
+        _locationRequest.value = null
+    }
+
+    /**
+     * Forward the captured location outcome (built by LocationCaptureService:
+     * `LocationResult`, `PermissionDenied`, or `HardwareUnavailable`) back to
+     * core, which records it via `set_exchange_location` or falls back.
+     */
+    fun forwardLocationEvent(event: MobileEvent) {
+        sendHardwareEvent(event)
+    }
+
+    /**
      * BLE work items (Bump / Shake / Magic). Core emits BLE `Command`s; the
      * Activity owns the radio (BluetoothManager needs a Context) and dispatches
      * to BleCentral / BlePeripheral. A buffered SharedFlow (not a latest-only
@@ -795,6 +818,10 @@ class CoreAppViewModel(
 
                 is CommandDTO.AudioStop -> {
                     _audioStopRequest.value = true
+                }
+
+                is CommandDTO.LocationRequest -> {
+                    _locationRequest.value = cmd.timeoutMs
                 }
 
                 is CommandDTO.BleStartScanning -> {

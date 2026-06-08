@@ -2086,6 +2086,16 @@ sealed class CommandDTO {
 
     data object AudioStop : CommandDTO()
 
+    /**
+     * One-shot device location request for the exchange "where we met"
+     * annotation (ADR-051 capture-at-exchange). The frontend captures a
+     * single fix within [timeoutMs] and reports it back as
+     * `MobileEvent.LocationResult`.
+     */
+    data class LocationRequest(
+        val timeoutMs: Long,
+    ) : CommandDTO()
+
     data object AccelerometerStart : CommandDTO()
 
     data object AccelerometerStop : CommandDTO()
@@ -2579,6 +2589,13 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                         CommandDTO.AudioListenForResponse(
                             timeoutMs = obj["timeout_ms"]!!.jsonPrimitive.long,
                             sampleRate = obj["sample_rate"]!!.jsonPrimitive.int.toUInt(),
+                        )
+                    }
+
+                    "LocationRequest" in element -> {
+                        val obj = element["LocationRequest"] as JsonObject
+                        CommandDTO.LocationRequest(
+                            timeoutMs = obj["timeout_ms"]!!.jsonPrimitive.long,
                         )
                     }
 

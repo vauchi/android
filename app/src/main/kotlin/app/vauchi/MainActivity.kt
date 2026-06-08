@@ -4,6 +4,7 @@
 
 package app.vauchi
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -60,6 +61,7 @@ import app.vauchi.ble.BlePeripheralListener
 import app.vauchi.ble.BleUuids
 import app.vauchi.proximity.AccelerometerProximityService
 import app.vauchi.proximity.AudioProximityService
+import app.vauchi.proximity.LocationCaptureService
 import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.KeyInvalidatedRecoveryScreen
 import app.vauchi.ui.MainViewModel
@@ -568,6 +570,49 @@ fun MainScreen(
             coreAppViewModel.consumeAudioStopRequest()
         }
     }
+
+    // Location capture (ADR-051 "where we met"). Core emits LocationRequest at
+    // in-person exchange finalize; capture a one-shot fix and report it back.
+    // Mirrors iOS's inline CLLocationManager prompt: request the runtime
+    // permission at capture time if not already granted, then let
+    // LocationCaptureService build the resulting MobileEvent (it re-checks the
+    // grant and emits PermissionDenied / HardwareUnavailable as needed).
+    val locationRequest by coreAppViewModel.locationRequest.collectAsState()
+    val pendingLocationTimeout = remember { mutableStateOf<Long?>(null) }
+    val locationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions(),
+        ) {
+            val timeout = pendingLocationTimeout.value
+            pendingLocationTimeout.value = null
+            if (timeout != null) {
+                LocationCaptureService.getInstance(context).requestOneShot(timeout) { event ->
+                    coreAppViewModel.forwardLocationEvent(event)
+                }
+            }
+        }
+    LaunchedEffect(locationRequest) {
+        val timeout = locationRequest ?: return@LaunchedEffect
+        coreAppViewModel.consumeLocationRequest()
+        val locationPerms =
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            )
+        val granted =
+            locationPerms.any {
+                ContextCompat.checkSelfPermission(context, it) ==
+                    PackageManager.PERMISSION_GRANTED
+            }
+        if (granted) {
+            LocationCaptureService.getInstance(context).requestOneShot(timeout) { event ->
+                coreAppViewModel.forwardLocationEvent(event)
+            }
+        } else {
+            pendingLocationTimeout.value = timeout
+            locationPermissionLauncher.launch(locationPerms)
+        }
+    }
     DisposableEffect(Unit) {
         onDispose { AudioProximityService.getInstance(context).stop() }
     }
@@ -581,20 +626,25 @@ fun MainScreen(
             BleCentral(
                 context,
                 object : BleCentralListener {
-                    override fun onDeviceDiscovered(id: String, rssi: Short, advData: ByteArray) =
-                        coreAppViewModel.onBleDeviceDiscovered(id, rssi, advData)
+                    override fun onDeviceDiscovered(
+                        id: String,
+                        rssi: Short,
+                        advData: ByteArray,
+                    ) = coreAppViewModel.onBleDeviceDiscovered(id, rssi, advData)
 
-                    override fun onConnected(deviceId: String) =
-                        coreAppViewModel.onBleConnected(deviceId)
+                    override fun onConnected(deviceId: String) = coreAppViewModel.onBleConnected(deviceId)
 
-                    override fun onDisconnected(reason: String) =
-                        coreAppViewModel.onBleDisconnected(reason)
+                    override fun onDisconnected(reason: String) = coreAppViewModel.onBleDisconnected(reason)
 
-                    override fun onCharacteristicNotified(uuid: String, data: ByteArray) =
-                        coreAppViewModel.onBleCharacteristicNotified(uuid, data)
+                    override fun onCharacteristicNotified(
+                        uuid: String,
+                        data: ByteArray,
+                    ) = coreAppViewModel.onBleCharacteristicNotified(uuid, data)
 
-                    override fun onCharacteristicRead(uuid: String, data: ByteArray) =
-                        coreAppViewModel.onBleCharacteristicRead(uuid, data)
+                    override fun onCharacteristicRead(
+                        uuid: String,
+                        data: ByteArray,
+                    ) = coreAppViewModel.onBleCharacteristicRead(uuid, data)
                 },
             )
         }
@@ -603,48 +653,56 @@ fun MainScreen(
             BlePeripheral(
                 context,
                 object : BlePeripheralListener {
-                    override fun onConnected(deviceId: String) =
-                        coreAppViewModel.onBleConnected(deviceId)
+                    override fun onConnected(deviceId: String) = coreAppViewModel.onBleConnected(deviceId)
 
-                    override fun onDisconnected(reason: String) =
-                        coreAppViewModel.onBleDisconnected(reason)
+                    override fun onDisconnected(reason: String) = coreAppViewModel.onBleDisconnected(reason)
 
-                    override fun onCharacteristicReceived(uuid: String, data: ByteArray) =
-                        coreAppViewModel.onBleCharacteristicNotified(uuid, data)
+                    override fun onCharacteristicReceived(
+                        uuid: String,
+                        data: ByteArray,
+                    ) = coreAppViewModel.onBleCharacteristicNotified(uuid, data)
                 },
             )
         }
     LaunchedEffect(Unit) {
         coreAppViewModel.bleCommands.collect { cmd ->
             when (cmd) {
-                is BleCommand.StartScan ->
+                is BleCommand.StartScan -> {
                     bleCentral
                         .startScanning(cmd.serviceUuid)
                         ?.let { Log.w("MainActivity", "BLE scan: $it") }
+                }
 
-                is BleCommand.StartAdvertise ->
+                is BleCommand.StartAdvertise -> {
                     // Core owns the tiebreak (ADR-043): cmd.payload is this
                     // device's identity-derived token; advertise it so the peer's
                     // core can compare and decide who connects.
                     blePeripheral
                         .startAdvertising(cmd.serviceUuid, cmd.payload)
                         ?.let { Log.w("MainActivity", "BLE advertise: $it") }
+                }
 
-                is BleCommand.Connect ->
+                is BleCommand.Connect -> {
                     bleCentral
                         .connect(cmd.deviceId)
                         ?.let { Log.w("MainActivity", "BLE connect: $it") }
+                }
 
-                BleCommand.Disconnect -> bleCentral.disconnect()
+                BleCommand.Disconnect -> {
+                    bleCentral.disconnect()
+                }
 
-                is BleCommand.Write ->
+                is BleCommand.Write -> {
                     if (cmd.uuid in BleUuids.peripheralNotifyChars) {
                         blePeripheral.notify(cmd.uuid, cmd.data)
                     } else {
                         bleCentral.writeCharacteristic(cmd.uuid, cmd.data)
                     }
+                }
 
-                is BleCommand.Read -> bleCentral.readCharacteristic(cmd.uuid)
+                is BleCommand.Read -> {
+                    bleCentral.readCharacteristic(cmd.uuid)
+                }
             }
         }
     }
