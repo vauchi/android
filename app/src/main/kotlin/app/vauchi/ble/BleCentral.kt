@@ -93,6 +93,7 @@ class BleCentral(
     private val opHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var inflightRetries = 0
     private var inflightOp: GattOp? = null
+    private var discoveryWaitRetries = 0
     private var discoveryRetries = 0
     private val opTimeout = Runnable { onOpTimeout() }
 
@@ -243,15 +244,25 @@ class BleCentral(
         val service = g.getService(BleUuids.uuid(BleUuids.SERVICE))
         val ch = service?.getCharacteristic(BleUuids.uuid(opUuid(op)))
         if (ch == null) {
-            // The discovery gate (onServicesDiscovered) guarantees the handshake
-            // char is present before onConnected, so a miss here is transient —
-            // retry WITHOUT clearing the cache. A refresh() here would wipe the
-            // just-discovered attribute table and loop, and the resulting churn
-            // makes the next write return ok=false.
-            Log.w(TAG, "GATT op on unknown characteristic ${opUuid(op)}")
-            retryOrGiveUp(op, "no-characteristic")
+            // The peer's GATT discovery hasn't surfaced this characteristic yet
+            // (a slow iOS CBPeripheralManager populates it a beat after connect).
+            // Wait on a SEPARATE budget — burning the write-retry budget here is
+            // exactly what stalled iPhone↔Android: all 8 write retries were spent
+            // waiting for the char, leaving none for the real write once it
+            // appeared. Don't refresh() (it wipes the just-discovered table).
+            Log.w(TAG, "GATT op on unknown characteristic ${opUuid(op)} (awaiting discovery)")
+            if (discoveryWaitRetries < MAX_DISCOVERY_WAIT) {
+                discoveryWaitRetries++
+                opHandler.postDelayed({ gatt?.let { executeOp(it, op) } }, OP_RETRY_MS)
+            } else {
+                Log.w(TAG, "GATT characteristic ${opUuid(op)} never appeared; giving up")
+                finishOp()
+            }
             return
         }
+        // Characteristic present — the discovery wait is over; the write keeps
+        // its own full retry budget.
+        discoveryWaitRetries = 0
         val ok =
             when (op) {
                 is GattOp.Write -> {
@@ -317,6 +328,7 @@ class BleCentral(
     private fun finishOp() {
         opHandler.removeCallbacks(opTimeout)
         inflightRetries = 0
+        discoveryWaitRetries = 0
         inflightOp = null
         synchronized(opLock) { opInFlight = false }
         processNextOp()
@@ -462,6 +474,11 @@ class BleCentral(
         const val REQUESTED_MTU = 247
         const val MAX_OP_RETRIES = 8
         const val OP_RETRY_MS = 150L
+
+        // Separate budget for waiting on a slow peer GATT discovery to surface
+        // a characteristic (iOS CBPeripheralManager). ~4.5s, kept distinct from
+        // the write-retry budget so the real write isn't starved.
+        const val MAX_DISCOVERY_WAIT = 30
 
         // Re-discovery budget when the first discovery returns an incomplete
         // characteristic list (Android 8). ~6s total, since the S7 can take a
