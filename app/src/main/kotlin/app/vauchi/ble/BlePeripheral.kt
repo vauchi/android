@@ -6,6 +6,7 @@ package app.vauchi.ble
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattServer
@@ -64,6 +65,8 @@ class BlePeripheral(
     private var advertiseCallback: AdvertiseCallback? = null
     private var gattServer: BluetoothGattServer? = null
     private var payload: ByteArray = ByteArray(0)
+    private var pendingAdvSettings: AdvertiseSettings? = null
+    private var pendingAdvData: AdvertiseData? = null
     private val subscribers = mutableSetOf<BluetoothDevice>()
 
     private data class PendingNotify(
@@ -82,11 +85,10 @@ class BlePeripheral(
         val adapter = adapter() ?: return "BLE adapter off"
         this.payload = payload
         stopAdvertising()
-        openGattServer(serviceUuid)
 
         val adv = adapter.bluetoothLeAdvertiser ?: return "BLE advertiser unavailable"
         advertiser = adv
-        val settings =
+        pendingAdvSettings =
             AdvertiseSettings
                 .Builder()
                 .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
@@ -99,13 +101,27 @@ class BlePeripheral(
         // so iOS, which can't advertise service data and can't control its
         // scan response, conveys the token the same way. 27 bytes ≤ the 31-byte
         // advert. The peer's central reads it back via serviceUuidToToken.
-        val data =
+        pendingAdvData =
             AdvertiseData
                 .Builder()
                 .setIncludeDeviceName(false)
                 .addServiceUuid(ParcelUuid(BleUuids.uuid(serviceUuid)))
                 .addServiceUuid(ParcelUuid(BleUuids.tokenToServiceUuid(payload)))
                 .build()
+        // Open the GATT server + add the service FIRST; advertising starts in
+        // onServiceAdded, never before. addService() is async — if we advertise
+        // immediately a fast central (Galaxy S7, LOW_LATENCY) connects and
+        // discovers during the addService window and never finds the handshake
+        // characteristic (…894), stalling the S7-as-central exchange.
+        openGattServer(serviceUuid)
+        return null
+    }
+
+    /** Start advertising once the GATT service is registered (onServiceAdded). */
+    private fun beginAdvertising() {
+        val adv = advertiser ?: return
+        val settings = pendingAdvSettings ?: return
+        val data = pendingAdvData ?: return
         val cb =
             object : AdvertiseCallback() {
                 override fun onStartFailure(errorCode: Int) {
@@ -113,12 +129,11 @@ class BlePeripheral(
                 }
             }
         advertiseCallback = cb
-        return try {
+        try {
             adv.startAdvertising(settings, data, cb)
-            null
         } catch (e: SecurityException) {
             advertiseCallback = null
-            "Missing BLUETOOTH_ADVERTISE permission"
+            Log.e(TAG, "BLE advertise: missing BLUETOOTH_ADVERTISE permission")
         }
     }
 
@@ -142,6 +157,8 @@ class BlePeripheral(
             Log.w(TAG, "gattServer close: ${e.javaClass.simpleName}")
         }
         gattServer = null
+        pendingAdvSettings = null
+        pendingAdvData = null
     }
 
     private fun openGattServer(serviceUuid: String) {
@@ -228,6 +245,18 @@ class BlePeripheral(
 
     private val gattServerCallback =
         object : BluetoothGattServerCallback() {
+            override fun onServiceAdded(
+                status: Int,
+                service: BluetoothGattService,
+            ) {
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    Log.d(TAG, "GATT service added — starting advertising")
+                    beginAdvertising()
+                } else {
+                    Log.e(TAG, "GATT addService failed: $status")
+                }
+            }
+
             override fun onConnectionStateChange(
                 device: BluetoothDevice,
                 status: Int,

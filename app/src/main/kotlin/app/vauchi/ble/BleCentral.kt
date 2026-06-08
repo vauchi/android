@@ -93,6 +93,7 @@ class BleCentral(
     private val opHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var inflightRetries = 0
     private var inflightOp: GattOp? = null
+    private var discoveryRetries = 0
     private val opTimeout = Runnable { onOpTimeout() }
 
     // ── Scanning (S1) ────────────────────────────────────────────────────────
@@ -242,8 +243,13 @@ class BleCentral(
         val service = g.getService(BleUuids.uuid(BleUuids.SERVICE))
         val ch = service?.getCharacteristic(BleUuids.uuid(opUuid(op)))
         if (ch == null) {
+            // The discovery gate (onServicesDiscovered) guarantees the handshake
+            // char is present before onConnected, so a miss here is transient —
+            // retry WITHOUT clearing the cache. A refresh() here would wipe the
+            // just-discovered attribute table and loop, and the resulting churn
+            // makes the next write return ok=false.
             Log.w(TAG, "GATT op on unknown characteristic ${opUuid(op)}")
-            finishOp()
+            retryOrGiveUp(op, "no-characteristic")
             return
         }
         val ok =
@@ -361,9 +367,28 @@ class BleCentral(
                     listener.onDisconnected("service discovery failed: $status")
                     return
                 }
-                notifyQueue.clear()
                 val service = g.getService(BleUuids.uuid(BleUuids.SERVICE))
-                service?.characteristics?.forEach { ch ->
+                // Android 8 can complete discovery with an INCOMPLETE
+                // characteristic list. Signalling onConnected here would race
+                // the KeyOffer write against a half-populated service — the
+                // …894 "unknown characteristic" S7-as-central stall. Require the
+                // handshake-write char before continuing; otherwise re-discover
+                // until it appears (it does, just a few hundred ms late).
+                val handshake =
+                    service?.getCharacteristic(BleUuids.uuid(BleUuids.HANDSHAKE_WRITE))
+                Log.d(TAG, "discovered ${service?.characteristics?.size ?: 0} chars (handshake=${handshake != null})")
+                if (handshake == null) {
+                    if (discoveryRetries < MAX_DISCOVERY_RETRIES) {
+                        discoveryRetries++
+                        opHandler.postDelayed({ gatt?.discoverServices() }, DISCOVERY_RETRY_MS)
+                    } else {
+                        listener.onDisconnected("incomplete service discovery (no handshake char)")
+                    }
+                    return
+                }
+                discoveryRetries = 0
+                notifyQueue.clear()
+                service.characteristics?.forEach { ch ->
                     val notifiable = ch.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0
                     if (notifiable) notifyQueue.add(ch)
                 }
@@ -414,6 +439,7 @@ class BleCentral(
             }
         }
 
+
     @Suppress("DEPRECATION")
     private fun enableNextNotification(g: BluetoothGatt) {
         val ch = notifyQueue.poll()
@@ -435,7 +461,13 @@ class BleCentral(
         const val TAG = "BleCentral"
         const val REQUESTED_MTU = 247
         const val MAX_OP_RETRIES = 8
-        const val OP_RETRY_MS = 60L
+        const val OP_RETRY_MS = 150L
+
+        // Re-discovery budget when the first discovery returns an incomplete
+        // characteristic list (Android 8). ~6s total, since the S7 can take a
+        // few seconds to surface the full table.
+        const val MAX_DISCOVERY_RETRIES = 15
+        const val DISCOVERY_RETRY_MS = 400L
 
         // Watchdog window: if no write/read callback arrives this long after a
         // GATT op was accepted locally (ok=true), assume the wire-level drop
