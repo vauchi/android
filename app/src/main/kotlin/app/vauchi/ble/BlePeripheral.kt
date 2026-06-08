@@ -93,25 +93,19 @@ class BlePeripheral(
                 .setConnectable(true)
                 .setTimeout(0)
                 .build()
+        // Primary advertisement carries the 128-bit service UUID (scan filter
+        // + GATT) plus the role-tiebreak token encoded as a 32-bit service UUID
+        // (ADR-043). Both go in the primary advert — not the scan response —
+        // so iOS, which can't advertise service data and can't control its
+        // scan response, conveys the token the same way. 27 bytes ≤ the 31-byte
+        // advert. The peer's central reads it back via serviceUuidToToken.
         val data =
             AdvertiseData
                 .Builder()
                 .setIncludeDeviceName(false)
                 .addServiceUuid(ParcelUuid(BleUuids.uuid(serviceUuid)))
+                .addServiceUuid(ParcelUuid(BleUuids.tokenToServiceUuid(payload)))
                 .build()
-        // Scan response carries core's role-tiebreak token (ADR-043) so the
-        // peer's core can compare it against its own and decide who initiates.
-        // Core's `payload` is the identity-derived token; advertise a
-        // BLE-fitting prefix (the full token can exceed the 31-byte scan
-        // response, and a prefix tiebreaks distinct identities correctly).
-        val advToken = payload.copyOf(minOf(payload.size, BleUuids.ADV_TOKEN_MAX))
-        val scanResponse =
-            AdvertiseData
-                .Builder()
-                .addServiceData(
-                    ParcelUuid(BleUuids.uuid(BleUuids.SERVICE_DATA_UUID)),
-                    advToken,
-                ).build()
         val cb =
             object : AdvertiseCallback() {
                 override fun onStartFailure(errorCode: Int) {
@@ -120,7 +114,7 @@ class BlePeripheral(
             }
         advertiseCallback = cb
         return try {
-            adv.startAdvertising(settings, data, scanResponse, cb)
+            adv.startAdvertising(settings, data, cb)
             null
         } catch (e: SecurityException) {
             advertiseCallback = null

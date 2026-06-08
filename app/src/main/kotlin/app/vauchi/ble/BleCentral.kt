@@ -113,17 +113,19 @@ class BleCentral(
                     result: ScanResult,
                 ) {
                     val address = result.device.address
-                    // Core owns the role tiebreak (ADR-043): deliver the peer's
-                    // advertised token (service data) to core as the discovery
-                    // event's adv_data. Core compares it against our own token and
-                    // emits BleConnect only for the winner — android no longer
-                    // decides the role. Wait for a token-bearing result (an early
-                    // adv-only callback before the scan response has no service
-                    // data).
+                    // Core owns the role tiebreak (ADR-043): the peer advertises
+                    // its token as a 32-bit service UUID alongside the 128-bit
+                    // service UUID. Pick the token UUID out of the scan record's
+                    // service-UUID list and deliver its bytes to core as the
+                    // discovery event's adv_data; core compares and emits
+                    // BleConnect only for the winner — android no longer decides
+                    // the role. Wait for a result that carries the token UUID (an
+                    // early adv-only callback may not have it yet).
                     val peerToken =
-                        result.scanRecord?.getServiceData(
-                            ParcelUuid(UUID.fromString(BleUuids.SERVICE_DATA_UUID)),
-                        ) ?: return
+                        result.scanRecord
+                            ?.serviceUuids
+                            ?.firstNotNullOfOrNull { BleUuids.serviceUuidToToken(it.uuid) }
+                            ?: return
                     // Report each peer once (a continuous low-latency scan repeats
                     // the same device; without this core emits a BleConnect per
                     // result and churns the connection).

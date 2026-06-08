@@ -43,24 +43,52 @@ object BleUuids {
     const val CCC_DESCRIPTOR = "00002902-0000-1000-8000-00805f9b34fb"
 
     /**
-     * Service-data slot carrying this device's role-tiebreak token in the
-     * advertisement. Core owns the tiebreak (ADR-043): the token is core's
-     * `BleStartAdvertising.payload` (identity-derived), advertised here so the
-     * peer's core can compare it against its own and decide who connects. The
-     * android side no longer compares tokens — it just advertises ours and
-     * delivers the peer's to core in `BleDeviceDiscovered.adv_data`.
+     * Number of token bytes carried in the advertisement. Core's tiebreak
+     * token (identity-derived, ADR-043) is advertised as a 32-bit
+     * Bluetooth-base service UUID alongside the 128-bit [SERVICE] UUID — the
+     * only portable way to convey it, since iOS CoreBluetooth peripherals
+     * cannot advertise service/manufacturer data (only service UUIDs). Two
+     * 128-bit UUIDs overflow the 31-byte advert, so the token is the first 4
+     * bytes (a 32-bit UUID): flags(3) + 128-bit(18) + 32-bit(6) = 27 <= 31.
+     * Core's full-vs-prefix compare still resolves for distinct identities
+     * (collision ~= 2^-32, a recoverable stall). See
+     * `2026-06-07-ios-ble-execution-parity-plan`.
      */
-    const val SERVICE_DATA_UUID = "0000fe00-0000-1000-8000-00805f9b34fb"
+    const val ADV_TOKEN_BYTES = 4
+
+    // Low 64 bits of the Bluetooth base UUID
+    // (00000000-0000-1000-8000-00805F9B34FB): a 16/32-bit UUID shares the base's
+    // low 96 bits and encodes its value in the top 32 bits of the high half.
+    private val BASE_LSB =
+        UUID.fromString("00000000-0000-1000-8000-00805f9b34fb").leastSignificantBits
 
     /**
-     * Max token bytes to advertise. A BLE scan response is 31 bytes; the
-     * service-data AD header (length + type + 16-bit UUID) takes 4, leaving
-     * ample room for a prefix of core's token. 16 bytes of an identity-derived
-     * token is collision-free for the tiebreak, and core's full-vs-prefix
-     * compare resolves on the first differing byte (within this prefix) for any
-     * two distinct identities.
+     * Encode the first [ADV_TOKEN_BYTES] of [token] as a 32-bit Bluetooth-base
+     * service UUID for advertising; the peer reads it back via
+     * [serviceUuidToToken].
      */
-    const val ADV_TOKEN_MAX = 16
+    fun tokenToServiceUuid(token: ByteArray): UUID {
+        var v = 0L
+        for (i in 0 until ADV_TOKEN_BYTES) {
+            v = (v shl 8) or (token.getOrElse(i) { 0 }.toLong() and 0xff)
+        }
+        return UUID((v shl 32) or 0x1000L, BASE_LSB)
+    }
+
+    /**
+     * Decode a 32-bit Bluetooth-base service UUID back to its [ADV_TOKEN_BYTES]
+     * token bytes, or `null` if [uuid] is not a 32-bit base UUID (e.g. the
+     * 128-bit [SERVICE] UUID). The central picks the token UUID out of a scan
+     * result's service-UUID list with this.
+     */
+    fun serviceUuidToToken(uuid: UUID): ByteArray? {
+        if (uuid.leastSignificantBits != BASE_LSB) return null
+        if ((uuid.mostSignificantBits and 0xFFFFFFFFL) != 0x1000L) return null
+        val v = uuid.mostSignificantBits ushr 32
+        return ByteArray(ADV_TOKEN_BYTES) { i ->
+            ((v ushr (8 * (ADV_TOKEN_BYTES - 1 - i))) and 0xff).toByte()
+        }
+    }
 
     /** All exchange characteristics the peripheral's GATT server exposes. */
     val allCharacteristics: List<String> =
