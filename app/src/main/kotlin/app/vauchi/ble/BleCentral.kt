@@ -92,6 +92,8 @@ class BleCentral(
     private var opInFlight = false
     private val opHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var inflightRetries = 0
+    private var inflightOp: GattOp? = null
+    private val opTimeout = Runnable { onOpTimeout() }
 
     // ── Scanning (S1) ────────────────────────────────────────────────────────
 
@@ -223,7 +225,12 @@ class BleCentral(
                 next
             }
         inflightRetries = 0
-        executeOp(g, op)
+        // Never issue a GATT op from inside a callback stack: the first
+        // KeyOffer write is triggered from onDescriptorWrite -> onConnected,
+        // and old stacks (Galaxy S7 / Android 8) silently drop a re-entrant
+        // op. Post onto the op handler so every write/read leaves the GATT
+        // callback thread first.
+        opHandler.post { gatt?.let { executeOp(it, op) } }
     }
 
     @Suppress("DEPRECATION")
@@ -231,6 +238,7 @@ class BleCentral(
         g: BluetoothGatt,
         op: GattOp,
     ) {
+        inflightOp = op
         val service = g.getService(BleUuids.uuid(BleUuids.SERVICE))
         val ch = service?.getCharacteristic(BleUuids.uuid(opUuid(op)))
         if (ch == null) {
@@ -258,22 +266,52 @@ class BleCentral(
         val kind = if (op is GattOp.Write) "write" else "read"
         Log.d(TAG, "GATT $kind ${opUuid(op)} ok=$ok try=$inflightRetries")
         if (!ok) {
-            // Old GATT stacks (Galaxy S7 / Android 8) transiently reject an op
-            // right after connection setup (writeCharacteristic returns false).
-            // Retry with backoff instead of dropping it — previously the S7-as-
-            // central KeyOffer was silently lost here.
-            if (inflightRetries < MAX_OP_RETRIES) {
-                inflightRetries++
-                opHandler.postDelayed({ gatt?.let { executeOp(it, op) } }, OP_RETRY_MS)
-            } else {
-                Log.w(TAG, "GATT op failed after $inflightRetries retries: ${opUuid(op)}")
-                finishOp()
-            }
+            // Synchronous reject (writeCharacteristic returned false) — old
+            // stacks (Galaxy S7 / Android 8) transiently reject right after
+            // connection setup. Retry with backoff instead of dropping it.
+            retryOrGiveUp(op, "rejected")
+            return
+        }
+        // Accepted locally — but the S7 / Android-8 stack can still drop the
+        // write on the wire with no onCharacteristicWrite ever firing, which
+        // would stall the queue forever (opInFlight stuck true). Arm a
+        // watchdog; the matching write/read callback cancels it via finishOp.
+        opHandler.removeCallbacks(opTimeout)
+        opHandler.postDelayed(opTimeout, OP_TIMEOUT_MS)
+    }
+
+    /**
+     * Re-issue the current op with backoff, or finish it once the retry budget
+     * is spent. Shared by the synchronous-reject and watchdog-timeout paths.
+     */
+    private fun retryOrGiveUp(
+        op: GattOp,
+        reason: String,
+    ) {
+        if (inflightRetries < MAX_OP_RETRIES) {
+            inflightRetries++
+            opHandler.postDelayed({ gatt?.let { executeOp(it, op) } }, OP_RETRY_MS)
+        } else {
+            Log.w(TAG, "GATT op gave up ($reason) after $inflightRetries retries: ${opUuid(op)}")
+            finishOp()
         }
     }
 
+    /**
+     * No write/read callback arrived within OP_TIMEOUT_MS — the wire-level drop
+     * the S7-as-central KeyOffer hit (write accepted locally, never delivered).
+     * Re-issue rather than stall the handshake forever.
+     */
+    private fun onOpTimeout() {
+        val op = synchronized(opLock) { if (!opInFlight) return else inflightOp } ?: return
+        Log.w(TAG, "GATT op timeout (no callback) ${opUuid(op)} try=$inflightRetries")
+        retryOrGiveUp(op, "timeout")
+    }
+
     private fun finishOp() {
+        opHandler.removeCallbacks(opTimeout)
         inflightRetries = 0
+        inflightOp = null
         synchronized(opLock) { opInFlight = false }
         processNextOp()
     }
@@ -398,6 +436,13 @@ class BleCentral(
         const val REQUESTED_MTU = 247
         const val MAX_OP_RETRIES = 8
         const val OP_RETRY_MS = 60L
+
+        // Watchdog window: if no write/read callback arrives this long after a
+        // GATT op was accepted locally (ok=true), assume the wire-level drop
+        // the Galaxy S7 (Android 8) exhibits as central, and re-issue the op.
+        // Generous enough that a real handshake write (tens of ms) never
+        // false-trips it.
+        const val OP_TIMEOUT_MS = 1500L
 
         // BluetoothDevice.TRANSPORT_LE inlined to avoid an extra import.
         const val TRANSPORT_LE = 2
