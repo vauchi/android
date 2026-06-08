@@ -35,16 +35,12 @@ class AccessibilityTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    // MARK: - Settings Accessibility
-    //
     // `settingsScreen_allSectionsAccessible` was removed alongside the native
     // `SettingsScreen` composable: `Screen.Settings` routes through
     // `CoreScreenView("Settings")`, so the accessibility guarantees (back
     // button, section headings) now live on core's Settings engine and are
     // covered by `test:reachability` + the cross-platform ScreenRenderer
     // a11y wiring.
-
-    // MARK: - Contacts Accessibility
 
     // `contactsScreen_emptyStateAccessible` was removed in Phase 1B.2:
     // Screen.Contacts now renders through CoreScreenView("Contacts").
@@ -54,8 +50,6 @@ class AccessibilityTest {
     // `core/vauchi-app/src/ui/contact_list.rs` unit tests plus the
     // reachability walker in `test:reachability`.
 
-    // MARK: - Labels Accessibility
-    //
     // `labelsScreen_labelsAreClickable` removed in the 2026-04-28 Pure
     // Humble UI retirement (Pair 2): `Screen.Labels` already renders
     // through `CoreScreenView("Groups")` against core's `GroupsEngine`,
@@ -72,8 +66,6 @@ class AccessibilityTest {
     // revives it. Core-side a11y for `DeliveryStatusEngine` continues
     // to be exercised by `coreScreenView_appliesA11yLabelsFromModel`
     // below and by `core/vauchi-app/tests/reachability/delivery_status.rs`.
-
-    // MARK: - Core-Driven Accessibility (ScreenRenderer)
 
     @Test
     fun coreScreenView_appliesA11yLabelsFromModel() {

@@ -102,7 +102,6 @@ class MainViewModel(
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    // Network connectivity state
     val isOnline: StateFlow<Boolean> =
         networkMonitor.isOnline
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
@@ -111,11 +110,9 @@ class MainViewModel(
     private val _snackbarMessage = MutableStateFlow<String?>(null)
     val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
 
-    // Sync state
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
-    // Last sync timestamp
     private val _lastSyncTime = MutableStateFlow<Instant?>(null)
     val lastSyncTime: StateFlow<Instant?> = _lastSyncTime.asStateFlow()
 
@@ -195,13 +192,11 @@ class MainViewModel(
                         repository.hasIdentity()
                     }
                 if (hasIdentity) {
-                    // Existing user - auto-mark onboarding complete if not set
                     if (!repository.hasCompletedOnboarding()) {
                         repository.setOnboardingCompleted(true)
                     }
                     loadUserData()
                 } else {
-                    // New user - show onboarding flow
                     _uiState.value = UiState.Onboarding
                 }
             } catch (e: DeviceNotSecureException) {

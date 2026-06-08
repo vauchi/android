@@ -312,8 +312,6 @@ class DiagnosticActivity : ComponentActivity() {
         }
     }
 
-    // ── Audio Helpers ──────────────────────────────────────────────────
-
     private fun emitAndRecord(
         frequencyHz: Int,
         durationMs: Int,
@@ -450,8 +448,6 @@ class DiagnosticActivity : ComponentActivity() {
         return track
     }
 
-    // ── Test A: Loopback ───────────────────────────────────────────────
-
     private fun testLoopback(log: MutableList<String>) {
         log.add("=== Test A: Loopback ===")
         for (freq in TEST_FREQUENCIES) {
@@ -471,8 +467,6 @@ class DiagnosticActivity : ComponentActivity() {
             )
         }
     }
-
-    // ── Test B: Noise Floor ────────────────────────────────────────────
 
     private fun testNoiseFloor(log: MutableList<String>) {
         log.add("=== Test B: Noise Floor ===")
@@ -496,8 +490,6 @@ class DiagnosticActivity : ComponentActivity() {
         )
     }
 
-    // ── Test C: Cross-Device Emit ──────────────────────────────────────
-
     private fun testCrossDeviceEmit(log: MutableList<String>) {
         log.add("=== Test C: Emit ===")
         for (freq in TEST_FREQUENCIES) {
@@ -512,8 +504,6 @@ class DiagnosticActivity : ComponentActivity() {
             message = "emit_complete",
         )
     }
-
-    // ── Test C: Cross-Device Listen ────────────────────────────────────
 
     private fun testCrossDeviceListen(log: MutableList<String>) {
         log.add("=== Test C: Listen ===")
@@ -534,8 +524,6 @@ class DiagnosticActivity : ComponentActivity() {
             )
         }
     }
-
-    // ── Test D: Frequency Sweep ────────────────────────────────────────
 
     private fun testSweep(log: MutableList<String>) {
         log.add("=== Test D: Frequency Sweep ===")
@@ -571,8 +559,6 @@ class DiagnosticActivity : ComponentActivity() {
             )
         }
     }
-
-    // ── Test F: AudioSource Comparison ─────────────────────────────────
 
     private fun testSourceComparison(log: MutableList<String>) {
         log.add("=== Test F: AudioSource Comparison ===")

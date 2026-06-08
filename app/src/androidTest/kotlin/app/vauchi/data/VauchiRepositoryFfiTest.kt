@@ -95,7 +95,6 @@ class VauchiRepositoryFfiTest {
         )
     }
 
-    // MARK: - Identity Management Tests
     // Based on: features/identity_management.feature
 
     /**
@@ -147,7 +146,6 @@ class VauchiRepositoryFfiTest {
         assertEquals("Alice", repo2.getDisplayName())
     }
 
-    // MARK: - Contact Card Tests
     // Based on: features/contact_card_management.feature
 
     /**
@@ -224,7 +222,6 @@ class VauchiRepositoryFfiTest {
         assertTrue(card.fields.isEmpty(), "Field should be removed")
     }
 
-    // MARK: - Contact Management Tests
     // Based on: features/contacts_management.feature
 
     /**
@@ -240,7 +237,6 @@ class VauchiRepositoryFfiTest {
         assertEquals(0u, repository.contactCount())
     }
 
-    // MARK: - Backup Tests
     // Based on: features/identity_management.feature
 
     /**
@@ -280,8 +276,6 @@ class VauchiRepositoryFfiTest {
             newDir.deleteRecursively()
         }
     }
-
-    // MARK: - Social Networks Tests
 
     /**
      * Scenario: List available social networks

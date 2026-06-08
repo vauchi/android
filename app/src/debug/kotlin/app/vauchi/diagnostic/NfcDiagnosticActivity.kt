@@ -301,8 +301,6 @@ class NfcDiagnosticActivity : ComponentActivity() {
         }
     }
 
-    // ── Test A: Discovery ────────────────────────────────────────────
-
     private suspend fun testDiscovery(log: MutableList<String>) {
         log.add("=== Test A: NFC Discovery ===")
         promptUser("Put and keep devices together")
@@ -361,8 +359,6 @@ class NfcDiagnosticActivity : ComponentActivity() {
         nfcAdapter?.disableReaderMode(this@NfcDiagnosticActivity)
     }
 
-    // ── Test B: AID Selection ────────────────────────────────────────
-
     private suspend fun testAidSelection(log: MutableList<String>) {
         log.add("=== Test B: AID Selection ===")
         log.add("Hold near HCE device...")
@@ -399,8 +395,6 @@ class NfcDiagnosticActivity : ComponentActivity() {
             )
         }
     }
-
-    // ── Test C: APDU Round-Trip Latency ──────────────────────────────
 
     private suspend fun testApduLatency(log: MutableList<String>) {
         log.add("=== Test C: APDU Latency ===")
@@ -448,8 +442,6 @@ class NfcDiagnosticActivity : ComponentActivity() {
             )
         }
     }
-
-    // ── Test D: Max Payload ──────────────────────────────────────────
 
     private suspend fun testMaxPayload(log: MutableList<String>) {
         log.add("=== Test D: Max Payload ===")
@@ -507,8 +499,6 @@ class NfcDiagnosticActivity : ComponentActivity() {
             )
         }
     }
-
-    // ── Test E: Throughput ───────────────────────────────────────────
 
     private suspend fun testThroughput(log: MutableList<String>) {
         log.add("=== Test E: Throughput ===")
@@ -569,8 +559,6 @@ class NfcDiagnosticActivity : ComponentActivity() {
         }
     }
 
-    // ── HCE Server Mode ──────────────────────────────────────────────
-
     private fun startHceServer(log: MutableList<String>) {
         log.add("=== NFC HCE Server Mode ===")
         log.add("Diagnostic HCE service is active")
@@ -598,8 +586,6 @@ class NfcDiagnosticActivity : ComponentActivity() {
         Log.i("Vauchi", "[NFC Diagnostic] User confirmed: $message")
         actionPrompt = null
     }
-
-    // ── Helpers ──────────────────────────────────────────────────────
 
     /**
      * Enable reader mode with periodic resets to detect tags already in the NFC field.

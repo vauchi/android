@@ -42,7 +42,6 @@ fun QRCountdownContent(
 ) {
     var remainingSeconds by remember { mutableIntStateOf(0) }
 
-    // Countdown tick
     LaunchedEffect(expiresAt) {
         while (true) {
             val now = (System.currentTimeMillis() / 1000).toULong()
@@ -66,7 +65,6 @@ fun QRCountdownContent(
         style = MaterialTheme.typography.bodyMedium,
     )
 
-    // QR Code
     val qrBitmap =
         remember(qrData) {
             generateQRBitmap(qrData, 250)
@@ -137,7 +135,6 @@ fun QRCountdownContent(
         )
     }
 
-    // Copy button
     TextButton(onClick = onCopy) {
         Icon(
             Icons.Default.Share,

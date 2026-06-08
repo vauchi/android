@@ -305,8 +305,6 @@ class BleDiagnosticActivity : ComponentActivity() {
         }
     }
 
-    // ── Test A: Discovery ────────────────────────────────────────────
-
     @SuppressLint("MissingPermission")
     private suspend fun testDiscovery(log: MutableList<String>) {
         log.add("=== Test A: Discovery ===")
@@ -352,8 +350,6 @@ class BleDiagnosticActivity : ComponentActivity() {
             DiagnosticLogger.logResult("ble_discovery", "info", message = "no_peer count=${found.size}")
         }
     }
-
-    // ── Test B: MTU Negotiation ──────────────────────────────────────
 
     @SuppressLint("MissingPermission")
     private suspend fun testMtu(log: MutableList<String>) {
@@ -403,8 +399,6 @@ class BleDiagnosticActivity : ComponentActivity() {
             DiagnosticLogger.logResult("ble_mtu", "fail", message = "timeout connected=$connected")
         }
     }
-
-    // ── Test C: Throughput ───────────────────────────────────────────
 
     @SuppressLint("MissingPermission")
     private suspend fun testThroughput(log: MutableList<String>) {
@@ -488,8 +482,6 @@ class BleDiagnosticActivity : ComponentActivity() {
 
         gatt?.disconnect()
     }
-
-    // ── Test D: Latency ─────────────────────────────────────────────
 
     @SuppressLint("MissingPermission")
     private suspend fun testLatency(log: MutableList<String>) {
@@ -577,8 +569,6 @@ class BleDiagnosticActivity : ComponentActivity() {
         DiagnosticLogger.logResult("ble_latency", if (pass) "pass" else "fail", message = "mean_rtt=$mean")
     }
 
-    // ── Test E: RSSI Range ──────────────────────────────────────────
-
     @SuppressLint("MissingPermission")
     private suspend fun testRssi(log: MutableList<String>) {
         log.add("=== Test E: RSSI Range ===")
@@ -646,8 +636,6 @@ class BleDiagnosticActivity : ComponentActivity() {
             DiagnosticLogger.logResult("ble_rssi", "fail", message = "avg=$avg min=$min max=$max")
         }
     }
-
-    // ── Test F: Connection Stability ─────────────────────────────────
 
     @SuppressLint("MissingPermission")
     private suspend fun testStability(log: MutableList<String>) {
@@ -749,8 +737,6 @@ class BleDiagnosticActivity : ComponentActivity() {
             DiagnosticLogger.logResult("ble_stability", "fail", message = "pings=$pings drops=$drops disconnected=$disconnected")
         }
     }
-
-    // ── GATT Server (peripheral mode) ────────────────────────────────
 
     @SuppressLint("MissingPermission")
     private fun startServer(log: MutableList<String>) {
@@ -873,8 +859,6 @@ class BleDiagnosticActivity : ComponentActivity() {
         gattServer = null
         isServerMode = false
     }
-
-    // ── Helpers ──────────────────────────────────────────────────────
 
     @SuppressLint("MissingPermission")
     private suspend fun findPeerDevice(log: MutableList<String>): BluetoothDevice? {

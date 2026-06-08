@@ -58,7 +58,6 @@ fun CoreScreenView(
     val imagePickEvent by viewModel.imagePickEvent.collectAsState()
     val useFrontCamera by viewModel.useFrontCamera.collectAsState()
 
-    // Image picker launcher (library)
     val imagePickerLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.GetContent(),
@@ -81,7 +80,6 @@ fun CoreScreenView(
             }
         }
 
-    // Camera capture launcher
     var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher =
         rememberLauncherForActivityResult(
@@ -105,7 +103,6 @@ fun CoreScreenView(
             }
         }
 
-    // Observe image pick events from core
     LaunchedEffect(imagePickEvent) {
         when (imagePickEvent) {
             "library" -> {

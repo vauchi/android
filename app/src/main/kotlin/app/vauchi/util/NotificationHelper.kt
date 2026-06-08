@@ -66,7 +66,6 @@ object NotificationHelper {
     fun showNotification(context: Context, notification: MobilePendingNotification) {
         val notificationManager = NotificationManagerCompat.from(context)
 
-        // Ensure channels exist before showing
         createNotificationChannels(context)
 
         val channelId = when (notification.category) {

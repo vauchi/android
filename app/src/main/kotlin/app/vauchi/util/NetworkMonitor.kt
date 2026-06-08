@@ -44,7 +44,6 @@ class NetworkMonitor(context: Context) {
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
 
-        // Send initial state
         trySend(isCurrentlyConnected())
 
         connectivityManager.registerNetworkCallback(request, callback)

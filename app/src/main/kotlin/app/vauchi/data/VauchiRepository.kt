@@ -4,23 +4,6 @@
 
 package app.vauchi.data
 
-// DONE: Content updates - isContentUpdatesSupported(), checkContentUpdates(),
-// applyContentUpdates(), reloadSocialNetworks() methods implemented.
-//
-// DONE: Demo contact - implemented initDemoContactIfNeeded(), getDemoContact(),
-// getDemoContactState(), isDemoUpdateAvailable(), triggerDemoUpdate(),
-// dismissDemoContact(), autoRemoveDemoContact(), restoreDemoContact().
-//
-// DONE: Visibility labels - listLabels(), createLabel(), getLabel(), renameLabel(),
-// deleteLabel(), addContactToGroup(), removeContactFromGroup(), getGroupsForContact(),
-// setGroupFieldVisibility(), getSuggestedLabels().
-//
-// DONE: Certificate pinning - isCertificatePinningEnabled(), setPinnedCertificate()
-// methods implemented. UI added to Settings under Security section.
-//
-// DONE: Device linking - getDevices(), generateDeviceLinkQr(), parseDeviceLinkQr(),
-// deviceCount(), unlinkDevice(), isPrimaryDevice() methods implemented.
-
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.SharedPreferences
@@ -242,7 +225,6 @@ class VauchiRepository(
 
     fun setRelayUrl(url: String) = preferences.setRelayUrl(url)
 
-    // Onboarding state management
     fun hasCompletedOnboarding(): Boolean = preferences.hasCompletedOnboarding()
 
     fun setOnboardingCompleted(completed: Boolean) = preferences.setOnboardingCompleted(completed)
@@ -253,7 +235,6 @@ class VauchiRepository(
 
     fun resetOnboarding() = preferences.resetOnboarding()
 
-    // Accessibility settings
     fun getReduceMotion(): Boolean = preferences.getReduceMotion()
 
     fun setReduceMotion(enabled: Boolean) = preferences.setReduceMotion(enabled)
@@ -267,8 +248,6 @@ class VauchiRepository(
     fun setLargeTouchTargets(enabled: Boolean) = preferences.setLargeTouchTargets(enabled)
 
     fun sync(): MobileSyncResult = platform().sync()
-
-    // Privacy toggles
 
     fun isDeliveryReceiptsEnabled(): Boolean {
         platform() // ensure lazy init
@@ -360,8 +339,6 @@ class VauchiRepository(
 
     fun removeContact(id: String) = appEngine.removeContact(id)
 
-    // Contact lifecycle (reversible deletion + archival)
-
     fun softDeleteImportedContact(id: String) = appEngine.softDeleteImportedContact(id)
 
     fun archiveContact(id: String) = appEngine.archiveContact(id)
@@ -386,7 +363,6 @@ class VauchiRepository(
 
     fun listArchivedContacts() = appEngine.listArchivedContacts()
 
-    // Visibility operations
     fun hideFieldFromContact(
         contactId: String,
         fieldLabel: String,
@@ -406,7 +382,6 @@ class VauchiRepository(
         fieldLabel: String,
     ): Boolean = appEngine.isFieldVisibleToContact(contactId, fieldLabel)
 
-    // Visibility Labels operations
     // Based on: features/visibility_labels.feature
 
     /**
@@ -451,7 +426,6 @@ class VauchiRepository(
      */
     fun getSuggestedLabels(): List<String> = runCatching { appEngine.getSuggestedLabels() }.getOrDefault(emptyList())
 
-    // Backup operations
     fun exportBackup(password: String): String {
         platform() // ensure initialized
         return appEngine.exportBackup(password)
@@ -465,7 +439,6 @@ class VauchiRepository(
         appEngine.importBackup(backupData, password)
     }
 
-    // Full backup operations (identity + contacts + own card + labels)
     // TODO: wire once export_full_backup is exported via UniFFI
     fun exportFullBackup(password: String): String {
         platform() // ensure initialized
@@ -480,8 +453,6 @@ class VauchiRepository(
         appEngine.importBackup(backupData, password)
     }
 
-    // Social network operations.
-    //
     // Non-throwing wrappers that silently degrade on dispatch failure —
     // callers treat social-networks data as a UI hint, so the legacy
     // non-throwing FFI shape is preserved by swallowing
@@ -498,7 +469,6 @@ class VauchiRepository(
         username: String,
     ): String? = runCatching { appEngine.getProfileUrl(networkId, username) }.getOrNull()
 
-    // Content Updates operations
     // Based on: features/content_updates.feature
 
     /**
@@ -526,8 +496,6 @@ class VauchiRepository(
     fun reloadSocialNetworks(): List<uniffi.vauchi_platform.MobileSocialNetwork> =
         runCatching { appEngine.reloadSocialNetworks() }.getOrDefault(emptyList())
 
-    // Certificate Pinning operations
-
     /**
      * Check if certificate pinning is enabled
      */
@@ -540,8 +508,6 @@ class VauchiRepository(
     fun setPinnedCertificate(certPem: String) {
         runCatching { appEngine.setPinnedCertificate(certPem) }
     }
-
-    // Duress PIN operations
 
     /**
      * Authenticate with app password. Returns the auth mode (Normal or Duress).
@@ -599,8 +565,6 @@ class VauchiRepository(
 
     fun getDuressSettings(): uniffi.vauchi_platform.MobileDuressSettings? = appEngine.getDuressSettings()
 
-    // Contact notes
-
     fun setContactNote(
         contactId: String,
         note: String,
@@ -631,8 +595,6 @@ class VauchiRepository(
         appEngine.deleteContactFieldNote(contactId, fieldId)
     }
 
-    // Proposal trust
-
     fun setProposalTrusted(
         contactId: String,
         trusted: Boolean,
@@ -640,12 +602,10 @@ class VauchiRepository(
         appEngine.setProposalTrusted(contactId, trusted)
     }
 
-    // Verification operations
     fun verifyContact(id: String) = appEngine.verifyContact(id)
 
     fun getOwnFingerprint(): String = appEngine.getOwnFingerprint()
 
-    // Recovery trust operations (direct B2 typed methods on PlatformAppEngine).
     fun trustContactForRecovery(id: String) = appEngine.trustContactForRecovery(id)
 
     fun untrustContactForRecovery(id: String) = appEngine.untrustContactForRecovery(id)
@@ -656,7 +616,6 @@ class VauchiRepository(
 
     fun getDeliverySummary(messageId: String) = appEngine.getDeliverySummary(messageId)
 
-    // Demo contact operations
     // Based on: features/demo_contact.feature
 
     /**
@@ -751,7 +710,6 @@ class VauchiRepository(
      * Send a device link request via the relay and wait for a response.
      */
 
-    // GDPR operations
     // Based on: features/privacy_compliance.feature
 
     /**

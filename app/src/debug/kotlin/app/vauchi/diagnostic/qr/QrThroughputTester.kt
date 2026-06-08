@@ -162,7 +162,6 @@ class QrThroughputTester(
                 .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
                 .build()
 
-        // Bind camera
         val cameraDeferred = CompletableDeferred<Unit>()
         ContextCompat.getMainExecutor(context).execute {
             try {
@@ -179,10 +178,8 @@ class QrThroughputTester(
 
         log("Scanning for ${measurementDurationMs / 1000}s...")
 
-        // Wait for measurement duration
         delay(measurementDurationMs)
 
-        // Unbind camera
         val unbindDone = CompletableDeferred<Unit>()
         ContextCompat.getMainExecutor(context).execute {
             cameraProvider.unbindAll()
@@ -190,7 +187,6 @@ class QrThroughputTester(
         }
         unbindDone.await()
 
-        // Calculate results
         val elapsedSec = measurementDurationMs / 1000.0f
         val latencyCopy = synchronized(latencies) { latencies.toList() }
         val avgLatency = if (latencyCopy.isNotEmpty()) latencyCopy.average().toFloat() else 0f

@@ -120,7 +120,6 @@ fun ScreenRenderer(
                             },
                         ),
             ) {
-                // Progress indicator
                 screen.progress?.let { progress ->
                     LinearProgressIndicator(
                         progress = {
@@ -143,14 +142,12 @@ fun ScreenRenderer(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // Title
                 Text(
                     text = localizer.resolveCoreLabel(screen.title),
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.semantics { heading() },
                 )
 
-                // Subtitle
                 screen.subtitle?.let {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(

@@ -40,8 +40,6 @@ import uniffi.vauchi_platform.PlatformAppEngine
 
 private fun unexpectedResult(name: String): Nothing = throw MobileException.Other(detail = "$name: unexpected result variant")
 
-// ── Identity / Bootstrap (C1) ──
-
 fun PlatformAppEngine.createIdentity(displayName: String) {
     dispatchDomainCommand(DomainCommand.CreateIdentity(displayName))
 }
@@ -55,8 +53,6 @@ fun PlatformAppEngine.getDisplayName(): String {
     val result = dispatchDomainCommand(DomainCommand.GetDisplayName)
     return (result as? DomainCommandResult.Text)?.value ?: unexpectedResult("GetDisplayName")
 }
-
-// ── Contact Field Mutation (C1) ──
 
 fun PlatformAppEngine.getOwnCard(): MobileContactCard {
     val result = dispatchDomainCommand(DomainCommand.GetOwnCard)
@@ -87,8 +83,6 @@ fun PlatformAppEngine.setDisplayName(name: String) {
     dispatchDomainCommand(DomainCommand.SetDisplayName(name))
 }
 
-// ── Backup (C5) ──
-
 fun PlatformAppEngine.exportBackup(password: String): String {
     val result = dispatchDomainCommand(DomainCommand.ExportBackup(password))
     return (result as? DomainCommandResult.Text)?.value ?: unexpectedResult("ExportBackup")
@@ -100,8 +94,6 @@ fun PlatformAppEngine.importBackup(
 ) {
     dispatchDomainCommand(DomainCommand.ImportBackup(backupData, password))
 }
-
-// ── Demo Contact (B7 batch 5) ──
 
 fun PlatformAppEngine.initDemoContactIfNeeded(): MobileDemoContact? {
     val result = dispatchDomainCommand(DomainCommand.InitDemoContactIfNeeded)
@@ -149,8 +141,6 @@ fun PlatformAppEngine.restoreDemoContact(): MobileDemoContact? {
     return opt.contact
 }
 
-// ── Social Networks (B7 batch 2 / 19) ──
-
 fun PlatformAppEngine.listSocialNetworks(): List<MobileSocialNetwork> {
     val result = dispatchDomainCommand(DomainCommand.ListSocialNetworks)
     return (result as? DomainCommandResult.SocialNetworks)?.networks
@@ -178,8 +168,6 @@ fun PlatformAppEngine.reloadSocialNetworks(): List<MobileSocialNetwork> {
         ?: unexpectedResult("ReloadSocialNetworks")
 }
 
-// ── Content Updates (B7 batch 2) ──
-
 fun PlatformAppEngine.isContentUpdatesSupported(): Boolean {
     val result = dispatchDomainCommand(DomainCommand.IsContentUpdatesSupported)
     return (result as? DomainCommandResult.Bool)?.value ?: unexpectedResult("IsContentUpdatesSupported")
@@ -195,8 +183,6 @@ fun PlatformAppEngine.applyContentUpdates(): MobileApplyResult {
     return (result as? DomainCommandResult.ApplyResult)?.result ?: unexpectedResult("ApplyContentUpdates")
 }
 
-// ── Certificate Pinning (B7 batch 21) ──
-
 fun PlatformAppEngine.isCertificatePinningEnabled(): Boolean {
     val result = dispatchDomainCommand(DomainCommand.IsCertificatePinningEnabled)
     return (result as? DomainCommandResult.Bool)?.value
@@ -206,8 +192,6 @@ fun PlatformAppEngine.isCertificatePinningEnabled(): Boolean {
 fun PlatformAppEngine.setPinnedCertificate(certPem: String) {
     dispatchDomainCommand(DomainCommand.SetPinnedCertificate(certPem))
 }
-
-// ── Contact CRUD (C2) ──
 
 fun PlatformAppEngine.listContacts(): List<MobileContact> {
     val result = dispatchDomainCommand(DomainCommand.ListContacts)
@@ -270,8 +254,6 @@ fun PlatformAppEngine.unhideContact(contactId: String) {
     dispatchDomainCommand(DomainCommand.UnhideContact(contactId))
 }
 
-// ── Contact Verification (C2) ──
-
 fun PlatformAppEngine.verifyContact(id: String) {
     dispatchDomainCommand(DomainCommand.VerifyContact(id))
 }
@@ -287,8 +269,6 @@ fun PlatformAppEngine.getOwnFingerprint(): String {
     val result = dispatchDomainCommand(DomainCommand.GetOwnFingerprint)
     return (result as? DomainCommandResult.Text)?.value ?: unexpectedResult("GetOwnFingerprint")
 }
-
-// ── Contact Notes (C2) ──
 
 fun PlatformAppEngine.setContactNote(
     contactId: String,
@@ -328,8 +308,6 @@ fun PlatformAppEngine.deleteContactFieldNote(
     dispatchDomainCommand(DomainCommand.DeleteContactFieldNote(contactId, fieldId))
 }
 
-// ── Field Visibility (C3) ──
-
 fun PlatformAppEngine.hideFieldFromContact(
     contactId: String,
     fieldLabel: String,
@@ -352,8 +330,6 @@ fun PlatformAppEngine.isFieldVisibleToContact(
     return (result as? DomainCommandResult.Bool)?.value
         ?: unexpectedResult("IsFieldVisibleToContact")
 }
-
-// ── Visibility Labels (C3) ──
 
 fun PlatformAppEngine.listLabels(): List<MobileVisibilityLabel> {
     val result = dispatchDomainCommand(DomainCommand.ListLabels)
@@ -414,8 +390,6 @@ fun PlatformAppEngine.getSuggestedLabels(): List<String> {
     return (result as? DomainCommandResult.Strings)?.values ?: unexpectedResult("GetSuggestedLabels")
 }
 
-// ── Delivery Records / Retry Queue (C4) ──
-
 fun PlatformAppEngine.getDeliveryRecordsForContact(recipientId: String): List<MobileDeliveryRecord> {
     val result = dispatchDomainCommand(DomainCommand.GetDeliveryRecordsForContact(recipientId))
     return (result as? DomainCommandResult.DeliveryRecords)?.records
@@ -428,7 +402,6 @@ fun PlatformAppEngine.getDeliverySummary(messageId: String): MobileDeliverySumma
         ?: unexpectedResult("GetDeliverySummary")
 }
 
-// ── Delivery flags + pending count (cf57f21e cascade follow-up) ──
 // VauchiPlatform direct wrappers for these were retired in core 0.51.2+
 // (mobile_delivery.rs Phase 2a flag-vestigial cleanup + the pending-count
 // relocation). The previous Android cascade commit `cf57f21e` migrated
@@ -462,23 +435,17 @@ fun PlatformAppEngine.pendingUpdateCount(): UInt {
         ?: unexpectedResult("PendingUpdateCount")
 }
 
-// ── Hidden Contacts (C5 remainder) ──
-
 fun PlatformAppEngine.listHiddenContacts(): List<MobileContact> {
     val result = dispatchDomainCommand(DomainCommand.ListHiddenContacts)
     return (result as? DomainCommandResult.Contacts)?.contacts
         ?: unexpectedResult("ListHiddenContacts")
 }
 
-// ── Recovery Verification (C7 remainder) ──
-
 fun PlatformAppEngine.verifyRecoveryProof(proofB64: String): MobileRecoveryVerification {
     val result = dispatchDomainCommand(DomainCommand.VerifyRecoveryProof(proofB64))
     return (result as? DomainCommandResult.RecoveryVerification)?.verification
         ?: unexpectedResult("VerifyRecoveryProof")
 }
-
-// ── Passcode (C6) ──
 
 fun PlatformAppEngine.authenticate(password: String): MobileAuthMode {
     val result = dispatchDomainCommand(DomainCommand.Authenticate(password))
@@ -493,8 +460,6 @@ fun PlatformAppEngine.isPasswordEnabled(): Boolean {
     val result = dispatchDomainCommand(DomainCommand.IsPasswordEnabled)
     return (result as? DomainCommandResult.Bool)?.value ?: unexpectedResult("IsPasswordEnabled")
 }
-
-// ── Duress (C6) ──
 
 fun PlatformAppEngine.isDuressEnabled(): Boolean {
     val result = dispatchDomainCommand(DomainCommand.IsDuressEnabled)
@@ -522,8 +487,6 @@ fun PlatformAppEngine.getDuressSettings(): MobileDuressSettings? {
     return opt.settings
 }
 
-// ── GDPR / Identity Deletion (C6) ──
-
 fun PlatformAppEngine.exportGdprData(): MobileGdprExport {
     val result = dispatchDomainCommand(DomainCommand.ExportGdprData)
     return (result as? DomainCommandResult.GdprExport)?.export ?: unexpectedResult("ExportGdprData")
@@ -544,8 +507,6 @@ fun PlatformAppEngine.getDeletionState(): MobileDeletionInfo {
     return (result as? DomainCommandResult.DeletionInfo)?.info ?: unexpectedResult("GetDeletionState")
 }
 
-// ── Consent (C6) ──
-
 fun PlatformAppEngine.grantConsent(consentType: MobileConsentType) {
     dispatchDomainCommand(DomainCommand.GrantConsent(consentType))
 }
@@ -560,7 +521,6 @@ fun PlatformAppEngine.getConsentRecords(): List<MobileConsentRecord> {
         ?: unexpectedResult("GetConsentRecords")
 }
 
-// ── Recovery Trust (B7 + slice 32g-B Phase 1) ──
 // The direct `pub fn trust_contact_for_recovery` / `untrust_contact_for_recovery`
 // methods on `impl PlatformAppEngine` retired in core 0.51.2
 // (`refactor: route recovery-trust through DomainCommand`, `513ab6f8`).
@@ -577,7 +537,6 @@ fun PlatformAppEngine.untrustContactForRecovery(contactId: String) {
     dispatchDomainCommand(DomainCommand.UntrustContactForRecovery(contactId))
 }
 
-// ── Contact Detail (slice 32g-B Phase 2) ──
 // `mobile_contact_detail.rs` impl block retired in core 0.51.2
 // (`refactor: retire mobile_*.rs contact-CRUD impl blocks`,
 // `5b415656`). The two read methods moved to `DomainCommand` dispatch.

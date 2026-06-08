@@ -53,8 +53,6 @@ class AudioProximityService(
         }
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    // MARK: - Audio Methods (formerly PlatformAudioHandler)
-
     /**
      * Check device capability for ultrasonic audio.
      * Returns: "full", "emit_only", "receive_only", or "none"
@@ -68,10 +66,8 @@ class AudioProximityService(
 
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-        // Check if device has microphone
         val hasMicrophone = context.packageManager.hasSystemFeature(PackageManager.FEATURE_MICROPHONE)
 
-        // Check if device has speaker
         val hasSpeaker = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).isNotEmpty()
 
         // Check sample rate support (need at least 44100 Hz for ultrasonic)
@@ -142,13 +138,11 @@ class AudioProximityService(
             audioTrack = track
             isPlaying.set(true)
 
-            // Convert List<Float> to FloatArray
             val floatArray = samples.toFloatArray()
 
             track.write(floatArray, 0, floatArray.size, AudioTrack.WRITE_BLOCKING)
             track.play()
 
-            // Wait for playback to complete
             val durationMs = (samples.size.toLong() * 1000) / sampleRateInt
             Thread.sleep(durationMs + 100)
 
@@ -319,8 +313,6 @@ class AudioProximityService(
         }
         audioTrack = null
     }
-
-    // MARK: - Helper Methods
 
     private fun getOptimalSampleRate(): Int {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager

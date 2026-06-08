@@ -715,7 +715,6 @@ fun MainScreen(
         }
     }
 
-    // Auto-sync when app comes to foreground
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
