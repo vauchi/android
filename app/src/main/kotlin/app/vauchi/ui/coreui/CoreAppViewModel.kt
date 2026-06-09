@@ -53,9 +53,6 @@ class CoreAppViewModel(
     private val _screen = MutableStateFlow<ScreenModel?>(null)
     val screen: StateFlow<ScreenModel?> = _screen.asStateFlow()
 
-    private val _availableScreens = MutableStateFlow<List<String>>(emptyList())
-    val availableScreens: StateFlow<List<String>> = _availableScreens.asStateFlow()
-
     /**
      * Top-level tabs as core describes them — `id` (snake_case
      * `screen_id`), `label` (locale-resolved), `icon` (SF Symbol name
@@ -399,7 +396,6 @@ class CoreAppViewModel(
     private var eventListener: ScreenInvalidationListener? = null
 
     init {
-        loadAvailableScreens()
         loadScreen()
         attachEventListener()
     }
@@ -447,20 +443,6 @@ class CoreAppViewModel(
         withContext(Dispatchers.IO) {
             runCatching { appEngine.pollNotifications() }
                 .onFailure { Log.e(TAG, "multi-stage tick poll failed", it) }
-        }
-    }
-
-    fun loadAvailableScreens() {
-        viewModelScope.launch {
-            try {
-                val screensJson =
-                    withContext(Dispatchers.IO) {
-                        appEngine.availableScreensJson()
-                    }
-                _availableScreens.value = json.decodeFromString(screensJson)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to load available screens", e)
-            }
         }
     }
 
@@ -567,7 +549,6 @@ class CoreAppViewModel(
                         appEngine.handleDeepLinkUri(uri = uri)
                     }
                 _screen.value = json.decodeFromString<ScreenModel>(screenJson)
-                loadAvailableScreens()
             } catch (e: Exception) {
                 Log.e(TAG, "Deep link dispatch failed", e)
                 onInvalid(e.message ?: "Unknown error")
@@ -621,7 +602,6 @@ class CoreAppViewModel(
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) { appEngine.invalidateAll() }
-                loadAvailableScreens()
                 loadScreen()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to invalidate", e)
