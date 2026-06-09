@@ -402,33 +402,6 @@ fun PlatformAppEngine.getDeliverySummary(messageId: String): MobileDeliverySumma
         ?: unexpectedResult("GetDeliverySummary")
 }
 
-// VauchiPlatform direct wrappers for these were retired in core 0.51.2+
-// (mobile_delivery.rs Phase 2a flag-vestigial cleanup + the pending-count
-// relocation). The previous Android cascade commit `cf57f21e` migrated
-// most retired direct calls; these five were missed because the Maven
-// 0.51.2 artifact still exposed them, hiding the stale-binding failure
-// until -PlocalBindings rebuilt against current core.
-
-fun PlatformAppEngine.isDeliveryReceiptsEnabled(): Boolean {
-    val result = dispatchDomainCommand(DomainCommand.IsDeliveryReceiptsEnabled)
-    return (result as? DomainCommandResult.Bool)?.value
-        ?: unexpectedResult("IsDeliveryReceiptsEnabled")
-}
-
-fun PlatformAppEngine.setDeliveryReceiptsEnabled(enabled: Boolean) {
-    dispatchDomainCommand(DomainCommand.SetDeliveryReceiptsEnabled(enabled))
-}
-
-fun PlatformAppEngine.isSuppressPresenceEnabled(): Boolean {
-    val result = dispatchDomainCommand(DomainCommand.IsSuppressPresenceEnabled)
-    return (result as? DomainCommandResult.Bool)?.value
-        ?: unexpectedResult("IsSuppressPresenceEnabled")
-}
-
-fun PlatformAppEngine.setSuppressPresenceEnabled(enabled: Boolean) {
-    dispatchDomainCommand(DomainCommand.SetSuppressPresenceEnabled(enabled))
-}
-
 fun PlatformAppEngine.pendingUpdateCount(): UInt {
     val result = dispatchDomainCommand(DomainCommand.PendingUpdateCount)
     return (result as? DomainCommandResult.Count)?.value
@@ -552,4 +525,3 @@ fun PlatformAppEngine.contactDetailViewState(contactId: String): MobileContactDe
     return (result as? DomainCommandResult.ContactDetailView)?.state
         ?: unexpectedResult("ContactDetailViewState")
 }
-

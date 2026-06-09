@@ -249,26 +249,6 @@ class VauchiRepository(
 
     fun sync(): MobileSyncResult = platform().sync()
 
-    fun isDeliveryReceiptsEnabled(): Boolean {
-        platform() // ensure lazy init
-        return _appEngine.isDeliveryReceiptsEnabled()
-    }
-
-    fun setDeliveryReceiptsEnabled(enabled: Boolean) {
-        platform() // ensure lazy init
-        _appEngine.setDeliveryReceiptsEnabled(enabled)
-    }
-
-    fun isSuppressPresenceEnabled(): Boolean {
-        platform() // ensure lazy init
-        return _appEngine.isSuppressPresenceEnabled()
-    }
-
-    fun setSuppressPresenceEnabled(enabled: Boolean) {
-        platform() // ensure lazy init
-        _appEngine.setSuppressPresenceEnabled(enabled)
-    }
-
     fun pendingUpdateCount(): UInt {
         platform() // ensure lazy init
         return _appEngine.pendingUpdateCount()
