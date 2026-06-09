@@ -16,7 +16,6 @@ import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.PlatformAppEngine
-import uniffi.vauchi_platform.VauchiPlatform
 import java.io.File
 
 /**
@@ -45,14 +44,13 @@ data class ExchangeData(
 }
 
 /**
- * Repository class wrapping VauchiPlatform UniFFI bindings.
+ * Repository class wrapping the single PlatformAppEngine UniFFI handle.
  * Uses Android KeyStore for secure storage key management.
  */
 class VauchiRepository(
     private val context: Context,
     private val keyStoreHelper: StorageKeyProvider = KeyStoreHelper(),
 ) {
-    private lateinit var _vauchi: VauchiPlatform
     private lateinit var _appEngine: PlatformAppEngine
     private var initialized = false
     private val prefs: SharedPreferences
@@ -91,7 +89,7 @@ class VauchiRepository(
 
         // Pre-check: device must have a secure lock screen for KeyStore operations.
         // This is a fast check (no KeyStore access). The actual KeyStore entry is
-        // created lazily in platform() on first use — NOT here.
+        // created lazily in ensureInitialized() on first use — NOT here.
         val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
         if (!keyguardManager.isDeviceSecure) {
             throw DeviceNotSecureException(
@@ -102,7 +100,7 @@ class VauchiRepository(
     }
 
     /**
-     * Lazily initialize the VauchiPlatform on first use.
+     * Lazily initialize the engine on first use.
      *
      * This defers KeyStore entry creation from app startup to the first actual
      * operation (e.g., createIdentity, hasIdentity). This prevents the bug where
@@ -110,18 +108,15 @@ class VauchiRepository(
      * in an "Authentication Required" loop.
      */
     @Synchronized
-    private fun platform(): VauchiPlatform {
+    private fun ensureInitialized() {
         if (!initialized) {
             val dataDir = context.filesDir.absolutePath
             val relayUrl = preferences.getRelayUrl()
             val storageKeyBytes = getOrCreateStorageKey(dataDir)
-            _vauchi = VauchiPlatform.newWithSecureKey(dataDir, relayUrl, storageKeyBytes)
-            _vauchi.setPlatformKeychain(PlatformKeychainBridge(context))
             _appEngine = PlatformAppEngine(dataDir, relayUrl, storageKeyBytes)
-            // B7 Phase 2: also wire the keychain to PlatformAppEngine so the
-            // core-driven shred DomainCommands (SoftShred / CancelShred /
-            // HardShred / PanicShred) can reach the platform keychain. The
-            // VauchiPlatform slot above stays for `widget_panic_shred`.
+            // Wire the keychain so core-driven shred DomainCommands (SoftShred /
+            // CancelShred / HardShred / PanicShred) reach the platform keychain.
+            // `widget_panic_shred` is a free function and needs no instance.
             _appEngine.setPlatformKeychain(PlatformKeychainBridge(context))
             initialized = true
 
@@ -134,18 +129,17 @@ class VauchiRepository(
             // (all-false) — see `2026-05-23-exchange-capabilities-frontend-gap`.
             pushDeviceCapabilities(context, _appEngine)
         }
-        return _vauchi
     }
 
     /**
      * Shared PlatformAppEngine for core-driven screen rendering.
-     * Created alongside VauchiPlatform using the same credentials —
+     * Initialized on first use via ensureInitialized() —
      * single DB connection, shared cache across all screens.
      * Call [platform] first to ensure initialization.
      */
     val appEngine: PlatformAppEngine
         get() {
-            platform() // ensure initialized
+            ensureInitialized()
             return _appEngine
         }
 
@@ -247,40 +241,43 @@ class VauchiRepository(
 
     fun setLargeTouchTargets(enabled: Boolean) = preferences.setLargeTouchTargets(enabled)
 
-    fun sync(): MobileSyncResult = platform().sync()
+    fun sync(): MobileSyncResult {
+        ensureInitialized()
+        return _appEngine.sync()
+    }
 
     fun pendingUpdateCount(): UInt {
-        platform() // ensure lazy init
+        ensureInitialized()
         return _appEngine.pendingUpdateCount()
     }
 
     fun hasIdentity(): Boolean {
-        platform() // ensure initialized
+        ensureInitialized()
         return appEngine.hasIdentity()
     }
 
     fun createIdentity(displayName: String) {
-        platform() // ensure initialized
+        ensureInitialized()
         appEngine.createIdentity(displayName)
     }
 
     fun getDisplayName(): String {
-        platform() // ensure initialized
+        ensureInitialized()
         return appEngine.getDisplayName()
     }
 
     fun setDisplayName(name: String) {
-        platform() // ensure initialized
+        ensureInitialized()
         appEngine.setDisplayName(name)
     }
 
     fun getPublicId(): String {
-        platform() // ensure initialized
+        ensureInitialized()
         return appEngine.getPublicId()
     }
 
     fun getOwnCard(): MobileContactCard {
-        platform() // ensure initialized
+        ensureInitialized()
         return appEngine.getOwnCard()
     }
 
@@ -289,7 +286,7 @@ class VauchiRepository(
         label: String,
         value: String,
     ) {
-        platform() // ensure initialized
+        ensureInitialized()
         appEngine.addField(fieldType, label, value)
     }
 
@@ -297,12 +294,12 @@ class VauchiRepository(
         label: String,
         newValue: String,
     ) {
-        platform() // ensure initialized
+        ensureInitialized()
         appEngine.updateField(label, newValue)
     }
 
     fun removeField(label: String): Boolean {
-        platform() // ensure initialized
+        ensureInitialized()
         return appEngine.removeField(label)
     }
 
@@ -401,13 +398,13 @@ class VauchiRepository(
      *
      * Non-throwing wrapper that returns `[]` on failure — `getSuggestedLabels`
      * is a non-essential UI hint, so dispatch errors silently degrade rather
-     * than propagate. The legacy `platform().getSuggestedLabels()` was likewise
+     * than propagate. The legacy `getSuggestedLabels()` was likewise
      * non-throwing on the FFI surface; we preserve that shape.
      */
     fun getSuggestedLabels(): List<String> = runCatching { appEngine.getSuggestedLabels() }.getOrDefault(emptyList())
 
     fun exportBackup(password: String): String {
-        platform() // ensure initialized
+        ensureInitialized()
         return appEngine.exportBackup(password)
     }
 
@@ -415,13 +412,13 @@ class VauchiRepository(
         backupData: String,
         password: String,
     ) {
-        platform() // ensure initialized
+        ensureInitialized()
         appEngine.importBackup(backupData, password)
     }
 
     // TODO: wire once export_full_backup is exported via UniFFI
     fun exportFullBackup(password: String): String {
-        platform() // ensure initialized
+        ensureInitialized()
         return appEngine.exportBackup(password)
     }
 
@@ -429,7 +426,7 @@ class VauchiRepository(
         backupData: String,
         password: String,
     ) {
-        platform() // ensure initialized
+        ensureInitialized()
         appEngine.importBackup(backupData, password)
     }
 
@@ -605,7 +602,7 @@ class VauchiRepository(
      * @return The demo contact if created, null if user has contacts or demo was dismissed
      */
     fun initDemoContactIfNeeded(): uniffi.vauchi_platform.MobileDemoContact? {
-        platform() // ensure initialized
+        ensureInitialized()
         return appEngine.initDemoContactIfNeeded()
     }
 
@@ -615,7 +612,7 @@ class VauchiRepository(
      * @return The demo contact if active, null otherwise
      */
     fun getDemoContact(): uniffi.vauchi_platform.MobileDemoContact? {
-        platform() // ensure initialized
+        ensureInitialized()
         return appEngine.getDemoContact()
     }
 
@@ -647,7 +644,7 @@ class VauchiRepository(
      * @return Updated demo contact with new tip, null if demo not active
      */
     fun triggerDemoUpdate(): uniffi.vauchi_platform.MobileDemoContact? {
-        platform() // ensure initialized
+        ensureInitialized()
         return appEngine.triggerDemoUpdate()
     }
 
@@ -655,7 +652,7 @@ class VauchiRepository(
      * Dismiss the demo contact manually.
      */
     fun dismissDemoContact() {
-        platform() // ensure initialized
+        ensureInitialized()
         appEngine.dismissDemoContact()
     }
 
@@ -666,7 +663,7 @@ class VauchiRepository(
      * @return True if demo was removed, false if it wasn't active
      */
     fun autoRemoveDemoContact(): Boolean {
-        platform() // ensure initialized
+        ensureInitialized()
         return appEngine.autoRemoveDemoContact()
     }
 
@@ -676,7 +673,7 @@ class VauchiRepository(
      * @return The restored demo contact
      */
     fun restoreDemoContact(): uniffi.vauchi_platform.MobileDemoContact? {
-        platform() // ensure initialized
+        ensureInitialized()
         return appEngine.restoreDemoContact()
     }
 

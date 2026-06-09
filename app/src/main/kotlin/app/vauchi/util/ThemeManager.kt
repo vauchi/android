@@ -47,7 +47,7 @@ class ThemeManager(
      * `MutableStateFlow` rather than `mutableStateOf` because this
      * manager is a singleton with a process-wide lifetime: it is
      * created on first `getInstance` (often from
-     * `VauchiRepository.platform()` on a background thread) and
+     * `VauchiRepository.ensureInitialized()` on a background thread) and
      * survives Activity recreation. Compose `mutableStateOf` is bound
      * to the snapshot system of the runtime that read it first; once
      * that runtime dies (config change, force-stop+relaunch) a fresh
@@ -88,7 +88,7 @@ class ThemeManager(
     /**
      * Wire this manager to the live [PlatformAppEngine] instance so
      * subsequent theme changes propagate to core's `RenderContext`.
-     * Called once by `VauchiRepository.platform()` after the platform
+     * Called once by `VauchiRepository.ensureInitialized()` after the platform
      * finishes lazy initialisation. Re-applies the theme and pushes
      * it to core so the Settings dropdown reflects what's on disk.
      */

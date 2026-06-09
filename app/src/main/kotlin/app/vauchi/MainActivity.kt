@@ -175,7 +175,7 @@ class MainActivity : FragmentActivity() {
 
         // Poll for notifications off the main thread (E).
         // This triggers the native library load via pollNotifications() →
-        // repository.platform(), so it must not block the first frame.
+        // repository.ensureInitialized(), so it must not block the first frame.
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val viewModel = ViewModelProvider(this@MainActivity)[MainViewModel::class.java]

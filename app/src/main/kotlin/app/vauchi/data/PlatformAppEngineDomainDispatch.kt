@@ -26,6 +26,7 @@ import uniffi.vauchi_platform.MobileGdprExport
 import uniffi.vauchi_platform.MobileRecoveryVerification
 import uniffi.vauchi_platform.MobileRetryEntry
 import uniffi.vauchi_platform.MobileSocialNetwork
+import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.MobileUpdateStatus
 import uniffi.vauchi_platform.MobileVisibilityLabel
 import uniffi.vauchi_platform.MobileVisibilityLabelDetail
@@ -524,4 +525,12 @@ fun PlatformAppEngine.contactDetailViewState(contactId: String): MobileContactDe
     val result = dispatchDomainCommand(DomainCommand.ContactDetailViewState(contactId))
     return (result as? DomainCommandResult.ContactDetailView)?.state
         ?: unexpectedResult("ContactDetailViewState")
+}
+
+// User-initiated relay sync (collapse-vauchi-platform G1). The engine owns
+// the connect lifecycle and honors the C1/C2 timing throttle: a throttled
+// (TooSoon) call comes back as a benign no-change MobileSyncResult.
+fun PlatformAppEngine.sync(): MobileSyncResult {
+    val result = dispatchDomainCommand(DomainCommand.Sync)
+    return (result as? DomainCommandResult.SyncResult)?.result ?: unexpectedResult("Sync")
 }

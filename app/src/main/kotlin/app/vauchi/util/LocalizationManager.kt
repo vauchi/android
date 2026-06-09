@@ -68,7 +68,7 @@ class LocalizationManager(
     /**
      * Wire this manager to the live [PlatformAppEngine] instance so
      * subsequent locale changes propagate to core's `RenderContext`.
-     * Called once by `VauchiRepository.platform()` after the platform
+     * Called once by `VauchiRepository.ensureInitialized()` after the platform
      * finishes lazy initialisation. Re-applies the locale and pushes
      * it to core so the Settings dropdown reflects what's on disk.
      */
