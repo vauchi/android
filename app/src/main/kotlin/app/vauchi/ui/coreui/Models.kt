@@ -1619,7 +1619,7 @@ sealed class UserAction {
 
     /**
      * Top-level tab tap (ADR-043 Am4). [actionId] is the opaque canonical
-     * id from `tabInfo()`; core resolves it to the canonical screen. Maps
+     * id from `navItems(.mobile)`; core resolves it to the canonical screen. Maps
      * to `UserAction::NavigateToTab { action_id }`.
      */
     data class NavigateToTab(

@@ -283,7 +283,7 @@ fun MainScreen(
             CoreAppViewModel(viewModel.appEngine)
         }
 
-    // Bottom-nav tabs come from core (`tabInfo(locale)`) — labels,
+    // Bottom-nav tabs come from core (`navItems(MOBILE, locale)`) — labels,
     // icons, and the tab set itself are core-owned. Reload when
     // identity is created (uiState transitions to Ready) and whenever
     // the active locale changes so labels stay in sync.

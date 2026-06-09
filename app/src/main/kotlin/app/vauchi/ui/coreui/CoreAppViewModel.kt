@@ -58,7 +58,7 @@ class CoreAppViewModel(
      * `screen_id`), `label` (locale-resolved), `icon` (SF Symbol name
      * Android maps to a Material Icon), `badge_count`. Empty before
      * identity exists or before the first [loadTabs] call. Driven by
-     * `PlatformAppEngine.tabInfo(locale)`; reload via [loadTabs] when
+     * `PlatformAppEngine.navItems(MOBILE, locale)`; reload via [loadTabs] when
      * identity transitions or the user changes locale.
      */
     private val _tabs = MutableStateFlow<List<MobileTabInfo>>(emptyList())
@@ -447,9 +447,9 @@ class CoreAppViewModel(
     }
 
     /**
-     * Refresh [tabs] from `PlatformAppEngine.tabInfo(locale)`. Call on
-     * startup, after identity creation (pre-identity returns just
-     * Onboarding; post-identity returns the five mobile top-level
+     * Refresh [tabs] from `PlatformAppEngine.navItems(MOBILE, locale)`.
+     * Call on startup, after identity creation (pre-identity returns
+     * just Onboarding; post-identity returns the five mobile top-level
      * tabs), and whenever the active locale changes so labels stay in
      * sync. Errors are logged and leave the previous tabs in place.
      */
@@ -458,7 +458,7 @@ class CoreAppViewModel(
             try {
                 _tabs.value =
                     withContext(Dispatchers.IO) {
-                        appEngine.tabInfo(locale = locale)
+                        appEngine.navItems(layout = MobileTabLayout.MOBILE, locale = locale)
                     }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load tabs", e)
