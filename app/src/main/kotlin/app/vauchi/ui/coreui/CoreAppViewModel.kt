@@ -366,25 +366,36 @@ class CoreAppViewModel(
         sendHardwareEvent(MobileEvent.ImagePickCancelled)
     }
 
+    // FIFO, single consumer: hardware events must reach core in arrival
+    // order (BLE KeyAck before card chunks) — a launch-per-event dispatch
+    // re-ordered notifications arriving milliseconds apart. See
+    // `_private/docs/problems/2026-06-06-android-ble-execution/`.
+    private val hardwareEvents =
+        FifoEventQueue<MobileEvent>(viewModelScope) { event ->
+            deliverHardwareEvent(event)
+        }
+
     private fun sendHardwareEvent(event: MobileEvent) {
-        viewModelScope.launch {
-            try {
-                val resultJson =
-                    withContext(Dispatchers.IO) {
-                        appEngine.handleHardwareEvent(event = event)
-                    }
-                // core 0.51.44+: handleHardwareEvent returns the
-                // `{"action_result": <ActionResult>|null, "commands": [<CommandDTO>]}`
-                // envelope so hardware events deliver the Commands they produce
-                // (KeyOffer / data writes / lifecycle hooks) — previously stranded.
-                val envelope = json.decodeFromString<HardwareEventEnvelope>(resultJson)
-                envelope.actionResult?.let { applyResult(it) }
-                if (envelope.commands.isNotEmpty()) {
-                    handleExchangeCommands(envelope.commands)
+        hardwareEvents.send(event)
+    }
+
+    private suspend fun deliverHardwareEvent(event: MobileEvent) {
+        try {
+            val resultJson =
+                withContext(Dispatchers.IO) {
+                    appEngine.handleHardwareEvent(event = event)
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to send hardware event", e)
+            // core 0.51.44+: handleHardwareEvent returns the
+            // `{"action_result": <ActionResult>|null, "commands": [<CommandDTO>]}`
+            // envelope so hardware events deliver the Commands they produce
+            // (KeyOffer / data writes / lifecycle hooks) — previously stranded.
+            val envelope = json.decodeFromString<HardwareEventEnvelope>(resultJson)
+            envelope.actionResult?.let { applyResult(it) }
+            if (envelope.commands.isNotEmpty()) {
+                handleExchangeCommands(envelope.commands)
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to send hardware event", e)
         }
     }
 
