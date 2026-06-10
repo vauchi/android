@@ -670,6 +670,9 @@ test:screenshots:
           - "app/build.gradle*"
           - "gradle.properties"
           - ".gitlab-ci.yml"
+    # Run on main too so the committed baselines upload to VRT every merge,
+    # matching the other platforms (macos/ios/linux-gtk/linux-qt/web-demo).
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 # Manual job: record screenshot baselines on CI and commit them to the branch.
 # CI is the single source of truth for baselines — never record locally.
