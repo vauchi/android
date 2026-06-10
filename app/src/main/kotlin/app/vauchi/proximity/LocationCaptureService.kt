@@ -50,6 +50,25 @@ class LocationCaptureService private constructor(
             }
 
         private const val TRANSPORT = "location"
+
+        /** No location permission at all → the generic denied reply; null = proceed. */
+        internal fun permissionDeniedEvent(
+            fine: Boolean,
+            coarse: Boolean,
+        ): MobileEvent? = if (!fine && !coarse) MobileEvent.PermissionDenied(TRANSPORT) else null
+
+        /** A fix without reported accuracy maps to a null accuracy, not a bogus 0. */
+        internal fun locationResultEvent(
+            latitude: Double,
+            longitude: Double,
+            hasAccuracy: Boolean,
+            accuracy: Float,
+        ): MobileEvent =
+            MobileEvent.LocationResult(
+                latitude = latitude,
+                longitude = longitude,
+                accuracyMeters = if (hasAccuracy) accuracy else null,
+            )
     }
 
     /**
@@ -65,8 +84,9 @@ class LocationCaptureService private constructor(
     ) {
         val fine = hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
         val coarse = hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-        if (!fine && !coarse) {
-            onResult(MobileEvent.PermissionDenied(TRANSPORT))
+        val denied = permissionDeniedEvent(fine, coarse)
+        if (denied != null) {
+            onResult(denied)
             return
         }
 
@@ -147,9 +167,10 @@ class LocationCaptureService private constructor(
         }
 
     private fun locationResult(location: Location): MobileEvent =
-        MobileEvent.LocationResult(
+        locationResultEvent(
             latitude = location.latitude,
             longitude = location.longitude,
-            accuracyMeters = if (location.hasAccuracy()) location.accuracy else null,
+            hasAccuracy = location.hasAccuracy(),
+            accuracy = location.accuracy,
         )
 }
