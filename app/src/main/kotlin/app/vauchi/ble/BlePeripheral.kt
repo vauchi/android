@@ -96,11 +96,13 @@ class BlePeripheral(
                 .setTimeout(0)
                 .build()
         // Primary advertisement carries the 128-bit service UUID (scan filter
-        // + GATT) plus the role-tiebreak token encoded as a 32-bit service UUID
-        // (ADR-043). Both go in the primary advert — not the scan response —
-        // so iOS, which can't advertise service data and can't control its
-        // scan response, conveys the token the same way. 27 bytes ≤ the 31-byte
-        // advert. The peer's central reads it back via serviceUuidToToken.
+        // + GATT) plus the role-tiebreak token encoded as a 16-bit service UUID
+        // (ADR-043; 16-bit because pre-Android-9 stacks truncate 32-bit UUIDs —
+        // see BleUuids.ADV_TOKEN_BYTES). Both go in the primary advert — not
+        // the scan response — so iOS, which can't advertise service data and
+        // can't control its scan response, conveys the token the same way.
+        // 25 bytes ≤ the 31-byte advert. The peer's central reads it back via
+        // serviceUuidToToken.
         pendingAdvData =
             AdvertiseData
                 .Builder()

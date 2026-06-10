@@ -44,17 +44,24 @@ object BleUuids {
 
     /**
      * Number of token bytes carried in the advertisement. Core's tiebreak
-     * token (identity-derived, ADR-043) is advertised as a 32-bit
+     * token (identity-derived, ADR-043) is advertised as a 16-bit
      * Bluetooth-base service UUID alongside the 128-bit [SERVICE] UUID — the
-     * only portable way to convey it, since iOS CoreBluetooth peripherals
-     * cannot advertise service/manufacturer data (only service UUIDs). Two
-     * 128-bit UUIDs overflow the 31-byte advert, so the token is the first 4
-     * bytes (a 32-bit UUID): flags(3) + 128-bit(18) + 32-bit(6) = 27 <= 31.
-     * Core's full-vs-prefix compare still resolves for distinct identities
-     * (collision ~= 2^-32, a recoverable stall). See
-     * `2026-06-07-ios-ble-execution-parity-plan`.
+     * only channel iOS CoreBluetooth peripherals can advertise (service UUIDs
+     * only, no service/manufacturer data), and 16-bit is the only compressed
+     * width every Android stack transmits intact: pre-Android-9 advertisers
+     * (Galaxy S7 / Android 8) truncate a 32-bit UUID to its low 16 bits
+     * (`ff5b2478` went on air as `00002478`), which deadlocked the role
+     * tiebreak with both peers as responder (P5b stall,
+     * `2026-06-06-android-ble-execution`, 2026-06-10). Advert budget:
+     * flags(3) + 128-bit(18) + 16-bit(4) = 25 <= 31. Core's full-vs-prefix
+     * compare still resolves for identities with distinct 2-byte prefixes
+     * (collision ~= 2^-16 per pair — a stall recovered by the exchange
+     * timeout/cancel, tracked in `2026-06-04-exchange-terminal-screens`).
      */
-    const val ADV_TOKEN_BYTES = 4
+    const val ADV_TOKEN_BYTES = 2
+
+    /** Token width of the retired 32-bit format (P5c v1), still decoded. */
+    private const val LEGACY_ADV_TOKEN_BYTES = 4
 
     // Low 64 bits of the Bluetooth base UUID
     // (00000000-0000-1000-8000-00805F9B34FB): a 16/32-bit UUID shares the base's
@@ -63,7 +70,7 @@ object BleUuids {
         UUID.fromString("00000000-0000-1000-8000-00805f9b34fb").leastSignificantBits
 
     /**
-     * Encode the first [ADV_TOKEN_BYTES] of [token] as a 32-bit Bluetooth-base
+     * Encode the first [ADV_TOKEN_BYTES] of [token] as a 16-bit Bluetooth-base
      * service UUID for advertising; the peer reads it back via
      * [serviceUuidToToken].
      */
@@ -76,17 +83,20 @@ object BleUuids {
     }
 
     /**
-     * Decode a 32-bit Bluetooth-base service UUID back to its [ADV_TOKEN_BYTES]
-     * token bytes, or `null` if [uuid] is not a 32-bit base UUID (e.g. the
-     * 128-bit [SERVICE] UUID). The central picks the token UUID out of a scan
-     * result's service-UUID list with this.
+     * Decode a 16-bit Bluetooth-base service UUID back to its [ADV_TOKEN_BYTES]
+     * token bytes — or a legacy 32-bit one to its 4 bytes (an un-updated peer
+     * still advertising the v1 format; decoding it whole keeps the
+     * full-vs-prefix compare consistent). `null` if [uuid] is not a base UUID
+     * (e.g. the 128-bit [SERVICE] UUID). The central picks the token UUID out
+     * of a scan result's service-UUID list with this.
      */
     fun serviceUuidToToken(uuid: UUID): ByteArray? {
         if (uuid.leastSignificantBits != BASE_LSB) return null
         if ((uuid.mostSignificantBits and 0xFFFFFFFFL) != 0x1000L) return null
         val v = uuid.mostSignificantBits ushr 32
-        return ByteArray(ADV_TOKEN_BYTES) { i ->
-            ((v ushr (8 * (ADV_TOKEN_BYTES - 1 - i))) and 0xff).toByte()
+        val width = if (v <= 0xFFFFL) ADV_TOKEN_BYTES else LEGACY_ADV_TOKEN_BYTES
+        return ByteArray(width) { i ->
+            ((v ushr (8 * (width - 1 - i))) and 0xff).toByte()
         }
     }
 

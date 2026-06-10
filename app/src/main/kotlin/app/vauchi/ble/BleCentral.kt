@@ -118,8 +118,9 @@ class BleCentral(
                 ) {
                     val address = result.device.address
                     // Core owns the role tiebreak (ADR-043): the peer advertises
-                    // its token as a 32-bit service UUID alongside the 128-bit
-                    // service UUID. Pick the token UUID out of the scan record's
+                    // its token as a 16-bit service UUID alongside the 128-bit
+                    // service UUID (see BleUuids.ADV_TOKEN_BYTES for why
+                    // 16-bit). Pick the token UUID out of the scan record's
                     // service-UUID list and deliver its bytes to core as the
                     // discovery event's adv_data; core compares and emits
                     // BleConnect only for the winner — android no longer decides
@@ -450,7 +451,6 @@ class BleCentral(
                 finishOp()
             }
         }
-
 
     @Suppress("DEPRECATION")
     private fun enableNextNotification(g: BluetoothGatt) {
