@@ -117,6 +117,17 @@ class CoreAppViewModel(
     }
 
     /**
+     * True while a dispatched [UserAction] is executing in core. Hosts
+     * render a blocking progress scrim once this has been true for a
+     * beat — long-running engine work (e.g. a 10k-contact backup
+     * restore) otherwise runs behind a fully interactive, unchanged
+     * screen and users re-submit
+     * (2026-06-11-restore-runs-without-progress-feedback).
+     */
+    private val _actionInFlight = MutableStateFlow(false)
+    val actionInFlight: StateFlow<Boolean> = _actionInFlight.asStateFlow()
+
+    /**
      * Screen brightness requests emitted by core's
      * `Command::SetScreenBrightness` (Phase 2b screen-presentation
      * lifecycle). [BrightnessRequest.Set] dims/brightens to the
@@ -549,6 +560,7 @@ class CoreAppViewModel(
         }
         viewModelScope.launch {
             try {
+                _actionInFlight.value = true
                 val actionJson = json.encodeToString(UserAction.serializer(), action)
                 val resultJson =
                     withContext(Dispatchers.IO) {
@@ -567,6 +579,8 @@ class CoreAppViewModel(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to handle action", e)
                 _error.value = "Action failed: ${e.message}"
+            } finally {
+                _actionInFlight.value = false
             }
         }
     }

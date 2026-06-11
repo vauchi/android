@@ -103,38 +103,42 @@ fun CoreOnboardingScreen(
     }
 
     Scaffold { paddingValues ->
-        val currentScreen = screen
+        Box(modifier = Modifier.fillMaxSize()) {
+            val currentScreen = screen
 
-        if (currentScreen == null) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator()
+            if (currentScreen == null) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                AnimatedContent(
+                    targetState = currentScreen,
+                    transitionSpec = {
+                        slideInHorizontally { it } + fadeIn() togetherWith
+                            slideOutHorizontally { -it } + fadeOut()
+                    },
+                    contentKey = { it.screenId },
+                    label = "core_onboarding_screen",
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                ) { targetScreen ->
+                    ScreenRenderer(
+                        screen = targetScreen,
+                        onAction = coreAppViewModel::handleAction,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
-        } else {
-            AnimatedContent(
-                targetState = currentScreen,
-                transitionSpec = {
-                    slideInHorizontally { it } + fadeIn() togetherWith
-                        slideOutHorizontally { -it } + fadeOut()
-                },
-                contentKey = { it.screenId },
-                label = "core_onboarding_screen",
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-            ) { targetScreen ->
-                ScreenRenderer(
-                    screen = targetScreen,
-                    onAction = coreAppViewModel::handleAction,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+
+            ActionInFlightOverlay(coreAppViewModel)
         }
     }
 }

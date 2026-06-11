@@ -149,6 +149,8 @@ fun CoreScreenView(
             )
         }
 
+        ActionInFlightOverlay(viewModel)
+
         // Alert dialog
         alertMessage?.let { (title, message) ->
             AlertDialog(
