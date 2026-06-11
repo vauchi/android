@@ -40,6 +40,7 @@ include:
       - '/ci-templates/reuse.yml'
       - '/ci-templates/design-drift.yml'
       - '/ci-templates/image-lint.yml'
+      - '/ci-templates/orphan-baselines.yml'
       - '/ci-templates/parser-parity.yml'
       - '/ci-templates/removed-symbols.yml'
       - '/ci-templates/badges.yml'
@@ -581,7 +582,7 @@ test:screenshots:
   # Falls back to main if tag missing — verify tags exist before bumping AAR.
   variables:
     VRT_PLATFORM: android
-    VRT_SCREENSHOT_DIR: app/src/screenshotTestDebug/reference/app/vauchi/ScreenshotTestsKt
+    VRT_SCREENSHOT_DIR: app/src/screenshotTestDebug/reference/app/vauchi/CoreUIComponentScreenshotTestsKt
   script:
     # Build host-platform native library so layoutlib can load UniFFI types.
     # Uses the same core ref that produced the published AAR bindings.
@@ -673,6 +674,20 @@ test:screenshots:
     # Run on main too so the committed baselines upload to VRT every merge,
     # matching the other platforms (macos/ios/linux-gtk/linux-qt/web-demo).
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+
+# Committed baselines must map to live preview test functions — orphans
+# from deleted tests masquerade as current UI (2026-06-11: 17 found).
+check:orphan-baselines:
+  extends: .check-orphan-baselines
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.21
+  tags: [docker]
+  before_script:
+    - apk add --no-cache bash findutils grep curl
+  variables:
+    ORPHAN_STYLE: compose
+    ORPHAN_BASELINE_ROOT: app/src/screenshotTestDebug/reference/app/vauchi
+    ORPHAN_TEST_SRC: app/src/screenshotTest
 
 # Manual job: record screenshot baselines on CI and commit them to the branch.
 # CI is the single source of truth for baselines — never record locally.
