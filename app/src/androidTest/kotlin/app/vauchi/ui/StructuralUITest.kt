@@ -9,7 +9,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onAllNodes
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider

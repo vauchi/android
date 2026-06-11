@@ -231,7 +231,7 @@ class VauchiRepositoryFfiTest {
     fun testEmptyContactsList() {
         repository.createIdentity("Alice")
 
-        val contacts = repository.listContacts()
+        val contacts = repository.listContactsPaginated(0u, 10u)
 
         assertTrue(contacts.isEmpty(), "Contact list should be empty initially")
         assertEquals(0u, repository.contactCount())
