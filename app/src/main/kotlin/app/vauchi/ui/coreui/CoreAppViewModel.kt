@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.vauchi.ble.BleCommand
+import app.vauchi.ble.BleFailure
 import app.vauchi.exchange.ExchangeModePermissions
 import app.vauchi.nfc.NfcReaderPort
 import app.vauchi.nfc.NfcReaderService
@@ -294,6 +295,15 @@ class CoreAppViewModel(
      */
     fun forwardLocationEvent(event: MobileEvent) {
         sendHardwareEvent(event)
+    }
+
+    /**
+     * A BLE operation (scan / advertise / connect) failed to start. Reported
+     * as PermissionDenied / HardwareUnavailable so the exchange engine fails
+     * the flow visibly instead of waiting on a scan that never began.
+     */
+    fun onBleOperationFailed(error: String) {
+        sendHardwareEvent(BleFailure.toEvent(error))
     }
 
     /**

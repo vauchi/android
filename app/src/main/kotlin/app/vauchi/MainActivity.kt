@@ -670,7 +670,10 @@ fun MainScreen(
                 is BleCommand.StartScan -> {
                     bleCentral
                         .startScanning(cmd.serviceUuid)
-                        ?.let { Log.w("MainActivity", "BLE scan: $it") }
+                        ?.let {
+                            Log.w("MainActivity", "BLE scan: $it")
+                            coreAppViewModel.onBleOperationFailed(it)
+                        }
                 }
 
                 is BleCommand.StartAdvertise -> {
@@ -679,13 +682,19 @@ fun MainScreen(
                     // core can compare and decide who connects.
                     blePeripheral
                         .startAdvertising(cmd.serviceUuid, cmd.payload)
-                        ?.let { Log.w("MainActivity", "BLE advertise: $it") }
+                        ?.let {
+                            Log.w("MainActivity", "BLE advertise: $it")
+                            coreAppViewModel.onBleOperationFailed(it)
+                        }
                 }
 
                 is BleCommand.Connect -> {
                     bleCentral
                         .connect(cmd.deviceId)
-                        ?.let { Log.w("MainActivity", "BLE connect: $it") }
+                        ?.let {
+                            Log.w("MainActivity", "BLE connect: $it")
+                            coreAppViewModel.onBleOperationFailed(it)
+                        }
                 }
 
                 BleCommand.Disconnect -> {
