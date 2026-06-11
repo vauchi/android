@@ -512,6 +512,33 @@ class ModelsTest {
         assertEquals(null, (result as CommandDTO.SetScreenBrightness).level)
     }
 
+    @Test
+    fun `CommandDTO FilePickFromUser deserialization with known purpose`() {
+        // Core emits this from `link_choice`'s restore_backup action
+        // (onboarding) and the lost-device replacement flow. Regression:
+        // the variant was missing entirely, so "Restore from backup" was
+        // a silent no-op on Android — see
+        // 2026-06-11-android-restore-paths-all-dead.
+        val input =
+            """{"FilePickFromUser": {"accepted_mime_types": ["application/octet-stream", "text/plain"], "purpose": "ImportBackup"}}"""
+        val result = json.decodeFromString(CommandDTOSerializer, input)
+        assertTrue(result is CommandDTO.FilePickFromUser)
+        val cmd = result as CommandDTO.FilePickFromUser
+        assertEquals(listOf("application/octet-stream", "text/plain"), cmd.acceptedMimeTypes)
+        assertEquals("ImportBackup", cmd.purpose)
+    }
+
+    @Test
+    fun `CommandDTO FilePickFromUser deserialization with Other purpose`() {
+        val input =
+            """{"FilePickFromUser": {"accepted_mime_types": [], "purpose": {"Other": {"label_key": "import.key_bundle"}}}}"""
+        val result = json.decodeFromString(CommandDTOSerializer, input)
+        assertTrue(result is CommandDTO.FilePickFromUser)
+        val cmd = result as CommandDTO.FilePickFromUser
+        assertEquals(emptyList<String>(), cmd.acceptedMimeTypes)
+        assertEquals("import.key_bundle", cmd.purpose)
+    }
+
     // ── Full round-trip ─────────────────────────────────────────────
 
     @Test
