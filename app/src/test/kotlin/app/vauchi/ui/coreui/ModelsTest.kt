@@ -46,6 +46,39 @@ class ModelsTest {
     }
 
     @Test
+    fun `deserialize ScreenModel with Pinned layout`() {
+        val input =
+            """
+            {
+                "screen_id": "contacts",
+                "title": "Contacts",
+                "components": [],
+                "actions": [],
+                "layout": "Pinned"
+            }
+            """.trimIndent()
+
+        val screen = json.decodeFromString<ScreenModel>(input)
+        assertEquals(ScreenLayout.Pinned, screen.layout)
+    }
+
+    @Test
+    fun `layout defaults to Scroll when absent`() {
+        val input =
+            """
+            {
+                "screen_id": "welcome",
+                "title": "Welcome",
+                "components": [],
+                "actions": []
+            }
+            """.trimIndent()
+
+        val screen = json.decodeFromString<ScreenModel>(input)
+        assertEquals(ScreenLayout.Scroll, screen.layout)
+    }
+
+    @Test
     fun `deserialize ScreenModel with progress`() {
         val input =
             """
