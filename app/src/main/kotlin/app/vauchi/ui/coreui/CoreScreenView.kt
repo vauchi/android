@@ -103,6 +103,8 @@ fun CoreScreenView(
             }
         }
 
+    FilePickHandler(viewModel)
+
     LaunchedEffect(imagePickEvent) {
         when (imagePickEvent) {
             "library" -> {

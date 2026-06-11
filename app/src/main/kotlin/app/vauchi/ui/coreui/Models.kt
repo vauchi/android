@@ -2107,6 +2107,18 @@ sealed class CommandDTO {
     data object ImagePickFromFile : CommandDTO()
 
     /**
+     * Open the native document picker and return the raw bytes +
+     * filename via `MobileEvent.FilePickedFromUser` (or
+     * `FilePickCancelledByUser`). [purpose] is the well-known variant
+     * name (`ImportBackup`, `ImportContacts`) or, for
+     * `Other { label_key }`, the label key itself.
+     */
+    data class FilePickFromUser(
+        val acceptedMimeTypes: List<String>,
+        val purpose: String,
+    ) : CommandDTO()
+
+    /**
      * Phase 2b screen-presentation command. `level == null` means
      * "restore platform default"; the Activity-side collector
      * snapshots the prior brightness on the first non-null value.
@@ -2637,6 +2649,29 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                                 ?.content
                                 ?.let { runCatching { OrientationDTO.valueOf(it) }.getOrNull() }
                         CommandDTO.SetOrientationLock(orientation = orientation)
+                    }
+
+                    "FilePickFromUser" in element -> {
+                        val obj = element["FilePickFromUser"] as JsonObject
+                        // purpose is either a bare variant name
+                        // ("ImportBackup") or {"Other": {"label_key": ...}}.
+                        val purposeElement = obj["purpose"]!!
+                        val purpose =
+                            if (purposeElement is JsonObject) {
+                                (purposeElement["Other"] as? JsonObject)
+                                    ?.get("label_key")
+                                    ?.jsonPrimitive
+                                    ?.content ?: "Other"
+                            } else {
+                                purposeElement.jsonPrimitive.content
+                            }
+                        CommandDTO.FilePickFromUser(
+                            acceptedMimeTypes =
+                                obj["accepted_mime_types"]!!.jsonArray.map {
+                                    it.jsonPrimitive.content
+                                },
+                            purpose = purpose,
+                        )
                     }
 
                     else -> {

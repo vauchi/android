@@ -75,6 +75,11 @@ fun CoreOnboardingScreen(
         }
     }
 
+    // restore_backup on `link_choice` emits Command::FilePickFromUser;
+    // without a host-side handler the action is a silent no-op
+    // (2026-06-11-android-restore-paths-all-dead).
+    FilePickHandler(coreAppViewModel)
+
     Scaffold { paddingValues ->
         val currentScreen = screen
 

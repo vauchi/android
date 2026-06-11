@@ -102,6 +102,21 @@ class CoreAppViewModel(
     }
 
     /**
+     * File-pick requests emitted by core's `Command::FilePickFromUser`
+     * (onboarding `restore_backup`, lost-device replacement, vCF
+     * import). The Compose layer launches the system document picker
+     * and reports back via [handleFilePicked] /
+     * [handleFilePickCancelled]. See
+     * `2026-06-11-android-restore-paths-all-dead`.
+     */
+    private val _filePickRequest = MutableStateFlow<FilePickRequest?>(null)
+    val filePickRequest: StateFlow<FilePickRequest?> = _filePickRequest.asStateFlow()
+
+    fun consumeFilePickRequest() {
+        _filePickRequest.value = null
+    }
+
+    /**
      * Screen brightness requests emitted by core's
      * `Command::SetScreenBrightness` (Phase 2b screen-presentation
      * lifecycle). [BrightnessRequest.Set] dims/brightens to the
@@ -364,6 +379,24 @@ class CoreAppViewModel(
      */
     fun handleImagePickCancelled() {
         sendHardwareEvent(MobileEvent.ImagePickCancelled)
+    }
+
+    /**
+     * Called by the Compose layer when the user picks a document for a
+     * pending [FilePickRequest]. Routes the raw bytes + filename back
+     * to core, which dispatches on the pick's purpose (e.g. backup
+     * restore transitions onboarding to the password step).
+     */
+    fun handleFilePicked(
+        bytes: ByteArray,
+        filename: String,
+    ) {
+        sendHardwareEvent(MobileEvent.FilePickedFromUser(bytes = bytes, filename = filename))
+    }
+
+    /** Called when the user dismisses the document picker. */
+    fun handleFilePickCancelled() {
+        sendHardwareEvent(MobileEvent.FilePickCancelledByUser)
     }
 
     // FIFO, single consumer: hardware events must reach core in arrival
@@ -750,6 +783,14 @@ class CoreAppViewModel(
                     )
                 }
 
+                is CommandDTO.FilePickFromUser -> {
+                    _filePickRequest.value =
+                        FilePickRequest(
+                            mimeTypes = cmd.acceptedMimeTypes,
+                            purpose = cmd.purpose,
+                        )
+                }
+
                 is CommandDTO.SetScreenBrightness -> {
                     // Phase 2b screen-presentation lifecycle command.
                     // Mirrors `MultiStageExchangeEngine::screen_entered/exited`
@@ -902,6 +943,17 @@ data class AudioEmitRequest(
 data class AudioListenRequest(
     val timeoutMs: Long,
     val sampleRate: UInt,
+)
+
+/**
+ * Pending `Command::FilePickFromUser` for the Compose layer to fulfil
+ * with the system document picker. [purpose] is the well-known core
+ * variant name (`ImportBackup`, `ImportContacts`) or an `Other`
+ * label key.
+ */
+data class FilePickRequest(
+    val mimeTypes: List<String>,
+    val purpose: String,
 )
 
 sealed interface BrightnessRequest {
