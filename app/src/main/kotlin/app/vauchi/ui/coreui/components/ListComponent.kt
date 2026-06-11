@@ -51,6 +51,16 @@ import app.vauchi.util.LocalizationManager
 
 /**
  * Renders a core `Component.List` as a searchable list of items.
+ *
+ * Rows render eagerly: this component sits inside `ScreenRenderer`'s
+ * vertically-scrollable Column, and Compose forbids nesting a
+ * vertically-scrollable LazyColumn inside another vertically-scrollable
+ * container (the parent passes an infinite-height constraint its
+ * measure policy rejects — the Samsung S7 composition-time crash).
+ * Acceptable only for short lists; large lists ship on Pinned-layout
+ * screens where `ScreenRenderer` lazy-hosts the rows itself via
+ * [ListSearchField] + [ListItemRow]
+ * (2026-06-11-contacts-list-eager-render-anr).
  */
 @Composable
 fun ListComponent(
@@ -60,54 +70,62 @@ fun ListComponent(
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Column(modifier = modifier.fillMaxWidth()) {
         if (searchable) {
-            OutlinedTextField(
-                value = "",
-                onValueChange = { query ->
-                    onAction(UserAction.SearchChanged(componentId = componentId, query = query))
-                },
-                label = { Text(localizationManager.t("action.search")) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-            )
+            ListSearchField(componentId = componentId, onAction = onAction)
         }
 
-        // Use plain Column iteration instead of LazyColumn — this component
-        // is rendered inside `ScreenRenderer`'s vertically-scrollable Column,
-        // and Compose forbids nesting a vertically-scrollable LazyColumn
-        // inside another vertically-scrollable container (the parent passes
-        // an infinite-height constraint, which the LazyColumn measure
-        // policy explicitly rejects). The exchange-verification ScreenModel
-        // hit this on Samsung S7 (Compose throws IllegalStateException →
-        // process crash) when the new contact appeared in the list.
-        // Performance trade-off is acceptable: lists rendered through this
-        // component are short (verification preview, group filters).
         for (item in items) {
-            ItemRow(
-                item = item,
-                onTap = {
-                    onAction(
-                        UserAction.ListItemSelected(
-                            componentId = componentId,
-                            itemId = item.id,
-                        ),
-                    )
-                },
-                onAction = { action ->
-                    onAction(
-                        UserAction.ListItemAction(
-                            componentId = componentId,
-                            itemId = item.id,
-                            actionId = action.id,
-                        ),
-                    )
-                },
-            )
+            ListItemRow(componentId = componentId, item = item, onAction = onAction)
         }
     }
+}
+
+/** The list's search input — also lazy-hosted by Pinned screens. */
+@Composable
+internal fun ListSearchField(
+    componentId: String,
+    onAction: (UserAction) -> Unit,
+) {
+    val context = LocalContext.current
+    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
+    OutlinedTextField(
+        value = "",
+        onValueChange = { query ->
+            onAction(UserAction.SearchChanged(componentId = componentId, query = query))
+        },
+        label = { Text(localizationManager.t("action.search")) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+    )
+}
+
+@Composable
+internal fun ListItemRow(
+    componentId: String,
+    item: Item,
+    onAction: (UserAction) -> Unit,
+) {
+    ItemRow(
+        item = item,
+        onTap = {
+            onAction(
+                UserAction.ListItemSelected(
+                    componentId = componentId,
+                    itemId = item.id,
+                ),
+            )
+        },
+        onAction = { action ->
+            onAction(
+                UserAction.ListItemAction(
+                    componentId = componentId,
+                    itemId = item.id,
+                    actionId = action.id,
+                ),
+            )
+        },
+    )
 }
 
 @Composable

@@ -151,11 +151,16 @@ enum class ActionStyle {
  * Whether the renderer scrolls the screen content or renders a fixed,
  * non-scrolling layout sized to the viewport. Absent on the wire when
  * `Scroll` (the default), so the field defaults to `Scroll`.
+ *
+ * `Pinned`: chrome stays pinned and the screen's list component owns
+ * scrolling (lazy). Unlike `Fixed`, overlays may still reflow the
+ * screen (design `2026-06-11-contacts-list-windowing`).
  */
 @Serializable
 enum class ScreenLayout {
     Scroll,
     Fixed,
+    Pinned,
 }
 
 // ── Component ───────────────────────────────────────────────────────

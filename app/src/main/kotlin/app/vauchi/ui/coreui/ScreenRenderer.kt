@@ -6,6 +6,8 @@ package app.vauchi.ui.coreui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -41,6 +44,8 @@ import app.vauchi.ui.coreui.components.IndicatorComponent
 import app.vauchi.ui.coreui.components.InfoPanelComponent
 import app.vauchi.ui.coreui.components.InlineConfirmComponent
 import app.vauchi.ui.coreui.components.ListComponent
+import app.vauchi.ui.coreui.components.ListItemRow
+import app.vauchi.ui.coreui.components.ListSearchField
 import app.vauchi.ui.coreui.components.PinInputComponent
 import app.vauchi.ui.coreui.components.PreviewComponent
 import app.vauchi.ui.coreui.components.QrCodeComponent
@@ -105,71 +110,83 @@ fun ScreenRenderer(
                     .fillMaxSize()
                     .padding(16.dp),
         ) {
-            Column(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .then(
-                            // Fixed-layout screens (e.g. the QR exchange)
-                            // must not scroll or reflow — a moving QR breaks
-                            // the peer camera's lock. See ScreenLayout.
-                            if (screen.layout == ScreenLayout.Fixed) {
-                                Modifier
-                            } else {
-                                Modifier.verticalScroll(rememberScrollState())
-                            },
-                        ),
-            ) {
-                screen.progress?.let { progress ->
-                    LinearProgressIndicator(
-                        progress = {
-                            if (progress.totalSteps > 0) {
-                                progress.currentStep.toFloat() / progress.totalSteps.toFloat()
-                            } else {
-                                0f
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    progress.label?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
+            if (screen.layout == ScreenLayout.Pinned) {
+                // The whole content region is one lazy host: header and
+                // non-list components scroll away as leading items (same
+                // visual behavior as Scroll), list rows compose lazily.
+                // Pinning all chrome instead starves the list on screens
+                // with tall action footers — device-verified
+                // (2026-06-11-contacts-list-eager-render-anr). Only the
+                // action footer (and tab bar) stay pinned.
+                LazyColumn(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .testTag("pinned_list"),
+                ) {
+                    item(key = "screen_header") {
+                        ScreenHeader(screen = screen, localizer = localizer)
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
+                    screen.components.forEachIndexed { index, component ->
+                        if (component is Component.List) {
+                            if (component.searchable) {
+                                item(key = "list_search:${component.id}") {
+                                    ListSearchField(
+                                        componentId = component.id,
+                                        onAction = onAction,
+                                    )
+                                }
+                            }
+                            items(
+                                component.items,
+                                key = { "list_row:${component.id}:${it.id}" },
+                            ) { item ->
+                                ListItemRow(
+                                    componentId = component.id,
+                                    item = item,
+                                    onAction = onAction,
+                                )
+                            }
+                        } else {
+                            item(key = componentSlotKey(component, index)) {
+                                ComponentRenderer(component = component, onAction = onAction)
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                        }
+                    }
                 }
+            } else {
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .then(
+                                // Fixed-layout screens (e.g. the QR exchange)
+                                // must not scroll or reflow — a moving QR
+                                // breaks the peer camera's lock. See
+                                // ScreenLayout.
+                                if (screen.layout == ScreenLayout.Fixed) {
+                                    Modifier
+                                } else {
+                                    Modifier.verticalScroll(rememberScrollState())
+                                },
+                            ),
+                ) {
+                    ScreenHeader(screen = screen, localizer = localizer)
 
-                Text(
-                    text = localizer.resolveCoreLabel(screen.title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.semantics { heading() },
-                )
-
-                screen.subtitle?.let {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = localizer.resolveCoreLabel(it),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Components — key by id so Compose preserves slot identity
-                // (and any AndroidView state, like the QrScanner camera
-                // binding) across ScreenModel re-emissions. Without this,
-                // a sibling component whose data churns (e.g. the multipart
-                // QR's Display peer cycling every ~300 ms) tears down the
-                // scanner's PreviewView between recompositions and the
-                // camera surface goes black.
-                screen.components.forEachIndexed { index, component ->
-                    key(componentSlotKey(component, index)) {
-                        ComponentRenderer(component = component, onAction = onAction)
-                        Spacer(modifier = Modifier.height(12.dp))
+                    // Components — key by id so Compose preserves slot
+                    // identity (and any AndroidView state, like the
+                    // QrScanner camera binding) across ScreenModel
+                    // re-emissions. Without this, a sibling component whose
+                    // data churns (e.g. the multipart QR's Display peer
+                    // cycling every ~300 ms) tears down the scanner's
+                    // PreviewView between recompositions and the camera
+                    // surface goes black.
+                    screen.components.forEachIndexed { index, component ->
+                        key(componentSlotKey(component, index)) {
+                            ComponentRenderer(component = component, onAction = onAction)
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
                     }
                 }
             }
@@ -199,10 +216,6 @@ fun ScreenRenderer(
     }
 }
 
-/**
- * Dispatches rendering to the appropriate component composable.
- */
-@Composable
 /**
  * Stable key for a component slot. Most variants carry an `id` field
  * (set by core for action routing); the two id-less singletons
@@ -241,6 +254,55 @@ private fun componentSlotKey(
         Component.Unknown -> "unknown@$index"
     }
 
+/** Progress, title, and subtitle — shared by every layout path. */
+@Composable
+private fun ScreenHeader(
+    screen: ScreenModel,
+    localizer: LocalizationManager,
+) {
+    screen.progress?.let { progress ->
+        LinearProgressIndicator(
+            progress = {
+                if (progress.totalSteps > 0) {
+                    progress.currentStep.toFloat() / progress.totalSteps.toFloat()
+                } else {
+                    0f
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        progress.label?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+
+    Text(
+        text = localizer.resolveCoreLabel(screen.title),
+        style = MaterialTheme.typography.headlineSmall,
+        modifier = Modifier.semantics { heading() },
+    )
+
+    screen.subtitle?.let {
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = localizer.resolveCoreLabel(it),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+}
+
+/**
+ * Dispatches rendering to the appropriate component composable.
+ */
 @Composable
 fun ComponentRenderer(
     component: Component,
