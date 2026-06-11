@@ -513,6 +513,23 @@ class ModelsTest {
     }
 
     @Test
+    fun `CommandDTO unknown variant carries its wire name`() {
+        // Silent-failure umbrella: a command this build can't decode must
+        // be reportable as HardwareUnavailable(<variant>) instead of being
+        // dropped — the name is the report payload
+        // (2026-06-11-silent-failure-mode-umbrella).
+        val objectForm = """{"SomeFutureCommand": {"x": 1}}"""
+        val result = json.decodeFromString(CommandDTOSerializer, objectForm)
+        assertTrue(result is CommandDTO.Unknown)
+        assertEquals("SomeFutureCommand", (result as CommandDTO.Unknown).variantName)
+
+        val unitForm = "\"SomeFutureUnitCommand\""
+        val unitResult = json.decodeFromString(CommandDTOSerializer, unitForm)
+        assertTrue(unitResult is CommandDTO.Unknown)
+        assertEquals("SomeFutureUnitCommand", (unitResult as CommandDTO.Unknown).variantName)
+    }
+
+    @Test
     fun `CommandDTO FilePickFromUser deserialization with known purpose`() {
         // Core emits this from `link_choice`'s restore_backup action
         // (onboarding) and the lost-device replacement flow. Regression:

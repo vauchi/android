@@ -2151,7 +2151,15 @@ sealed class CommandDTO {
         val orientation: OrientationDTO?,
     ) : CommandDTO()
 
-    data object Unknown : CommandDTO()
+    /**
+     * A command this build cannot decode. [variantName] is the wire
+     * variant tag so the frontend can answer with
+     * `HardwareUnavailable(variantName)` instead of silently dropping
+     * it (2026-06-11-silent-failure-mode-umbrella).
+     */
+    data class Unknown(
+        val variantName: String,
+    ) : CommandDTO()
 }
 
 /** Mirrors `vauchi-core::Orientation` on the JSON wire. */
@@ -2524,7 +2532,7 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                     "ImagePickFromLibrary" -> CommandDTO.ImagePickFromLibrary
                     "ImageCaptureFromCamera" -> CommandDTO.ImageCaptureFromCamera
                     "ImagePickFromFile" -> CommandDTO.ImagePickFromFile
-                    else -> CommandDTO.Unknown
+                    else -> CommandDTO.Unknown(element.content)
                 }
             }
 
@@ -2675,13 +2683,13 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                     }
 
                     else -> {
-                        CommandDTO.Unknown
+                        CommandDTO.Unknown(element.keys.firstOrNull() ?: "?")
                     }
                 }
             }
 
             else -> {
-                CommandDTO.Unknown
+                CommandDTO.Unknown("?")
             }
         }
     }

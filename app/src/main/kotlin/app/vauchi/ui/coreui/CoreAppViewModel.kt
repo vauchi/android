@@ -890,6 +890,16 @@ class CoreAppViewModel(
                     _bleCommands.tryEmit(BleCommand.Read(cmd.uuid))
                 }
 
+                is CommandDTO.Unknown -> {
+                    // A command this build can't decode (newer core, or a
+                    // missing DTO arm like the FilePickFromUser gap). Answer
+                    // with HardwareUnavailable so the engine sees the failure
+                    // instead of waiting forever
+                    // (2026-06-11-silent-failure-mode-umbrella).
+                    Log.w(TAG, "Undecoded exchange command: ${cmd.variantName}")
+                    sendHardwareEvent(MobileEvent.HardwareUnavailable(cmd.variantName))
+                }
+
                 else -> {
                     // NFC initiator command dispatch (T1.1). When core emits
                     // NfcActivate/NfcSendApdu/NfcDeactivate, relay to the
