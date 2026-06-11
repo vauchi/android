@@ -115,8 +115,7 @@ class BlePeripheral(
         // immediately a fast central (Galaxy S7, LOW_LATENCY) connects and
         // discovers during the addService window and never finds the handshake
         // characteristic (…894), stalling the S7-as-central exchange.
-        openGattServer(serviceUuid)
-        return null
+        return openGattServer(serviceUuid)
     }
 
     /** Start advertising once the GATT service is registered (onServiceAdded). */
@@ -163,9 +162,19 @@ class BlePeripheral(
         pendingAdvData = null
     }
 
-    private fun openGattServer(serviceUuid: String) {
-        val manager = bluetoothManager ?: return
-        val server = manager.openGattServer(context, gattServerCallback) ?: return
+    private fun openGattServer(serviceUuid: String): String? {
+        val manager = bluetoothManager ?: return "BLE manager unavailable"
+        // API 31+ throws SecurityException without the BLUETOOTH_CONNECT
+        // runtime permission — a fresh install crashed here when core's
+        // proximity discovery started advertising before any permission
+        // prompt (2026-06-11-android-ble-permission-crash-on-exchange).
+        val server =
+            try {
+                manager.openGattServer(context, gattServerCallback)
+            } catch (e: SecurityException) {
+                Log.e(TAG, "BLE GATT server: missing BLUETOOTH_CONNECT permission")
+                return "BLE permission not granted"
+            } ?: return "BLE GATT server unavailable"
         gattServer = server
 
         val service =
@@ -177,6 +186,7 @@ class BlePeripheral(
             service.addCharacteristic(buildCharacteristic(uuid))
         }
         server.addService(service)
+        return null
     }
 
     private fun buildCharacteristic(uuid: String): BluetoothGattCharacteristic {
