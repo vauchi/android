@@ -13,14 +13,19 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import app.vauchi.util.LocalizationManager
 
 /**
  * Core-driven onboarding screen rendered through the shared
@@ -79,6 +84,23 @@ fun CoreOnboardingScreen(
     // without a host-side handler the action is a silent no-op
     // (2026-06-11-android-restore-paths-all-dead).
     FilePickHandler(coreAppViewModel)
+
+    // Restore failures arrive as ActionResult.ShowAlert; without a
+    // host the error is swallowed and the user is silently bounced
+    // back to link_choice (2026-06-11-android-restore-paths-all-dead).
+    val alertMessage by coreAppViewModel.alertMessage.collectAsState()
+    alertMessage?.let { (title, message) ->
+        AlertDialog(
+            onDismissRequest = { coreAppViewModel.dismissAlert() },
+            title = { Text(title) },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { coreAppViewModel.dismissAlert() }) {
+                    Text(LocalizationManager.getInstance(LocalContext.current).t("action.ok"))
+                }
+            },
+        )
+    }
 
     Scaffold { paddingValues ->
         val currentScreen = screen
