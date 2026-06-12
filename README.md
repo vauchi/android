@@ -49,14 +49,11 @@ Native Android app for living contact cards, exchanged in person.
 
 ## Project Structure
 
-```text
-app/src/main/kotlin/com/vauchi/
-├── MainActivity.kt      # Entry point
-├── VauchiApp.kt        # Application class
-├── ui/screens/          # Compose screens
-├── data/                # Repository, KeyStore helper
-└── viewmodels/          # ViewModel layer
-```
+App code lives under `app/src/main/kotlin/app/vauchi/` —
+`MainActivity.kt` + `VauchiApp.kt` entry points, with `ui/`, `data/`,
+`exchange/`, `ble/`, `nfc/`, `proximity/`, `worker/`, and `util/`
+packages. Run `ls` for the live tree; this README deliberately
+carries no file inventory.
 
 ## Related Repositories
 
