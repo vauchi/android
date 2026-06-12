@@ -6,13 +6,14 @@ package app.vauchi.ui.coreui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -46,6 +47,7 @@ import app.vauchi.ui.coreui.components.InlineConfirmComponent
 import app.vauchi.ui.coreui.components.ListComponent
 import app.vauchi.ui.coreui.components.ListItemRow
 import app.vauchi.ui.coreui.components.ListSearchField
+import app.vauchi.ui.coreui.components.ListWindowPrefetch
 import app.vauchi.ui.coreui.components.PinInputComponent
 import app.vauchi.ui.coreui.components.PreviewComponent
 import app.vauchi.ui.coreui.components.QrCodeComponent
@@ -118,7 +120,18 @@ fun ScreenRenderer(
                 // with tall action footers — device-verified
                 // (2026-06-11-contacts-list-eager-render-anr). Only the
                 // action footer (and tab bar) stay pinned.
+                val listState = rememberLazyListState()
+                screen.components.forEach { component ->
+                    if (component is Component.List && component.totalCount > 0) {
+                        ListWindowPrefetch(
+                            component = component,
+                            listState = listState,
+                            onAction = onAction,
+                        )
+                    }
+                }
                 LazyColumn(
+                    state = listState,
                     modifier =
                         Modifier
                             .weight(1f)

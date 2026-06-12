@@ -232,6 +232,17 @@ sealed class Component {
         val id: String,
         val items: kotlin.collections.List<Item>,
         val searchable: Boolean,
+        /**
+         * Windowed emission (Track B,
+         * 2026-06-11-contacts-list-eager-render-anr): when nonzero,
+         * [items] is the `[offset, offset + window)` slice of a
+         * [totalCount]-sized filtered set and the renderer dispatches
+         * [UserAction.ListWindowRequested] near the window edge.
+         * Zero = unwindowed ([items] is the complete set).
+         */
+        val totalCount: Int = 0,
+        val offset: Int = 0,
+        val window: Int = 0,
     ) : Component()
 
     data class SettingsGroup(
@@ -449,6 +460,9 @@ private data class ListContent(
     val id: String,
     val items: List<Item>,
     val searchable: Boolean,
+    @SerialName("total_count") val totalCount: Int = 0,
+    val offset: Int = 0,
+    val window: Int = 0,
 )
 
 @Serializable
@@ -679,7 +693,14 @@ internal object ComponentSerializer : KSerializer<Component> {
                     "List" in element -> {
                         val c: ListContent =
                             jsonDecoder.json.decodeFromJsonElement(element["List"]!!)
-                        Component.List(id = c.id, items = c.items, searchable = c.searchable)
+                        Component.List(
+                            id = c.id,
+                            items = c.items,
+                            searchable = c.searchable,
+                            totalCount = c.totalCount,
+                            offset = c.offset,
+                            window = c.window,
+                        )
                     }
 
                     "SettingsGroup" in element -> {
@@ -941,7 +962,14 @@ internal object ComponentSerializer : KSerializer<Component> {
 
             is Component.List -> {
                 val content =
-                    ListContent(id = value.id, items = value.items, searchable = value.searchable)
+                    ListContent(
+                        id = value.id,
+                        items = value.items,
+                        searchable = value.searchable,
+                        totalCount = value.totalCount,
+                        offset = value.offset,
+                        window = value.window,
+                    )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("List" to inner)))
             }
@@ -1608,6 +1636,16 @@ sealed class UserAction {
         val actionId: String,
     ) : UserAction()
 
+    /**
+     * The lazy list is approaching the edge of a windowed
+     * `Component::List` emission — ask core to re-slice from [offset]
+     * (Track B, 2026-06-11-contacts-list-eager-render-anr).
+     */
+    data class ListWindowRequested(
+        val componentId: String,
+        val offset: Int,
+    ) : UserAction()
+
     data class SettingsToggled(
         val componentId: String,
         val itemId: String,
@@ -1766,6 +1804,20 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                     )
                 }
 
+                is UserAction.ListWindowRequested -> {
+                    JsonObject(
+                        mapOf(
+                            "ListWindowRequested" to
+                                JsonObject(
+                                    mapOf(
+                                        "component_id" to JsonPrimitive(value.componentId),
+                                        "offset" to JsonPrimitive(value.offset),
+                                    ),
+                                ),
+                        ),
+                    )
+                }
+
                 is UserAction.SettingsToggled -> {
                     JsonObject(
                         mapOf(
@@ -1890,6 +1942,14 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                             componentId = obj["component_id"]!!.jsonPrimitive.content,
                             itemId = obj["item_id"]!!.jsonPrimitive.content,
                             actionId = obj["action_id"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "ListWindowRequested" in element -> {
+                        val obj = element["ListWindowRequested"] as JsonObject
+                        UserAction.ListWindowRequested(
+                            componentId = obj["component_id"]!!.jsonPrimitive.content,
+                            offset = obj["offset"]!!.jsonPrimitive.int,
                         )
                     }
 
