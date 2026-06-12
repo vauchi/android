@@ -315,6 +315,32 @@ class ModelsTest {
         assertTrue(action.enabled)
     }
 
+    @Test
+    fun `deserialize List component without window fields`() {
+        // Core skip-serializes zero windowing fields — absence is the
+        // unwindowed wire shape (Track B,
+        // 2026-06-11-contacts-list-eager-render-anr).
+        val input = """{"List":{"id":"contacts","items":[],"searchable":true}}"""
+        val component = json.decodeFromString<Component>(input)
+        assertTrue(component is Component.List)
+        val list = component as Component.List
+        assertEquals(0, list.totalCount)
+        assertEquals(0, list.offset)
+        assertEquals(0, list.window)
+    }
+
+    @Test
+    fun `deserialize windowed List component`() {
+        val input =
+            """{"List":{"id":"contacts","items":[],"searchable":true,"total_count":500,"offset":200,"window":200}}"""
+        val component = json.decodeFromString<Component>(input)
+        assertTrue(component is Component.List)
+        val list = component as Component.List
+        assertEquals(500, list.totalCount)
+        assertEquals(200, list.offset)
+        assertEquals(200, list.window)
+    }
+
     // ── UserAction serialization ────────────────────────────────────
 
     @Test
@@ -343,6 +369,13 @@ class ModelsTest {
         val action = UserAction.ItemToggled(componentId = "groups", itemId = "Family")
         val serialized = json.encodeToString(UserAction.serializer(), action)
         assertEquals("""{"ItemToggled":{"component_id":"groups","item_id":"Family"}}""", serialized)
+    }
+
+    @Test
+    fun `serialize ListWindowRequested`() {
+        val action = UserAction.ListWindowRequested(componentId = "contacts", offset = 150)
+        val serialized = json.encodeToString(UserAction.serializer(), action)
+        assertEquals("""{"ListWindowRequested":{"component_id":"contacts","offset":150}}""", serialized)
     }
 
     @Test
