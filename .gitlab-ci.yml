@@ -818,8 +818,22 @@ gate:app-size:debug:
     APP_SIZE_GATE_FORMAT: "apk"
     APP_SIZE_GATE_MAX_BYTES: "73400320"     # 70 MB
     APP_SIZE_GATE_WARN_BYTES: "62914560"    # 60 MB
+  # Rules MUST mirror build:debug's changes list: an unconditional MR rule
+  # here while build:debug is changes-filtered makes GitLab abort the whole
+  # pipeline ("needs 'build:debug', but it does not exist") with ZERO jobs —
+  # docs/assets-only MRs become unmergeable, and REST shows no reason (only
+  # GraphQL failureReason does). Broke docs:gate's purpose; hit by !526.
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        compare_to: refs/heads/main
+        paths:
+          - "**/*.kt"
+          - "**/*.java"
+          - "**/*.xml"
+          - "build.gradle*"
+          - "app/build.gradle*"
+          - ".gitlab-ci.yml"
 
 gate:app-size:release:
   extends: .app-size-gate-job
