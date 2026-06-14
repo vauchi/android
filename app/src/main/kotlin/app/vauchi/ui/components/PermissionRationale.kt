@@ -62,6 +62,13 @@ fun rememberPermissionState(
     permission: String,
     title: String,
     rationale: String,
+    // Invoked once when the OS permission prompt resolves with a DENIAL (the
+    // launcher result callback fires `granted == false`). Opt-in (default no-op)
+    // so existing callers are unchanged. This is the only point a *definitive*
+    // negative decision exists — firing here can never race the pending prompt
+    // (the callback fires only after the modal dismisses with a result). See
+    // T0.3 design 2026-06-14-t03-camera-deny-forwarding-design.md §1.
+    onDenied: (() -> Unit)? = null,
 ): PermissionState {
     val context = LocalContext.current
     val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
@@ -77,6 +84,12 @@ fun rememberPermissionState(
     val launcher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             isGranted = granted
+            // Fire the denial hook only on a real negative decision — never on
+            // grant (the grant asymmetry: grants are re-learned via the in-app
+            // affordance, not an event). T0.3 §1. Rule extracted to
+            // [permissionResultIsDenial] so it is unit-testable without the OS
+            // prompt (CC-23).
+            if (permissionResultIsDenial(granted)) onDenied?.invoke()
         }
 
     // Re-check on resume so a grant made via the system dialog or the OS
@@ -262,3 +275,11 @@ fun PermissionRationaleDialog(state: MultiplePermissionsState) {
         )
     }
 }
+
+/**
+ * Whether a permission-launcher result should be reported as a denial: true on
+ * a negative decision, false on a grant. Pure + OS-free so the fire rule that
+ * drives [rememberPermissionState]'s `onDenied` hook — notify on deny, NEVER on
+ * grant (the grant asymmetry) — is unit-testable without the OS prompt (CC-23).
+ */
+internal fun permissionResultIsDenial(granted: Boolean): Boolean = !granted

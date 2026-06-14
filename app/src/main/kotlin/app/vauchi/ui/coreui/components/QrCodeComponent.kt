@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import app.vauchi.camera.CameraFailure
 import app.vauchi.ui.components.PermissionRationaleDialog
 import app.vauchi.ui.components.QrCodeAnalyzer
 import app.vauchi.ui.components.rememberPermissionState
@@ -175,6 +176,13 @@ private fun QrScanner(
             permission = android.Manifest.permission.CAMERA,
             title = localizationManager.t("permission.camera.title"),
             rationale = localizationManager.t("permission.camera.rationale"),
+            // T0.3: on a definitive camera denial, forward it to core (via the
+            // sentinel ActionPressed CoreScreenView intercepts) so the exchange
+            // ledger / CameraGate fails the QR leg visibly instead of leaving
+            // core waiting forever.
+            onDenied = {
+                onAction(UserAction.ActionPressed(CameraFailure.DENIED_ACTION_ID))
+            },
         )
     LaunchedEffect(Unit) { cameraPermission.request() }
     PermissionRationaleDialog(cameraPermission)
@@ -330,7 +338,6 @@ private fun QrScanner(
         }
     }
 }
-
 
 /**
  * Shown in place of the camera preview when the CAMERA permission has not

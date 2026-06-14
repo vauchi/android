@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.vauchi.ble.BleCommand
 import app.vauchi.ble.BleFailure
+import app.vauchi.camera.CameraFailure
 import app.vauchi.exchange.ExchangeModePermissions
 import app.vauchi.nfc.NfcReaderPort
 import app.vauchi.nfc.NfcReaderService
@@ -307,6 +308,17 @@ class CoreAppViewModel(
     }
 
     /**
+     * The camera runtime permission was denied (the OS prompt resolved with a
+     * deny). Reported as PermissionDenied("camera") so the exchange ledger /
+     * CameraGate fails the QR leg visibly instead of leaving core waiting on a
+     * scan that can never start (T0.3,
+     * `2026-06-11-exchange-waits-forever-without-capabilities`).
+     */
+    fun onCameraPermissionDenied() {
+        sendHardwareEvent(CameraFailure.deniedEvent())
+    }
+
+    /**
      * BLE work items (Bump / Shake / Magic). Core emits BLE `Command`s; the
      * Activity owns the radio (BluetoothManager needs a Context) and dispatches
      * to BleCentral / BlePeripheral. A buffered SharedFlow (not a latest-only
@@ -559,6 +571,15 @@ class CoreAppViewModel(
     }
 
     fun handleAction(action: UserAction) {
+        // T0.3: the QR scanner reports a camera-permission denial as a sentinel
+        // ActionPressed. Intercept it HERE — the single chokepoint every render
+        // path's onAction funnels through (CoreScreenView AND CoreOnboardingScreen)
+        // — and forward it to core as a hardware event, never as a serialized
+        // UserAction (it must never reach handleActionJson / core's action path).
+        if (action is UserAction.ActionPressed && action.actionId == CameraFailure.DENIED_ACTION_ID) {
+            onCameraPermissionDenied()
+            return
+        }
         // Permissions step: when a mode is picked, surface the OS permissions
         // its ritual needs so the Activity can request them up front, before the
         // ritual screen. See _private/docs/problems/2026-06-06-exchange-ritual-flow/.
