@@ -63,6 +63,7 @@ import app.vauchi.proximity.AccelerometerProximityService
 import app.vauchi.proximity.AudioProximityService
 import app.vauchi.proximity.LocationCaptureService
 import app.vauchi.ui.AppPasswordScreen
+import app.vauchi.ui.CORE_CADENCE_TICK_INTERVAL_MS
 import app.vauchi.ui.KeyInvalidatedRecoveryScreen
 import app.vauchi.ui.MainViewModel
 import app.vauchi.ui.MultiStageExchangeScreen
@@ -79,6 +80,7 @@ import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
 import app.vauchi.ui.coreui.UserAction
 import app.vauchi.ui.coreui.materialIconNameForCoreIcon
+import app.vauchi.ui.pollLoop
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
 import kotlinx.coroutines.Dispatchers
@@ -292,6 +294,20 @@ fun MainScreen(
     LaunchedEffect(uiState, localizationManager.currentLocale) {
         if (uiState is UiState.Ready) {
             coreAppViewModel.loadTabs(localizationManager.currentLocale)
+        }
+    }
+
+    // App-level core pump. Bounded-wait exchange engines (BLE/NFC/cable
+    // discovery) enforce their stall-timeout only when the frontend calls
+    // pollNotifications on a cadence; core's contract is that this pump runs
+    // "every loop regardless of screen" (vauchi-app engine.rs). Scoping it to
+    // the QR screen left the BLE "Searching…" screen unticked, so its 60s
+    // deadline never fired (discovery ran forever). One Ready-scoped loop
+    // ticks every core-driven screen + future bounded-wait modes; the QR
+    // screen keeps its own faster loop for frame throughput.
+    LaunchedEffect(uiState) {
+        if (uiState is UiState.Ready) {
+            pollLoop(CORE_CADENCE_TICK_INTERVAL_MS) { coreAppViewModel.tickCore() }
         }
     }
 

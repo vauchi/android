@@ -506,20 +506,24 @@ class CoreAppViewModel(
         get() = eventListener != null
 
     /**
-     * Drive one multi-stage protocol tick. Polling core advances the
-     * engine-held machine and fires `onScreensInvalidated`, which
-     * refetches the screen so the cycling own-QR and protocol progress
-     * surface. The exchange screen calls this on a cadence via
-     * [app.vauchi.ui.pollLoop] while composed — it replaces the core
-     * cycle thread retired in slice-32m T1.2c, whose absence left the
-     * own-QR never rendering (Bug 5,
-     * `2026-05-30-exchange-screen-nav-visual-bugs`). Errors are logged,
-     * not thrown — a dropped tick is recovered by the next one.
+     * Drive one core tick. Polling core drains events, advances any
+     * engine-held machine (multi-stage QR, link), and runs the active
+     * engine's wall-clock `tick` so bounded-wait modes (BLE/NFC/cable
+     * discovery) fail a stalled step past their timeout; it also fires
+     * `onScreensInvalidated` so protocol progress + the cycling own-QR
+     * surface. Screen-agnostic: an app-level [app.vauchi.ui.pollLoop]
+     * calls this on a cadence whenever the app is Ready, per core's
+     * contract that the pump runs "every loop regardless of screen"
+     * (vauchi-app `engine.rs`). Replaces the cycle thread retired in
+     * slice-32m T1.2c (Bug 5, `2026-05-30-exchange-screen-nav-visual-bugs`);
+     * scoping the pump to the QR screen also left the BLE "Searching…"
+     * screen's 60s timeout never firing. Errors are logged, not thrown —
+     * a dropped tick is recovered by the next one.
      */
-    suspend fun tickMultiStageExchange() {
+    suspend fun tickCore() {
         withContext(Dispatchers.IO) {
             runCatching { appEngine.pollNotifications() }
-                .onFailure { Log.e(TAG, "multi-stage tick poll failed", it) }
+                .onFailure { Log.e(TAG, "core tick poll failed", it) }
         }
     }
 

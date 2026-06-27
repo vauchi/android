@@ -29,6 +29,21 @@ import kotlinx.coroutines.delay
 const val MULTI_STAGE_POLL_INTERVAL_MS = 50L
 
 /**
+ * Cadence for the app-level core pump that drives EVERY core-driven
+ * screen (not just the multi-stage QR screen). Bounded-wait exchange
+ * engines (BLE/NFC/cable discovery) enforce their stall-timeout only
+ * when the frontend calls `pollNotifications` on a cadence — core's
+ * contract is that this pump "runs every loop regardless of screen"
+ * (vauchi-app `engine.rs`). Scoping the pump to the QR screen left the
+ * BLE "Searching…" screen unticked, so its 60s deadline never fired and
+ * discovery ran forever. 1s is far under any 60s wall-clock deadline and
+ * cheap: `pollNotifications` no-ops for engines without a bounded wait.
+ * The QR screen keeps its own faster [MULTI_STAGE_POLL_INTERVAL_MS] loop
+ * for frame throughput.
+ */
+const val CORE_CADENCE_TICK_INTERVAL_MS = 1_000L
+
+/**
  * Drive [tick] immediately, then once every [intervalMs], until the
  * calling coroutine is cancelled (e.g. the exchange screen leaves
  * composition). Replaces the core cycle thread retired in slice-32m

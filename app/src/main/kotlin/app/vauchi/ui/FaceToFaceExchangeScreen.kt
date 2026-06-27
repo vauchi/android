@@ -85,11 +85,12 @@ fun MultiStageExchangeScreen(
     val coreScreen by coreAppViewModel.screen.collectAsState()
     var entered by remember { mutableStateOf(false) }
     LaunchedEffect(coreScreen?.screenId) {
-        val decision = exchangeExitDecision(
-            entered = entered,
-            coreScreenId = coreScreen?.screenId,
-            ownScreenId = "multi_stage_exchange",
-        )
+        val decision =
+            exchangeExitDecision(
+                entered = entered,
+                coreScreenId = coreScreen?.screenId,
+                ownScreenId = "multi_stage_exchange",
+            )
         entered = decision.entered
         if (decision.shouldExit) onCoreNavigatedAway()
     }
@@ -110,7 +111,7 @@ fun MultiStageExchangeScreen(
     // scoped to composition, so polling starts on entry and stops on exit
     // — matching the retired thread's lifetime.
     LaunchedEffect(Unit) {
-        pollLoop { coreAppViewModel.tickMultiStageExchange() }
+        pollLoop { coreAppViewModel.tickCore() }
     }
 
     CoreScreenView(
