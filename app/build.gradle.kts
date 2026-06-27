@@ -24,8 +24,8 @@ android {
         applicationId = "app.vauchi"
         minSdk = 26  // Android 8.0 - 94.8% coverage
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -205,7 +205,7 @@ dependencies {
         implementation("net.java.dev.jna:jna:5.14.0@aar")
     } else {
         // Remote: published AAR includes JNA + JNI libs + Kotlin bindings
-        implementation("app.vauchi:vauchi-platform:0.51.54")
+        implementation("app.vauchi:vauchi-platform:0.51.55")
     }
 
     // Testing
@@ -232,7 +232,7 @@ dependencies {
     if (useLocalBindings) {
         screenshotTestImplementation("net.java.dev.jna:jna:5.14.0@aar")
     } else {
-        screenshotTestImplementation("app.vauchi:vauchi-platform:0.51.54")
+        screenshotTestImplementation("app.vauchi:vauchi-platform:0.51.55")
     }
     screenshotTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
     screenshotTestImplementation("androidx.compose.ui:ui")
