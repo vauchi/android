@@ -129,6 +129,12 @@ workflow:
 
 .android-docker-job:
   image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/cimg/android:2025.01
+  # Route to the self-hosted docker executor (allyson-docker). Without an
+  # explicit tag this job is untagged, and since shared runners are disabled
+  # and every self-hosted runner has run_untagged=false, the only consumers
+  # (build:release, deploy:internal) would sit pending forever with no
+  # eligible runner — which is why no release pipeline had ever gone green.
+  tags: [docker, self-hosted]
   cache:
     <<: *gradle-cache
 
