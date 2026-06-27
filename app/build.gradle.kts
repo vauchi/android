@@ -24,8 +24,8 @@ android {
         applicationId = "app.vauchi"
         minSdk = 26  // Android 8.0 - 94.8% coverage
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.1.2"
+        versionCode = 4
+        versionName = "0.1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -68,6 +68,10 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.findByName("release")
+            // Bundle native debug symbols so Play crash/ANR reports for the
+            // Rust/JNA .so libraries are symbolicated (silences the upload
+            // "native code without debug symbols" warning).
+            ndk { debugSymbolLevel = "FULL" }
         }
     }
 
