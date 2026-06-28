@@ -251,7 +251,10 @@ class VauchiRepository(
                 "VauchiSync",
                 "sync: contactsAdded=${result.contactsAdded} " +
                     "cardsUpdated=${result.cardsUpdated} " +
-                    "updatesSent=${result.updatesSent} hasChanges=${result.hasChanges}",
+                    "updatesSent=${result.updatesSent} " +
+                    "blobsFetched=${result.blobsFetched} " +
+                    "rejected=${result.rejected} unresolved=${result.unresolved} " +
+                    "hasChanges=${result.hasChanges}",
             )
         }
         return result
