@@ -243,7 +243,18 @@ class VauchiRepository(
 
     fun sync(): MobileSyncResult {
         ensureInitialized()
-        return _appEngine.sync()
+        val result = _appEngine.sync()
+        if (app.vauchi.BuildConfig.DEBUG) {
+            // Device-test diagnostics: numeric sync counts only (no PII /
+            // contact names) — localizes the send vs receive leg per device.
+            Log.d(
+                "VauchiSync",
+                "sync: contactsAdded=${result.contactsAdded} " +
+                    "cardsUpdated=${result.cardsUpdated} " +
+                    "updatesSent=${result.updatesSent} hasChanges=${result.hasChanges}",
+            )
+        }
+        return result
     }
 
     fun pendingUpdateCount(): UInt {
