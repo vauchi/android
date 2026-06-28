@@ -36,10 +36,13 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
@@ -95,6 +98,7 @@ class MainActivity : FragmentActivity() {
     /** Set by --reset-for-testing intent extra (DEBUG only). */
     private var _resetForTesting = false
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -125,7 +129,19 @@ class MainActivity : FragmentActivity() {
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .navigationBarsPadding(),
+                            .navigationBarsPadding()
+                            // DEBUG-only: expose Compose `testTag`s as
+                            // resource-ids so uiautomator can drive the app in
+                            // device-test automation (same debug-only carve-out
+                            // pattern as the screenshot-prevention guard in
+                            // onCreate). No-op + no testid exposure in release.
+                            .then(
+                                if (BuildConfig.DEBUG) {
+                                    Modifier.semantics { testTagsAsResourceId = true }
+                                } else {
+                                    Modifier
+                                },
+                            ),
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     if (ready) {
