@@ -53,6 +53,12 @@ fun CoreOnboardingScreen(
     onIdentityCreated: () -> Unit,
 ) {
     val screen by coreAppViewModel.screen.collectAsState()
+    // ActionResult.ShowToast host: onboarding renders its own ScreenRenderer
+    // (not the main CoreScreenView), so the toast state must be threaded in
+    // here too — otherwise a core-emitted toast sets toastMessage with nothing
+    // observing it and is silently dropped.
+    val toastMessage by coreAppViewModel.toastMessage.collectAsState()
+    val toastUndoActionId by coreAppViewModel.toastUndoActionId.collectAsState()
 
     // Cold start: ensure PAE's current screen is loaded so the user
     // sees the Onboarding step PAE reports. With no identity, that's
@@ -134,6 +140,9 @@ fun CoreOnboardingScreen(
                         screen = targetScreen,
                         onAction = coreAppViewModel::handleAction,
                         modifier = Modifier.fillMaxSize(),
+                        toastMessage = toastMessage,
+                        toastUndoActionId = toastUndoActionId,
+                        onToastDismiss = coreAppViewModel::dismissToast,
                     )
                 }
             }
