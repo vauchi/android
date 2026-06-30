@@ -22,6 +22,24 @@ class SyncWorker(
     override suspend fun doWork(): Result {
         Log.d(TAG, "Starting background sync")
 
+        // This worker builds its OWN VauchiRepository/engine per tick — a
+        // separate instance from the foreground CoreAppViewModel's engine, which
+        // holds the only ScreenInvalidationListener (core's engine_cache is
+        // per-engine). A device-sync update applied here therefore fires
+        // onScreensInvalidated on a listener-less engine and does NOT live-refresh
+        // a screen the user is parked on.
+        //
+        // Decision — 2026-06-30-sync-ui-invalidation-sibling-gaps Gap B: accept
+        // the next-resume refresh as the contract. The foreground engine re-syncs
+        // on ON_RESUME (MainActivity -> viewModel.sync()) and, now that core's
+        // apply_sync_items dispatches a VauchiEvent per applied arm (Gap A), that
+        // resync live-refreshes the affected screens. Storage is always written
+        // correctly; the only uncovered window is "foregrounded and parked through
+        // a 15-min worker tick with no intervening resume" — narrow and
+        // recoverable by navigation. Closing it live would require sharing one
+        // engine (and its listener) across the worker and the foreground VM, or a
+        // cross-engine invalidation channel — deferred as disproportionate to the
+        // window.
         val repository =
             try {
                 VauchiRepository(applicationContext)
