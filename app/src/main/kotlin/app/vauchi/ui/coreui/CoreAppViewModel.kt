@@ -69,8 +69,11 @@ class CoreAppViewModel(
     /**
      * A tab navigation requested before [loadTabs] populated [_tabs]
      * (cold-start/restore race, `2026-07-01-android-startup-nav-race-no-tab`).
-     * Replayed by [flushPendingTabNav] once tabs arrive; at most one
-     * outstanding since startup issues a single deferred nav.
+     * Replayed by [flushPendingTabNav] once tabs arrive. Two startup
+     * effects can each issue one (device-testing programmatic nav, then
+     * the dynamic default landing) — the slot is FIRST-wins so the
+     * explicit early nav beats the later default. Cleared by any deep
+     * link: real intent supersedes the courtesy landing.
      */
     private var pendingTabNavId: String? = null
 
@@ -644,6 +647,9 @@ class CoreAppViewModel(
         uri: String,
         onInvalid: (String) -> Unit,
     ) {
+        // A deep link is real intent — the queued default landing must
+        // never replay over the consent screen it is about to present.
+        pendingTabNavId = null
         viewModelScope.launch {
             try {
                 val screenJson =
@@ -669,32 +675,42 @@ class CoreAppViewModel(
     fun navigateToTabById(canonicalId: String) {
         when (val decision = decideTabNav(_tabs.value, canonicalId)) {
             is TabNavDecision.Dispatch -> handleAction(UserAction.NavigateToTab(actionId = decision.actionId))
-            is TabNavDecision.Queue -> pendingTabNavId = canonicalId
+            is TabNavDecision.Queue ->
+                if (pendingTabNavId == null) {
+                    pendingTabNavId = canonicalId
+                }
             is TabNavDecision.Unknown -> Log.e(TAG, "navigateToTabById: no tab for id=$canonicalId")
         }
     }
 
     /**
-     * Replay a nav requested before tabs loaded. Called once [loadTabs]
-     * has populated [_tabs]; keeps the request queued if tabs came back
-     * empty (e.g. pre-identity), dispatches it if the tab now exists, and
-     * only now — with tabs present but the id absent — treats it as an error.
+     * Replay a nav requested before tabs loaded. Called on [loadTabs]'
+     * success path (a failed load keeps the request queued for the next
+     * attempt). [decideTabNavFlush] owns the semantics: replay only while
+     * the app still rests on core's bootstrap screen, keep queued while
+     * tabs are still empty, drop silently when superseded by a real
+     * navigation, and error only when tabs are loaded but the id is
+     * genuinely absent.
      */
     private fun flushPendingTabNav() {
         val pending = pendingTabNavId ?: return
-        when (val decision = decideTabNav(_tabs.value, pending)) {
-            is TabNavDecision.Dispatch -> {
+        when (val outcome = decideTabNavFlush(pending, _tabs.value, _screen.value?.screenId)) {
+            is TabNavFlush.Replay -> {
                 pendingTabNavId = null
-                handleAction(UserAction.NavigateToTab(actionId = decision.actionId))
+                handleAction(UserAction.NavigateToTab(actionId = outcome.actionId))
             }
 
-            is TabNavDecision.Unknown -> {
+            is TabNavFlush.Keep -> {
+                Unit
+            }
+
+            is TabNavFlush.DropSuperseded -> {
+                pendingTabNavId = null
+            }
+
+            is TabNavFlush.DropUnknown -> {
                 pendingTabNavId = null
                 Log.e(TAG, "navigateToTabById: no tab for id=$pending")
-            }
-
-            is TabNavDecision.Queue -> {
-                Unit
             }
         }
     }
