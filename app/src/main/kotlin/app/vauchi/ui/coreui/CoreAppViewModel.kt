@@ -66,6 +66,14 @@ class CoreAppViewModel(
     private val _tabs = MutableStateFlow<List<MobileTabInfo>>(emptyList())
     val tabs: StateFlow<List<MobileTabInfo>> = _tabs.asStateFlow()
 
+    /**
+     * A tab navigation requested before [loadTabs] populated [_tabs]
+     * (cold-start/restore race, `2026-07-01-android-startup-nav-race-no-tab`).
+     * Replayed by [flushPendingTabNav] once tabs arrive; at most one
+     * outstanding since startup issues a single deferred nav.
+     */
+    private var pendingTabNavId: String? = null
+
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
 
@@ -541,6 +549,7 @@ class CoreAppViewModel(
                     withContext(Dispatchers.IO) {
                         appEngine.navItems(layout = MobileTabLayout.MOBILE, locale = locale)
                     }
+                flushPendingTabNav()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load tabs", e)
             }
@@ -658,12 +667,36 @@ class CoreAppViewModel(
      * CoreScreenIdMap rework).
      */
     fun navigateToTabById(canonicalId: String) {
-        val actionId = _tabs.value.firstOrNull { it.id == canonicalId }?.actionId
-        if (actionId == null) {
-            Log.e(TAG, "navigateToTabById: no tab for id=$canonicalId")
-            return
+        when (val decision = decideTabNav(_tabs.value, canonicalId)) {
+            is TabNavDecision.Dispatch -> handleAction(UserAction.NavigateToTab(actionId = decision.actionId))
+            is TabNavDecision.Queue -> pendingTabNavId = canonicalId
+            is TabNavDecision.Unknown -> Log.e(TAG, "navigateToTabById: no tab for id=$canonicalId")
         }
-        handleAction(UserAction.NavigateToTab(actionId = actionId))
+    }
+
+    /**
+     * Replay a nav requested before tabs loaded. Called once [loadTabs]
+     * has populated [_tabs]; keeps the request queued if tabs came back
+     * empty (e.g. pre-identity), dispatches it if the tab now exists, and
+     * only now — with tabs present but the id absent — treats it as an error.
+     */
+    private fun flushPendingTabNav() {
+        val pending = pendingTabNavId ?: return
+        when (val decision = decideTabNav(_tabs.value, pending)) {
+            is TabNavDecision.Dispatch -> {
+                pendingTabNavId = null
+                handleAction(UserAction.NavigateToTab(actionId = decision.actionId))
+            }
+
+            is TabNavDecision.Unknown -> {
+                pendingTabNavId = null
+                Log.e(TAG, "navigateToTabById: no tab for id=$pending")
+            }
+
+            is TabNavDecision.Queue -> {
+                Unit
+            }
+        }
     }
 
     // / Whether core has somewhere to go back to from the current screen —
