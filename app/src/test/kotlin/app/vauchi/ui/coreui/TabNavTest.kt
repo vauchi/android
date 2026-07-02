@@ -42,4 +42,56 @@ class TabNavTest {
 
         assertEquals(TabNavDecision.Unknown("contacts"), decideTabNav(tabs, "contacts"))
     }
+
+    // ── decideTabNavFlush — the queued nav is a default-landing courtesy ──
+
+    @Test
+    fun `flush replays when tabs resolve and the first screen has not loaded`() {
+        val tabs = listOf(tab("contacts", "act-contacts"))
+
+        assertEquals(
+            TabNavFlush.Replay("act-contacts"),
+            decideTabNavFlush("contacts", tabs, currentScreenId = null),
+        )
+    }
+
+    @Test
+    fun `flush replays while parked on core's bootstrap screen`() {
+        val tabs = listOf(tab("contacts", "act-contacts"))
+
+        assertEquals(
+            TabNavFlush.Replay("act-contacts"),
+            decideTabNavFlush("contacts", tabs, currentScreenId = "my_info"),
+        )
+    }
+
+    @Test
+    fun `flush drops silently when a real navigation landed in between`() {
+        // Deep-link consent, a programmatic settings nav, or a user tap —
+        // replaying the courtesy landing would clobber it.
+        val tabs = listOf(tab("contacts", "act-contacts"))
+
+        assertEquals(
+            TabNavFlush.DropSuperseded("deep_link_consent"),
+            decideTabNavFlush("contacts", tabs, currentScreenId = "deep_link_consent"),
+        )
+    }
+
+    @Test
+    fun `flush keeps the request queued while tabs are still empty`() {
+        assertEquals(
+            TabNavFlush.Keep,
+            decideTabNavFlush("contacts", emptyList(), currentScreenId = null),
+        )
+    }
+
+    @Test
+    fun `flush errors only when tabs are loaded but the id is absent`() {
+        val tabs = listOf(tab("home", "act-home"))
+
+        assertEquals(
+            TabNavFlush.DropUnknown("contacts"),
+            decideTabNavFlush("contacts", tabs, currentScreenId = "my_info"),
+        )
+    }
 }
