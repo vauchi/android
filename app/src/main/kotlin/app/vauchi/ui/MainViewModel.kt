@@ -435,7 +435,12 @@ class MainViewModel(
                 showMessage(msg)
             } catch (e: MobileException.RateLimited) {
                 _syncState.value = SyncState.RateLimited(e.retryAfterSecs.toLong())
-                showMessage("Please wait ${e.retryAfterSecs}s before syncing again")
+                showMessage(
+                    localizationManager.t(
+                        "rate_limit.retry_in",
+                        mapOf("seconds" to e.retryAfterSecs.toString()),
+                    ),
+                )
             } catch (e: Exception) {
                 // Logging-rules.md format: `[<Module>] Failed: <error_type_only>`.
                 // The exception class (e.g. `MobileException$Other`) is not PII;
@@ -446,12 +451,12 @@ class MainViewModel(
                 Log.e("Vauchi", "[Sync] Failed: ${e.javaClass.simpleName}", e)
                 val errorMsg =
                     if (!networkMonitor.isCurrentlyConnected()) {
-                        "No internet connection"
+                        localizationManager.t("sync.offline_banner")
                     } else {
-                        e.message ?: "Sync failed"
+                        e.message ?: localizationManager.t("sync.error_failed")
                     }
                 _syncState.value = SyncState.Error(errorMsg)
-                showMessage("Sync failed: $errorMsg")
+                showMessage("${localizationManager.t("sync.error_failed")}: $errorMsg")
             }
         }
     }
