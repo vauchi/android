@@ -16,8 +16,6 @@ import androidx.work.WorkerParameters
 import app.vauchi.data.VauchiRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import uniffi.vauchi_platform.MobileApplyResult
-import uniffi.vauchi_platform.MobileUpdateStatus
 import java.util.concurrent.TimeUnit
 
 /**
@@ -31,9 +29,32 @@ class ContentUpdateWorker(
     context: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
+    /** WorkManager result the worker should return for a cycle. */
+    internal enum class CycleAction { SUCCESS, RETRY, FAILURE }
+
     companion object {
         const val TAG = "ContentUpdateWorker"
         const val WORK_NAME = "vauchi_content_update"
+
+        /** Attempts (inclusive of the first run) before a retryable failure gives up. */
+        const val MAX_ATTEMPTS = 3
+
+        /**
+         * Pure retry policy: a retryable failure retries while there is
+         * attempt budget left, otherwise gives up; a clean cycle
+         * succeeds. Kept engine-free so it is unit-testable directly
+         * (the domain check→apply sequencing lives in core's
+         * `RunContentUpdateCycle`).
+         */
+        internal fun cycleAction(
+            retryableFailure: Boolean,
+            attempt: Int,
+        ): CycleAction =
+            when {
+                !retryableFailure -> CycleAction.SUCCESS
+                attempt < MAX_ATTEMPTS -> CycleAction.RETRY
+                else -> CycleAction.FAILURE
+            }
 
         /**
          * Schedule periodic content update checks.
@@ -75,90 +96,30 @@ class ContentUpdateWorker(
 
     override suspend fun doWork(): Result =
         withContext(Dispatchers.IO) {
-            Log.d(TAG, "Starting content update check")
+            Log.d(TAG, "Starting content update cycle")
 
-            try {
-                val repository = VauchiRepository(applicationContext)
-
-                // Check if content updates are supported
-                if (!repository.isContentUpdatesSupported()) {
-                    Log.d(TAG, "Content updates not supported, skipping")
-                    return@withContext Result.success()
+            // Core owns the whole check → apply → screen-invalidation
+            // cycle (RunContentUpdateCycle); the worker only maps the
+            // outcome to a WorkManager result. A thrown dispatch failure
+            // (e.g. native lib unavailable) is treated as retryable.
+            val action =
+                try {
+                    val outcome = VauchiRepository(applicationContext).runContentUpdateCycle()
+                    Log.d(
+                        TAG,
+                        "Content update cycle: applied=${outcome.applied}, " +
+                            "retryable=${outcome.retryableFailure}",
+                    )
+                    cycleAction(outcome.retryableFailure, runAttemptCount)
+                } catch (e: Exception) {
+                    Log.e(TAG, "[ContentUpdate] Failed: ${e.javaClass.simpleName}", e)
+                    cycleAction(retryableFailure = true, attempt = runAttemptCount)
                 }
 
-                // Check for available updates via core
-                val status = repository.checkContentUpdates()
-
-                when (status) {
-                    is MobileUpdateStatus.UpToDate -> {
-                        Log.d(TAG, "Content is up to date")
-                        return@withContext Result.success()
-                    }
-
-                    is MobileUpdateStatus.Disabled -> {
-                        Log.d(TAG, "Content updates disabled")
-                        return@withContext Result.success()
-                    }
-
-                    is MobileUpdateStatus.CheckFailed -> {
-                        Log.e(TAG, "Content update check failed: ${status.error}")
-                        return@withContext if (runAttemptCount < 3) {
-                            Result.retry()
-                        } else {
-                            Result.failure()
-                        }
-                    }
-
-                    is MobileUpdateStatus.UpdatesAvailable -> {
-                        Log.d(TAG, "Updates available: ${status.types}")
-                    }
-                }
-
-                // Apply available updates via core
-                val applyResult = repository.applyContentUpdates()
-
-                when (applyResult) {
-                    is MobileApplyResult.Applied -> {
-                        Log.d(
-                            TAG,
-                            "Content updates applied: ${applyResult.applied.size} applied, " +
-                                "${applyResult.failed.size} failed",
-                        )
-                        // Reload social networks if networks were updated
-                        if (applyResult.applied.any {
-                                it == uniffi.vauchi_platform.MobileContentType.NETWORKS
-                            }
-                        ) {
-                            repository.reloadSocialNetworks()
-                        }
-                    }
-
-                    is MobileApplyResult.NoUpdates -> {
-                        Log.d(TAG, "No updates to apply")
-                    }
-
-                    is MobileApplyResult.Disabled -> {
-                        Log.d(TAG, "Content updates disabled")
-                    }
-
-                    is MobileApplyResult.Error -> {
-                        Log.e(TAG, "Failed to apply content updates: ${applyResult.error}")
-                        return@withContext if (runAttemptCount < 3) {
-                            Result.retry()
-                        } else {
-                            Result.failure()
-                        }
-                    }
-                }
-
-                Result.success()
-            } catch (e: Exception) {
-                Log.e(TAG, "Content update check failed: ${e.message}", e)
-                if (runAttemptCount < 3) {
-                    Result.retry()
-                } else {
-                    Result.failure()
-                }
+            when (action) {
+                CycleAction.SUCCESS -> Result.success()
+                CycleAction.RETRY -> Result.retry()
+                CycleAction.FAILURE -> Result.failure()
             }
         }
 }

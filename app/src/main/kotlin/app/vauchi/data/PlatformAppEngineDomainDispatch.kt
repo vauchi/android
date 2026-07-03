@@ -5,7 +5,6 @@ package app.vauchi.data
 
 import uniffi.vauchi_platform.DomainCommand
 import uniffi.vauchi_platform.DomainCommandResult
-import uniffi.vauchi_platform.MobileApplyResult
 import uniffi.vauchi_platform.MobileAuthMode
 import uniffi.vauchi_platform.MobileConsentRecord
 import uniffi.vauchi_platform.MobileConsentStatus
@@ -13,6 +12,7 @@ import uniffi.vauchi_platform.MobileConsentType
 import uniffi.vauchi_platform.MobileContact
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileContactDetailViewState
+import uniffi.vauchi_platform.MobileContentCycleOutcome
 import uniffi.vauchi_platform.MobileDeletionInfo
 import uniffi.vauchi_platform.MobileDeliveryRecord
 import uniffi.vauchi_platform.MobileDeliverySummary
@@ -27,7 +27,6 @@ import uniffi.vauchi_platform.MobileRecoveryVerification
 import uniffi.vauchi_platform.MobileRetryEntry
 import uniffi.vauchi_platform.MobileSocialNetwork
 import uniffi.vauchi_platform.MobileSyncResult
-import uniffi.vauchi_platform.MobileUpdateStatus
 import uniffi.vauchi_platform.MobileVisibilityLabel
 import uniffi.vauchi_platform.MobileVisibilityLabelDetail
 import uniffi.vauchi_platform.PlatformAppEngine
@@ -163,25 +162,10 @@ fun PlatformAppEngine.getProfileUrl(
     return opt.value
 }
 
-fun PlatformAppEngine.reloadSocialNetworks(): List<MobileSocialNetwork> {
-    val result = dispatchDomainCommand(DomainCommand.ReloadSocialNetworks)
-    return (result as? DomainCommandResult.SocialNetworks)?.networks
-        ?: unexpectedResult("ReloadSocialNetworks")
-}
-
-fun PlatformAppEngine.isContentUpdatesSupported(): Boolean {
-    val result = dispatchDomainCommand(DomainCommand.IsContentUpdatesSupported)
-    return (result as? DomainCommandResult.Bool)?.value ?: unexpectedResult("IsContentUpdatesSupported")
-}
-
-fun PlatformAppEngine.checkContentUpdates(): MobileUpdateStatus {
-    val result = dispatchDomainCommand(DomainCommand.CheckContentUpdates)
-    return (result as? DomainCommandResult.UpdateStatus)?.status ?: unexpectedResult("CheckContentUpdates")
-}
-
-fun PlatformAppEngine.applyContentUpdates(): MobileApplyResult {
-    val result = dispatchDomainCommand(DomainCommand.ApplyContentUpdates)
-    return (result as? DomainCommandResult.ApplyResult)?.result ?: unexpectedResult("ApplyContentUpdates")
+fun PlatformAppEngine.runContentUpdateCycle(): MobileContentCycleOutcome {
+    val result = dispatchDomainCommand(DomainCommand.RunContentUpdateCycle)
+    return (result as? DomainCommandResult.ContentUpdateCycle)?.outcome
+        ?: unexpectedResult("RunContentUpdateCycle")
 }
 
 fun PlatformAppEngine.isCertificatePinningEnabled(): Boolean {

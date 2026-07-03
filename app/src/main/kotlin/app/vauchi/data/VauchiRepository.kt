@@ -463,29 +463,13 @@ class VauchiRepository(
     // Based on: features/content_updates.feature
 
     /**
-     * Check if content updates feature is supported
+     * Run the whole content-update cycle (check → apply → screen
+     * invalidation) in core and return its presentation-only outcome.
+     * Unlike the UI read methods this does *not* swallow errors: the
+     * background worker maps a thrown dispatch failure to a WorkManager
+     * retry, so the failure must propagate.
      */
-    fun isContentUpdatesSupported(): Boolean = runCatching { appEngine.isContentUpdatesSupported() }.getOrDefault(false)
-
-    /**
-     * Check for available content updates
-     */
-    fun checkContentUpdates(): uniffi.vauchi_platform.MobileUpdateStatus =
-        runCatching { appEngine.checkContentUpdates() }
-            .getOrDefault(uniffi.vauchi_platform.MobileUpdateStatus.UpToDate)
-
-    /**
-     * Apply available content updates
-     */
-    fun applyContentUpdates(): uniffi.vauchi_platform.MobileApplyResult =
-        runCatching { appEngine.applyContentUpdates() }
-            .getOrDefault(uniffi.vauchi_platform.MobileApplyResult.Error("Dispatch failed"))
-
-    /**
-     * Reload social networks after content updates
-     */
-    fun reloadSocialNetworks(): List<uniffi.vauchi_platform.MobileSocialNetwork> =
-        runCatching { appEngine.reloadSocialNetworks() }.getOrDefault(emptyList())
+    fun runContentUpdateCycle(): uniffi.vauchi_platform.MobileContentCycleOutcome = appEngine.runContentUpdateCycle()
 
     /**
      * Check if certificate pinning is enabled

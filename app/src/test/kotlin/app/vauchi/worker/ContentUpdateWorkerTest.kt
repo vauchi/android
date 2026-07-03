@@ -31,8 +31,9 @@ class ContentUpdateWorkerTest {
         runBlocking {
             val worker = TestListenableWorkerBuilder<ContentUpdateWorker>(context).build()
 
-            // The worker should call repository.checkContentUpdates() instead of
-            // performing standalone HTTP manifest fetching. Since VauchiRepository
+            // The worker delegates the whole cycle to core via
+            // repository.runContentUpdateCycle() instead of performing
+            // standalone HTTP manifest fetching. Since VauchiRepository
             // requires native libs unavailable in unit tests, this verifies:
             // 1. The worker compiles without standalone HTTP/manifest code
             // 2. Error handling produces a valid WorkManager result
@@ -160,7 +161,54 @@ class ContentUpdateWorkerTest {
         }
     }
 
-    // --- Retry behavior ---
+    // --- Cycle retry policy (pure) ---
+    //
+    // The check→apply→decide sequencing lives in core
+    // (RunContentUpdateCycle, covered by core's content_cycle_outcome
+    // table test). All that remains on the worker is mapping the
+    // outcome's retryable flag to a WorkManager result within the
+    // attempt budget — covered here without native libs.
+
+    @Test
+    fun `cycleAction succeeds when the cycle reports no retryable failure`() {
+        assertEquals(
+            ContentUpdateWorker.CycleAction.SUCCESS,
+            ContentUpdateWorker.cycleAction(retryableFailure = false, attempt = 0),
+        )
+    }
+
+    @Test
+    fun `cycleAction retries a retryable failure within the attempt budget`() {
+        assertEquals(
+            ContentUpdateWorker.CycleAction.RETRY,
+            ContentUpdateWorker.cycleAction(retryableFailure = true, attempt = 0),
+        )
+        assertEquals(
+            "second-to-last attempt still retries",
+            ContentUpdateWorker.CycleAction.RETRY,
+            ContentUpdateWorker.cycleAction(
+                retryableFailure = true,
+                attempt = ContentUpdateWorker.MAX_ATTEMPTS - 1,
+            ),
+        )
+    }
+
+    @Test
+    fun `cycleAction fails once the attempt budget is exhausted`() {
+        assertEquals(
+            ContentUpdateWorker.CycleAction.FAILURE,
+            ContentUpdateWorker.cycleAction(
+                retryableFailure = true,
+                attempt = ContentUpdateWorker.MAX_ATTEMPTS,
+            ),
+        )
+        assertEquals(
+            ContentUpdateWorker.CycleAction.FAILURE,
+            ContentUpdateWorker.cycleAction(retryableFailure = true, attempt = 99),
+        )
+    }
+
+    // --- Retry behavior (end-to-end via native-lib-missing) ---
 
     @Test
     fun `doWork returns retry on first failure`() =
