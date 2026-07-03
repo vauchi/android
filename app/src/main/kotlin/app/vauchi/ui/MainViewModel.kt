@@ -131,6 +131,22 @@ class MainViewModel(
     init {
         checkIdentity()
         observeNetworkStateForCore()
+        runContentUpdateCycleOnLaunch()
+    }
+
+    /**
+     * Cadence Option 2 startup leg
+     * (2026-07-03-periodic-mobile-content-update-cadence): fire the
+     * content-update cycle once on foreground launch, off the main
+     * thread, best-effort. The recurring leg is handled by [SyncWorker].
+     * Applied content follows the next-resume refresh contract (it lands
+     * on disk; the foreground engine picks it up on navigation/resume),
+     * so no UI refresh is triggered here.
+     */
+    private fun runContentUpdateCycleOnLaunch() {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { repository.runContentUpdateCycle() }
+        }
     }
 
     /**

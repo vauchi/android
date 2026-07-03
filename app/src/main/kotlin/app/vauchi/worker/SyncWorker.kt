@@ -57,6 +57,16 @@ class SyncWorker(
             // notification polling.
             repository.appEngine.periodicSyncTick()
 
+            // Opportunistic content-update cycle (cadence Option 2,
+            // 2026-07-03-periodic-mobile-content-update-cadence):
+            // piggyback on this existing periodic sync — no new
+            // WorkManager job. Best-effort: a content failure must not
+            // fail the sync tick or trigger its retry, and applied
+            // content follows the same next-resume refresh contract as
+            // sync (Gap B above).
+            runCatching { repository.runContentUpdateCycle() }
+                .onFailure { Log.w(TAG, "[ContentUpdate] skipped: ${it.javaClass.simpleName}") }
+
             // Poll for pending notifications (E)
             val notifications = repository.pollNotifications()
             for (notification in notifications) {
