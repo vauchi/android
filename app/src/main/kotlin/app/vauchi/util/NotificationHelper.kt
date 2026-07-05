@@ -26,6 +26,7 @@ object NotificationHelper {
     
     const val CHANNEL_UPDATES = "vauchi_updates"
     const val CHANNEL_ALERTS = "vauchi_alerts"
+    const val CHANNEL_DURESS = "vauchi_duress"
 
     /**
      * Create notification channels for Android O+.
@@ -71,6 +72,8 @@ object NotificationHelper {
         val channelId = when (notification.category) {
             MobileNotificationCategory.EMERGENCY_ALERT -> CHANNEL_ALERTS
             MobileNotificationCategory.CONTACT_ADDED -> CHANNEL_UPDATES
+            MobileNotificationCategory.DURESS_ALERT -> CHANNEL_DURESS
+            MobileNotificationCategory.CARD_UPDATE -> CHANNEL_UPDATES
         }
 
         val priority = when (notification.category) {
