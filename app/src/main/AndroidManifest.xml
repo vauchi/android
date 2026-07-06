@@ -69,12 +69,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Deep link handler for vauchi:// scheme (SP-9) -->
+            <!-- Deep link handler for vauchi:// scheme (SP-9, M5 B3).
+                 No host filter — core parses and routes every vauchi:// URI. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="vauchi" android:host="exchange" />
+                <data android:scheme="vauchi" />
             </intent-filter>
         </activity>
 

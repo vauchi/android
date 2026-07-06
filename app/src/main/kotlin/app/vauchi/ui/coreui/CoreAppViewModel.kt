@@ -662,38 +662,6 @@ class CoreAppViewModel(
     }
 
     /**
-     * Dispatch an incoming `vauchi://exchange?...` deep link URI to core.
-     *
-     * On success core navigates to `AppScreen::DeepLinkConsent` and
-     * `screen` updates to the consent ScreenModel — observers (the
-     * native consent dialog) react via `screen.collectAsState()`.
-     *
-     * On parse failure, [onInvalid] is invoked with a human-readable
-     * detail (UniFFI `MobileError::InvalidInput.detail`). The native
-     * UI surfaces this via snackbar.
-     */
-    fun handleDeepLinkUri(
-        uri: String,
-        onInvalid: (String) -> Unit,
-    ) {
-        // A deep link is real intent — the queued default landing must
-        // never replay over the consent screen it is about to present.
-        pendingTabNavId = null
-        viewModelScope.launch {
-            try {
-                val screenJson =
-                    withContext(Dispatchers.IO) {
-                        appEngine.handleDeepLinkUri(uri = uri)
-                    }
-                _screen.value = json.decodeFromString<ScreenModel>(screenJson)
-            } catch (e: Exception) {
-                Log.e(TAG, "Deep link dispatch failed", e)
-                onInvalid(e.message ?: "Unknown error")
-            }
-        }
-    }
-
-    /**
      * Forward a bottom-nav tab navigation by canonical tab id (`"contacts"`,
      * `"my_info"`, `"more"`, …), looking up the opaque `actionId` from the
      * live [tabs] list and dispatching [UserAction.NavigateToTab]. Replaces

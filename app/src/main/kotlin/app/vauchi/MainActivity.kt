@@ -755,13 +755,7 @@ fun MainScreen(
         }
     }
 
-    // Deep link consent gate (SP-9). The state machine + URL parser
-    // live in core (`PlatformAppEngine.handleDeepLinkUri`) since the
-    // 2026-04-25-deeplink-consent-orchestrator cleanup. The native
-    // dialog is shown whenever core's current screen is the consent
-    // gate — `screenId == "deep_link_consent"`.
     val coreScreen by coreAppViewModel.screen.collectAsState()
-    val showDeepLinkConsent = coreScreen?.screenId == "deep_link_consent"
 
     // NOTE (Bug 2, `2026-05-30-exchange-screen-nav-visual-bugs`): an
     // earlier Activity-enum-collapse note claimed `MultiStageExchange`
@@ -801,15 +795,13 @@ fun MainScreen(
         }
     }
 
-    // Handle incoming deep link URI — forward raw URI string to core,
-    // which parses it and (on success) navigates to the consent screen.
+    // Handle incoming deep link URI — forward every vauchi:// URI to core
+    // as UserAction::LinkOpened. Core parses the URI and routes to the
+    // consent gate, device-link join screen, or ShowAlert. The consent gate
+    // renders via the standard CoreScreenView; no native dialog is needed.
     LaunchedEffect(deepLinkUri) {
         deepLinkUri?.let { uri ->
-            coreAppViewModel.handleDeepLinkUri(uri.toString()) { reason ->
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar("Invalid link: $reason")
-                }
-            }
+            coreAppViewModel.handleAction(UserAction.LinkOpened(uri = uri.toString()))
             onDeepLinkConsumed()
         }
     }
@@ -1141,59 +1133,6 @@ fun MainScreen(
             }
         }
     } // Scaffold
-
-    // Deep link consent dialog (SP-9). Visibility is driven by core —
-    // the dialog is shown while `screenId == "deep_link_consent"` and
-    // auto-hides when the user's grant/deny dispatch causes core to
-    // navigate away. NEVER auto-process: the dialog forces an explicit
-    // grant or deny ScreenAction press before any exchange can proceed.
-    if (showDeepLinkConsent) {
-        DeepLinkConsentDialog(
-            onConfirm = { coreAppViewModel.handleAction(UserAction.ActionPressed("grant")) },
-            onDeny = { coreAppViewModel.handleAction(UserAction.ActionPressed("deny")) },
-        )
-    }
-}
-
-/**
- * Consent dialog shown before processing a deep link exchange.
- *
- * This is the security gate: the user must explicitly confirm
- * before any exchange data from a deep link is processed.
- */
-@Composable
-fun DeepLinkConsentDialog(
-    onConfirm: () -> Unit,
-    onDeny: () -> Unit,
-) {
-    val context = LocalContext.current
-    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
-    AlertDialog(
-        onDismissRequest = onDeny,
-        icon = {
-            Icon(
-                Icons.Default.Warning,
-                contentDescription = localizationManager.t("deep_link.icon_a11y"),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        },
-        title = {
-            Text(localizationManager.t("deep_link.title"))
-        },
-        text = {
-            Text(localizationManager.t("deep_link.body"))
-        },
-        confirmButton = {
-            Button(onClick = onConfirm) {
-                Text(localizationManager.t("deep_link.accept"))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDeny) {
-                Text(localizationManager.t("deep_link.decline"))
-            }
-        },
-    )
 }
 
 @Composable

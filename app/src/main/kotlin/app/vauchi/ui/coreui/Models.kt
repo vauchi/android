@@ -1669,6 +1669,15 @@ sealed class UserAction {
         val actionId: String,
     ) : UserAction()
 
+    /**
+     * A `vauchi://` link was opened by the OS. Core parses the URI and routes
+     * to the consent gate, device-link join screen, or an alert. Humble surface:
+     * the frontend does not inspect the URI scheme or host.
+     */
+    data class LinkOpened(
+        val uri: String,
+    ) : UserAction()
+
     /** Unknown action variant from deserialization — should not be sent to core. */
     data object Unknown : UserAction()
 }
@@ -1868,6 +1877,17 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                     )
                 }
 
+                is UserAction.LinkOpened -> {
+                    JsonObject(
+                        mapOf(
+                            "LinkOpened" to
+                                JsonObject(
+                                    mapOf("uri" to JsonPrimitive(value.uri)),
+                                ),
+                        ),
+                    )
+                }
+
                 is UserAction.Unknown -> {
                     // Unknown actions should not be serialized back to core
                     JsonObject(emptyMap())
@@ -1973,6 +1993,13 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                         UserAction.SliderChanged(
                             componentId = obj["component_id"]!!.jsonPrimitive.content,
                             valueMilli = obj["value_milli"]!!.jsonPrimitive.int,
+                        )
+                    }
+
+                    "LinkOpened" in element -> {
+                        val obj = element["LinkOpened"] as JsonObject
+                        UserAction.LinkOpened(
+                            uri = obj["uri"]!!.jsonPrimitive.content,
                         )
                     }
 
