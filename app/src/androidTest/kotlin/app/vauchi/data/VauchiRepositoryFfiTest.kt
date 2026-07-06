@@ -8,26 +8,19 @@ import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
-import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import uniffi.vauchi_platform.MobileFieldType
 import java.io.File
-import java.net.InetSocketAddress
-import java.net.Socket
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
  * Instrumented tests for VauchiRepository FFI integration.
  * These tests run on an actual Android device/emulator where native libraries are loaded.
  *
- * Based on: features/identity_management.feature, features/contact_card_management.feature,
- *           features/contact_exchange.feature, features/account_recovery.feature
+ * Based on: features/identity_management.feature, features/contact_card_management.feature
  */
 @RunWith(AndroidJUnit4::class)
 class VauchiRepositoryFfiTest {
@@ -35,12 +28,6 @@ class VauchiRepositoryFfiTest {
     private lateinit var tempDir: File
     private lateinit var repository: VauchiRepository
     private lateinit var storageKeyProvider: TestStorageKeyProvider
-
-    companion object {
-        /** Local dev relay URL (started via `just dev-relay`) */
-        private const val LOCAL_RELAY_URL = "ws://127.0.0.1:8080"
-        private const val LOCAL_RELAY_PORT = 8080
-    }
 
     @Before
     fun setUp() {
@@ -73,26 +60,6 @@ class VauchiRepositoryFfiTest {
     ): VauchiRepository {
         val testContext = TestContextWrapper(context, dataDir)
         return VauchiRepository(testContext, provider)
-    }
-
-    /**
-     * Skip test if local dev relay is not running at 127.0.0.1:8080.
-     * Start with: just dev-relay
-     */
-    private fun assumeLocalRelay() {
-        val reachable =
-            try {
-                Socket().use { sock ->
-                    sock.connect(InetSocketAddress("127.0.0.1", LOCAL_RELAY_PORT), 500)
-                    true
-                }
-            } catch (_: Exception) {
-                false
-            }
-        Assume.assumeTrue(
-            "Local relay not running at $LOCAL_RELAY_URL — start with: just dev-relay",
-            reachable,
-        )
     }
 
     // Based on: features/identity_management.feature
@@ -159,141 +126,5 @@ class VauchiRepositoryFfiTest {
 
         assertEquals("Alice", card.displayName)
         assertTrue(card.fields.isEmpty(), "Initial card should have no fields")
-    }
-
-    /**
-     * Scenario: Add email field to card
-     */
-    @Test
-    fun testAddEmailField() {
-        repository.createIdentity("Alice")
-
-        repository.addField(MobileFieldType.EMAIL, "Work", "alice@company.com")
-
-        val card = repository.getOwnCard()
-        assertEquals(1, card.fields.size)
-        assertEquals(MobileFieldType.EMAIL, card.fields[0].fieldType)
-        assertEquals("Work", card.fields[0].label)
-        assertEquals("alice@company.com", card.fields[0].value)
-    }
-
-    /**
-     * Scenario: Add phone field to card
-     */
-    @Test
-    fun testAddPhoneField() {
-        repository.createIdentity("Alice")
-
-        repository.addField(MobileFieldType.PHONE, "Mobile", "+1234567890")
-
-        val card = repository.getOwnCard()
-        assertEquals(1, card.fields.size)
-        assertEquals(MobileFieldType.PHONE, card.fields[0].fieldType)
-        assertEquals("Mobile", card.fields[0].label)
-        assertEquals("+1234567890", card.fields[0].value)
-    }
-
-    /**
-     * Scenario: Update field value
-     */
-    @Test
-    fun testUpdateFieldValue() {
-        repository.createIdentity("Alice")
-        repository.addField(MobileFieldType.PHONE, "Mobile", "+1234567890")
-
-        repository.updateField("Mobile", "+0987654321")
-
-        val card = repository.getOwnCard()
-        assertEquals("+0987654321", card.fields[0].value)
-    }
-
-    /**
-     * Scenario: Remove field from card
-     */
-    @Test
-    fun testRemoveField() {
-        repository.createIdentity("Alice")
-        repository.addField(MobileFieldType.EMAIL, "Work", "alice@company.com")
-
-        val removed = repository.removeField("Work")
-
-        assertTrue(removed, "removeField should return true")
-        val card = repository.getOwnCard()
-        assertTrue(card.fields.isEmpty(), "Field should be removed")
-    }
-
-    // Based on: features/contacts_management.feature
-
-    /**
-     * Scenario: Empty contacts list on first launch
-     */
-    @Test
-    fun testEmptyContactsList() {
-        repository.createIdentity("Alice")
-
-        val contacts = repository.listContactsPaginated(0u, 10u)
-
-        assertTrue(contacts.isEmpty(), "Contact list should be empty initially")
-        assertEquals(0u, repository.contactCount())
-    }
-
-    // Based on: features/identity_management.feature
-
-    /**
-     * Scenario: Export encrypted backup
-     */
-    @Test
-    fun testExportBackup() {
-        repository.createIdentity("Alice")
-        repository.addField(MobileFieldType.EMAIL, "Work", "alice@company.com")
-
-        val backup = repository.exportBackup("correct-horse-battery-staple")
-
-        assertFalse(backup.isEmpty(), "Backup should not be empty")
-    }
-
-    /**
-     * Scenario: Import backup restores identity
-     */
-    @Test
-    fun testImportBackup() {
-        // Create identity and export backup
-        repository.createIdentity("Alice")
-        repository.addField(MobileFieldType.EMAIL, "Work", "alice@company.com")
-        val backupPassword = "correct-horse-battery-staple"
-        val backupData = repository.exportBackup(backupPassword)
-
-        // Create new repository and import backup
-        val newDir = File(context.cacheDir, "new_${System.currentTimeMillis()}")
-        newDir.mkdirs()
-        try {
-            val repo2 = createTestRepository(newDir, TestStorageKeyProvider())
-            repo2.importBackup(backupData, backupPassword)
-
-            assertTrue(repo2.hasIdentity())
-            assertEquals("Alice", repo2.getDisplayName())
-        } finally {
-            newDir.deleteRecursively()
-        }
-    }
-
-    /**
-     * Scenario: List available social networks
-     */
-    @Test
-    fun testListSocialNetworks() {
-        val networks = repository.listSocialNetworks()
-
-        assertFalse(networks.isEmpty(), "Should have default social networks")
-    }
-
-    /**
-     * Scenario: Get profile URL for social network
-     */
-    @Test
-    fun testGetProfileUrl() {
-        val url = repository.getProfileUrl("github", "octocat")
-
-        assertEquals("https://github.com/octocat", url)
     }
 }

@@ -17,7 +17,6 @@ import uniffi.vauchi_platform.DomainCommandResult
 import uniffi.vauchi_platform.MobileAhaMoment
 import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileContactCard
-import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.PlatformAppEngine
 import java.io.File
@@ -68,23 +67,6 @@ class VauchiRepository(
         // SharedPreferences files [ThemeManager] / [LocalizationManager]
         // already use. The migration below copies any existing vault row
         // into these files exactly once per upgrade.
-
-        /**
-         * Extract the 16-byte audio challenge from a wb:// QR data string.
-         * QR binary layout: [MAGIC(4)][version(1)][pubkey(32)][exchkey(32)][token(32)][audio_challenge(16)][...]
-         * Audio challenge = bytes 101..117 after base64 decode.
-         */
-        fun extractAudioChallenge(qrData: String): ByteArray? {
-            val b64 = qrData.removePrefix("wb://")
-            val bytes =
-                try {
-                    Base64.decode(b64, Base64.NO_WRAP)
-                } catch (_: Exception) {
-                    return null
-                }
-            if (bytes.size < 117) return null
-            return bytes.sliceArray(101 until 117)
-        }
     }
 
     init {
@@ -276,22 +258,6 @@ class VauchiRepository(
         }.getOrNull()
     }
 
-    /**
-     * Check whether an aha [momentType] has already been seen. Errors return
-     * `true` so the caller conservatively skips showing the moment.
-     */
-    fun hasSeenAhaMoment(momentType: MobileAhaMomentType): Boolean {
-        return runCatching {
-            val result = appEngine.dispatchDomainCommand(DomainCommand.HasSeenAhaMoment(momentType))
-            (result as? DomainCommandResult.Bool)?.value ?: true
-        }.getOrDefault(true)
-    }
-
-    fun pendingUpdateCount(): UInt {
-        ensureInitialized()
-        return _appEngine.pendingUpdateCount()
-    }
-
     fun hasIdentity(): Boolean {
         ensureInitialized()
         return appEngine.hasIdentity()
@@ -307,11 +273,6 @@ class VauchiRepository(
         return appEngine.getDisplayName()
     }
 
-    fun setDisplayName(name: String) {
-        ensureInitialized()
-        appEngine.setDisplayName(name)
-    }
-
     fun getPublicId(): String {
         ensureInitialized()
         return appEngine.getPublicId()
@@ -322,132 +283,7 @@ class VauchiRepository(
         return appEngine.getOwnCard()
     }
 
-    fun addField(
-        fieldType: MobileFieldType,
-        label: String,
-        value: String,
-    ) {
-        ensureInitialized()
-        appEngine.addField(fieldType, label, value)
-    }
-
-    fun updateField(
-        label: String,
-        newValue: String,
-    ) {
-        ensureInitialized()
-        appEngine.updateField(label, newValue)
-    }
-
-    fun removeField(label: String): Boolean {
-        ensureInitialized()
-        return appEngine.removeField(label)
-    }
-
     fun contactCount(): UInt = appEngine.contactCount()
-
-    fun listContactsPaginated(
-        offset: UInt,
-        limit: UInt,
-    ) = appEngine.listContactsPaginated(offset, limit)
-
-    fun searchContacts(query: String) = appEngine.searchContacts(query)
-
-    fun getContact(id: String) = appEngine.getContact(id)
-
-    fun removeContact(id: String) = appEngine.removeContact(id)
-
-    fun softDeleteImportedContact(id: String) = appEngine.softDeleteImportedContact(id)
-
-    fun archiveContact(id: String) = appEngine.archiveContact(id)
-
-    fun unarchiveContact(id: String) = appEngine.unarchiveContact(id)
-
-    /**
-     * Returns the footer-button action id (`"delete_contact"` or
-     * `"archive_contact"`) for the given contact. Views dispatch on
-     * the returned id so they never branch on the imported-vs-exchanged
-     * distinction in the view layer (§1A pure-renderer rule).
-     */
-    fun contactDetailFooterActionId(contactId: String) = appEngine.contactDetailFooterActionId(contactId)
-
-    /**
-     * G4 (ADR-021/043): typed contact-detail view-state — frontends
-     * iterate `actions`/`badges`/`banners` instead of branching on
-     * raw MobileContact flags. Closes the iOS/Android Verify-button
-     * divergence (audit V4).
-     */
-    fun contactDetailViewState(contactId: String) = appEngine.contactDetailViewState(contactId)
-
-    fun listArchivedContacts() = appEngine.listArchivedContacts()
-
-    fun hideFieldFromContact(
-        contactId: String,
-        fieldLabel: String,
-    ) {
-        appEngine.hideFieldFromContact(contactId, fieldLabel)
-    }
-
-    fun showFieldToContact(
-        contactId: String,
-        fieldLabel: String,
-    ) {
-        appEngine.showFieldToContact(contactId, fieldLabel)
-    }
-
-    fun isFieldVisibleToContact(
-        contactId: String,
-        fieldLabel: String,
-    ): Boolean = appEngine.isFieldVisibleToContact(contactId, fieldLabel)
-
-    // Based on: features/visibility_labels.feature
-
-    /**
-     * List all visibility labels
-     */
-    fun listLabels() = appEngine.listLabels()
-
-    /**
-     * Create a new visibility label
-     */
-    fun createLabel(name: String) = appEngine.createLabel(name)
-
-    /**
-     * Get label details by ID
-     */
-    fun getLabel(labelId: String) = appEngine.getLabel(labelId)
-
-    /**
-     * Rename a visibility label
-     */
-    fun renameLabel(
-        labelId: String,
-        newName: String,
-    ) {
-        appEngine.renameLabel(labelId, newName)
-    }
-
-    /**
-     * Delete a visibility label
-     */
-    fun deleteLabel(labelId: String) {
-        appEngine.deleteLabel(labelId)
-    }
-
-    /**
-     * Get suggested label names.
-     *
-     * Non-throwing wrapper that returns `[]` on failure — `getSuggestedLabels`
-     * is a non-essential UI hint, so dispatch errors silently degrade rather
-     * than propagate. The legacy `getSuggestedLabels()` was likewise
-     * non-throwing on the FFI surface; we preserve that shape.
-     */
-    fun getSuggestedLabels(): List<String> = runCatching { appEngine.getSuggestedLabels() }.getOrDefault(emptyList())
-
-    fun exportBackup(password: String): String {
-        ensureInitialized()
-        return appEngine.exportBackup(password)
-    }
 
     fun importBackup(
         backupData: String,
@@ -457,12 +293,6 @@ class VauchiRepository(
         appEngine.importBackup(backupData, password)
     }
 
-    // TODO: wire once export_full_backup is exported via UniFFI
-    fun exportFullBackup(password: String): String {
-        ensureInitialized()
-        return appEngine.exportBackup(password)
-    }
-
     fun importFullBackup(
         backupData: String,
         password: String,
@@ -470,21 +300,6 @@ class VauchiRepository(
         ensureInitialized()
         appEngine.importBackup(backupData, password)
     }
-
-    // Non-throwing wrappers that silently degrade on dispatch failure —
-    // callers treat social-networks data as a UI hint, so the legacy
-    // non-throwing FFI shape is preserved by swallowing
-    // `dispatchDomainCommand` errors.
-    fun listSocialNetworks(): List<uniffi.vauchi_platform.MobileSocialNetwork> =
-        runCatching { appEngine.listSocialNetworks() }.getOrDefault(emptyList())
-
-    fun searchSocialNetworks(query: String): List<uniffi.vauchi_platform.MobileSocialNetwork> =
-        runCatching { appEngine.searchSocialNetworks(query) }.getOrDefault(emptyList())
-
-    fun getProfileUrl(
-        networkId: String,
-        username: String,
-    ): String? = runCatching { appEngine.getProfileUrl(networkId, username) }.getOrNull()
 
     // Based on: features/content_updates.feature
 
@@ -498,124 +313,10 @@ class VauchiRepository(
     fun runContentUpdateCycle(): uniffi.vauchi_platform.MobileContentCycleOutcome = appEngine.runContentUpdateCycle()
 
     /**
-     * Check if certificate pinning is enabled
-     */
-    fun isCertificatePinningEnabled(): Boolean = runCatching { appEngine.isCertificatePinningEnabled() }.getOrDefault(false)
-
-    /**
-     * Set the pinned certificate for relay TLS connections
-     * @param certPem Certificate in PEM format
-     */
-    fun setPinnedCertificate(certPem: String) {
-        runCatching { appEngine.setPinnedCertificate(certPem) }
-    }
-
-    /**
      * Authenticate with app password. Returns the auth mode (Normal or Duress).
      * Core sets internal auth_mode which controls contact visibility (decoy vs real).
      */
     fun authenticate(password: String): uniffi.vauchi_platform.MobileAuthMode = appEngine.authenticate(password)
-
-    /**
-     * Set up app password (prerequisite for duress PIN).
-     */
-    fun setupAppPassword(password: String) {
-        appEngine.setupAppPassword(password)
-    }
-
-    /**
-     * Check if app password is configured.
-     */
-    fun isPasswordEnabled(): Boolean = appEngine.isPasswordEnabled()
-
-    /**
-     * Check if duress PIN is enabled
-     */
-    fun isDuressEnabled(): Boolean = appEngine.isDuressEnabled()
-
-    /**
-     * Set up duress PIN (requires app password to be set first)
-     */
-    fun setupDuressPassword(duressPassword: String) {
-        appEngine.setupDuressPassword(duressPassword)
-    }
-
-    /**
-     * Disable duress PIN
-     */
-    fun disableDuress() {
-        appEngine.disableDuress()
-    }
-
-    fun hideContact(contactId: String) {
-        appEngine.hideContact(contactId)
-    }
-
-    fun unhideContact(contactId: String) {
-        appEngine.unhideContact(contactId)
-    }
-
-    fun listHiddenContacts(): List<uniffi.vauchi_platform.MobileContact> = appEngine.listHiddenContacts()
-
-    fun configureDuressAlerts(
-        contactIds: List<String>,
-        message: String,
-    ) {
-        appEngine.configureDuressAlerts(contactIds, message)
-    }
-
-    fun getDuressSettings(): uniffi.vauchi_platform.MobileDuressSettings? = appEngine.getDuressSettings()
-
-    fun setContactNote(
-        contactId: String,
-        note: String,
-    ) {
-        appEngine.setContactNote(contactId, note)
-    }
-
-    fun getContactNote(contactId: String): String? = appEngine.getContactNote(contactId)
-
-    fun deleteContactNote(contactId: String) {
-        appEngine.deleteContactNote(contactId)
-    }
-
-    fun setContactFieldNote(
-        contactId: String,
-        fieldId: String,
-        note: String,
-    ) {
-        appEngine.setContactFieldNote(contactId, fieldId, note)
-    }
-
-    fun getContactFieldNotes(contactId: String): List<uniffi.vauchi_platform.MobileFieldNote> = appEngine.getContactFieldNotes(contactId)
-
-    fun deleteContactFieldNote(
-        contactId: String,
-        fieldId: String,
-    ) {
-        appEngine.deleteContactFieldNote(contactId, fieldId)
-    }
-
-    fun setProposalTrusted(
-        contactId: String,
-        trusted: Boolean,
-    ) {
-        appEngine.setProposalTrusted(contactId, trusted)
-    }
-
-    fun verifyContact(id: String) = appEngine.verifyContact(id)
-
-    fun getOwnFingerprint(): String = appEngine.getOwnFingerprint()
-
-    fun trustContactForRecovery(id: String) = appEngine.trustContactForRecovery(id)
-
-    fun untrustContactForRecovery(id: String) = appEngine.untrustContactForRecovery(id)
-
-    fun verifyRecoveryProof(proofB64: String) = appEngine.verifyRecoveryProof(proofB64)
-
-    fun getDeliveryRecordsForContact(contactId: String) = appEngine.getDeliveryRecordsForContact(contactId)
-
-    fun getDeliverySummary(messageId: String) = appEngine.getDeliverySummary(messageId)
 
     // Based on: features/demo_contact.feature
 
@@ -629,136 +330,6 @@ class VauchiRepository(
         ensureInitialized()
         return appEngine.initDemoContactIfNeeded()
     }
-
-    /**
-     * Get the current demo contact if active.
-     *
-     * @return The demo contact if active, null otherwise
-     */
-    fun getDemoContact(): uniffi.vauchi_platform.MobileDemoContact? {
-        ensureInitialized()
-        return appEngine.getDemoContact()
-    }
-
-    /**
-     * Get the demo contact state.
-     *
-     * @return Current state of the demo contact
-     */
-    fun getDemoContactState(): uniffi.vauchi_platform.MobileDemoContactState =
-        runCatching { appEngine.getDemoContactState() }.getOrDefault(
-            uniffi.vauchi_platform.MobileDemoContactState(
-                isActive = false,
-                wasDismissed = false,
-                autoRemoved = false,
-                updateCount = 0u,
-            ),
-        )
-
-    /**
-     * Check if a demo update is available.
-     *
-     * @return True if an update is due (based on 2-hour interval)
-     */
-    fun isDemoUpdateAvailable(): Boolean = runCatching { appEngine.isDemoUpdateAvailable() }.getOrDefault(false)
-
-    /**
-     * Trigger a demo update and get the new content.
-     *
-     * @return Updated demo contact with new tip, null if demo not active
-     */
-    fun triggerDemoUpdate(): uniffi.vauchi_platform.MobileDemoContact? {
-        ensureInitialized()
-        return appEngine.triggerDemoUpdate()
-    }
-
-    /**
-     * Dismiss the demo contact manually.
-     */
-    fun dismissDemoContact() {
-        ensureInitialized()
-        appEngine.dismissDemoContact()
-    }
-
-    /**
-     * Auto-remove demo contact after first real exchange.
-     * Call this after a successful contact exchange.
-     *
-     * @return True if demo was removed, false if it wasn't active
-     */
-    fun autoRemoveDemoContact(): Boolean {
-        ensureInitialized()
-        return appEngine.autoRemoveDemoContact()
-    }
-
-    /**
-     * Restore the demo contact from Settings.
-     *
-     * @return The restored demo contact
-     */
-    fun restoreDemoContact(): uniffi.vauchi_platform.MobileDemoContact? {
-        ensureInitialized()
-        return appEngine.restoreDemoContact()
-    }
-
-    /**
-     * Create a new device-link orchestration session (Phase 1: initiator only).
-     * Core's cycle thread owns QR generation, request listening, state transitions,
-     * and persistence. Frontend wires a `DeviceLinkSessionListener` for events.
-     */
-
-    /**
-     * Send a device link request via the relay and wait for a response.
-     */
-
-    // Based on: features/privacy_compliance.feature
-
-    /**
-     * Export all user data as GDPR-compliant JSON.
-     *
-     * @return GDPR export with JSON data, timestamp, and version
-     */
-    fun exportGdprData() = appEngine.exportGdprData()
-
-    /**
-     * Schedule account deletion with 7-day grace period.
-     *
-     * @return Deletion info with state and timing
-     */
-    fun scheduleIdentityDeletion() = appEngine.scheduleIdentityDeletion()
-
-    /**
-     * Cancel a scheduled account deletion.
-     */
-    fun cancelIdentityDeletion() = appEngine.cancelIdentityDeletion()
-
-    /**
-     * Get current deletion state.
-     *
-     * @return Current deletion info
-     */
-    fun getDeletionState() = appEngine.getDeletionState()
-
-    /**
-     * Grant consent for a specific type.
-     *
-     * @param consentType The type of consent to grant
-     */
-    fun grantConsent(consentType: uniffi.vauchi_platform.MobileConsentType) = appEngine.grantConsent(consentType)
-
-    /**
-     * Revoke consent for a specific type.
-     *
-     * @param consentType The type of consent to revoke
-     */
-    fun revokeConsent(consentType: uniffi.vauchi_platform.MobileConsentType) = appEngine.revokeConsent(consentType)
-
-    /**
-     * Get all consent records.
-     *
-     * @return List of all consent records
-     */
-    fun getConsentRecords() = appEngine.getConsentRecords()
 
     /**
      * Handle app backgrounded event (C1 auto-lock).
