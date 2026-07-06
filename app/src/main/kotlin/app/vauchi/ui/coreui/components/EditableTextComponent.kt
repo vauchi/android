@@ -77,6 +77,9 @@ fun EditableTextComponent(
                     modifier = Modifier.weight(1f),
                 )
 
+                // TODO(HUMBLE): T, P1. Mints "{id}:edit" action id. Fix: core
+                // supplies explicit edit_action_id. (see _private problem record
+                // 2026-07-06-mobile-domain-shell-violations)
                 IconButton(
                     onClick = {
                         onAction(UserAction.ActionPressed(actionId = "$componentId:edit"))

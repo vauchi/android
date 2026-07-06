@@ -98,6 +98,9 @@ fun MultiStageExchangeScreen(
     // Forward system back to core as the engine-level cancel event.
     // Core decides the next screen via its routing layer; the observer
     // above then follows core off this screen.
+    // TODO(HUMBLE): T, P1. Mints generic "cancel" action id. Fix: core
+    // exposes cancel action id in ScreenModel actions. (see _private problem
+    // record 2026-07-06-mobile-domain-shell-violations)
     BackHandler {
         coreAppViewModel.handleAction(UserAction.ActionPressed(actionId = "cancel"))
     }
@@ -114,6 +117,8 @@ fun MultiStageExchangeScreen(
         pollLoop { coreAppViewModel.tickCore() }
     }
 
+    // TODO(HUMBLE): W, P2. Passes domain screen name "MultiStageExchange".
+    // (see _private problem record 2026-07-06-mobile-domain-shell-violations)
     CoreScreenView(
         viewModel = coreAppViewModel,
         screenName = "MultiStageExchange",

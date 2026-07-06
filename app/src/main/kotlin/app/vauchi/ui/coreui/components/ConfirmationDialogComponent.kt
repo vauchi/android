@@ -70,6 +70,9 @@ fun ConfirmationDialogComponent(
             ) {
                 Spacer(modifier = Modifier.weight(1f))
 
+                // TODO(HUMBLE): T, P1. Mints generic "cancel" action id. Fix:
+                // core supplies cancel_action_id. (see _private problem record
+                // 2026-07-06-mobile-domain-shell-violations)
                 OutlinedButton(
                     onClick = {
                         onAction(UserAction.ActionPressed(actionId = "cancel"))
@@ -81,6 +84,9 @@ fun ConfirmationDialogComponent(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 if (destructive) {
+                    // TODO(HUMBLE): T, P1. Mints generic "confirm" action id.
+                    // Fix: core supplies confirm_action_id. (see _private problem
+                    // record 2026-07-06-mobile-domain-shell-violations)
                     Button(
                         onClick = {
                             onAction(UserAction.ActionPressed(actionId = "confirm"))

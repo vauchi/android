@@ -50,6 +50,9 @@ fun NfcTapExchangeScreen(coreAppViewModel: CoreAppViewModel) {
     // then presents the Send/Receive role choice
     // (`ExchangeStep::NfcRoleSelection`) as a ScreenModel this CoreScreenView
     // renders — the role choice is core-driven (ADR-043/044), not here.
+    // TODO(HUMBLE): T/W, P1. Hardcodes mode/category item ids to enter exchange.
+    // Fix: core exposes a single start_nfc_exchange action. (see _private
+    // problem record 2026-07-06-mobile-domain-shell-violations)
     LaunchedEffect(Unit) {
         coreAppViewModel.handleAction(
             UserAction.ListItemSelected(
@@ -60,10 +63,15 @@ fun NfcTapExchangeScreen(coreAppViewModel: CoreAppViewModel) {
     }
 
     // Forward system back to core as the engine-level cancel event.
+    // TODO(HUMBLE): T, P1. Mints generic "cancel" action id. Fix: core
+    // exposes cancel action id in ScreenModel actions. (see _private problem
+    // record 2026-07-06-mobile-domain-shell-violations)
     BackHandler {
         coreAppViewModel.handleAction(UserAction.ActionPressed(actionId = "cancel"))
     }
 
+    // TODO(HUMBLE): W, P2. Passes domain screen name "Exchange".
+    // (see _private problem record 2026-07-06-mobile-domain-shell-violations)
     CoreScreenView(
         viewModel = coreAppViewModel,
         screenName = "Exchange",

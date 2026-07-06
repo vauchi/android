@@ -41,6 +41,10 @@ object ExchangeModePermissions {
      * [sdkInt] is injected (defaulting to the live build) so the version-gated
      * Bluetooth mapping is unit-testable.
      */
+    // TODO(HUMBLE): T, P1. Maps exchange mode strings to Android permissions;
+    // frontend transforms domain capability set into platform request. Fix:
+    // core emits Command::RequestPermissions with capability list. (see
+    // _private problem record 2026-07-06-mobile-domain-shell-violations)
     fun forMode(
         modeItemId: String,
         sdkInt: Int = Build.VERSION.SDK_INT,

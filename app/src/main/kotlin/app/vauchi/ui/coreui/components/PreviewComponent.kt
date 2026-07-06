@@ -70,6 +70,10 @@ fun PreviewComponent(
         // Variant selector chips. Core's `UserAction::GroupViewSelected`
         // (kept its old name in Tier 0; payload `group_name` carries the
         // variant id on the wire).
+        // TODO(HUMBLE): W, P1. Uses GroupViewSelected domain action and exposes
+        // raw variantId as chip label. Fix: core emits variant action id and
+        // display label. (see _private problem record
+        // 2026-07-06-mobile-domain-shell-violations)
         if (variants.isNotEmpty()) {
             Row(
                 modifier =
@@ -117,6 +121,9 @@ fun PreviewComponent(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    // TODO(HUMBLE): W, P2. Default a11y label embeds "Preview"
+                    // domain word. Fix: core supplies a11y.label. (see _private
+                    // problem record 2026-07-06-mobile-domain-shell-violations)
                     .semantics { contentDescription = a11y?.label ?: "Preview: $displayName" },
             shape = RoundedCornerShape(16.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),

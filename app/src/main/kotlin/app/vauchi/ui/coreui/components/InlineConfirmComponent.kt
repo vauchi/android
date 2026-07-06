@@ -58,6 +58,9 @@ fun InlineConfirmComponent(
                         .fillMaxWidth()
                         .padding(top = 12.dp),
             ) {
+                // TODO(HUMBLE): T, P1. Mints "{id}:cancel" action id. Fix:
+                // core supplies explicit cancel_action_id. (see _private problem
+                // record 2026-07-06-mobile-domain-shell-violations)
                 OutlinedButton(
                     onClick = {
                         onAction(UserAction.ActionPressed(actionId = "$componentId:cancel"))
@@ -73,6 +76,9 @@ fun InlineConfirmComponent(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 if (destructive) {
+                    // TODO(HUMBLE): T, P1. Mints "{id}:confirm" action id. Fix:
+                    // core supplies explicit confirm_action_id. (see _private
+                    // problem record 2026-07-06-mobile-domain-shell-violations)
                     Button(
                         onClick = {
                             onAction(UserAction.ActionPressed(actionId = "$componentId:confirm"))

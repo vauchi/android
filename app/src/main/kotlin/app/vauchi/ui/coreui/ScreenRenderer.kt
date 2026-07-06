@@ -218,6 +218,9 @@ fun ScreenRenderer(
         ToastOverlay(
             message = toastMessage ?: "",
             visible = toastMessage != null,
+            // TODO(HUMBLE): W, P2. Hardcoded English "Undo" toast label. Fix:
+            // core supplies undo label key. (see _private problem record
+            // 2026-07-06-mobile-domain-shell-violations)
             undoLabel = if (toastUndoActionId != null) "Undo" else null,
             onUndo =
                 toastUndoActionId?.let { actionId ->

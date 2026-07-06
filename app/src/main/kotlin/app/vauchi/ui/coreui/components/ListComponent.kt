@@ -218,6 +218,9 @@ private fun ItemRow(
     }
 }
 
+// TODO(HUMBLE): W/T, P2. Maps ListItemActionKind domain variants to platform
+// icons. Fix: core provides icon_token per action. (see _private problem
+// record 2026-07-06-mobile-domain-shell-violations)
 private fun iconFor(kind: ListItemActionKind): ImageVector =
     when (kind) {
         ListItemActionKind.Archive -> Icons.Default.Archive

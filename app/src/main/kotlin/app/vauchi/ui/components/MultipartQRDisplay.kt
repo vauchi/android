@@ -91,6 +91,9 @@ fun MultipartQRDisplay(
                 modifier = Modifier.size(250.dp),
                 contentAlignment = Alignment.Center,
             ) {
+                // TODO(HUMBLE): W, P2. Hardcoded English error label. Fix:
+                // core/localized error key. (see _private problem record
+                // 2026-07-06-mobile-domain-shell-violations)
                 Text(
                     text = "QR generation failed",
                     style = MaterialTheme.typography.bodyMedium,
@@ -99,6 +102,9 @@ fun MultipartQRDisplay(
             }
         }
 
+        // TODO(HUMBLE): W, P2. Hardcoded English multipart progress label.
+        // Fix: core supplies localized format key. (see _private problem record
+        // 2026-07-06-mobile-domain-shell-violations)
         Text(
             text = "Part ${currentIndex + 1} of ${chunks.size}",
             style = MaterialTheme.typography.bodySmall,

@@ -159,6 +159,10 @@ fun CoreOnboardingScreen(
  * at the `app_engine_onboarding_completion_tests` level in core, which
  * exercises the same Step→screen_id mapping end-to-end.
  */
+// TODO(HUMBLE): D/W, P1. Frontend enumerates onboarding screen ids to decide
+// completion and uses domain screen vocabulary. Fix: core emits
+// ActionResult::OnboardingComplete. (see _private problem record
+// 2026-07-06-mobile-domain-shell-violations)
 private val ONBOARDING_SCREEN_IDS: Set<String> =
     setOf(
         "identity_check",

@@ -60,6 +60,9 @@ fun QRCountdownContent(
     val formattedTime = String.format("%d:%02d", minutes, seconds)
     val isUrgent = remainingSeconds <= 60
 
+    // TODO(HUMBLE): W, P2. Hardcoded English device-link copy. Fix: core
+    // supplies localized label keys. (see _private problem record
+    // 2026-07-06-mobile-domain-shell-violations)
     Text(
         text = "Scan this QR code on your new device",
         style = MaterialTheme.typography.bodyMedium,
@@ -107,6 +110,9 @@ fun QRCountdownContent(
                     MaterialTheme.colorScheme.onSurfaceVariant
                 },
         )
+        // TODO(HUMBLE): W, P2. Hardcoded English countdown label. Fix: core
+        // supplies localized label. (see _private problem record
+        // 2026-07-06-mobile-domain-shell-violations)
         Text(
             text = "Expires in $formattedTime",
             style = MaterialTheme.typography.labelMedium,
@@ -128,6 +134,9 @@ fun QRCountdownContent(
             modifier = Modifier.size(16.dp),
             strokeWidth = 2.dp,
         )
+        // TODO(HUMBLE): W, P2. Hardcoded English waiting label. Fix: core
+        // supplies localized label. (see _private problem record
+        // 2026-07-06-mobile-domain-shell-violations)
         Text(
             text = "Waiting for new device to connect...",
             style = MaterialTheme.typography.bodySmall,
@@ -145,6 +154,9 @@ fun QRCountdownContent(
         Text(localizationManager.t("device_link.copy_link"))
     }
 
+    // TODO(HUMBLE): W, P2. Hardcoded English instructional copy. Fix: core
+    // supplies localized label. (see _private problem record
+    // 2026-07-06-mobile-domain-shell-violations)
     Text(
         text =
             "Open Vauchi on your new device and select " +

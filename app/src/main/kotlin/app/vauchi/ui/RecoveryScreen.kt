@@ -54,6 +54,9 @@ fun RecoveryScreen(
         }
         when (selectedTab) {
             0 -> {
+                // TODO(HUMBLE): W, P2. Passes domain screen name "Recovery" to
+                // CoreScreenView (unused but leaks domain vocabulary).
+                // (see _private problem record 2026-07-06-mobile-domain-shell-violations)
                 CoreScreenView(
                     viewModel = coreAppViewModel,
                     screenName = "Recovery",
@@ -62,6 +65,8 @@ fun RecoveryScreen(
             }
 
             1 -> {
+                // TODO(HUMBLE): W, P2. Passes domain screen name "RecoveryHelp".
+                // (see _private problem record 2026-07-06-mobile-domain-shell-violations)
                 CoreScreenView(
                     viewModel = coreAppViewModel,
                     screenName = "RecoveryHelp",

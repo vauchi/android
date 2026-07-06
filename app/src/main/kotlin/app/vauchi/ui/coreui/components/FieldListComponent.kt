@@ -50,7 +50,9 @@ fun FieldListComponent(
     Column(
         modifier =
             modifier
-                .fillMaxWidth()
+                // TODO(HUMBLE): W, P2. Default a11y label embeds domain term
+                // "Contact fields". Fix: generic fallback or core a11y.label.
+                // (see _private problem record 2026-07-06-mobile-domain-shell-violations)
                 .semantics { contentDescription = a11y?.label ?: "Contact fields" },
     ) {
         fields.forEachIndexed { index, field ->
@@ -100,6 +102,10 @@ private fun FieldRow(
                 )
             }
 
+            // TODO(HUMBLE): D/T, P1. Interprets VisibilityMode.ShowHide and
+            // UiFieldVisibility.Shown/Hidden to render toggle. Fix: core emits
+            // generic visibility controls with explicit action ids.
+            // (see _private problem record 2026-07-06-mobile-domain-shell-violations)
             if (visibilityMode == VisibilityMode.ShowHide) {
                 val isVisible = field.visibility is UiFieldVisibility.Shown
                 IconButton(onClick = {
@@ -120,6 +126,10 @@ private fun FieldRow(
             }
         }
 
+        // TODO(HUMBLE): D/T, P1. Interprets VisibilityMode.PerGroup and group
+        // membership to render group chips. Fix: core emits visibility controls
+        // as first-class components. (see _private problem record
+        // 2026-07-06-mobile-domain-shell-violations)
         if (visibilityMode == VisibilityMode.PerGroup && availableGroups.isNotEmpty()) {
             Spacer(modifier = Modifier.height(4.dp))
             val visibleGroups =

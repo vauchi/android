@@ -98,6 +98,10 @@ fun AvatarPreviewComponent(
                 .clip(CircleShape)
                 .then(
                     if (editable) {
+                        // TODO(HUMBLE): T, P1. Hardcodes "edit_avatar" action id.
+                        // Fix: core emits edit_action_id on AvatarPreview.
+                        // (see _private problem record
+                        // 2026-07-06-mobile-domain-shell-violations)
                         Modifier.clickable {
                             onAction(UserAction.ActionPressed(actionId = "edit_avatar"))
                         }

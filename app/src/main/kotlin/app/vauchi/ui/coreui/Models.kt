@@ -2389,6 +2389,10 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
 
                     "CompleteWith" in element -> {
                         val obj = element["CompleteWith"] as JsonObject
+                        // TODO(HUMBLE): D/T, P1. Maps domain destination strings
+                        // to PostOnboardingDestination (domain result → screen
+                        // routing). Fix: core emits NavigateTo. (see _private
+                        // problem record 2026-07-06-mobile-domain-shell-violations)
                         val dest =
                             when (obj["destination"]!!.jsonPrimitive.content) {
                                 "Exchange" -> PostOnboardingDestination.Exchange
@@ -2765,6 +2769,10 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                         val obj = element["FilePickFromUser"] as JsonObject
                         // purpose is either a bare variant name
                         // ("ImportBackup") or {"Other": {"label_key": ...}}.
+                        // TODO(HUMBLE): T, P1. Parses domain purpose variant names
+                        // (ImportBackup/ImportContacts) to derive label key. Fix:
+                        // core supplies localized purpose label. (see _private
+                        // problem record 2026-07-06-mobile-domain-shell-violations)
                         val purposeElement = obj["purpose"]!!
                         val purpose =
                             if (purposeElement is JsonObject) {

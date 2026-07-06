@@ -29,6 +29,9 @@ enum class MaterialIconName {
  * preferable to a runtime crash if core adds a new tab before the
  * Android binding picks up the icon.
  */
+// TODO(HUMBLE): W, P2. Maintains a domain-aware SF-Symbol→MaterialIcon name
+// catalog in the view layer. Fix: core emits icon_token. (see _private
+// problem record 2026-07-06-mobile-domain-shell-violations)
 fun materialIconNameForCoreIcon(coreIcon: String): MaterialIconName =
     when (coreIcon) {
         "person.crop.rectangle" -> MaterialIconName.PERSON

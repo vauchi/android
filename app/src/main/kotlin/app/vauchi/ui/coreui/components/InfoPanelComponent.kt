@@ -146,6 +146,10 @@ private fun InfoItemRow(item: InfoItem) {
  * Core sends icon names as lowercase strings (e.g. "shield", "lock").
  * We map them to the best Material Icon match.
  */
+// TODO(HUMBLE): W, P2. Maintains a domain icon-name catalog in the view layer
+// ("group", "card", "qrcode", etc.). Fix: core emits icon_token mapped to
+// platform catalog. (see _private problem record
+// 2026-07-06-mobile-domain-shell-violations)
 internal fun resolveIcon(name: String): ImageVector =
     when (name.lowercase()) {
         "shield" -> Icons.Default.Shield

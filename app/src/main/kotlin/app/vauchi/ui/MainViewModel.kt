@@ -267,6 +267,9 @@ class MainViewModel(
     }
 
     /** Create test identity for --reset-for-testing (DEBUG only). */
+    // TODO(HUMBLE): D, P2. DEBUG-only test gate creates identity directly from
+    // the UI layer. Fix: core test hook or CLI flag. (see _private problem
+    // record 2026-07-06-mobile-domain-shell-violations)
     fun seedTestIdentityIfNeeded() {
         if (!repository.hasIdentity()) {
             Log.i("Vauchi", "--reset-for-testing: creating test identity")
@@ -365,6 +368,10 @@ class MainViewModel(
                     null
                 }
 
+            // TODO(HUMBLE): D, P1. Maps BiometricUnlockOutcome string to
+            // screen state (duress PIN gate). Fix: core emits NavigateTo or
+            // explicit screen state. (see _private problem record
+            // 2026-07-06-mobile-domain-shell-violations)
             when (outcome) {
                 "PromptForDuressPin" -> {
                     _uiState.value = UiState.AppPasswordRequired
@@ -428,12 +435,20 @@ class MainViewModel(
 
                 // Surface the first-update-received aha moment when this sync
                 // actually brought in changes.
+                // TODO(HUMBLE): D, P1. Frontend decides FIRST_UPDATE_RECEIVED aha
+                // moment from sync result counts. Fix: core returns moments
+                // directly. (see _private problem record
+                // 2026-07-06-mobile-domain-shell-violations)
                 if (result.hasChanges) {
                     repository.tryTriggerAhaMoment(MobileAhaMomentType.FIRST_UPDATE_RECEIVED)?.let { moment ->
                         showMessage(moment.message)
                     }
                 }
 
+                // TODO(HUMBLE): T/W, P1. Assembles sync result copy from domain
+                // counts/names (updatedContactNames, contactsAdded, cardsUpdated).
+                // Fix: core returns localized summary or ShowToast. (see _private
+                // problem record 2026-07-06-mobile-domain-shell-violations)
                 val msg =
                     if (result.updatedContactNames.isNotEmpty()) {
                         if (result.updatedContactNames.size == 1) {

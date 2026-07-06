@@ -621,6 +621,10 @@ class CoreAppViewModel(
         // path's onAction funnels through (CoreScreenView AND CoreOnboardingScreen)
         // — and forward it to core as a hardware event, never as a serialized
         // UserAction (it must never reach handleActionJson / core's action path).
+        // TODO(HUMBLE): T/W, P1. Mints/intercepts a sentinel action id for camera
+        // denial instead of core emitting a dedicated hardware event. Fix: core
+        // provides CameraPermissionDenied event or explicit action id.
+        // (see _private problem record 2026-07-06-mobile-domain-shell-violations)
         if (action is UserAction.ActionPressed && action.actionId == CameraFailure.DENIED_ACTION_ID) {
             onCameraPermissionDenied()
             return
@@ -628,6 +632,10 @@ class CoreAppViewModel(
         // Permissions step: when a mode is picked, surface the OS permissions
         // its ritual needs so the Activity can request them up front, before the
         // ritual screen. See _private/docs/problems/2026-06-06-exchange-ritual-flow/.
+        // TODO(HUMBLE): D/T, P1. Parses "mode:" item ids and maps exchange mode
+        // to Android permissions. Fix: core emits a Command::RequestPermissions
+        // with capability list. (see _private problem record
+        // 2026-07-06-mobile-domain-shell-violations)
         if (action is UserAction.ListItemSelected && action.itemId.startsWith("mode:")) {
             val perms = ExchangeModePermissions.forMode(action.itemId)
             if (perms.isNotEmpty()) {
@@ -830,6 +838,9 @@ class CoreAppViewModel(
                 // Card preview handled by NavigateTo — no separate action needed
             }
 
+            // TODO(HUMBLE): W, P1. Observes raw StartDeviceLink ActionResult;
+            // should be resolved to NavigateTo by core. (see _private problem
+            // record 2026-07-06-mobile-domain-shell-violations)
             is ActionResult.StartDeviceLink -> {
                 // Handled by native Android flows
             }
@@ -841,6 +852,10 @@ class CoreAppViewModel(
                 loadScreen()
             }
 
+            // TODO(HUMBLE): D, P1. Maps raw RequestCamera domain result to
+            // loadScreen; frontend should not interpret domain outcomes.
+            // Fix: core emits NavigateTo. (see _private problem record
+            // 2026-07-06-mobile-domain-shell-violations)
             is ActionResult.RequestCamera -> {
                 loadScreen()
             }

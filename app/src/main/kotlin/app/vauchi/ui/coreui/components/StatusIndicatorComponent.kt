@@ -83,6 +83,9 @@ fun StatusIndicatorComponent(
 
 @Composable
 private fun StatusBadge(status: Status) {
+    // TODO(HUMBLE): W, P2. Hardcoded English status labels. Fix: core supplies
+    // label keys or localized status text. (see _private problem record
+    // 2026-07-06-mobile-domain-shell-violations)
     val (color, label) =
         when (status) {
             Status.Pending -> Color.Gray to "Pending"

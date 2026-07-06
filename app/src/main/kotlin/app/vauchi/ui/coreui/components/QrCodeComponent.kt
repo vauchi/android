@@ -136,6 +136,9 @@ private fun QrDisplay(
             )
         } else {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                // TODO(HUMBLE): W, P2. Hardcoded English QR placeholder label.
+                // Fix: core supplies label key. (see _private problem record
+                // 2026-07-06-mobile-domain-shell-violations)
                 Text(
                     text = "Generating QR…",
                     style = MaterialTheme.typography.titleMedium,
@@ -180,6 +183,9 @@ private fun QrScanner(
             // sentinel ActionPressed CoreScreenView intercepts) so the exchange
             // ledger / CameraGate fails the QR leg visibly instead of leaving
             // core waiting forever.
+            // TODO(HUMBLE): T/W, P1. Mints a sentinel action id for camera
+            // denial. Fix: core consumes a hardware event directly.
+            // (see _private problem record 2026-07-06-mobile-domain-shell-violations)
             onDenied = {
                 onAction(UserAction.ActionPressed(CameraFailure.DENIED_ACTION_ID))
             },
@@ -323,6 +329,9 @@ private fun QrScanner(
                     },
                 )
                 bindFailure.value?.let { msg ->
+                    // TODO(HUMBLE): W, P2. Hardcoded English camera-failure
+                    // label. Fix: core/localized error key. (see _private
+                    // problem record 2026-07-06-mobile-domain-shell-violations)
                     Text(
                         text = "Camera unavailable\n$msg",
                         color = MaterialTheme.colorScheme.onErrorContainer,

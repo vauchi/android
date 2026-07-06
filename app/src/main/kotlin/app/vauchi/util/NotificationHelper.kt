@@ -69,6 +69,9 @@ object NotificationHelper {
 
         createNotificationChannels(context)
 
+        // TODO(HUMBLE): T, P1. Maps MobileNotificationCategory to OS channel and
+        // priority. Fix: core supplies os_channel_id + urgency/presentation hint.
+        // (see _private problem record 2026-07-06-mobile-domain-shell-violations)
         val channelId = when (notification.category) {
             MobileNotificationCategory.EMERGENCY_ALERT -> CHANNEL_ALERTS
             MobileNotificationCategory.CONTACT_ADDED -> CHANNEL_UPDATES

@@ -225,6 +225,10 @@ class MainActivity : FragmentActivity() {
 // Core screen_ids the shell renders with a NATIVE composable (hardware
 // wrappers + the MyInfo TopAppBar chrome). Everything else renders via
 // the generic CoreScreenView (dispatch inversion — CoreScreenIdMap rework).
+// TODO(HUMBLE): W, P2. Hardcodes domain screen ids in view layer. Fix:
+// core publishes native-wrapper metadata so the shell doesn't enumerate
+// screen names. (see _private problem record
+// 2026-07-06-mobile-domain-shell-violations)
 private val NATIVE_SCREEN_IDS = setOf("my_info", "multi_stage_exchange", "exchange_nfc_role")
 
 enum class Screen {
@@ -264,6 +268,10 @@ enum class Screen {
  * [app.vauchi.ui.coreui.materialIconNameForCoreIcon] so it can be
  * unit-tested without Compose.
  */
+// TODO(HUMBLE): W, P2. Maps core tab icon tokens to Material icons by
+// SF-Symbol name; domain vocabulary in view layer. Fix: core supplies a
+// platform-agnostic icon_token catalog. (see _private problem record
+// 2026-07-06-mobile-domain-shell-violations)
 private fun imageVectorForCoreTab(coreIcon: String): ImageVector =
     when (materialIconNameForCoreIcon(coreIcon)) {
         MaterialIconName.PERSON -> Icons.Default.Person
@@ -348,6 +356,11 @@ fun MainScreen(
     // it through the system share sheet is appropriate (the user
     // chooses the destination; core has already applied the
     // passphrase-derived encryption).
+    //
+    // TODO(HUMBLE): W, P2. Hardcoded English share-sheet labels
+    // ("Vauchi backup", "Save Vauchi backup"). Fix: core supplies
+    // localized title/subject. (see _private problem record
+    // 2026-07-06-mobile-domain-shell-violations)
     val backupExportData by coreAppViewModel.backupExportData.collectAsState()
     LaunchedEffect(backupExportData) {
         backupExportData?.let { hex ->
@@ -778,6 +791,10 @@ fun MainScreen(
 
     // Handle programmatic navigation (device testing: --es navigate exchange)
     // Must wait for UiState.Ready — auth must complete before navigating.
+    // TODO(HUMBLE): W, P2. Hardcodes tab/screen ids ("exchange", "contacts",
+    // "settings", "home") for device-test nav. Fix: core exposes a stable
+    // programmatic navigation action. (see _private problem record
+    // 2026-07-06-mobile-domain-shell-violations)
     LaunchedEffect(navigateTo, uiState) {
         if (navigateTo != null && uiState is UiState.Ready) {
             when (navigateTo) {
@@ -866,6 +883,10 @@ fun MainScreen(
     // the local `currentScreen` so the matching `when` arm renders. Replaces
     // the retired ExchangeModePicker.onModeSelected sets. Leaving a native
     // wrapper resets to Home so the inverted CoreScreenView branch takes over.
+    // TODO(HUMBLE): D/T, P1. Maps domain screen_ids ("multi_stage_exchange",
+    // "exchange_nfc_role") to native Screen enum. Fix: core emits NavigateTo
+    // with native-wrapper hint. (see _private problem record
+    // 2026-07-06-mobile-domain-shell-violations)
     LaunchedEffect(coreScreen?.screenId) {
         when (coreScreen?.screenId) {
             "multi_stage_exchange" -> currentScreen = Screen.MultiStageExchange
@@ -898,6 +919,9 @@ fun MainScreen(
     // (the regression the old `coreVariantForBack != null` gate prevented).
     // `currentTab` is core's tab id for the active screen; only the home tab
     // (and the boot states) leave BACK to the OS.
+    // TODO(HUMBLE): W, P2. Hardcodes "my_info" home-tab id in back-gesture
+    // logic. Fix: core marks the home tab in tab metadata. (see _private
+    // problem record 2026-07-06-mobile-domain-shell-violations)
     val coreCanGoBack = uiState is UiState.Ready && coreAppViewModel.canGoBack()
     val onSecondaryTab = currentTab != null && currentTab != "my_info"
     val canGoBack =
@@ -933,6 +957,11 @@ fun MainScreen(
                             // directly to `tab.id` — no engine-id fold needed.
                             selected = currentTab == tab.id,
                             onClick = {
+                                // TODO(HUMBLE): W, P2. Hardcodes "my_info" tab id
+                                // and uses local Screen enum for home. Fix: core
+                                // exposes home-tab metadata so the shell never
+                                // branches on tab ids. (see _private problem record
+                                // 2026-07-06-mobile-domain-shell-violations)
                                 // Native top-level cases (my_info -> Home;
                                 // exchange now routes through core's
                                 // `exchange_mode_selection`) still need
@@ -1245,6 +1274,9 @@ fun AuthenticationGate(
                         errorCode: Int,
                         errString: CharSequence,
                     ) {
+                        // TODO(HUMBLE): W, P2. Hardcoded English biometric error
+                        // messages. Fix: localized keys. (see _private problem
+                        // record 2026-07-06-mobile-domain-shell-violations)
                         if (errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
                             errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
                             errorCode == BiometricPrompt.ERROR_CANCELED
@@ -1270,6 +1302,10 @@ fun ErrorScreen(
 ) {
     val context = LocalContext.current
     val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
+    // TODO(HUMBLE): D, P0. Classifies error type by substring matching on
+    // English phrases; breaks i18n and can misroute core errors.
+    // Fix: core returns typed error codes. (see _private problem record
+    // 2026-07-06-mobile-domain-shell-violations)
     val isLockScreenError =
         message.contains("lock screen", ignoreCase = true) ||
             message.contains("device authentication", ignoreCase = true)
