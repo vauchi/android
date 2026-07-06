@@ -622,6 +622,18 @@ class ModelsTest {
         assertEquals("import.key_bundle", cmd.purpose)
     }
 
+    @Test
+    fun `CommandDTO Celebrate deserialization`() {
+        val input =
+            """{"Celebrate": {"haptic": "success", "sound": "none", "animation": "checkmark"}}"""
+        val result = json.decodeFromString(CommandDTOSerializer, input)
+        assertTrue(result is CommandDTO.Celebrate)
+        val cmd = result as CommandDTO.Celebrate
+        assertEquals("success", cmd.haptic)
+        assertEquals("none", cmd.sound)
+        assertEquals("checkmark", cmd.animation)
+    }
+
     // ── Full round-trip ─────────────────────────────────────────────
 
     @Test

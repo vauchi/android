@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.MobileException
@@ -424,6 +425,15 @@ class MainViewModel(
                 _syncState.value = SyncState.Success(result)
                 _lastSyncTime.value = Instant.now()
                 loadUserData()
+
+                // Surface the first-update-received aha moment when this sync
+                // actually brought in changes.
+                if (result.hasChanges) {
+                    repository.tryTriggerAhaMoment(MobileAhaMomentType.FIRST_UPDATE_RECEIVED)?.let { moment ->
+                        showMessage(moment.message)
+                    }
+                }
+
                 val msg =
                     if (result.updatedContactNames.isNotEmpty()) {
                         if (result.updatedContactNames.size == 1) {

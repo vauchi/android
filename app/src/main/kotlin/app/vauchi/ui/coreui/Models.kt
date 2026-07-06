@@ -2217,6 +2217,16 @@ sealed class CommandDTO {
     ) : CommandDTO()
 
     /**
+     * Exchange-success ceremony (M2 S5). Frontends execute the requested
+     * haptic/sound/animation axis; skipped axes are silently ignored.
+     */
+    data class Celebrate(
+        val haptic: String,
+        val sound: String,
+        val animation: String,
+    ) : CommandDTO()
+
+    /**
      * A command this build cannot decode. [variantName] is the wire
      * variant tag so the frontend can answer with
      * `HardwareUnavailable(variantName)` instead of silently dropping
@@ -2744,6 +2754,15 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                                     it.jsonPrimitive.content
                                 },
                             purpose = purpose,
+                        )
+                    }
+
+                    "Celebrate" in element -> {
+                        val obj = element["Celebrate"] as JsonObject
+                        CommandDTO.Celebrate(
+                            haptic = obj["haptic"]!!.jsonPrimitive.content,
+                            sound = obj["sound"]!!.jsonPrimitive.content,
+                            animation = obj["animation"]!!.jsonPrimitive.content,
                         )
                     }
 

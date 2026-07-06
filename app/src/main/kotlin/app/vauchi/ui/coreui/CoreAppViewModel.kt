@@ -30,6 +30,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import uniffi.vauchi_platform.DomainCommand
+import uniffi.vauchi_platform.DomainCommandResult
+import uniffi.vauchi_platform.MobileAhaMoment
+import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.MobileLocale
 import uniffi.vauchi_platform.MobileTabInfo
@@ -112,6 +116,31 @@ class CoreAppViewModel(
 
     fun consumeImagePickEvent() {
         _imagePickEvent.value = null
+    }
+
+    /**
+     * Exchange-success ceremony request (M2 S5). Non-null when core emits
+     * `Command::Celebrate`; the Compose layer performs the haptic and,
+     * unless reduce-motion is enabled, plays the one-beat animation.
+     */
+    private val _celebrateRequest = MutableStateFlow<CelebrateRequest?>(null)
+    val celebrateRequest: StateFlow<CelebrateRequest?> = _celebrateRequest.asStateFlow()
+
+    fun consumeCelebrateRequest() {
+        _celebrateRequest.value = null
+    }
+
+    /**
+     * Aha-moment toast request tied to the exchange-success ceremony. When
+     * `Command::Celebrate` arrives we also ask core for the
+     * `firstContactAdded` milestone. If reduce-motion is enabled the Compose
+     * layer surfaces this as a toast instead of the animated checkmark.
+     */
+    private val _ahaMomentRequest = MutableStateFlow<MobileAhaMoment?>(null)
+    val ahaMomentRequest: StateFlow<MobileAhaMoment?> = _ahaMomentRequest.asStateFlow()
+
+    fun consumeAhaMomentRequest() {
+        _ahaMomentRequest.value = null
     }
 
     /**
@@ -774,6 +803,21 @@ class CoreAppViewModel(
         _alertMessage.value = null
     }
 
+    /**
+     * Ask core to trigger an aha [momentType] and return the localized moment
+     * if it should be shown now, or `null` if already seen. Errors are logged
+     * and ignored — a missed milestone is non-fatal.
+     */
+    private fun tryTriggerAhaMoment(momentType: MobileAhaMomentType): MobileAhaMoment? {
+        return try {
+            val result = appEngine.dispatchDomainCommand(DomainCommand.TryTriggerAhaMoment(momentType))
+            (result as? DomainCommandResult.AhaMomentOpt)?.moment
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to trigger aha moment $momentType", e)
+            null
+        }
+    }
+
     private fun applyResult(result: ActionResult) {
         when (result) {
             is ActionResult.UpdateScreen -> {
@@ -954,6 +998,20 @@ class CoreAppViewModel(
                     _locationRequest.value = cmd.timeoutMs
                 }
 
+                is CommandDTO.Celebrate -> {
+                    _celebrateRequest.value =
+                        CelebrateRequest(
+                            haptic = cmd.haptic,
+                            sound = cmd.sound,
+                            animation = cmd.animation,
+                        )
+                    // Mark the first-contact milestone as seen and stash the
+                    // returned moment. CoreScreenView renders it as a toast
+                    // when reduce-motion is enabled; otherwise the celebrate
+                    // animation carries the moment and the toast is skipped.
+                    _ahaMomentRequest.value = tryTriggerAhaMoment(MobileAhaMomentType.FIRST_CONTACT_ADDED)
+                }
+
                 is CommandDTO.BleStartScanning -> {
                     _bleCommands.tryEmit(BleCommand.StartScan(cmd.serviceUuid))
                 }
@@ -1033,6 +1091,18 @@ class CoreAppViewModel(
  * [CoreAppViewModel.brightnessRequest]; the Activity-side collector
  * owns the platform call.
  */
+
+/**
+ * Exchange-success ceremony request from core's `Command::Celebrate`
+ * (M2 S5). The Compose layer performs the requested [haptic], plays
+ * [animation] unless reduce-motion is enabled, and skips the [sound]
+ * axis on Android (no bundled ceremony sound asset).
+ */
+data class CelebrateRequest(
+    val haptic: String,
+    val sound: String,
+    val animation: String,
+)
 
 /**
  * Ultrasonic emit request from core's `Command::AudioEmitChallenge`. The

@@ -5,13 +5,14 @@
   "subtitle": null,
   "components": [
     {
-      "PinInput": {
-        "id": "pin",
+      "TextInput": {
+        "id": "app_password",
         "label": "Password",
-        "length": 6,
-        "filled": 0,
-        "masked": true,
-        "validation_error": null
+        "value": "",
+        "placeholder": null,
+        "max_length": 64,
+        "validation_error": null,
+        "input_type": "Password"
       }
     }
   ],

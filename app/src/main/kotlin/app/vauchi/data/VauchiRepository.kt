@@ -12,6 +12,10 @@ import android.util.Log
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.ThemeManager
 import app.vauchi.util.pushDeviceCapabilities
+import uniffi.vauchi_platform.DomainCommand
+import uniffi.vauchi_platform.DomainCommandResult
+import uniffi.vauchi_platform.MobileAhaMoment
+import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileFieldType
 import uniffi.vauchi_platform.MobileSyncResult
@@ -260,6 +264,29 @@ class VauchiRepository(
         return result
     }
 
+    /**
+     * Try to trigger an aha [momentType] and return the localized moment if
+     * it should be shown now, or `null` if already seen. Errors are swallowed
+     * so a milestone failure never breaks the calling flow.
+     */
+    fun tryTriggerAhaMoment(momentType: MobileAhaMomentType): MobileAhaMoment? {
+        return runCatching {
+            val result = appEngine.dispatchDomainCommand(DomainCommand.TryTriggerAhaMoment(momentType))
+            (result as? DomainCommandResult.AhaMomentOpt)?.moment
+        }.getOrNull()
+    }
+
+    /**
+     * Check whether an aha [momentType] has already been seen. Errors return
+     * `true` so the caller conservatively skips showing the moment.
+     */
+    fun hasSeenAhaMoment(momentType: MobileAhaMomentType): Boolean {
+        return runCatching {
+            val result = appEngine.dispatchDomainCommand(DomainCommand.HasSeenAhaMoment(momentType))
+            (result as? DomainCommandResult.Bool)?.value ?: true
+        }.getOrDefault(true)
+    }
+
     fun pendingUpdateCount(): UInt {
         ensureInitialized()
         return _appEngine.pendingUpdateCount()
@@ -447,8 +474,7 @@ class VauchiRepository(
     // Non-throwing wrappers that silently degrade on dispatch failure —
     // callers treat social-networks data as a UI hint, so the legacy
     // non-throwing FFI shape is preserved by swallowing
-    // `dispatchDomainCommand` errors. Same convention applies to the
-    // Content Updates / Aha Moments / Cert Pinning wrappers below.
+    // `dispatchDomainCommand` errors.
     fun listSocialNetworks(): List<uniffi.vauchi_platform.MobileSocialNetwork> =
         runCatching { appEngine.listSocialNetworks() }.getOrDefault(emptyList())
 
