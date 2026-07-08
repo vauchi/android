@@ -5,6 +5,7 @@
 [default.extend-words]
 PNGs = "PNGs"
 PN = "PN"
+mappin = "mappin"
 
 # Locale files contain German, French, Spanish — not English typos
 [type.json]

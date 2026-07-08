@@ -13,21 +13,30 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Cable
+import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContactPage
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
@@ -160,7 +169,26 @@ internal fun resolveIcon(name: String): ImageVector =
 
         "info" -> Icons.Default.Info
 
-        "check", "check_circle" -> Icons.Default.CheckCircle
+        "check", "check_circle", "checkmark.circle" -> Icons.Default.CheckCircle
+
+        "folder" -> Icons.Default.Folder
+
+        "more" -> Icons.Default.MoreVert
+
+        // Field-type glyphs (received-fields list on exchange success).
+        "phone" -> Icons.Default.Phone
+
+        "envelope" -> Icons.Default.Email
+
+        "globe" -> Icons.Default.Language
+
+        "mappin" -> Icons.Default.LocationOn
+
+        "at" -> Icons.Default.AlternateEmail
+
+        "gift" -> Icons.Default.CardGiftcard
+
+        "tag" -> Icons.AutoMirrored.Filled.Label
 
         "warning" -> Icons.Default.Warning
 

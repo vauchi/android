@@ -5,12 +5,22 @@
 package app.vauchi.ui.coreui.components
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Cable
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Nfc
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.TouchApp
@@ -36,6 +46,24 @@ class ResolveIconTest {
         assertEquals(Icons.Default.Gesture, resolveIcon("gesture"))
         assertEquals(Icons.Default.Link, resolveIcon("link"))
         assertEquals(Icons.Default.Cable, resolveIcon("cable"))
+    }
+
+    @Test
+    fun `exchange success screen tokens map to their material glyphs`() {
+        assertEquals(Icons.Default.CheckCircle, resolveIcon("checkmark.circle"))
+        assertEquals(Icons.Default.Folder, resolveIcon("folder"))
+        assertEquals(Icons.Default.MoreVert, resolveIcon("more"))
+    }
+
+    @Test
+    fun `field type tokens map to their material glyphs`() {
+        assertEquals(Icons.Default.Phone, resolveIcon("phone"))
+        assertEquals(Icons.Default.Email, resolveIcon("envelope"))
+        assertEquals(Icons.Default.Language, resolveIcon("globe"))
+        assertEquals(Icons.Default.LocationOn, resolveIcon("mappin"))
+        assertEquals(Icons.Default.AlternateEmail, resolveIcon("at"))
+        assertEquals(Icons.Default.CardGiftcard, resolveIcon("gift"))
+        assertEquals(Icons.AutoMirrored.Filled.Label, resolveIcon("tag"))
     }
 
     @Test
