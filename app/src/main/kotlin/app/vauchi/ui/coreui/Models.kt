@@ -1224,6 +1224,7 @@ data class Field(
     @SerialName("field_type") val fieldType: String,
     val label: String,
     val value: String,
+    val icon: String? = null,
     val visibility: UiFieldVisibility,
     val a11y: A11y? = null,
 )

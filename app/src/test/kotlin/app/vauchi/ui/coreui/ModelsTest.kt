@@ -206,8 +206,8 @@ class ModelsTest {
                 "FieldList": {
                     "id": "fields",
                     "fields": [
-                        {"id": "f1", "field_type": "Phone", "label": "Mobile", "value": "+1234", "visibility": "Shown"},
-                        {"id": "f2", "field_type": "Email", "label": "Work", "value": "a@b.com", "visibility": "Hidden"}
+                        {"id": "f1", "field_type": "Phone", "label": "Mobile", "value": "+1234", "icon": "phone", "visibility": "Shown"},
+                        {"id": "f2", "field_type": "Email", "label": "Work", "value": "a@b.com", "icon": "envelope", "visibility": "Hidden"}
                     ],
                     "visibility_mode": "ShowHide",
                     "available_groups": ["Family", "Work"]
@@ -219,7 +219,9 @@ class ModelsTest {
         val fieldList = component as Component.FieldList
         assertEquals(2, fieldList.fields.size)
         assertEquals("Phone", fieldList.fields[0].fieldType)
+        assertEquals("phone", fieldList.fields[0].icon)
         assertTrue(fieldList.fields[0].visibility is UiFieldVisibility.Shown)
+        assertEquals("envelope", fieldList.fields[1].icon)
         assertTrue(fieldList.fields[1].visibility is UiFieldVisibility.Hidden)
         assertEquals(VisibilityMode.ShowHide, fieldList.visibilityMode)
         assertEquals(listOf("Family", "Work"), fieldList.availableGroups)
