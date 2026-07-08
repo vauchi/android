@@ -20,6 +20,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
+private const val TEST_CONTACT_0 = "Contact 0"
+private const val TEST_CONTACT_499 = "Contact 499"
+private const val TEST_CONTACT_PREFIX = "Contact "
+private const val TEST_CONTACTS_TITLE = "Contacts"
+
 /**
  * Pins the `ScreenLayout.Pinned` contract on the renderer: the list
  * component becomes the lazy scroll host (bounded composition) while
@@ -36,7 +41,7 @@ class PinnedLayoutListTest {
         (0 until count).map { i ->
             Item(
                 id = "contact-$i",
-                name = "Contact $i",
+                name = "$TEST_CONTACT_PREFIX$i",
                 subtitle = null,
                 avatarInitials = "C$i",
             )
@@ -48,7 +53,7 @@ class PinnedLayoutListTest {
     ): ScreenModel =
         ScreenModel(
             screenId = "contacts",
-            title = "Contacts",
+            title = TEST_CONTACTS_TITLE,
             components =
                 listOf(
                     Component.List(
@@ -70,11 +75,11 @@ class PinnedLayoutListTest {
         }
 
         // Lazy host: far-away rows must not exist in the tree.
-        composeTestRule.onNodeWithText("Contact 0").assertExists()
-        composeTestRule.onNodeWithText("Contact 499").assertDoesNotExist()
+        composeTestRule.onNodeWithText(TEST_CONTACT_0).assertExists()
+        composeTestRule.onNodeWithText(TEST_CONTACT_499).assertDoesNotExist()
         val composed =
             composeTestRule
-                .onAllNodesWithText("Contact ", substring = true)
+                .onAllNodesWithText(TEST_CONTACT_PREFIX, substring = true)
                 .fetchSemanticsNodes()
                 .size
         assertTrue("expected bounded composition, got $composed rows", composed < 100)
@@ -90,8 +95,8 @@ class PinnedLayoutListTest {
 
         composeTestRule
             .onNodeWithTag("pinned_list")
-            .performScrollToNode(hasText("Contact 499"))
-        composeTestRule.onNodeWithText("Contact 499").assertExists()
+            .performScrollToNode(hasText(TEST_CONTACT_499))
+        composeTestRule.onNodeWithText(TEST_CONTACT_499).assertExists()
     }
 
     @Test
@@ -102,7 +107,7 @@ class PinnedLayoutListTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Contacts").assertExists()
+        composeTestRule.onNodeWithText(TEST_CONTACTS_TITLE).assertExists()
     }
 
     @Test
@@ -116,7 +121,7 @@ class PinnedLayoutListTest {
         // Eager path: every row exists in the tree even off-viewport.
         val composed =
             composeTestRule
-                .onAllNodesWithText("Contact ", substring = true)
+                .onAllNodesWithText(TEST_CONTACT_PREFIX, substring = true)
                 .fetchSemanticsNodes()
                 .size
         assertTrue("expected all 30 rows composed eagerly, got $composed", composed == 30)

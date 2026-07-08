@@ -4,6 +4,9 @@
 
 package app.vauchi.diagnostic
 
+import androidx.compose.ui.res.stringResource
+import app.vauchi.R
+
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.IntentFilter
@@ -195,17 +198,17 @@ class NfcDiagnosticActivity : ComponentActivity() {
                 Button(
                     onClick = { runTest { testDiscovery(it) } },
                     enabled = !running && nfcAdapter != null,
-                ) { Text("A: Discovery") }
+                ) { Text(stringResource(R.string.debug_a_discovery)) }
 
                 Button(
                     onClick = { runTest { testAidSelection(it) } },
                     enabled = !running && nfcAdapter != null,
-                ) { Text("B: AID Select") }
+                ) { Text(stringResource(R.string.debug_b_aid_select)) }
 
                 Button(
                     onClick = { runTest { testApduLatency(it) } },
                     enabled = !running && nfcAdapter != null,
-                ) { Text("C: APDU Latency") }
+                ) { Text(stringResource(R.string.debug_c_apdu_latency)) }
             }
 
             FlowRow(
@@ -218,12 +221,12 @@ class NfcDiagnosticActivity : ComponentActivity() {
                 Button(
                     onClick = { runTest { testMaxPayload(it) } },
                     enabled = !running && nfcAdapter != null,
-                ) { Text("D: Max Payload") }
+                ) { Text(stringResource(R.string.debug_d_max_payload)) }
 
                 Button(
                     onClick = { runTest { testThroughput(it) } },
                     enabled = !running && nfcAdapter != null,
-                ) { Text("E: Throughput") }
+                ) { Text(stringResource(R.string.debug_e_throughput)) }
             }
 
             FlowRow(
@@ -236,7 +239,7 @@ class NfcDiagnosticActivity : ComponentActivity() {
                 Button(
                     onClick = { runTest { startHceServer(it) } },
                     enabled = !running && nfcAdapter != null && !isHceMode,
-                ) { Text("Start HCE Server") }
+                ) { Text(stringResource(R.string.debug_start_hce_server)) }
 
                 Button(
                     onClick = {
@@ -244,7 +247,7 @@ class NfcDiagnosticActivity : ComponentActivity() {
                         logLines.add("HCE server stopped")
                     },
                     enabled = isHceMode,
-                ) { Text("Stop HCE") }
+                ) { Text(stringResource(R.string.debug_stop_hce)) }
             }
 
             if (running) {
@@ -260,7 +263,7 @@ class NfcDiagnosticActivity : ComponentActivity() {
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
                 Button(onClick = { actionConfirmed = true }) {
-                    Text("Done")
+                    Text(stringResource(R.string.debug_done))
                 }
             }
 

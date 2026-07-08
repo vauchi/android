@@ -4,6 +4,9 @@
 
 package app.vauchi.diagnostic.qr
 
+import androidx.compose.ui.res.stringResource
+import app.vauchi.R
+
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -474,7 +477,7 @@ private fun QrTunerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("QR Camera Tuner") },
+                title = { Text(stringResource(R.string.debug_qr_camera_tuner)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -505,7 +508,7 @@ private fun QrTunerScreen(
                     enabled = cameraGranted,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Start Full Sweep (36 configs)")
+                    Text(stringResource(R.string.debug_start_full_sweep))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -513,7 +516,7 @@ private fun QrTunerScreen(
                     enabled = cameraGranted,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Quick Test (5 configs)")
+                    Text(stringResource(R.string.debug_quick_test))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -521,7 +524,7 @@ private fun QrTunerScreen(
                     enabled = cameraGranted,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Front Camera Sweep (18 configs)")
+                    Text(stringResource(R.string.debug_front_camera_sweep))
                 }
             }
 

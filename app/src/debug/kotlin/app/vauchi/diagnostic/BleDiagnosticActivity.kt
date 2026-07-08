@@ -4,6 +4,9 @@
 
 package app.vauchi.diagnostic
 
+import androidx.compose.ui.res.stringResource
+import app.vauchi.R
+
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
@@ -211,17 +214,17 @@ class BleDiagnosticActivity : ComponentActivity() {
                 Button(
                     onClick = { runTest { testDiscovery(it) } },
                     enabled = !running && blePermissionGranted,
-                ) { Text("A: Discovery") }
+                ) { Text(stringResource(R.string.debug_a_discovery)) }
 
                 Button(
                     onClick = { runTest { testMtu(it) } },
                     enabled = !running && blePermissionGranted,
-                ) { Text("B: MTU") }
+                ) { Text(stringResource(R.string.debug_b_mtu)) }
 
                 Button(
                     onClick = { runTest { testThroughput(it) } },
                     enabled = !running && blePermissionGranted,
-                ) { Text("C: Throughput") }
+                ) { Text(stringResource(R.string.debug_c_throughput)) }
             }
 
             FlowRow(
@@ -234,17 +237,17 @@ class BleDiagnosticActivity : ComponentActivity() {
                 Button(
                     onClick = { runTest { testLatency(it) } },
                     enabled = !running && blePermissionGranted,
-                ) { Text("D: Latency") }
+                ) { Text(stringResource(R.string.debug_d_latency)) }
 
                 Button(
                     onClick = { runTest { testRssi(it) } },
                     enabled = !running && blePermissionGranted,
-                ) { Text("E: RSSI") }
+                ) { Text(stringResource(R.string.debug_e_rssi)) }
 
                 Button(
                     onClick = { runTest { testStability(it) } },
                     enabled = !running && blePermissionGranted,
-                ) { Text("F: Stability") }
+                ) { Text(stringResource(R.string.debug_f_stability)) }
             }
 
             FlowRow(
@@ -257,7 +260,7 @@ class BleDiagnosticActivity : ComponentActivity() {
                 Button(
                     onClick = { runTest { startServer(it) } },
                     enabled = !running && blePermissionGranted && !isServerMode,
-                ) { Text("Start Server") }
+                ) { Text(stringResource(R.string.debug_start_server)) }
 
                 Button(
                     onClick = {
@@ -265,7 +268,7 @@ class BleDiagnosticActivity : ComponentActivity() {
                         isServerMode = false
                     },
                     enabled = isServerMode,
-                ) { Text("Stop Server") }
+                ) { Text(stringResource(R.string.debug_stop_server)) }
             }
 
             if (running) {

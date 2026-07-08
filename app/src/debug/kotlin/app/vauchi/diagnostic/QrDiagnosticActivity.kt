@@ -4,6 +4,9 @@
 
 package app.vauchi.diagnostic
 
+import androidx.compose.ui.res.stringResource
+import app.vauchi.R
+
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -195,7 +198,7 @@ private fun QrDiagnosticAutoScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("QR Diagnostic") },
+                title = { Text(stringResource(R.string.debug_qr_diagnostic_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

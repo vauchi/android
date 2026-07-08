@@ -4,6 +4,9 @@
 
 package app.vauchi.diagnostic
 
+import androidx.compose.ui.res.stringResource
+import app.vauchi.R
+
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -175,17 +178,17 @@ class DiagnosticActivity : ComponentActivity() {
                 Button(
                     onClick = { runTest { testLoopback(it) } },
                     enabled = !running && micPermissionGranted,
-                ) { Text("A: Loopback") }
+                ) { Text(stringResource(R.string.debug_a_loopback)) }
 
                 Button(
                     onClick = { runTest { testNoiseFloor(it) } },
                     enabled = !running && micPermissionGranted,
-                ) { Text("B: Noise") }
+                ) { Text(stringResource(R.string.debug_b_noise)) }
 
                 Button(
                     onClick = { runTest { testSweep(it) } },
                     enabled = !running && micPermissionGranted,
-                ) { Text("D: Sweep") }
+                ) { Text(stringResource(R.string.debug_d_sweep)) }
             }
 
             FlowRow(
@@ -198,17 +201,17 @@ class DiagnosticActivity : ComponentActivity() {
                 Button(
                     onClick = { runTest { testSourceComparison(it) } },
                     enabled = !running && micPermissionGranted,
-                ) { Text("F: Source Cmp") }
+                ) { Text(stringResource(R.string.debug_f_source_cmp)) }
 
                 Button(
                     onClick = { runTest { testCrossDeviceListen(it) } },
                     enabled = !running && micPermissionGranted,
-                ) { Text("C: Listen") }
+                ) { Text(stringResource(R.string.debug_c_listen)) }
 
                 Button(
                     onClick = { runTest { testCrossDeviceEmit(it) } },
                     enabled = !running,
-                ) { Text("C: Emit") }
+                ) { Text(stringResource(R.string.debug_c_emit)) }
             }
 
             Text(
@@ -234,7 +237,7 @@ class DiagnosticActivity : ComponentActivity() {
                         }
                     },
                     enabled = !running && micPermissionGranted,
-                ) { Text("A: Loopback (existing)") }
+                ) { Text(stringResource(R.string.debug_a_loopback_existing)) }
 
                 Button(
                     onClick = {
@@ -243,7 +246,7 @@ class DiagnosticActivity : ComponentActivity() {
                         }
                     },
                     enabled = !running && micPermissionGranted,
-                ) { Text("B: Noise (existing)") }
+                ) { Text(stringResource(R.string.debug_b_noise_existing)) }
             }
 
             Text(
@@ -272,7 +275,7 @@ class DiagnosticActivity : ComponentActivity() {
                         )
                     },
                     enabled = !running,
-                ) { Text("QR Camera Tuner") }
+                ) { Text(stringResource(R.string.debug_qr_camera_tuner)) }
             }
 
             if (running) {

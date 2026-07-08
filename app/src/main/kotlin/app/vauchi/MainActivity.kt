@@ -1205,7 +1205,7 @@ fun ReadyScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Vauchi") },
+                title = { Text(localizationManager.t("app.name")) },
                 actions = {
                     // Sync status + trigger is core-driven: every top-level
                     // screen carries a `Component.Indicator(id="sync")` injected
