@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="debug_qr_diagnostic_title" translatable="false">QR Diagnostic</string>
+    <string name="debug_a_discovery" translatable="false">A: Discovery</string>
+    <string name="debug_b_mtu" translatable="false">B: MTU</string>
+    <string name="debug_b_aid_select" translatable="false">B: AID Select</string>
+    <string name="debug_c_throughput" translatable="false">C: Throughput</string>
+    <string name="debug_c_apdu_latency" translatable="false">C: APDU Latency</string>
+    <string name="debug_d_latency" translatable="false">D: Latency</string>
+    <string name="debug_d_max_payload" translatable="false">D: Max Payload</string>
+    <string name="debug_d_sweep" translatable="false">D: Sweep</string>
+    <string name="debug_e_rssi" translatable="false">E: RSSI</string>
+    <string name="debug_e_throughput" translatable="false">E: Throughput</string>
+    <string name="debug_f_stability" translatable="false">F: Stability</string>
+    <string name="debug_f_source_cmp" translatable="false">F: Source Cmp</string>
+    <string name="debug_start_server" translatable="false">Start Server</string>
+    <string name="debug_stop_server" translatable="false">Stop Server</string>
+    <string name="debug_start_hce_server" translatable="false">Start HCE Server</string>
+    <string name="debug_stop_hce" translatable="false">Stop HCE</string>
+    <string name="debug_done" translatable="false">Done</string>
+    <string name="debug_a_loopback" translatable="false">A: Loopback</string>
+    <string name="debug_a_loopback_existing" translatable="false">A: Loopback (existing)</string>
+    <string name="debug_b_noise" translatable="false">B: Noise</string>
+    <string name="debug_b_noise_existing" translatable="false">B: Noise (existing)</string>
+    <string name="debug_c_listen" translatable="false">C: Listen</string>
+    <string name="debug_c_emit" translatable="false">C: Emit</string>
+    <string name="debug_qr_camera_tuner" translatable="false">QR Camera Tuner</string>
+    <string name="debug_start_full_sweep" translatable="false">Start Full Sweep (36 configs)</string>
+    <string name="debug_quick_test" translatable="false">Quick Test (5 configs)</string>
+    <string name="debug_front_camera_sweep" translatable="false">Front Camera Sweep (18 configs)</string>
+</resources>
