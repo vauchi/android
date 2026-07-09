@@ -151,9 +151,7 @@ class LocalizationManager(
 
         val root = context.assets.list("") ?: emptyArray()
         val localePattern = Regex("^[a-z]{2}(-[A-Z]{2})?\\.json$")
-        return root
-            .filter { it.matches(localePattern) }
-            .map { it }
+        return root.filter { it.matches(localePattern) }
     }
 
     private fun getAppVersionCode(context: Context): String =

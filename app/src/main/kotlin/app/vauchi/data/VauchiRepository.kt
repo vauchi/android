@@ -58,7 +58,6 @@ class VauchiRepository internal constructor(
     private var initialized = false
     private val prefs: SharedPreferences
     private val preferences: VauchiPreferences
-    private val instanceId = java.util.UUID.randomUUID().toString().take(8)
 
     companion object {
         private const val KEY_ENCRYPTED_STORAGE_KEY = "encrypted_storage_key"

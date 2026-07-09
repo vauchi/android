@@ -90,8 +90,6 @@ sealed class UiState {
 class MainViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
-    private val instanceId = java.util.UUID.randomUUID().toString().take(8)
-
     private val repository: VauchiRepository by lazy {
         VauchiRepository.getInstance(application)
     }
