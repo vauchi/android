@@ -624,7 +624,7 @@ private fun ActionButton(
             Button(
                 onClick = { onAction(UserAction.ActionPressed(actionId = action.id)) },
                 enabled = action.enabled,
-                modifier = modifier.fillMaxWidth(),
+                modifier = modifier.fillMaxWidth().testTag(action.id),
             ) {
                 Text(action.label)
             }
@@ -634,7 +634,7 @@ private fun ActionButton(
             OutlinedButton(
                 onClick = { onAction(UserAction.ActionPressed(actionId = action.id)) },
                 enabled = action.enabled,
-                modifier = modifier.fillMaxWidth(),
+                modifier = modifier.fillMaxWidth().testTag(action.id),
             ) {
                 Text(action.label)
             }

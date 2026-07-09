@@ -90,8 +90,10 @@ sealed class UiState {
 class MainViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
+    private val instanceId = java.util.UUID.randomUUID().toString().take(8)
+
     private val repository: VauchiRepository by lazy {
-        VauchiRepository(application)
+        VauchiRepository.getInstance(application)
     }
 
     val appEngine: PlatformAppEngine
@@ -146,6 +148,14 @@ class MainViewModel(
      */
     private fun runContentUpdateCycleOnLaunch() {
         viewModelScope.launch(Dispatchers.IO) {
+            // Skip the content-update cycle until the user has an identity.
+            // On a fresh install the foreground is busy rendering onboarding;
+            // touching the shared engine with a content cycle that may reload
+            // cached locale/theme overlays can race against the initial render
+            // and transiently produce "Missing: ..." placeholders.
+            if (!repository.hasIdentity()) {
+                return@launch
+            }
             runCatching { repository.runContentUpdateCycle() }
         }
     }

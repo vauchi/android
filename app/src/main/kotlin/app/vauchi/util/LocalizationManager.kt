@@ -76,6 +76,17 @@ class LocalizationManager(
         this.appEngine = appEngine
         applySelectedLocale()
         pushRenderContext(appContext, appEngine)
+
+        // The engine's first screen may have been rendered with the bundled
+        // fallback catalog before locales were extracted and initialized.
+        // Force a full rebuild now that the catalog is loaded and the render
+        // context has been pushed, so the onboarding/first screen reflects
+        // the real translations instead of "Missing: ..." placeholders.
+        try {
+            appEngine.invalidateAll()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to invalidate engine after locale attach: ${e.javaClass.simpleName}", e)
+        }
     }
 
     /**
@@ -93,6 +104,8 @@ class LocalizationManager(
                 initLocales(localesDir.absolutePath)
             } catch (e: LinkageError) {
                 Log.e(TAG, "Failed to initialize locales: native library not loaded", e)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize locales from existing files: ${e.message}", e)
             }
             return
         }
@@ -100,11 +113,10 @@ class LocalizationManager(
         localesDir.mkdirs()
 
         try {
-            val assetFiles = context.assets.list("locales") ?: emptyArray()
+            val assetFiles = listLocaleAssetFiles(context)
             for (filename in assetFiles) {
-                if (!filename.endsWith(".json")) continue
-                context.assets.open("locales/$filename").use { input ->
-                    File(localesDir, filename).outputStream().use { output ->
+                context.assets.open(filename).use { input ->
+                    File(localesDir, File(filename).name).outputStream().use { output ->
                         input.copyTo(output)
                     }
                 }
@@ -114,10 +126,34 @@ class LocalizationManager(
                 initLocales(localesDir.absolutePath)
             } catch (e: LinkageError) {
                 Log.e(TAG, "Failed to initialize locales: native library not loaded", e)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize locales: ${e.message}", e)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to extract locales: ${e.message}")
+            Log.e(TAG, "Failed to extract locales: ${e.message}", e)
         }
+    }
+
+    /**
+     * Discover locale JSON files packaged as assets.
+     *
+     * First tries the canonical `locales/` sub-directory. If that is empty,
+     * falls back to the asset root and selects files that look like locale
+     * catalogs (e.g. `en.json`, `de-CH.json`). The fallback supports wiring
+     * an external `locales/` directory directly via `assets.srcDir` without
+     * an intermediate copy step.
+     */
+    private fun listLocaleAssetFiles(context: Context): List<String> {
+        val canonical = context.assets.list("locales")?.filter { it.endsWith(".json") }
+        if (!canonical.isNullOrEmpty()) {
+            return canonical.map { "locales/$it" }
+        }
+
+        val root = context.assets.list("") ?: emptyArray()
+        val localePattern = Regex("^[a-z]{2}(-[A-Z]{2})?\\.json$")
+        return root
+            .filter { it.matches(localePattern) }
+            .map { it }
     }
 
     private fun getAppVersionCode(context: Context): String =

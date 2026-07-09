@@ -945,6 +945,7 @@ fun MainScreen(
                         // `CoreScreenView` arm picks up the resulting
                         // `coreScreen.screenId` and renders.
                         NavigationBarItem(
+                            modifier = Modifier.testTag("tab_${tab.id}"),
                             icon = {
                                 Icon(
                                     imageVector = imageVectorForCoreTab(tab.icon),

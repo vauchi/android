@@ -50,7 +50,7 @@ data class ExchangeData(
  * Repository class wrapping the single PlatformAppEngine UniFFI handle.
  * Uses Android KeyStore for secure storage key management.
  */
-class VauchiRepository(
+class VauchiRepository internal constructor(
     private val context: Context,
     private val keyStoreHelper: StorageKeyProvider = KeyStoreHelper(),
 ) {
@@ -58,9 +58,25 @@ class VauchiRepository(
     private var initialized = false
     private val prefs: SharedPreferences
     private val preferences: VauchiPreferences
+    private val instanceId = java.util.UUID.randomUUID().toString().take(8)
 
     companion object {
         private const val KEY_ENCRYPTED_STORAGE_KEY = "encrypted_storage_key"
+
+        @Volatile
+        private var instance: VauchiRepository? = null
+
+        /**
+         * Process-wide singleton. There must be exactly one [PlatformAppEngine]
+         * per process: multiple engines share the same on-disk state and can
+         * race on global core resources such as the locale catalog, causing
+         * screens that were already rendered correctly to revert to
+         * "Missing: ..." placeholders.
+         */
+        fun getInstance(context: Context): VauchiRepository =
+            instance ?: synchronized(this) {
+                instance ?: VauchiRepository(context.applicationContext).also { instance = it }
+            }
 
         // S4 of `2026-05-16-settings-storage-by-sensitivity`: render-
         // context state (theme + locale) lives in the same OS-native
@@ -96,6 +112,14 @@ class VauchiRepository(
     @Synchronized
     private fun ensureInitialized() {
         if (!initialized) {
+            // Ensure locale files are extracted and the core i18n store is
+            // loaded before the engine is created, so the first rendered
+            // screen uses the full locale catalog instead of the embedded
+            // fallback. This is defensive: the manager is also created from
+            // MainViewModel, but engine creation may race past extraction on
+            // fresh installs or after an app update.
+            LocalizationManager.getInstance(context)
+
             val dataDir = context.filesDir.absolutePath
             val relayUrl = preferences.getRelayUrl()
             val storageKeyBytes = getOrCreateStorageKey(dataDir)

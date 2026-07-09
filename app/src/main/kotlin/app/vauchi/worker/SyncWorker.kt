@@ -22,52 +22,32 @@ class SyncWorker(
     override suspend fun doWork(): Result {
         Log.d(TAG, "Starting background sync")
 
-        // This worker builds its OWN VauchiRepository/engine per tick — a
-        // separate instance from the foreground CoreAppViewModel's engine, which
-        // holds the only ScreenInvalidationListener (core's engine_cache is
-        // per-engine). A device-sync update applied here therefore fires
-        // onScreensInvalidated on a listener-less engine and does NOT live-refresh
-        // a screen the user is parked on.
-        //
-        // Decision — 2026-06-30-sync-ui-invalidation-sibling-gaps Gap B: accept
-        // the next-resume refresh as the contract. The foreground engine re-syncs
-        // on ON_RESUME (MainActivity -> viewModel.sync()) and, now that core's
-        // apply_sync_items dispatches a VauchiEvent per applied arm (Gap A), that
-        // resync live-refreshes the affected screens. Storage is always written
-        // correctly; the only uncovered window is "foregrounded and parked through
-        // a 15-min worker tick with no intervening resume" — narrow and
-        // recoverable by navigation. Closing it live would require sharing one
-        // engine (and its listener) across the worker and the foreground VM, or a
-        // cross-engine invalidation channel — deferred as disproportionate to the
-        // window.
         val repository =
             try {
-                VauchiRepository(applicationContext)
+                VauchiRepository.getInstance(applicationContext)
             } catch (e: Exception) {
                 Log.e(TAG, "Repository init failed: ${e.message}", e)
                 return Result.failure()
             }
+
+        // Skip all engine work until the user has completed onboarding.
+        // Without an identity, periodicSyncTick() returns NoIdentity anyway,
+        // but touching the shared engine during the onboarding flow races
+        // against the foreground renderer and can transiently corrupt the
+        // locale catalog / screen state that CoreAppViewModel is displaying.
+        if (!repository.hasIdentity()) {
+            Log.d(TAG, "No identity yet; skipping background sync")
+            return Result.success()
+        }
+
         val maxRetries = 3u
 
         return try {
-            // Per-tick decision (gate on identity / OHTTP key, honour
-            // throttle window) lives in core (audit
-            // `2026-04-28-lifecycle-session-residue-umbrella` P2-C).
-            // The worker shrinks to a single core call plus
-            // notification polling.
             repository.appEngine.periodicSyncTick()
 
-            // Opportunistic content-update cycle (cadence Option 2,
-            // 2026-07-03-periodic-mobile-content-update-cadence):
-            // piggyback on this existing periodic sync — no new
-            // WorkManager job. Best-effort: a content failure must not
-            // fail the sync tick or trigger its retry, and applied
-            // content follows the same next-resume refresh contract as
-            // sync (Gap B above).
             runCatching { repository.runContentUpdateCycle() }
                 .onFailure { Log.w(TAG, "[ContentUpdate] skipped: ${it.javaClass.simpleName}") }
 
-            // Poll for pending notifications (E)
             val notifications = repository.pollNotifications()
             for (notification in notifications) {
                 app.vauchi.util.NotificationHelper

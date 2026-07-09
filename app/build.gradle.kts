@@ -101,6 +101,14 @@ android {
         lintConfig = file("lint.xml")
     }
 
+    // Pull locale JSON catalogs from the shared `locales/` repo so the
+    // packaged APK includes the latest translations without duplicating
+    // them inside the Android sub-repo. Files land at the asset root, and
+    // `LocalizationManager` discovers them by locale-like filename.
+    sourceSets.getByName("main") {
+        assets.srcDir(rootProject.file("../locales"))
+    }
+
     // When using local bindings, include the locally-generated Kotlin source.
     // Files live in src/local-bindings/kotlin/ (not the default source set),
     // so they're only compiled when explicitly added.
