@@ -125,7 +125,20 @@ data class ScreenModel(
     val layout: ScreenLayout = ScreenLayout.Scroll,
     @SerialName("requires_animated_qr") val requiresAnimatedQr: Boolean = false,
     @SerialName("requires_poll") val requiresPoll: Boolean = false,
+    @SerialName("native_wrapper_hint") val nativeWrapperHint: NativeWrapperHint = NativeWrapperHint.None,
 )
+
+/**
+ * Hint telling the native shell which hardware-wrapper flow hosts this screen.
+ * Replaces frontend-side `screen_id` substring checks
+ * (`2026-07-06-mobile-domain-shell-violations` A2).
+ */
+@Serializable
+enum class NativeWrapperHint {
+    None,
+    MultiStageExchange,
+    NfcExchange,
+}
 
 @Serializable
 data class Progress(
@@ -2053,6 +2066,17 @@ sealed class ActionResult {
         val destination: PostOnboardingDestination,
     ) : ActionResult()
 
+    /**
+     * Onboarding is finished; the engine has already navigated to the
+     * chosen post-onboarding screen. Frontends should flip their app state
+     * from "onboarding" to "ready" and render the current screen.
+     * (`2026-07-06-mobile-domain-shell-violations` A13).
+     */
+    data class OnboardingComplete(
+        val destination: PostOnboardingDestination,
+    ) : ActionResult()
+
+    /** Deprecated: routed to NavigateTo/Commands in core. */
     data object StartDeviceLink : ActionResult()
 
     data class BackupExportComplete(
@@ -2277,6 +2301,15 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
     override val descriptor: SerialDescriptor =
         buildClassSerialDescriptor("ActionResult")
 
+    private fun decodePostOnboardingDestination(obj: JsonObject): PostOnboardingDestination =
+        when (obj["destination"]!!.jsonPrimitive.content) {
+            "Exchange" -> PostOnboardingDestination.Exchange
+            "ImportContacts" -> PostOnboardingDestination.ImportContacts
+            "SecurityInfo" -> PostOnboardingDestination.SecurityInfo
+            "BackupSetup" -> PostOnboardingDestination.BackupSetup
+            else -> PostOnboardingDestination.MainScreen
+        }
+
     override fun deserialize(decoder: Decoder): ActionResult {
         val jsonDecoder = decoder as JsonDecoder
         return when (val element = jsonDecoder.decodeJsonElement()) {
@@ -2392,19 +2425,14 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
 
                     "CompleteWith" in element -> {
                         val obj = element["CompleteWith"] as JsonObject
-                        // TODO(HUMBLE): D/T, P1. Maps domain destination strings
-                        // to PostOnboardingDestination (domain result → screen
-                        // routing). Fix: core emits NavigateTo. (see _private
-                        // problem record 2026-07-06-mobile-domain-shell-violations)
-                        val dest =
-                            when (obj["destination"]!!.jsonPrimitive.content) {
-                                "Exchange" -> PostOnboardingDestination.Exchange
-                                "ImportContacts" -> PostOnboardingDestination.ImportContacts
-                                "SecurityInfo" -> PostOnboardingDestination.SecurityInfo
-                                "BackupSetup" -> PostOnboardingDestination.BackupSetup
-                                else -> PostOnboardingDestination.MainScreen
-                            }
+                        val dest = decodePostOnboardingDestination(obj)
                         ActionResult.CompleteWith(destination = dest)
+                    }
+
+                    "OnboardingComplete" in element -> {
+                        val obj = element["OnboardingComplete"] as JsonObject
+                        val dest = decodePostOnboardingDestination(obj)
+                        ActionResult.OnboardingComplete(destination = dest)
                     }
 
                     "BiometricUnlockOutcome" in element -> {
@@ -2601,6 +2629,15 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                         mapOf("destination" to JsonPrimitive(destStr)),
                     )
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("CompleteWith" to obj)))
+            }
+
+            is ActionResult.OnboardingComplete -> {
+                val destStr = value.destination.name
+                val obj =
+                    JsonObject(
+                        mapOf("destination" to JsonPrimitive(destStr)),
+                    )
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("OnboardingComplete" to obj)))
             }
 
             is ActionResult.BiometricUnlockOutcome -> {

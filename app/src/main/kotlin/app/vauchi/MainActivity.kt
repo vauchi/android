@@ -11,6 +11,7 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.nfc.NfcAdapter
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -18,6 +19,7 @@ import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
@@ -80,6 +82,7 @@ import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.CoreOnboardingScreen
 import app.vauchi.ui.coreui.CoreScreenView
 import app.vauchi.ui.coreui.MaterialIconName
+import app.vauchi.ui.coreui.NativeWrapperHint
 import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
 import app.vauchi.ui.coreui.UserAction
@@ -88,9 +91,11 @@ import app.vauchi.ui.pollLoop
 import app.vauchi.ui.startupErrorKindFor
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
+import app.vauchi.util.NotificationHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uniffi.vauchi_platform.MobilePendingNotification
 import uniffi.vauchi_platform.coreVersion
 
 class MainActivity : FragmentActivity() {
@@ -100,11 +105,31 @@ class MainActivity : FragmentActivity() {
     /** Set by --reset-for-testing intent extra (DEBUG only). */
     private var _resetForTesting = false
 
+    /** Notifications polled while POST_NOTIFICATIONS was not granted. */
+    private val pendingNotifications = mutableListOf<MobilePendingNotification>()
+
+    /** Launcher for the contextual POST_NOTIFICATIONS request. */
+    private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
+
     @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        notificationPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            if (granted) {
+                val batch = pendingNotifications.toList()
+                pendingNotifications.clear()
+                batch.forEach { notification ->
+                    NotificationHelper.showNotification(this, notification)
+                }
+            } else {
+                pendingNotifications.clear()
+            }
+        }
 
         // Prevent screenshots and screen recording (T1-5: screenshot prevention).
         // Disabled in debug builds for device testing automation (uiautomator).
@@ -200,9 +225,34 @@ class MainActivity : FragmentActivity() {
             try {
                 val viewModel = ViewModelProvider(this@MainActivity)[MainViewModel::class.java]
                 val notifications = viewModel.pollNotifications()
-                for (notification in notifications) {
-                    app.vauchi.util.NotificationHelper
-                        .showNotification(this@MainActivity, notification)
+                if (notifications.isEmpty()) return@launch
+
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                    // Android 12 and lower do not require POST_NOTIFICATIONS.
+                    notifications.forEach { notification ->
+                        NotificationHelper.showNotification(this@MainActivity, notification)
+                    }
+                    return@launch
+                }
+
+                val granted = ContextCompat.checkSelfPermission(
+                    this@MainActivity,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (granted) {
+                    notifications.forEach { notification ->
+                        NotificationHelper.showNotification(this@MainActivity, notification)
+                    }
+                } else {
+                    // Stash the batch and request permission contextually on the
+                    // main thread. The launcher callback will show or drop the
+                    // batch based on the user's decision.
+                    pendingNotifications.clear()
+                    pendingNotifications.addAll(notifications)
+                    runOnUiThread {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("MainActivity", "pollAndShowNotifications failed", e)
@@ -224,14 +274,15 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-// Core screen_ids the shell renders with a NATIVE composable (hardware
-// wrappers + the MyInfo TopAppBar chrome). Everything else renders via
-// the generic CoreScreenView (dispatch inversion — CoreScreenIdMap rework).
-// TODO(HUMBLE): W, P2. Hardcodes domain screen ids in view layer. Fix:
-// core publishes native-wrapper metadata so the shell doesn't enumerate
-// screen names. (see _private problem record
+// Home tab root keeps Android-specific top-app-bar chrome; all other
+// top-level screens render through the default CoreScreenView branch.
+// Wrapper routing uses core's native_wrapper_hint instead of matching
+// domain screen_ids (2026-07-06-mobile-domain-shell-violations A2).
+// The "my_info" check remains a HUMBLE-EXCEPTION because core does not
+// yet expose home-tab metadata; the app bar is shell-owned chrome.
+// TODO(HUMBLE): W, P2. Hardcodes "my_info" home-tab id. Fix: core marks
+// the home tab in tab metadata. (see _private problem record
 // 2026-07-06-mobile-domain-shell-violations)
-private val NATIVE_SCREEN_IDS = setOf("my_info", "multi_stage_exchange", "exchange_nfc_role")
 
 enum class Screen {
     // Pre-Ready boot/auth states. Home renders one of:
@@ -880,20 +931,20 @@ fun MainScreen(
     val currentTab = remember(coreScreen?.screenId) { coreAppViewModel.currentTabId() }
     val isTopLevel = currentTab != null && coreScreen?.screenId == currentTab
 
-    // Follow-core: the native exchange wrappers (multi-stage QR, NFC tap)
-    // are reached by core navigating to their screen_id; mirror that into
-    // the local `currentScreen` so the matching `when` arm renders. Replaces
-    // the retired ExchangeModePicker.onModeSelected sets. Leaving a native
-    // wrapper resets to Home so the inverted CoreScreenView branch takes over.
-    // TODO(HUMBLE): D/T, P1. Maps domain screen_ids ("multi_stage_exchange",
-    // "exchange_nfc_role") to native Screen enum. Fix: core emits NavigateTo
-    // with native-wrapper hint. (see _private problem record
-    // 2026-07-06-mobile-domain-shell-violations)
-    LaunchedEffect(coreScreen?.screenId) {
-        when (coreScreen?.screenId) {
-            "multi_stage_exchange" -> currentScreen = Screen.MultiStageExchange
-            "exchange_nfc_role" -> currentScreen = Screen.NfcExchange
-            else -> if (currentScreen == Screen.MultiStageExchange) currentScreen = Screen.Home
+    // Follow-core: the native exchange wrappers are reached by core
+    // navigating to a screen whose `native_wrapper_hint` is not None.
+    // Mirror that hint into the local `currentScreen` so the matching
+    // `when` arm renders. Leaving a native wrapper resets to Home so the
+    // inverted CoreScreenView branch takes over.
+    val wrapperHint = coreScreen?.nativeWrapperHint
+    LaunchedEffect(wrapperHint) {
+        when (wrapperHint) {
+            NativeWrapperHint.MultiStageExchange -> currentScreen = Screen.MultiStageExchange
+            NativeWrapperHint.NfcExchange -> currentScreen = Screen.NfcExchange
+            NativeWrapperHint.None,
+            null -> if (currentScreen == Screen.MultiStageExchange || currentScreen == Screen.NfcExchange) {
+                currentScreen = Screen.Home
+            }
         }
     }
 
@@ -1007,15 +1058,15 @@ fun MainScreen(
             // — they now live as `Component::Dropdown`s inside the
             // existing core-driven Settings screen.
             // Dispatch inversion (CoreScreenIdMap rework): render every core
-            // screen via CoreScreenView by default; only the closed
-            // NATIVE_SCREEN_IDS set (hardware wrappers + MyInfo chrome) falls
-            // through to the local `when (currentScreen)` below. ADR-043: the
-            // frontend no longer interprets screen_ids via a domain map.
-            val sid = coreScreen?.screenId
-            if (sid != null && sid !in NATIVE_SCREEN_IDS && uiState is UiState.Ready) {
+            // screen via CoreScreenView by default; only native wrapper
+            // screens and the home-tab root (MyInfo chrome) fall through to
+            // the local `when (currentScreen)` below. ADR-043: the frontend
+            // no longer interprets screen_ids via a domain map for wrappers.
+            val isHomeTab = coreScreen?.screenId == "my_info"
+            if (wrapperHint == NativeWrapperHint.None && !isHomeTab && uiState is UiState.Ready) {
                 CoreScreenView(
                     viewModel = coreAppViewModel,
-                    screenName = sid,
+                    screenName = coreScreen?.screenId ?: "",
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {

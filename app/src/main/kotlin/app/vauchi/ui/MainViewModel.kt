@@ -214,9 +214,6 @@ class MainViewModel(
                         repository.hasIdentity()
                     }
                 if (hasIdentity) {
-                    if (!repository.hasCompletedOnboarding()) {
-                        repository.setOnboardingCompleted(true)
-                    }
                     loadUserData()
                 } else {
                     _uiState.value = UiState.Onboarding

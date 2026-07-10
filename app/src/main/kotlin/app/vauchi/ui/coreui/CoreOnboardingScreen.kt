@@ -71,17 +71,11 @@ fun CoreOnboardingScreen(
     // PAE transitions away from onboarding — identity has been written
     // to the DB by `AppEngine::handle_completion` (display name,
     // groups, and per slice 32c S2, fields). Hand control back to
-    // MainActivity so it re-evaluates `hasIdentity` and renders the
-    // Ready state.
-    //
-    // The onboarding screen_ids are an enumerated set owned by
-    // `core/vauchi-app/src/ui/onboarding.rs`: identity_check,
-    // link_choice, default_name, groups_setup, contact_info,
-    // what_next, backup_password_entry. Any other id means PAE
-    // navigated past Complete (typically `my_info`).
-    LaunchedEffect(screen?.screenId) {
-        val id = screen?.screenId
-        if (id != null && id !in ONBOARDING_SCREEN_IDS) {
+    // MainActivity so it flips app state from onboarding to ready and
+    // renders the destination core already navigated to.
+    // (`2026-07-06-mobile-domain-shell-violations` A13).
+    LaunchedEffect(Unit) {
+        coreAppViewModel.onboardingCompleteEvent.collect {
             onIdentityCreated()
         }
     }
@@ -152,24 +146,3 @@ fun CoreOnboardingScreen(
     }
 }
 
-/**
- * Screen IDs produced by `OnboardingEngine::current_screen()`.
- * Source: `core/vauchi-app/src/ui/onboarding.rs:173,222,296,334,404,569,581`.
- * Kept in sync with that set is a structural contract — drift is caught
- * at the `app_engine_onboarding_completion_tests` level in core, which
- * exercises the same Step→screen_id mapping end-to-end.
- */
-// TODO(HUMBLE): D/W, P1. Frontend enumerates onboarding screen ids to decide
-// completion and uses domain screen vocabulary. Fix: core emits
-// ActionResult::OnboardingComplete. (see _private problem record
-// 2026-07-06-mobile-domain-shell-violations)
-private val ONBOARDING_SCREEN_IDS: Set<String> =
-    setOf(
-        "identity_check",
-        "link_choice",
-        "default_name",
-        "groups_setup",
-        "contact_info",
-        "what_next",
-        "backup_password_entry",
-    )

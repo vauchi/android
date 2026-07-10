@@ -100,6 +100,15 @@ class CoreAppViewModel(
         _openUrlEvent.value = null
     }
 
+    /**
+     * Fires once when core reports onboarding is finished
+     * (`ActionResult::OnboardingComplete`). The shell should flip app state
+     * from onboarding to ready and render the current screen.
+     * (`2026-07-06-mobile-domain-shell-violations` A13).
+     */
+    private val _onboardingCompleteEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val onboardingCompleteEvent: SharedFlow<Unit> = _onboardingCompleteEvent.asSharedFlow()
+
     private val _backupExportData = MutableStateFlow<String?>(null)
     val backupExportData: StateFlow<String?> = _backupExportData.asStateFlow()
 
@@ -838,13 +847,6 @@ class CoreAppViewModel(
                 // Card preview handled by NavigateTo — no separate action needed
             }
 
-            // TODO(HUMBLE): W, P1. Observes raw StartDeviceLink ActionResult;
-            // should be resolved to NavigateTo by core. (see _private problem
-            // record 2026-07-06-mobile-domain-shell-violations)
-            is ActionResult.StartDeviceLink -> {
-                // Handled by native Android flows
-            }
-
             is ActionResult.BackupExportComplete -> {
                 // Core executed the backup — surface the data for sharing.
                 // The encrypted hex is in result.data; emit to UI for save/share.
@@ -852,11 +854,12 @@ class CoreAppViewModel(
                 loadScreen()
             }
 
-            // TODO(HUMBLE): D, P1. Maps raw RequestCamera domain result to
-            // loadScreen; frontend should not interpret domain outcomes.
-            // Fix: core emits NavigateTo. (see _private problem record
-            // 2026-07-06-mobile-domain-shell-violations)
-            is ActionResult.RequestCamera -> {
+            is ActionResult.OnboardingComplete -> {
+                // Core has already navigated to the chosen post-onboarding
+                // screen. Notify the shell so it flips app state from
+                // onboarding to ready; then load the current screen so the
+                // UI renders the destination.
+                _onboardingCompleteEvent.tryEmit(Unit)
                 loadScreen()
             }
 
@@ -866,12 +869,16 @@ class CoreAppViewModel(
                 // directly — it never flows through this screen pipeline.
             }
 
-            // Resolved to NavigateTo by AppEngine.route_result in core —
-            // frontends never observe these raw (ADR-043 Am4).
+            // Resolved to NavigateTo/Commands by AppEngine.route_result in
+            // core — frontends never observe these raw (ADR-043 Am4).
+            // CompleteWith and StartDeviceLink are kept decode-only for
+            // backward compatibility with older core versions.
             is ActionResult.OpenContact,
             is ActionResult.EditContact,
             is ActionResult.OpenEntryDetail,
             is ActionResult.CompleteWith,
+            is ActionResult.StartDeviceLink,
+            is ActionResult.RequestCamera,
             is ActionResult.Unknown,
             -> { /* no-op */ }
         }
