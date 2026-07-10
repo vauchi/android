@@ -73,6 +73,7 @@ import app.vauchi.ui.MultiStageExchangeScreen
 import app.vauchi.ui.NfcTapExchangeScreen
 import app.vauchi.ui.QrDiagnosticScreen
 import app.vauchi.ui.RecoveryScreen
+import app.vauchi.ui.StartupErrorKind
 import app.vauchi.ui.UiState
 import app.vauchi.ui.coreui.BrightnessRequest
 import app.vauchi.ui.coreui.CoreAppViewModel
@@ -84,6 +85,7 @@ import app.vauchi.ui.coreui.OrientationLockRequest
 import app.vauchi.ui.coreui.UserAction
 import app.vauchi.ui.coreui.materialIconNameForCoreIcon
 import app.vauchi.ui.pollLoop
+import app.vauchi.ui.startupErrorKindFor
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
 import kotlinx.coroutines.Dispatchers
@@ -1056,8 +1058,8 @@ fun MainScreen(
                             is UiState.AuthRequired -> {
                                 AuthenticationGate(
                                     onAuthenticated = { viewModel.retryInit() },
-                                    onError = { msg ->
-                                        viewModel.setError(msg)
+                                    onError = { kind, detail ->
+                                        viewModel.setError(kind, detail)
                                     },
                                 )
                             }
@@ -1082,7 +1084,8 @@ fun MainScreen(
 
                             is UiState.Error -> {
                                 ErrorScreen(
-                                    message = state.message,
+                                    kind = state.kind,
+                                    detail = state.detail,
                                     onRetry = { viewModel.refresh() },
                                 )
                             }
@@ -1246,7 +1249,7 @@ fun ReadyScreen(
 @Composable
 fun AuthenticationGate(
     onAuthenticated: () -> Unit,
-    onError: (String) -> Unit,
+    onError: (StartupErrorKind, String?) -> Unit,
 ) {
     val activity = LocalContext.current as FragmentActivity
     val localizationManager = remember(activity) { LocalizationManager.getInstance(activity) }
@@ -1275,16 +1278,11 @@ fun AuthenticationGate(
                         errorCode: Int,
                         errString: CharSequence,
                     ) {
-                        // TODO(HUMBLE): W, P2. Hardcoded English biometric error
-                        // messages. Fix: localized keys. (see _private problem
-                        // record 2026-07-06-mobile-domain-shell-violations)
-                        if (errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
-                            errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
-                            errorCode == BiometricPrompt.ERROR_CANCELED
-                        ) {
-                            onError("Authentication cancelled. Tap retry to unlock.")
-                        } else {
-                            onError("Authentication failed: $errString")
+                        when (val kind = startupErrorKindFor(errorCode)) {
+                            StartupErrorKind.AuthCancelled -> onError(kind, null)
+
+                            // errString is already OS-localized; pass it verbatim.
+                            else -> onError(kind, errString.toString())
                         }
                     }
                 },
@@ -1298,19 +1296,14 @@ fun AuthenticationGate(
 
 @Composable
 fun ErrorScreen(
-    message: String,
+    kind: StartupErrorKind,
+    detail: String? = null,
     onRetry: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
-    // TODO(HUMBLE): D, P0. Classifies error type by substring matching on
-    // English phrases; breaks i18n and can misroute core errors.
-    // Fix: core returns typed error codes. (see _private problem record
-    // 2026-07-06-mobile-domain-shell-violations)
-    val isLockScreenError =
-        message.contains("lock screen", ignoreCase = true) ||
-            message.contains("device authentication", ignoreCase = true)
-    val isCancelledError = message.contains("cancelled", ignoreCase = true)
+    val isLockScreenError = kind == StartupErrorKind.DeviceNotSecure
+    val isCancelledError = kind == StartupErrorKind.AuthCancelled
 
     Box(
         modifier =
@@ -1348,7 +1341,7 @@ fun ErrorScreen(
                     } else if (isCancelledError) {
                         localizationManager.t("auth.required_body")
                     } else {
-                        message
+                        detail ?: localizationManager.t("error.generic")
                     },
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,

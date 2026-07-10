@@ -70,7 +70,8 @@ sealed class UiState {
     ) : UiState()
 
     data class Error(
-        val message: String,
+        val kind: StartupErrorKind,
+        val detail: String? = null,
     ) : UiState()
 
     /**
@@ -204,11 +205,7 @@ class MainViewModel(
                             BiometricManager.Authenticators.DEVICE_CREDENTIAL,
                     )
                 if (canAuth != BiometricManager.BIOMETRIC_SUCCESS) {
-                    _uiState.value =
-                        UiState.Error(
-                            "A device lock screen (PIN, pattern, or biometric) is required to use Vauchi. " +
-                                "Please set one up in Settings.",
-                        )
+                    _uiState.value = UiState.Error(StartupErrorKind.DeviceNotSecure)
                     return@launch
                 }
 
@@ -225,10 +222,7 @@ class MainViewModel(
                     _uiState.value = UiState.Onboarding
                 }
             } catch (e: DeviceNotSecureException) {
-                _uiState.value =
-                    UiState.Error(
-                        e.message ?: "A secure lock screen is required to use Vauchi.",
-                    )
+                _uiState.value = UiState.Error(StartupErrorKind.DeviceNotSecure)
             } catch (e: AuthenticationRequiredException) {
                 android.util.Log.e("Vauchi", "checkIdentity: auth required", e)
                 _uiState.value = UiState.AuthRequired
@@ -242,7 +236,7 @@ class MainViewModel(
                 }
             } catch (e: Exception) {
                 android.util.Log.e("Vauchi", "checkIdentity: ${e.javaClass.simpleName}: ${e.message}", e)
-                _uiState.value = UiState.Error(e.message ?: "Unknown error")
+                _uiState.value = UiState.Error(StartupErrorKind.Other, e.message)
             }
         }
     }
@@ -269,7 +263,7 @@ class MainViewModel(
                 loadUserData()
                 initDemoContactIfNeeded()
             } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "Failed to complete onboarding")
+                _uiState.value = UiState.Error(StartupErrorKind.Other, e.message)
             }
         }
     }
@@ -296,7 +290,7 @@ class MainViewModel(
                 }
                 loadUserData()
             } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "Failed to create identity")
+                _uiState.value = UiState.Error(StartupErrorKind.Other, e.message)
             }
         }
     }
@@ -314,10 +308,7 @@ class MainViewModel(
                 }
             _uiState.value = UiState.Ready(displayName, publicId, card, contactCount)
         } catch (e: DeviceNotSecureException) {
-            _uiState.value =
-                UiState.Error(
-                    e.message ?: "A secure lock screen is required to use Vauchi.",
-                )
+            _uiState.value = UiState.Error(StartupErrorKind.DeviceNotSecure)
         } catch (e: AuthenticationRequiredException) {
             android.util.Log.e("Vauchi", "loadUserData: auth required", e)
             _uiState.value = UiState.AuthRequired
@@ -327,7 +318,7 @@ class MainViewModel(
                 if (e.hadData) UiState.KeyInvalidatedRecovery(hadData = true) else UiState.Onboarding
         } catch (e: Exception) {
             android.util.Log.e("Vauchi", "loadUserData: ${e.javaClass.simpleName}: ${e.message}", e)
-            _uiState.value = UiState.Error(e.message ?: "Failed to load user data")
+            _uiState.value = UiState.Error(StartupErrorKind.Other, e.message)
         }
     }
 
@@ -421,8 +412,11 @@ class MainViewModel(
         }
     }
 
-    fun setError(message: String) {
-        _uiState.value = UiState.Error(message)
+    fun setError(
+        kind: StartupErrorKind,
+        detail: String? = null,
+    ) {
+        _uiState.value = UiState.Error(kind, detail)
     }
 
     fun sync() {

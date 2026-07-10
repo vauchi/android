@@ -24,4 +24,12 @@ enum class StartupErrorKind {
 }
 
 /** Classifies a [BiometricPrompt] error code at the callback boundary. */
-fun startupErrorKindFor(biometricErrorCode: Int): StartupErrorKind = StartupErrorKind.Other
+fun startupErrorKindFor(biometricErrorCode: Int): StartupErrorKind =
+    when (biometricErrorCode) {
+        BiometricPrompt.ERROR_USER_CANCELED,
+        BiometricPrompt.ERROR_NEGATIVE_BUTTON,
+        BiometricPrompt.ERROR_CANCELED,
+        -> StartupErrorKind.AuthCancelled
+
+        else -> StartupErrorKind.Other
+    }
