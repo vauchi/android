@@ -80,19 +80,18 @@ fun MultiStageExchangeScreen(
     // null for `exchange_*`), so without this the local enum stays pinned
     // and the screen looks frozen: Cancel/Back appear dead (Bug 2,
     // `2026-05-30-exchange-screen-nav-visual-bugs`). Mirrors iOS's
-    // `FaceToFaceCoreShell.onChange { dismiss() }`. The latch guards the
-    // entry race where this mounts before core reaches its screen.
+    // `FaceToFaceCoreShell.onChange { dismiss() }`.
+    //
+    // Core stamps `requires_poll` on the multi-stage exchange screen; we
+    // use that lifecycle hint instead of matching a domain `screen_id`
+    // (`2026-07-06-mobile-domain-shell-violations` I4). The latch guards
+    // the entry race where this mounts before core reaches its screen.
     val coreScreen by coreAppViewModel.screen.collectAsState()
     var entered by remember { mutableStateOf(false) }
-    LaunchedEffect(coreScreen?.screenId) {
-        val decision =
-            exchangeExitDecision(
-                entered = entered,
-                coreScreenId = coreScreen?.screenId,
-                ownScreenId = "multi_stage_exchange",
-            )
-        entered = decision.entered
-        if (decision.shouldExit) onCoreNavigatedAway()
+    LaunchedEffect(coreScreen?.requiresPoll) {
+        val nowRequiresPoll = coreScreen?.requiresPoll == true
+        if (nowRequiresPoll) entered = true
+        if (entered && !nowRequiresPoll) onCoreNavigatedAway()
     }
 
     // Forward system back to core as the engine-level cancel event.

@@ -123,6 +123,8 @@ data class ScreenModel(
     val progress: Progress? = null,
     val tokens: DesignTokens = DesignTokens.DEFAULT,
     val layout: ScreenLayout = ScreenLayout.Scroll,
+    @SerialName("requires_animated_qr") val requiresAnimatedQr: Boolean = false,
+    @SerialName("requires_poll") val requiresPoll: Boolean = false,
 )
 
 @Serializable
