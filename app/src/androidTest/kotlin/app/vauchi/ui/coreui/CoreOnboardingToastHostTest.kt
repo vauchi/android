@@ -5,21 +5,17 @@
 package app.vauchi.ui.coreui
 
 import android.content.Context
-import android.nfc.Tag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.platform.app.InstrumentationRegistry
 import app.vauchi.data.TestContextWrapper
 import app.vauchi.data.TestStorageKeyProvider
 import app.vauchi.data.VauchiRepository
-import app.vauchi.nfc.NfcReaderPort
-import app.vauchi.nfc.NfcResponderPort
 import app.vauchi.ui.theme.VauchiTheme
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import uniffi.vauchi_platform.MobileEvent
 import java.io.File
 
 /**
@@ -45,31 +41,6 @@ class CoreOnboardingToastHostTest {
     private lateinit var repository: VauchiRepository
     private lateinit var viewModel: CoreAppViewModel
 
-    // No-op NFC ports keep construction off any device NFC adapter — the
-    // onboarding tree under test never drives NFC.
-    private val noopNfcReader =
-        object : NfcReaderPort {
-            override fun activate(
-                payload: ByteArray,
-                callback: (MobileEvent) -> Unit,
-            ) {}
-
-            override fun onTagDiscovered(tag: Tag) {}
-
-            override fun sendApdu(data: ByteArray) {}
-
-            override fun deactivate() {}
-        }
-
-    private val noopNfcResponder =
-        object : NfcResponderPort {
-            override fun register(onApdu: (ByteArray) -> Unit) {}
-
-            override fun fulfill(bytes: ByteArray): Boolean = false
-
-            override fun clear() {}
-        }
-
     @Before
     fun setUp() {
         val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -78,7 +49,7 @@ class CoreOnboardingToastHostTest {
         // No createIdentity: PAE reports onboarding screens — the tree whose
         // missing toast host this guards.
         repository = VauchiRepository(TestContextWrapper(context, tempDir), TestStorageKeyProvider())
-        viewModel = CoreAppViewModel(repository.appEngine, noopNfcReader, noopNfcResponder)
+        viewModel = CoreAppViewModel(repository.appEngine, NoopNfcReader, NoopNfcResponder)
     }
 
     @After

@@ -688,12 +688,19 @@ class CoreAppViewModel(
      */
     fun navigateToTabById(canonicalId: String) {
         when (val decision = decideTabNav(_tabs.value, canonicalId)) {
-            is TabNavDecision.Dispatch -> handleAction(UserAction.NavigateToTab(actionId = decision.actionId))
-            is TabNavDecision.Queue ->
+            is TabNavDecision.Dispatch -> {
+                handleAction(UserAction.NavigateToTab(actionId = decision.actionId))
+            }
+
+            is TabNavDecision.Queue -> {
                 if (pendingTabNavId == null) {
                     pendingTabNavId = canonicalId
                 }
-            is TabNavDecision.Unknown -> Log.e(TAG, "navigateToTabById: no tab for id=$canonicalId")
+            }
+
+            is TabNavDecision.Unknown -> {
+                Log.e(TAG, "navigateToTabById: no tab for id=$canonicalId")
+            }
         }
     }
 
@@ -793,17 +800,19 @@ class CoreAppViewModel(
      * if it should be shown now, or `null` if already seen. Errors are logged
      * and ignored — a missed milestone is non-fatal.
      */
-    private fun tryTriggerAhaMoment(momentType: MobileAhaMomentType): MobileAhaMoment? {
-        return try {
+    private fun tryTriggerAhaMoment(momentType: MobileAhaMomentType): MobileAhaMoment? =
+        try {
             val result = appEngine.dispatchDomainCommand(DomainCommand.TryTriggerAhaMoment(momentType))
             (result as? DomainCommandResult.AhaMomentOpt)?.moment
         } catch (e: Exception) {
             Log.e(TAG, "Failed to trigger aha moment $momentType", e)
             null
         }
-    }
 
-    private fun applyResult(result: ActionResult) {
+    // Internal (not private) so the host-reachability guards can drive the
+    // real `ActionResult` dispatch arms instead of a parallel helper
+    // (`2026-06-11-silent-failure-mode-umbrella` goal 2).
+    internal fun applyResult(result: ActionResult) {
         when (result) {
             is ActionResult.UpdateScreen -> {
                 _screen.value = result.screen
