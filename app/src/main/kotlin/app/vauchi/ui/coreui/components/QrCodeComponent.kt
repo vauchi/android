@@ -317,8 +317,7 @@ private fun QrScanner(
                                             (if (useFrontCamera) "front" else "back") +
                                             "): ${e.javaClass.simpleName}",
                                     )
-                                    bindFailure.value =
-                                        "Camera failed to start (${e.javaClass.simpleName})"
+                                    bindFailure.value = e.javaClass.simpleName
                                 }
                             },
                             androidx.core.content.ContextCompat
@@ -328,12 +327,12 @@ private fun QrScanner(
                         previewView
                     },
                 )
-                bindFailure.value?.let { msg ->
-                    // TODO(HUMBLE): W, P2. Hardcoded English camera-failure
-                    // label. Fix: core/localized error key. (see _private
-                    // problem record 2026-07-06-mobile-domain-shell-violations)
+                bindFailure.value?.let { exceptionClass ->
                     Text(
-                        text = "Camera unavailable\n$msg",
+                        text =
+                            localizationManager.t("exchange.camera_unavailable") +
+                                "\n" + localizationManager.t("exchange.camera_start_failed") +
+                                " ($exceptionClass)",
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,

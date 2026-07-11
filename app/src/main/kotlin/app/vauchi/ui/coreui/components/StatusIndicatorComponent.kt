@@ -19,13 +19,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.A11y
 import app.vauchi.ui.coreui.Status
+import app.vauchi.ui.theme.LocalStatusColors
+import app.vauchi.util.LocalizationManager
 
 /**
  * Renders a core StatusIndicator component as a read-only indicator
@@ -37,6 +39,7 @@ fun StatusIndicatorComponent(
     title: String,
     detail: String?,
     status: Status,
+    statusLabel: String? = null,
     a11y: A11y? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -77,22 +80,34 @@ fun StatusIndicatorComponent(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        StatusBadge(status = status)
+        StatusBadge(status = status, statusLabel = statusLabel)
     }
 }
 
 @Composable
-private fun StatusBadge(status: Status) {
-    // TODO(HUMBLE): W, P2. Hardcoded English status labels. Fix: core supplies
-    // label keys or localized status text. (see _private problem record
-    // 2026-07-06-mobile-domain-shell-violations)
-    val (color, label) =
+private fun StatusBadge(
+    status: Status,
+    statusLabel: String?,
+) {
+    val statusColors = LocalStatusColors.current
+    // Closed-enum → theme-slot color table (wire-humble §1): the renderer
+    // routes on the discriminant for color only. The label is core-resolved
+    // (`status_label`, core feature/status-indicator-wire-label); the
+    // catalog fallback below serves pre-field cores and drops once the
+    // vauchi-platform pin carries the wire label.
+    val (color, fallbackLabelKey) =
         when (status) {
-            Status.Pending -> Color.Gray to "Pending"
-            Status.InProgress -> Color(0xFF2196F3) to "In Progress"
-            Status.Success -> Color(0xFF4CAF50) to "Success"
-            Status.Failed -> Color(0xFFF44336) to "Failed"
-            Status.Warning -> Color(0xFFFF9800) to "Warning"
+            Status.Pending -> MaterialTheme.colorScheme.onSurfaceVariant to "status.pending"
+            Status.InProgress -> statusColors.info to "status.in_progress"
+            Status.Success -> statusColors.success to "status.success"
+            Status.Failed -> MaterialTheme.colorScheme.error to "status.failed"
+            Status.Warning -> statusColors.warning to "status.warning"
+        }
+    val label =
+        if (statusLabel.isNullOrEmpty()) {
+            LocalizationManager.getInstance(LocalContext.current).t(fallbackLabelKey)
+        } else {
+            statusLabel
         }
 
     Surface(

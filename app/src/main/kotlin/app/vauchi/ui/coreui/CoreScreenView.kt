@@ -34,11 +34,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.content.FileProvider
 import app.vauchi.data.VauchiPreferences
+import app.vauchi.ui.theme.LocalStatusColors
 import app.vauchi.util.LocalizationManager
 import kotlinx.coroutines.delay
 import java.io.File
@@ -265,11 +265,12 @@ private fun CelebrateOverlay(onAnimationEnd: () -> Unit) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
-            tint = Color(0xFF4CAF50),
-            modifier = Modifier
-                .align(Alignment.Center)
-                .scale(scale)
-                .alpha(alpha),
+            tint = LocalStatusColors.current.success,
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .scale(scale)
+                    .alpha(alpha),
         )
     }
 }

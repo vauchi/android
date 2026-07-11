@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.A11y
 import app.vauchi.ui.coreui.IndicatorKind
 import app.vauchi.ui.coreui.UserAction
+import app.vauchi.ui.theme.LocalStatusColors
 
 /**
  * Renders a core [Component.Indicator][app.vauchi.ui.coreui.Component.Indicator]
@@ -146,13 +147,12 @@ private fun colorsForKind(kind: IndicatorKind): Pair<Color, Color> {
     val scheme = MaterialTheme.colorScheme
     return when (kind) {
         IndicatorKind.Active -> {
-            val green = Color(0xFF2E7D32)
-            green to green.copy(alpha = 0.12f)
+            val active = LocalStatusColors.current.success
+            active to active.copy(alpha = 0.12f)
         }
 
         IndicatorKind.Error -> {
-            val warn = Color(0xFFE65100)
-            warn to warn.copy(alpha = 0.12f)
+            scheme.error to scheme.error.copy(alpha = 0.12f)
         }
 
         IndicatorKind.Neutral -> {

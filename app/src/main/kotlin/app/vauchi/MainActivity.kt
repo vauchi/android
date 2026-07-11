@@ -420,12 +420,12 @@ fun MainScreen(
             val intent =
                 Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
-                    putExtra(Intent.EXTRA_SUBJECT, "Vauchi backup")
+                    putExtra(Intent.EXTRA_SUBJECT, localizationManager.t("backup.share_subject"))
                     putExtra(Intent.EXTRA_TEXT, hex)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
             val chooser =
-                Intent.createChooser(intent, "Save Vauchi backup").apply {
+                Intent.createChooser(intent, localizationManager.t("backup.share_chooser_title")).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
             context.startActivity(chooser)

@@ -404,7 +404,9 @@ class MainViewModel(
                 }
                 checkIdentity()
             } catch (e: Exception) {
-                onError("Incorrect password")
+                onError(
+                    LocalizationManager.getInstance(getApplication()).t("app_password.error_incorrect"),
+                )
             }
         }
     }

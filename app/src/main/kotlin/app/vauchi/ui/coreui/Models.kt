@@ -283,6 +283,7 @@ sealed class Component {
         val title: String,
         val detail: String? = null,
         val status: Status,
+        val statusLabel: String? = null,
         val a11y: A11y? = null,
     ) : Component()
 
@@ -506,6 +507,7 @@ private data class StatusIndicatorContent(
     val title: String,
     val detail: String? = null,
     val status: Status,
+    @SerialName("status_label") val statusLabel: String? = null,
     val a11y: A11y? = null,
 )
 
@@ -745,6 +747,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                             title = c.title,
                             detail = c.detail,
                             status = c.status,
+                            statusLabel = c.statusLabel,
                             a11y = c.a11y,
                         )
                     }
@@ -1016,6 +1019,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                         title = value.title,
                         detail = value.detail,
                         status = value.status,
+                        statusLabel = value.statusLabel,
                         a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)

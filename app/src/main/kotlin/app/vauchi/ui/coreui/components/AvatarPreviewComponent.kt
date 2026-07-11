@@ -57,6 +57,9 @@ fun AvatarPreviewComponent(
 ) {
     val context = LocalContext.current
     val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
+    // Resolved in composable scope — .semantics {} lambdas are not composable.
+    val avatarPreviewFallback = localizationManager.t("a11y.avatar_preview")
+    val avatarImageFallback = localizationManager.t("a11y.avatar_image")
     val bgColorValue =
         bgColor?.let { colorFromIntList(it) }
             ?: MaterialTheme.colorScheme.primary
@@ -109,7 +112,7 @@ fun AvatarPreviewComponent(
                         Modifier
                     },
                 ).semantics {
-                    contentDescription = a11y?.label ?: "Avatar preview"
+                    contentDescription = a11y?.label ?: avatarPreviewFallback
                 },
         contentAlignment = Alignment.Center,
     ) {
@@ -124,7 +127,7 @@ fun AvatarPreviewComponent(
         if (bitmap != null) {
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = a11y?.label ?: "Avatar image",
+                contentDescription = a11y?.label ?: avatarImageFallback,
                 modifier =
                     Modifier
                         .fillMaxSize()
