@@ -679,9 +679,10 @@ class CoreAppViewModel(
     }
 
     /**
-     * Forward a bottom-nav tab navigation by canonical tab id (`"contacts"`,
-     * `"my_info"`, `"more"`, …), looking up the opaque `actionId` from the
-     * live [tabs] list and dispatching [UserAction.NavigateToTab]. Replaces
+     * Forward a bottom-nav tab navigation by canonical tab id, looking up the
+     * opaque `actionId` from the live [tabs] list and dispatching
+     * [UserAction.NavigateToTab]. The id is treated opaquely — the shell does
+     * not enumerate or interpret specific tab ids. Replaces
      * `navigateTo(screenName)` → `navigate_to_json` for tab targets so the
      * frontend stops constructing core screen names (ADR-043 Am4 §1;
      * CoreScreenIdMap rework).

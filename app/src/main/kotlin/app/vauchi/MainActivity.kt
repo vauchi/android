@@ -117,19 +117,20 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        notificationPermissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { granted ->
-            if (granted) {
-                val batch = pendingNotifications.toList()
-                pendingNotifications.clear()
-                batch.forEach { notification ->
-                    NotificationHelper.showNotification(this, notification)
+        notificationPermissionLauncher =
+            registerForActivityResult(
+                ActivityResultContracts.RequestPermission(),
+            ) { granted ->
+                if (granted) {
+                    val batch = pendingNotifications.toList()
+                    pendingNotifications.clear()
+                    batch.forEach { notification ->
+                        NotificationHelper.showNotification(this, notification)
+                    }
+                } else {
+                    pendingNotifications.clear()
                 }
-            } else {
-                pendingNotifications.clear()
             }
-        }
 
         // Prevent screenshots and screen recording (T1-5: screenshot prevention).
         // Disabled in debug builds for device testing automation (uiautomator).
@@ -235,10 +236,11 @@ class MainActivity : FragmentActivity() {
                     return@launch
                 }
 
-                val granted = ContextCompat.checkSelfPermission(
-                    this@MainActivity,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
+                val granted =
+                    ContextCompat.checkSelfPermission(
+                        this@MainActivity,
+                        Manifest.permission.POST_NOTIFICATIONS,
+                    ) == PackageManager.PERMISSION_GRANTED
 
                 if (granted) {
                     notifications.forEach { notification ->
@@ -842,24 +844,25 @@ fun MainScreen(
         }
     }
 
-    // Handle programmatic navigation (device testing: --es navigate exchange)
+    // Handle programmatic navigation (device testing: --es navigate <id>).
     // Must wait for UiState.Ready — auth must complete before navigating.
-    // TODO(HUMBLE): W, P2. Hardcodes tab/screen ids ("exchange", "contacts",
-    // "settings", "home") for device-test nav. Fix: core exposes a stable
-    // programmatic navigation action. (see _private problem record
+    // Any target other than the two native boot targets is forwarded to core
+    // as an opaque tab id, so the shell no longer enumerates domain tab ids.
+    // TODO(HUMBLE): W, P2. `home`/`settings` still map to native targets. Fix:
+    // core exposes a stable programmatic-navigation action so device tests
+    // address every screen opaquely. (see _private problem record
     // 2026-07-06-mobile-domain-shell-violations)
     LaunchedEffect(navigateTo, uiState) {
-        if (navigateTo != null && uiState is UiState.Ready) {
-            when (navigateTo) {
-                "exchange" -> coreAppViewModel.navigateToTabById("exchange")
-
+        val target = navigateTo
+        // `navigateTo` is only ever set from a BuildConfig.DEBUG-guarded intent
+        // extra (see the intent handler), but guard the consumer too so R8
+        // tree-shakes this programmatic-navigation path out of release builds —
+        // external apps must never drive in-app navigation in production.
+        if (BuildConfig.DEBUG && target != null && uiState is UiState.Ready) {
+            when (target) {
                 "home" -> currentScreen = Screen.Home
-
-                // Activity-enum collapse: Contacts and Settings render
-                // through the default core-driven arm; navigate via core.
-                "contacts" -> coreAppViewModel.navigateToTabById("contacts")
-
                 "settings" -> coreAppViewModel.handleAction(UserAction.ActionPressed("open_settings"))
+                else -> coreAppViewModel.navigateToTabById(target)
             }
             onNavigateConsumed()
         }
@@ -903,6 +906,12 @@ fun MainScreen(
     LaunchedEffect(uiState) {
         val state = uiState
         if (state is UiState.Ready && currentScreen == Screen.Home && state.contactCount > 0u) {
+            // TODO(HUMBLE): D/W, P1. Frontend decides the post-boot default
+            // landing (contacts when the user has contacts) and hardcodes the
+            // "contacts" tab id. Fix: core emits the default landing screen via
+            // NavigateTo once identity is ready, so the shell renders it through
+            // the generic CoreScreenView path without naming a tab. (see _private
+            // problem record 2026-07-06-mobile-domain-shell-violations)
             coreAppViewModel.navigateToTabById("contacts")
         }
     }
@@ -939,11 +948,20 @@ fun MainScreen(
     val wrapperHint = coreScreen?.nativeWrapperHint
     LaunchedEffect(wrapperHint) {
         when (wrapperHint) {
-            NativeWrapperHint.MultiStageExchange -> currentScreen = Screen.MultiStageExchange
-            NativeWrapperHint.NfcExchange -> currentScreen = Screen.NfcExchange
+            NativeWrapperHint.MultiStageExchange -> {
+                currentScreen = Screen.MultiStageExchange
+            }
+
+            NativeWrapperHint.NfcExchange -> {
+                currentScreen = Screen.NfcExchange
+            }
+
             NativeWrapperHint.None,
-            null -> if (currentScreen == Screen.MultiStageExchange || currentScreen == Screen.NfcExchange) {
-                currentScreen = Screen.Home
+            null,
+            -> {
+                if (currentScreen == Screen.MultiStageExchange || currentScreen == Screen.NfcExchange) {
+                    currentScreen = Screen.Home
+                }
             }
         }
     }
@@ -984,6 +1002,10 @@ fun MainScreen(
         if (coreCanGoBack) {
             coreAppViewModel.navigateBack()
         } else {
+            // TODO(HUMBLE): W, P2. Back from a secondary tab root returns to the
+            // home tab, whose id is hardcoded "my_info". Fix: core marks the home
+            // tab in tab metadata so the shell resolves it opaquely. (see _private
+            // problem record 2026-07-06-mobile-domain-shell-violations)
             currentScreen = Screen.Home
             coreAppViewModel.navigateToTabById("my_info")
         }
@@ -1025,6 +1047,12 @@ fun MainScreen(
                                 // `navigateTo` the engine stays on (say)
                                 // `contact_list` so Path A still wins and
                                 // the tap appears to do nothing.
+                                // TODO(HUMBLE): W, P2. The home tab tap falls
+                                // through to the native `Screen.Home` chrome and
+                                // hardcodes the "my_info" tab id. Fix: core marks
+                                // the home tab and renders My Card as a ScreenModel
+                                // so this native branch is retired. (see _private
+                                // problem record 2026-07-06-mobile-domain-shell-violations)
                                 when (tab.id) {
                                     "my_info" -> currentScreen = Screen.Home
                                 }
@@ -1062,6 +1090,13 @@ fun MainScreen(
             // screens and the home-tab root (MyInfo chrome) fall through to
             // the local `when (currentScreen)` below. ADR-043: the frontend
             // no longer interprets screen_ids via a domain map for wrappers.
+            // TODO(HUMBLE): D/W, P1. The home tab (My Card) still renders through
+            // the native `ReadyScreen` chrome, so the shell must recognise its
+            // "my_info" screen id to fall through to the local `when` instead of
+            // the generic CoreScreenView. Fix: core marks the home tab / renders
+            // My Card as a ScreenModel, retiring `ReadyScreen`; then this branch
+            // and the whole `isHomeTab` gate disappear. (see _private problem
+            // record 2026-07-06-mobile-domain-shell-violations)
             val isHomeTab = coreScreen?.screenId == "my_info"
             if (wrapperHint == NativeWrapperHint.None && !isHomeTab && uiState is UiState.Ready) {
                 CoreScreenView(

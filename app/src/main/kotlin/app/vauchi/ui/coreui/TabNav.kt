@@ -72,8 +72,8 @@ sealed interface TabNavFlush {
  *
  * A queued nav is a *default-landing courtesy*: it may only replay while
  * the app still rests on core's bootstrap screen — [currentScreenId] null
- * (first screen not yet delivered) or `"my_info"` (core's post-identity
- * default). Any other screen means a navigation with real intent landed
+ * (first screen not yet delivered) or core's post-identity default screen.
+ * Any other screen means a navigation with real intent landed
  * between queue and flush (deep-link consent, a programmatic settings
  * nav, a user tap) and replaying would clobber it
  * (`2026-07-01-android-startup-nav-race-no-tab`, review finding).
