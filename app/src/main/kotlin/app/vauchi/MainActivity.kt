@@ -938,6 +938,7 @@ fun MainScreen(
     // every recomposition (which would hammer the UniFFI mutex on
     // the main thread).
     val currentTab = remember(coreScreen?.screenId) { coreAppViewModel.currentTabId() }
+    val homeTabId = tabs.firstOrNull { it.isHome }?.id
     val isTopLevel = currentTab != null && coreScreen?.screenId == currentTab
 
     // Follow-core: the native exchange wrappers are reached by core
@@ -990,11 +991,8 @@ fun MainScreen(
     // (the regression the old `coreVariantForBack != null` gate prevented).
     // `currentTab` is core's tab id for the active screen; only the home tab
     // (and the boot states) leave BACK to the OS.
-    // TODO(HUMBLE): W, P2. Hardcodes "my_info" home-tab id in back-gesture
-    // logic. Fix: core marks the home tab in tab metadata. (see _private
-    // problem record 2026-07-06-mobile-domain-shell-violations)
     val coreCanGoBack = uiState is UiState.Ready && coreAppViewModel.canGoBack()
-    val onSecondaryTab = currentTab != null && currentTab != "my_info"
+    val onSecondaryTab = currentTab != null && currentTab != homeTabId
     val canGoBack =
         uiState is UiState.Ready &&
             (coreCanGoBack || onSecondaryTab || currentScreen != Screen.Home)
@@ -1002,12 +1000,8 @@ fun MainScreen(
         if (coreCanGoBack) {
             coreAppViewModel.navigateBack()
         } else {
-            // TODO(HUMBLE): W, P2. Back from a secondary tab root returns to the
-            // home tab, whose id is hardcoded "my_info". Fix: core marks the home
-            // tab in tab metadata so the shell resolves it opaquely. (see _private
-            // problem record 2026-07-06-mobile-domain-shell-violations)
             currentScreen = Screen.Home
-            coreAppViewModel.navigateToTabById("my_info")
+            homeTabId?.let { coreAppViewModel.navigateToTabById(it) }
         }
     }
 
@@ -1047,14 +1041,8 @@ fun MainScreen(
                                 // `navigateTo` the engine stays on (say)
                                 // `contact_list` so Path A still wins and
                                 // the tap appears to do nothing.
-                                // TODO(HUMBLE): W, P2. The home tab tap falls
-                                // through to the native `Screen.Home` chrome and
-                                // hardcodes the "my_info" tab id. Fix: core marks
-                                // the home tab and renders My Card as a ScreenModel
-                                // so this native branch is retired. (see _private
-                                // problem record 2026-07-06-mobile-domain-shell-violations)
-                                when (tab.id) {
-                                    "my_info" -> currentScreen = Screen.Home
+                                if (tab.id == homeTabId) {
+                                    currentScreen = Screen.Home
                                 }
                                 // Forward the opaque tab action_id as
                                 // `UserAction::NavigateToTab` (ADR-043 Am4) —
@@ -1097,7 +1085,7 @@ fun MainScreen(
             // My Card as a ScreenModel, retiring `ReadyScreen`; then this branch
             // and the whole `isHomeTab` gate disappear. (see _private problem
             // record 2026-07-06-mobile-domain-shell-violations)
-            val isHomeTab = coreScreen?.screenId == "my_info"
+            val isHomeTab = homeTabId != null && coreScreen?.screenId == homeTabId
             if (wrapperHint == NativeWrapperHint.None && !isHomeTab && uiState is UiState.Ready) {
                 CoreScreenView(
                     viewModel = coreAppViewModel,

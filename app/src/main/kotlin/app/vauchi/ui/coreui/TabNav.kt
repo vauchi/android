@@ -83,10 +83,8 @@ fun decideTabNavFlush(
     tabs: List<MobileTabInfo>,
     currentScreenId: String?,
 ): TabNavFlush {
-    // TODO(HUMBLE): W, P2. Hardcodes "my_info" bootstrap screen id. Fix:
-    // core exposes isBootstrapScreen flag. (see _private problem record
-    // 2026-07-06-mobile-domain-shell-violations)
-    if (currentScreenId != null && currentScreenId != "my_info") {
+    val homeTabId = tabs.firstOrNull { it.isHome }?.id
+    if (currentScreenId != null && currentScreenId != homeTabId) {
         return TabNavFlush.DropSuperseded(currentScreenId)
     }
     return when (val decision = decideTabNav(tabs, pendingId)) {
