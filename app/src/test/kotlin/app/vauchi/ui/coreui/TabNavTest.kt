@@ -21,7 +21,7 @@ class TabNavTest {
     private fun tab(
         id: String,
         actionId: String,
-    ) = MobileTabInfo(id = id, actionId = actionId, label = id, icon = "", badgeCount = 0u)
+    ) = MobileTabInfo(id = id, actionId = actionId, label = id, icon = "", badgeCount = 0u, isHome = id == "home")
 
     @Test
     fun `dispatches when the tab is present`() {

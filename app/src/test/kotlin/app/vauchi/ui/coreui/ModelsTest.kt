@@ -210,7 +210,7 @@ class ModelsTest {
                         {"id": "f2", "field_type": "Email", "label": "Work", "value": "a@b.com", "icon": "envelope", "visibility": "Hidden"}
                     ],
                     "visibility_mode": "ShowHide",
-                    "available_groups": ["Family", "Work"]
+                    "available_scopes": ["Family", "Work"]
                 }
             }
             """.trimIndent()
@@ -289,11 +289,11 @@ class ModelsTest {
     // ── UiFieldVisibility ───────────────────────────────────────────
 
     @Test
-    fun `deserialize Groups visibility with group list`() {
-        val input = """{"Groups":["Family","Work"]}"""
+    fun `deserialize Scopes visibility with scope list`() {
+        val input = """{"Scopes":["Family","Work"]}"""
         val visibility = json.decodeFromString<UiFieldVisibility>(input)
-        assertTrue(visibility is UiFieldVisibility.Groups)
-        assertEquals(listOf("Family", "Work"), (visibility as UiFieldVisibility.Groups).groups)
+        assertTrue(visibility is UiFieldVisibility.Scopes)
+        assertEquals(listOf("Family", "Work"), (visibility as UiFieldVisibility.Scopes).scopes)
     }
 
     // ── ScreenAction ────────────────────────────────────────────────
@@ -388,10 +388,10 @@ class ModelsTest {
     }
 
     @Test
-    fun `serialize GroupViewSelected`() {
-        val action = UserAction.GroupViewSelected(groupName = "Family")
+    fun `serialize VariantSelected`() {
+        val action = UserAction.VariantSelected(variantId = "Family")
         val serialized = json.encodeToString(UserAction.serializer(), action)
-        assertEquals("""{"GroupViewSelected":{"group_name":"Family"}}""", serialized)
+        assertEquals("""{"VariantSelected":{"variant_id":"Family"}}""", serialized)
     }
 
     @Test
@@ -846,7 +846,7 @@ class ModelsTest {
                 "id": "c1",
                 "name": "Alice",
                 "subtitle": "alice@example.org",
-                "avatar_initials": "A",
+                "initials": "A",
                 "status": null,
                 "actions": [
                     {"id": "archive", "label": "Archive", "kind": "archive", "destructive": false},
@@ -869,7 +869,7 @@ class ModelsTest {
     fun `deserialize legacy Item without new fields`() {
         // Fixtures written before core!637 omit `actions`. Decoding must
         // still succeed — the data class provides an empty default.
-        val input = """{"id":"c1","name":"Bob","avatar_initials":"B"}"""
+        val input = """{"id":"c1","name":"Bob","initials":"B"}"""
         val item = json.decodeFromString<Item>(input)
         assertEquals("c1", item.id)
         assertTrue(item.actions.isEmpty())

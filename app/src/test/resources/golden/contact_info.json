@@ -9,7 +9,7 @@
         "id": "fields",
         "fields": [],
         "visibility_mode": "ShowHide",
-        "available_groups": []
+        "available_scopes": []
       }
     }
   ],

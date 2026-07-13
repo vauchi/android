@@ -37,20 +37,22 @@ import app.vauchi.ui.coreui.UserAction
 import app.vauchi.util.LocalizationManager
 
 /**
- * Renders a core AvatarPreview component.
+ * Renders a core ImageCircle component.
  *
  * Shows either an image (decoded from byte array) or a fallback initials circle.
  * Applies brightness adjustment via ColorMatrix.
- * If editable, shows a camera overlay icon and emits ActionPressed on click.
+ * If editable, shows a camera overlay icon and emits ActionPressed with the
+ * core-supplied [editActionId] on click.
  */
 @Composable
-fun AvatarPreviewComponent(
+fun ImageCircleComponent(
     id: String,
     imageData: List<Int>?,
     initials: String,
     bgColor: List<Int>?,
     brightness: Float,
     editable: Boolean,
+    editActionId: String? = null,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
     a11y: A11y? = null,
@@ -100,13 +102,9 @@ fun AvatarPreviewComponent(
                 .size(120.dp)
                 .clip(CircleShape)
                 .then(
-                    if (editable) {
-                        // TODO(HUMBLE): T, P1. Hardcodes "edit_avatar" action id.
-                        // Fix: core emits edit_action_id on AvatarPreview.
-                        // (see _private problem record
-                        // 2026-07-06-mobile-domain-shell-violations)
+                    if (editable && editActionId != null) {
                         Modifier.clickable {
-                            onAction(UserAction.ActionPressed(actionId = "edit_avatar"))
+                            onAction(UserAction.ActionPressed(actionId = editActionId))
                         }
                     } else {
                         Modifier

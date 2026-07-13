@@ -135,7 +135,7 @@ private fun FieldRow(
             Spacer(modifier = Modifier.height(4.dp))
             val visibleGroups =
                 when (val vis = field.visibility) {
-                    is UiFieldVisibility.Groups -> vis.groups.toSet()
+                    is UiFieldVisibility.Scopes -> vis.scopes.toSet()
                     is UiFieldVisibility.Shown -> availableGroups.toSet()
                     is UiFieldVisibility.Hidden -> emptySet()
                 }

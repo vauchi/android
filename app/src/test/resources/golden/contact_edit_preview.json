@@ -14,7 +14,7 @@
             "label": "Mobile",
             "value": "+1-555-0100",
             "visibility": {
-              "Groups": [
+              "Scopes": [
                 "Family"
               ]
             }
@@ -25,7 +25,7 @@
             "label": "Work",
             "value": "alice@example.com",
             "visibility": {
-              "Groups": [
+              "Scopes": [
                 "Friends",
                 "Work"
               ]
@@ -43,7 +43,7 @@
                 "label": "Mobile",
                 "value": "+1-555-0100",
                 "visibility": {
-                  "Groups": [
+                  "Scopes": [
                     "Family"
                   ]
                 }
@@ -60,7 +60,7 @@
                 "label": "Work",
                 "value": "alice@example.com",
                 "visibility": {
-                  "Groups": [
+                  "Scopes": [
                     "Friends",
                     "Work"
                   ]
@@ -78,7 +78,7 @@
                 "label": "Work",
                 "value": "alice@example.com",
                 "visibility": {
-                  "Groups": [
+                  "Scopes": [
                     "Friends",
                     "Work"
                   ]

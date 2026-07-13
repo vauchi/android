@@ -67,12 +67,10 @@ fun PreviewComponent(
     val context = LocalContext.current
     val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Column(modifier = modifier.fillMaxWidth()) {
-        // Variant selector chips. Core's `UserAction::GroupViewSelected`
-        // (kept its old name in Tier 0; payload `group_name` carries the
-        // variant id on the wire).
-        // TODO(HUMBLE): W, P1. Uses GroupViewSelected domain action and exposes
-        // raw variantId as chip label. Fix: core emits variant action id and
-        // display label. (see _private problem record
+        // Variant selector chips. Core's `UserAction::VariantSelected`
+        // carries the selected `variant_id` on the wire.
+        // TODO(HUMBLE): W, P1. Exposes raw variantId as chip label. Fix: core
+        // emits variant display label. (see _private problem record
         // 2026-07-06-mobile-domain-shell-violations)
         if (variants.isNotEmpty()) {
             Row(
@@ -83,7 +81,7 @@ fun PreviewComponent(
             ) {
                 FilterChip(
                     selected = selectedVariant == null,
-                    onClick = { onAction(UserAction.GroupViewSelected(groupName = null)) },
+                    onClick = { onAction(UserAction.VariantSelected(variantId = null)) },
                     label = { Text(localizationManager.t("preview.filter_all")) },
                     modifier = Modifier.padding(end = 8.dp),
                 )
@@ -91,12 +89,11 @@ fun PreviewComponent(
                     FilterChip(
                         selected = selectedVariant == variant.variantId,
                         onClick = {
-                            onAction(UserAction.GroupViewSelected(groupName = variant.variantId))
+                            onAction(UserAction.VariantSelected(variantId = variant.variantId))
                         },
-                        // Chip label is the variant identifier (was `group_name`
-                        // pre-Tier-1) — that's the tab label per the design spec.
-                        // `display_name` populates the card header instead, after
-                        // the user picks a variant.
+                        // Chip label is the variant identifier — that's the tab
+                        // label per the design spec. `display_name` populates the
+                        // card header instead, after the user picks a variant.
                         label = { Text(variant.variantId) },
                         modifier = Modifier.padding(end = 8.dp),
                     )

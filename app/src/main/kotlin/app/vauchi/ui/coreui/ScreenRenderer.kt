@@ -34,13 +34,13 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.components.ActionListComponent
-import app.vauchi.ui.coreui.components.AvatarPreviewComponent
 import app.vauchi.ui.coreui.components.BannerComponent
 import app.vauchi.ui.coreui.components.ConfirmationDialogComponent
 import app.vauchi.ui.coreui.components.DividerComponent
 import app.vauchi.ui.coreui.components.DropdownComponent
 import app.vauchi.ui.coreui.components.EditableTextComponent
 import app.vauchi.ui.coreui.components.FieldListComponent
+import app.vauchi.ui.coreui.components.ImageCircleComponent
 import app.vauchi.ui.coreui.components.IndicatorComponent
 import app.vauchi.ui.coreui.components.InfoPanelComponent
 import app.vauchi.ui.coreui.components.InlineConfirmComponent
@@ -244,7 +244,7 @@ private fun componentSlotKey(
 ): String =
     when (component) {
         is Component.ActionList -> "action_list:${component.id}"
-        is Component.AvatarPreview -> "avatar:${component.id}"
+        is Component.ImageCircle -> "avatar:${component.id}"
         is Component.Banner -> "banner@$index"
         is Component.ConfirmationDialog -> "confirm:${component.id}"
         is Component.Dropdown -> "dropdown:${component.id}"
@@ -570,14 +570,15 @@ fun ComponentRenderer(
             )
         }
 
-        is Component.AvatarPreview -> {
-            AvatarPreviewComponent(
+        is Component.ImageCircle -> {
+            ImageCircleComponent(
                 id = component.id,
                 imageData = component.imageData,
                 initials = component.initials,
                 bgColor = component.bgColor,
                 brightness = component.brightness,
                 editable = component.editable,
+                editActionId = component.editActionId,
                 onAction = onAction,
                 modifier = modifier,
                 a11y = component.a11y,

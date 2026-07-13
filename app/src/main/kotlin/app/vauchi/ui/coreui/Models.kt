@@ -352,13 +352,14 @@ sealed class Component {
         val a11y: A11y? = null,
     ) : Component()
 
-    data class AvatarPreview(
+    data class ImageCircle(
         val id: String,
         val imageData: kotlin.collections.List<Int>?,
         val initials: String,
         val bgColor: kotlin.collections.List<Int>?,
         val brightness: Float,
         val editable: Boolean,
+        val editActionId: String? = null,
         val a11y: A11y? = null,
     ) : Component()
 
@@ -444,7 +445,7 @@ private data class FieldListContent(
     val id: String,
     val fields: List<Field>,
     @SerialName("visibility_mode") val visibilityMode: VisibilityMode,
-    @SerialName("available_groups") val availableGroups: List<String>,
+    @SerialName("available_scopes") val availableGroups: List<String>,
     val a11y: A11y? = null,
 )
 
@@ -458,7 +459,7 @@ private data class PreviewContent(
     val variants: List<PreviewVariant>,
     @SerialName("selected_variant") val selectedVariant: String? = null,
     @SerialName("visible_fields") val visibleFields: List<Field> = emptyList(),
-    @SerialName("avatar_data") val avatarData: List<Int>? = null,
+    @SerialName("image_data") val avatarData: List<Int>? = null,
     val a11y: A11y? = null,
 )
 
@@ -585,13 +586,14 @@ private data class DropdownContent(
 )
 
 @Serializable
-private data class AvatarPreviewContent(
+private data class ImageCircleContent(
     val id: String,
     @SerialName("image_data") val imageData: List<Int>? = null,
     val initials: String,
     @SerialName("bg_color") val bgColor: List<Int>? = null,
     val brightness: Float,
     val editable: Boolean,
+    @SerialName("edit_action_id") val editActionId: String? = null,
     val a11y: A11y? = null,
 )
 
@@ -837,16 +839,17 @@ internal object ComponentSerializer : KSerializer<Component> {
                         Component.Dropdown(id = c.id, label = c.label, selected = c.selected, options = c.options, a11y = c.a11y)
                     }
 
-                    "AvatarPreview" in element -> {
-                        val c: AvatarPreviewContent =
-                            jsonDecoder.json.decodeFromJsonElement(element["AvatarPreview"]!!)
-                        Component.AvatarPreview(
+                    "ImageCircle" in element -> {
+                        val c: ImageCircleContent =
+                            jsonDecoder.json.decodeFromJsonElement(element["ImageCircle"]!!)
+                        Component.ImageCircle(
                             id = c.id,
                             imageData = c.imageData,
                             initials = c.initials,
                             bgColor = c.bgColor,
                             brightness = c.brightness,
                             editable = c.editable,
+                            editActionId = c.editActionId,
                             a11y = c.a11y,
                         )
                     }
@@ -1127,19 +1130,20 @@ internal object ComponentSerializer : KSerializer<Component> {
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("Dropdown" to inner)))
             }
 
-            is Component.AvatarPreview -> {
+            is Component.ImageCircle -> {
                 val content =
-                    AvatarPreviewContent(
+                    ImageCircleContent(
                         id = value.id,
                         imageData = value.imageData,
                         initials = value.initials,
                         bgColor = value.bgColor,
                         brightness = value.brightness,
                         editable = value.editable,
+                        editActionId = value.editActionId,
                         a11y = value.a11y,
                     )
                 val inner = jsonEncoder.json.encodeToJsonElement(content)
-                jsonEncoder.encodeJsonElement(JsonObject(mapOf("AvatarPreview" to inner)))
+                jsonEncoder.encodeJsonElement(JsonObject(mapOf("ImageCircle" to inner)))
             }
 
             is Component.Slider -> {
@@ -1252,7 +1256,7 @@ data class Field(
  * Serde serializes this Rust enum as:
  * - `"Shown"` (unit variant)
  * - `"Hidden"` (unit variant)
- * - `{"Groups": ["Family", "Work"]}` (tuple variant wrapping Vec<String>)
+ * - `{"Scopes": ["Family", "Work"]}` (tuple variant wrapping Vec<String>)
  *
  * kotlinx.serialization's default sealed class handling doesn't match
  * serde's tuple variant format, so we use a custom serializer.
@@ -1263,8 +1267,8 @@ sealed class UiFieldVisibility {
 
     data object Hidden : UiFieldVisibility()
 
-    data class Groups(
-        val groups: List<String>,
+    data class Scopes(
+        val scopes: List<String>,
     ) : UiFieldVisibility()
 }
 
@@ -1291,10 +1295,10 @@ internal object UiFieldVisibilitySerializer : KSerializer<UiFieldVisibility> {
             }
 
             is JsonObject -> {
-                val groups =
-                    element["Groups"]?.jsonArray?.map { it.jsonPrimitive.content }
-                if (groups != null) {
-                    UiFieldVisibility.Groups(groups)
+                val scopes =
+                    element["Scopes"]?.jsonArray?.map { it.jsonPrimitive.content }
+                if (scopes != null) {
+                    UiFieldVisibility.Scopes(scopes)
                 } else {
                     val variant = element.keys.firstOrNull() ?: "(empty object)"
                     throw SerializationException(
@@ -1325,13 +1329,13 @@ internal object UiFieldVisibilitySerializer : KSerializer<UiFieldVisibility> {
                 jsonEncoder.encodeJsonElement(JsonPrimitive("Hidden"))
             }
 
-            is UiFieldVisibility.Groups -> {
+            is UiFieldVisibility.Scopes -> {
                 val obj =
                     JsonObject(
                         mapOf(
-                            "Groups" to
+                            "Scopes" to
                                 JsonArray(
-                                    value.groups.map { JsonPrimitive(it) },
+                                    value.scopes.map { JsonPrimitive(it) },
                                 ),
                         ),
                     )
@@ -1360,7 +1364,7 @@ data class Item(
     val id: String,
     val name: String,
     val subtitle: String? = null,
-    @SerialName("avatar_initials") val avatarInitials: String,
+    @SerialName("initials") val avatarInitials: String,
     val status: String? = null,
     val actions: List<ListItemAction> = emptyList(),
     val a11y: A11y? = null,
@@ -1632,8 +1636,8 @@ sealed class UserAction {
         val visible: Boolean,
     ) : UserAction()
 
-    data class GroupViewSelected(
-        val groupName: String? = null,
+    data class VariantSelected(
+        val variantId: String? = null,
     ) : UserAction()
 
     data class SearchChanged(
@@ -1772,15 +1776,15 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                     )
                 }
 
-                is UserAction.GroupViewSelected -> {
+                is UserAction.VariantSelected -> {
                     JsonObject(
                         mapOf(
-                            "GroupViewSelected" to
+                            "VariantSelected" to
                                 JsonObject(
                                     mapOf(
-                                        "group_name" to
-                                            if (value.groupName != null) {
-                                                JsonPrimitive(value.groupName)
+                                        "variant_id" to
+                                            if (value.variantId != null) {
+                                                JsonPrimitive(value.variantId)
                                             } else {
                                                 JsonNull
                                             },
@@ -1953,10 +1957,10 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                         )
                     }
 
-                    "GroupViewSelected" in element -> {
-                        val obj = element["GroupViewSelected"] as JsonObject
-                        UserAction.GroupViewSelected(
-                            groupName = obj["group_name"]?.jsonPrimitive?.contentOrNull,
+                    "VariantSelected" in element -> {
+                        val obj = element["VariantSelected"] as JsonObject
+                        UserAction.VariantSelected(
+                            variantId = obj["variant_id"]?.jsonPrimitive?.contentOrNull,
                         )
                     }
 
