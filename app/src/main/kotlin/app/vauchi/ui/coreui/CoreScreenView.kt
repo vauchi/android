@@ -40,6 +40,7 @@ import androidx.core.content.FileProvider
 import app.vauchi.data.VauchiPreferences
 import app.vauchi.ui.theme.LocalStatusColors
 import app.vauchi.util.LocalizationManager
+import app.vauchi.util.applyLocaleFromUserAction
 import kotlinx.coroutines.delay
 import java.io.File
 
@@ -181,9 +182,13 @@ fun CoreScreenView(
             androidx.compose.runtime.CompositionLocalProvider(
                 LocalUseFrontCamera provides useFrontCamera,
             ) {
+                val context = LocalContext.current
                 ScreenRenderer(
                     screen = currentScreenModel,
-                    onAction = { action -> viewModel.handleAction(action) },
+                    onAction = { action ->
+                        applyLocaleFromUserAction(context, action)
+                        viewModel.handleAction(action)
+                    },
                     toastMessage = toastMessage,
                     toastUndoActionId = toastUndoActionId,
                     onToastDismiss = { viewModel.dismissToast() },

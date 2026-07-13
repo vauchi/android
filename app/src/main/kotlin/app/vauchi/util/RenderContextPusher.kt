@@ -6,6 +6,7 @@ package app.vauchi.util
 
 import android.content.Context
 import android.util.Log
+import app.vauchi.ui.coreui.UserAction
 import uniffi.vauchi_platform.PlatformAppEngine
 
 /**
@@ -62,4 +63,29 @@ private fun jsonString(s: String): String {
             .replace("\\", "\\\\")
             .replace("\"", "\\\"")
     return "\"$escaped\""
+}
+
+/**
+ * Persist a Settings language dropdown selection to the OS-native locale
+ * store so the choice survives restart and the bottom-tab labels re-render
+ * in the picked language.
+ *
+ * Core's Settings engine updates its in-memory `RenderContext` when the
+ * dropdown fires, but durability is the frontend's responsibility per S4 of
+ * `2026-05-16-settings-storage-by-sensitivity`. Call this before forwarding
+ * the action to [app.vauchi.ui.coreui.CoreAppViewModel].
+ */
+fun applyLocaleFromUserAction(
+    context: Context,
+    action: UserAction,
+) {
+    val selected = action as? UserAction.ListItemSelected ?: return
+    if (selected.componentId != "language") return
+
+    val manager = LocalizationManager.getInstance(context)
+    if (selected.itemId == "follow_system") {
+        manager.resetToSystem()
+    } else {
+        manager.selectLocale(selected.itemId)
+    }
 }
