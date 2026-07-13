@@ -21,7 +21,8 @@ class TabNavTest {
     private fun tab(
         id: String,
         actionId: String,
-    ) = MobileTabInfo(id = id, actionId = actionId, label = id, icon = "", badgeCount = 0u, isHome = id == "home")
+        isHome: Boolean = false,
+    ) = MobileTabInfo(id = id, actionId = actionId, label = id, icon = "", badgeCount = 0u, isHome = isHome)
 
     @Test
     fun `dispatches when the tab is present`() {
@@ -57,7 +58,7 @@ class TabNavTest {
 
     @Test
     fun `flush replays while parked on core's bootstrap screen`() {
-        val tabs = listOf(tab("contacts", "act-contacts"))
+        val tabs = listOf(tab("my_info", "act-home", isHome = true), tab("contacts", "act-contacts"))
 
         assertEquals(
             TabNavFlush.Replay("act-contacts"),
@@ -87,7 +88,7 @@ class TabNavTest {
 
     @Test
     fun `flush errors only when tabs are loaded but the id is absent`() {
-        val tabs = listOf(tab("home", "act-home"))
+        val tabs = listOf(tab("my_info", "act-home", isHome = true))
 
         assertEquals(
             TabNavFlush.DropUnknown("contacts"),
