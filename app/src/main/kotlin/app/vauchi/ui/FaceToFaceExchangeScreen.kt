@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.vauchi.ui.components.QrCodeAnalyzer
 import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.CoreScreenView
+import app.vauchi.ui.coreui.NativeWrapperHint
 import app.vauchi.ui.coreui.UserAction
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -82,16 +83,18 @@ fun MultiStageExchangeScreen(
     // `2026-05-30-exchange-screen-nav-visual-bugs`). Mirrors iOS's
     // `FaceToFaceCoreShell.onChange { dismiss() }`.
     //
-    // Core stamps `requires_poll` on the multi-stage exchange screen; we
-    // use that lifecycle hint instead of matching a domain `screen_id`
-    // (`2026-07-06-mobile-domain-shell-violations` I4). The latch guards
-    // the entry race where this mounts before core reaches its screen.
+    // Follow core off this screen. The Activity's local `Screen` enum pins
+    // this native wrapper while `native_wrapper_hint == MultiStageExchange`;
+    // when core navigates away the hint changes and we tell the Activity to
+    // follow (Bug 2, `2026-05-30-exchange-screen-nav-visual-bugs`).
     val coreScreen by coreAppViewModel.screen.collectAsState()
-    var entered by remember { mutableStateOf(false) }
-    LaunchedEffect(coreScreen?.requiresPoll) {
-        val nowRequiresPoll = coreScreen?.requiresPoll == true
-        if (nowRequiresPoll) entered = true
-        if (entered && !nowRequiresPoll) onCoreNavigatedAway()
+    var previousHint by remember { mutableStateOf<NativeWrapperHint?>(null) }
+    LaunchedEffect(coreScreen?.nativeWrapperHint) {
+        val hint = coreScreen?.nativeWrapperHint
+        if (previousHint == NativeWrapperHint.MultiStageExchange && hint != NativeWrapperHint.MultiStageExchange) {
+            onCoreNavigatedAway()
+        }
+        previousHint = hint
     }
 
     // Forward system back to core as the engine-level cancel event.
@@ -100,20 +103,11 @@ fun MultiStageExchangeScreen(
     // TODO(HUMBLE): T, P1. Mints generic "cancel" action id. Fix: core
     // exposes cancel action id in ScreenModel actions. (see _private problem
     // record 2026-07-06-mobile-domain-shell-violations)
+    // Forward system back to core as `UserAction::NavigateBack`.
+    // Core decides the next screen via its routing layer; the observer
+    // above then follows core off this screen (ADR-044 Am2a).
     BackHandler {
-        coreAppViewModel.handleAction(UserAction.ActionPressed(actionId = "cancel"))
-    }
-
-    // Drive the multi-stage protocol while this screen is shown. The core
-    // cycle thread that used to advance the machine autonomously was
-    // retired in slice-32m T1.2c; post-retirement the machine only steps
-    // when the frontend polls core. Without this tick the own-QR never
-    // appears and the exchange stays at "Pending" (Bug 5,
-    // `2026-05-30-exchange-screen-nav-visual-bugs`). The LaunchedEffect is
-    // scoped to composition, so polling starts on entry and stops on exit
-    // — matching the retired thread's lifetime.
-    LaunchedEffect(Unit) {
-        pollLoop { coreAppViewModel.tickCore() }
+        coreAppViewModel.handleAction(UserAction.NavigateBack)
     }
 
     // TODO(HUMBLE): W, P2. Passes domain screen name "MultiStageExchange".

@@ -30,6 +30,9 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
+import uniffi.vauchi_platform.MobileNotificationCategory
+import uniffi.vauchi_platform.MobileNotificationPriority
+import uniffi.vauchi_platform.MobilePendingNotification
 
 /**
  * Kotlin data classes matching core UI JSON types.
@@ -126,6 +129,8 @@ data class ScreenModel(
     @SerialName("requires_animated_qr") val requiresAnimatedQr: Boolean = false,
     @SerialName("requires_poll") val requiresPoll: Boolean = false,
     @SerialName("native_wrapper_hint") val nativeWrapperHint: NativeWrapperHint = NativeWrapperHint.None,
+    @SerialName("nav_tab_id") val navTabId: String? = null,
+    @SerialName("nav_actions") val navActions: List<ScreenAction> = emptyList(),
 )
 
 /**
@@ -153,6 +158,7 @@ data class ScreenAction(
     val label: String,
     val style: ActionStyle,
     val enabled: Boolean,
+    val a11y: A11y? = null,
 )
 
 @Serializable
@@ -1694,6 +1700,19 @@ sealed class UserAction {
     ) : UserAction()
 
     /**
+     * The OS back gesture (Android system BACK / swipe). Core owns the decision
+     * (ADR-044 Amendment 2a); the frontend forwards it unconditionally and never
+     * gates its handler on `can_go_back`.
+     */
+    data object NavigateBack : UserAction()
+
+    /**
+     * The app returned to the foreground (Android `ON_RESUME`). Core owns the
+     * consequence — a relay catch-up sync plus a re-render (ADR-044 Am2a).
+     */
+    data object AppForegrounded : UserAction()
+
+    /**
      * A `vauchi://` link was opened by the OS. Core parses the URI and routes
      * to the consent gate, device-link join screen, or an alert. Humble surface:
      * the frontend does not inspect the URI scheme or host.
@@ -1912,6 +1931,14 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                     )
                 }
 
+                is UserAction.NavigateBack -> {
+                    JsonPrimitive("NavigateBack")
+                }
+
+                is UserAction.AppForegrounded -> {
+                    JsonPrimitive("AppForegrounded")
+                }
+
                 is UserAction.Unknown -> {
                     // Unknown actions should not be serialized back to core
                     JsonObject(emptyMap())
@@ -2033,6 +2060,14 @@ internal object UserActionSerializer : KSerializer<UserAction> {
                 }
             }
 
+            is JsonPrimitive -> {
+                when (element.content) {
+                    "NavigateBack" -> UserAction.NavigateBack
+                    "AppForegrounded" -> UserAction.AppForegrounded
+                    else -> UserAction.Unknown
+                }
+            }
+
             // Future unit variants (e.g., "Heartbeat") — degrade gracefully
             else -> {
                 UserAction.Unknown
@@ -2062,6 +2097,13 @@ sealed class ActionResult {
     data class NavigateTo(
         val screen: ScreenModel,
     ) : ActionResult()
+
+    /**
+     * The back gesture reached a back-stopping root: there is no screen to pop,
+     * so the frontend performs the platform's native back default (Android
+     * finish / minimize). Core owns the decision (ADR-044 Amendment 2a).
+     */
+    data object PerformNativeBack : ActionResult()
 
     data class ValidationError(
         val componentId: String,
@@ -2177,6 +2219,16 @@ sealed class CommandDTO {
     ) : CommandDTO()
 
     data object BleDisconnect : CommandDTO()
+
+    /**
+     * Core's hint for when the next platform wakeup should fire. The shell
+     * owns the native scheduler (Android WorkManager); this is informational
+     * and safely ignored when a periodic task is already armed (ADR-044 Am2a).
+     */
+    data class ScheduleWakeup(
+        @SerialName("earliest_secs") val earliestSecs: UInt,
+        @SerialName("deadline_secs") val deadlineSecs: UInt,
+    ) : CommandDTO()
 
     data class NfcActivate(
         val payload: List<Int>,
@@ -2305,6 +2357,7 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                     "StartDeviceLink" -> ActionResult.StartDeviceLink
                     "RequestCamera" -> ActionResult.RequestCamera
                     "WipeComplete" -> ActionResult.WipeComplete
+                    "PerformNativeBack" -> ActionResult.PerformNativeBack
                     else -> ActionResult.Unknown
                 }
             }
@@ -2497,6 +2550,10 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                 jsonEncoder.encodeJsonElement(JsonPrimitive("WipeComplete"))
             }
 
+            is ActionResult.PerformNativeBack -> {
+                jsonEncoder.encodeJsonElement(JsonPrimitive("PerformNativeBack"))
+            }
+
             is ActionResult.OpenContact -> {
                 val obj =
                     JsonObject(
@@ -2660,6 +2717,14 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
 
             is JsonObject -> {
                 when {
+                    "ScheduleWakeup" in element -> {
+                        val obj = element["ScheduleWakeup"] as JsonObject
+                        CommandDTO.ScheduleWakeup(
+                            earliestSecs = obj["earliest_secs"]!!.jsonPrimitive.int.toUInt(),
+                            deadlineSecs = obj["deadline_secs"]!!.jsonPrimitive.int.toUInt(),
+                        )
+                    }
+
                     "QrDisplay" in element -> {
                         val obj = element["QrDisplay"] as JsonObject
                         CommandDTO.QrDisplay(
@@ -2842,20 +2907,6 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
 // ── Envelope wrappers (Phase 2b) ────────────────────────────────────
 
 /**
- * Envelope returned by `PlatformAppEngine.navigateToJson` /
- * `navigateBackJson` (Phase 2b of
- * `2026-05-04-exchange-command-screen-presentation`). Carries the
- * rendered [ScreenModel] plus any [CommandDTO]s emitted by the
- * `WorkflowEngine`'s `screen_entered` / `screen_exited` lifecycle
- * hooks during the navigation.
- */
-@Serializable
-data class ScreenEnvelope(
-    val screen: ScreenModel,
-    val commands: List<CommandDTO>,
-)
-
-/**
  * Envelope returned by `PlatformAppEngine.handleActionJson`. Carries
  * the engine's [ActionResult] plus any [CommandDTO]s emitted as a
  * side-effect of navigation during the action.
@@ -2882,6 +2933,77 @@ data class HardwareEventEnvelope(
     val actionResult: ActionResult? = null,
     val commands: List<CommandDTO> = emptyList(),
 )
+
+/**
+ * Envelope returned by `PlatformAppEngine::on_wakeup`. Carries OS
+ * notifications produced by the wakeup tick plus any [CommandDTO]s emitted —
+ * in practice the next `ScheduleWakeup` so the shell can re-arm its platform
+ * scheduler (ADR-044 Am2a).
+ */
+@Serializable
+data class WakeupOutcome(
+    val notifications: List<MobilePendingNotificationDTO> = emptyList(),
+    val commands: List<CommandDTO> = emptyList(),
+)
+
+/** DTO for a pending OS notification emitted by `on_wakeup`. */
+@Serializable
+data class MobilePendingNotificationDTO(
+    @SerialName("event_key") val eventKey: String,
+    val category: MobileNotificationCategoryDTO,
+    val title: String,
+    val body: String,
+    @SerialName("contact_id") val contactId: String,
+    @SerialName("deep_link_uri") val deepLinkUri: String? = null,
+    @SerialName("os_category_id") val osCategoryId: String,
+    @SerialName("os_channel_id") val osChannelId: String,
+    val priority: MobileNotificationPriorityDTO,
+    @SerialName("os_category_options") val osCategoryOptions: List<String> = emptyList(),
+)
+
+@Serializable
+enum class MobileNotificationCategoryDTO {
+    EmergencyAlert,
+    DuressAlert,
+    ContactAdded,
+    CardUpdate,
+}
+
+@Serializable
+enum class MobileNotificationPriorityDTO {
+    Default,
+    High,
+    Urgent,
+}
+
+fun MobileNotificationCategoryDTO.toMobile(): MobileNotificationCategory =
+    when (this) {
+        MobileNotificationCategoryDTO.EmergencyAlert -> MobileNotificationCategory.EMERGENCY_ALERT
+        MobileNotificationCategoryDTO.DuressAlert -> MobileNotificationCategory.DURESS_ALERT
+        MobileNotificationCategoryDTO.ContactAdded -> MobileNotificationCategory.CONTACT_ADDED
+        MobileNotificationCategoryDTO.CardUpdate -> MobileNotificationCategory.CARD_UPDATE
+    }
+
+fun MobileNotificationPriorityDTO.toMobile(): MobileNotificationPriority =
+    when (this) {
+        MobileNotificationPriorityDTO.Default -> MobileNotificationPriority.DEFAULT
+        MobileNotificationPriorityDTO.High -> MobileNotificationPriority.HIGH
+        MobileNotificationPriorityDTO.Urgent -> MobileNotificationPriority.URGENT
+    }
+
+fun MobilePendingNotificationDTO.toMobile(): MobilePendingNotification =
+    MobilePendingNotification(
+        eventKey = eventKey,
+        category = category.toMobile(),
+        title = title,
+        body = body,
+        contactId = contactId,
+        deepLinkUri = deepLinkUri,
+        osCategoryId = osCategoryId,
+        osChannelId = osChannelId,
+        priority = priority.toMobile(),
+        osCategoryOptions = osCategoryOptions,
+    )
 
 // ── OnboardingData ──────────────────────────────────────────────────
 

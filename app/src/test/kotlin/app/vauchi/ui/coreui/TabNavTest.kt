@@ -21,8 +21,7 @@ class TabNavTest {
     private fun tab(
         id: String,
         actionId: String,
-        isHome: Boolean = false,
-    ) = MobileTabInfo(id = id, actionId = actionId, label = id, icon = "", badgeCount = 0u, isHome = isHome)
+    ) = MobileTabInfo(id = id, actionId = actionId, label = id, icon = "", badgeCount = 0u, isHome = false)
 
     @Test
     fun `dispatches when the tab is present`() {
@@ -52,29 +51,30 @@ class TabNavTest {
 
         assertEquals(
             TabNavFlush.Replay("act-contacts"),
-            decideTabNavFlush("contacts", tabs, currentScreenId = null),
+            decideTabNavFlush("contacts", tabs, currentNavTabId = null),
         )
     }
 
     @Test
     fun `flush replays while parked on core's bootstrap screen`() {
-        val tabs = listOf(tab("my_info", "act-home", isHome = true), tab("contacts", "act-contacts"))
+        // Bootstrap screens have no bottom-nav tab id.
+        val tabs = listOf(tab("my_info", "act-home"), tab("contacts", "act-contacts"))
 
         assertEquals(
             TabNavFlush.Replay("act-contacts"),
-            decideTabNavFlush("contacts", tabs, currentScreenId = "my_info"),
+            decideTabNavFlush("contacts", tabs, currentNavTabId = null),
         )
     }
 
     @Test
     fun `flush drops silently when a real navigation landed in between`() {
-        // Deep-link consent, a programmatic settings nav, or a user tap —
-        // replaying the courtesy landing would clobber it.
+        // A non-null navTabId means a real navigation landed — replaying the
+        // courtesy landing would clobber it.
         val tabs = listOf(tab("contacts", "act-contacts"))
 
         assertEquals(
-            TabNavFlush.DropSuperseded("deep_link_consent"),
-            decideTabNavFlush("contacts", tabs, currentScreenId = "deep_link_consent"),
+            TabNavFlush.DropSuperseded("contacts"),
+            decideTabNavFlush("contacts", tabs, currentNavTabId = "contacts"),
         )
     }
 
@@ -82,17 +82,17 @@ class TabNavTest {
     fun `flush keeps the request queued while tabs are still empty`() {
         assertEquals(
             TabNavFlush.Keep,
-            decideTabNavFlush("contacts", emptyList(), currentScreenId = null),
+            decideTabNavFlush("contacts", emptyList(), currentNavTabId = null),
         )
     }
 
     @Test
     fun `flush errors only when tabs are loaded but the id is absent`() {
-        val tabs = listOf(tab("my_info", "act-home", isHome = true))
+        val tabs = listOf(tab("my_info", "act-home"))
 
         assertEquals(
             TabNavFlush.DropUnknown("contacts"),
-            decideTabNavFlush("contacts", tabs, currentScreenId = "my_info"),
+            decideTabNavFlush("contacts", tabs, currentNavTabId = null),
         )
     }
 }

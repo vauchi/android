@@ -555,28 +555,6 @@ class CoreAppViewModel(
         get() = eventListener != null
 
     /**
-     * Drive one core tick. Polling core drains events, advances any
-     * engine-held machine (multi-stage QR, link), and runs the active
-     * engine's wall-clock `tick` so bounded-wait modes (BLE/NFC/cable
-     * discovery) fail a stalled step past their timeout; it also fires
-     * `onScreensInvalidated` so protocol progress + the cycling own-QR
-     * surface. Screen-agnostic: an app-level [app.vauchi.ui.pollLoop]
-     * calls this on a cadence whenever the app is Ready, per core's
-     * contract that the pump runs "every loop regardless of screen"
-     * (vauchi-app `engine.rs`). Replaces the cycle thread retired in
-     * slice-32m T1.2c (Bug 5, `2026-05-30-exchange-screen-nav-visual-bugs`);
-     * scoping the pump to the QR screen also left the BLE "Searching…"
-     * screen's 60s timeout never firing. Errors are logged, not thrown —
-     * a dropped tick is recovered by the next one.
-     */
-    suspend fun tickCore() {
-        withContext(Dispatchers.IO) {
-            runCatching { appEngine.pollNotifications() }
-                .onFailure { Log.e(TAG, "core tick poll failed", it) }
-        }
-    }
-
-    /**
      * Refresh [tabs] from `PlatformAppEngine.navItems(MOBILE, locale)`.
      * Call on startup, after identity creation (pre-identity returns
      * just Onboarding; post-identity returns the five mobile top-level
@@ -596,17 +574,6 @@ class CoreAppViewModel(
             }
         }
     }
-
-    /**
-     * Canonical id of the bottom-nav tab the active screen belongs to
-     * (ADR-043 Am4), or null for overlays. Drives bottom-nav visibility
-     * and pill selection — supersedes the local `canonicalScreenIdFor` /
-     * `TOP_LEVEL_SCREEN_IDS` fold now that core stamps canonical
-     * screen-ids. A cheap synchronous engine lookup (not IO); called
-     * during composition after a navigation has already settled the
-     * engine state.
-     */
-    fun currentTabId(): String? = runCatching { appEngine.currentTabId(layout = MobileTabLayout.MOBILE) }.getOrNull()
 
     fun loadScreen() {
         viewModelScope.launch {
@@ -716,7 +683,7 @@ class CoreAppViewModel(
      */
     private fun flushPendingTabNav() {
         val pending = pendingTabNavId ?: return
-        when (val outcome = decideTabNavFlush(pending, _tabs.value, _screen.value?.screenId)) {
+        when (val outcome = decideTabNavFlush(pending, _tabs.value, _screen.value?.navTabId)) {
             is TabNavFlush.Replay -> {
                 pendingTabNavId = null
                 handleAction(UserAction.NavigateToTab(actionId = outcome.actionId))
@@ -737,29 +704,43 @@ class CoreAppViewModel(
         }
     }
 
-    // / Whether core has somewhere to go back to from the current screen —
-    // / either an AppScreen nav-history entry or an engine-internal step
-    // / (e.g. an exchange sub-flow). The shell drives its BackHandler from
-    // / this instead of a frontend-side screen-id map (ADR-043). Synchronous
-    // / like [currentTabId]; a quick engine lock.
-    fun canGoBack(): Boolean = runCatching { appEngine.canGoBack() }.getOrDefault(false)
+    /**
+     * Fires when core reports a back-stopping root via
+     * `ActionResult::PerformNativeBack`. The Activity should finish / minimize
+     * itself. One-shot StateFlow — consumed by [consumeNativeBackEvent].
+     */
+    private val _nativeBackEvent = MutableStateFlow<Boolean?>(null)
+    val nativeBackEvent: StateFlow<Boolean?> = _nativeBackEvent.asStateFlow()
 
+    fun consumeNativeBackEvent() {
+        _nativeBackEvent.value = null
+    }
+
+    /**
+     * Forward the system-back gesture to core as `UserAction::NavigateBack`.
+     * Core returns `ActionResult::PerformNativeBack` when there is nothing to
+     * pop; [nativeBackEvent] is emitted so the Activity can finish.
+     */
     fun navigateBack() {
-        viewModelScope.launch {
-            try {
-                val screenJson =
-                    withContext(Dispatchers.IO) {
-                        appEngine.navigateBackJson()
-                    }
-                val envelope = json.decodeFromString<ScreenEnvelope>(screenJson)
-                _screen.value = envelope.screen
-                if (envelope.commands.isNotEmpty()) {
-                    handleExchangeCommands(envelope.commands)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to navigate back", e)
+        handleAction(UserAction.NavigateBack)
+    }
+
+    /**
+     * The shell's platform wakeup fired (Android WorkManager, lifecycle resume,
+     * etc.). Runs the relay/exchange advance + activity-log poll and returns any
+     * OS notifications plus commands. Core also fires `onScreensInvalidated`
+     * through the attached listener when the tick changed the current screen.
+     */
+    suspend fun onWakeup(): WakeupOutcome {
+        val outcomeJson =
+            withContext(Dispatchers.IO) {
+                appEngine.onWakeup()
             }
+        val outcome = json.decodeFromString<WakeupOutcome>(outcomeJson)
+        if (outcome.commands.isNotEmpty()) {
+            handleExchangeCommands(outcome.commands)
         }
+        return outcome
     }
 
     fun invalidateAll() {
@@ -873,6 +854,11 @@ class CoreAppViewModel(
                 loadScreen()
             }
 
+            is ActionResult.PerformNativeBack -> {
+                // Back-stopping root: the Activity finishes / minimizes itself.
+                _nativeBackEvent.value = true
+            }
+
             is ActionResult.BiometricUnlockOutcome -> {
                 // Consumed by MainViewModel.retryInit(), which reports
                 // the biometric hardware event and decodes the outcome
@@ -896,11 +882,9 @@ class CoreAppViewModel(
 
     /**
      * Dispatch a list of [CommandDTO]s emitted by core. Called from
-     * [applyResult] for `ActionResult.Commands`, and from the Phase 2b
-     * envelope-drain path in [handleAction] / [navigateTo] /
-     * [navigateBack] so the
-     * lifecycle-emitted brightness / idle-timer commands reach the
-     * exchange session and image-pick affordances reach the UI.
+     * [applyResult] for `ActionResult.Commands`, from [handleAction]'s
+     * action-result envelope drain, and from [onWakeup] so lifecycle /
+     * exchange commands reach the right platform handlers.
      *
      * ADR-031: hardware exchange commands (BLE, NFC, Audio, brightness,
      * idle-timer) are handled by the exchange session and the
@@ -910,6 +894,11 @@ class CoreAppViewModel(
     private fun handleExchangeCommands(commands: List<CommandDTO>) {
         for (cmd in commands) {
             when (cmd) {
+                is CommandDTO.ScheduleWakeup -> {
+                    // Core hints when the next wakeup is due. Android uses a
+                    // periodic WorkManager task, so no explicit re-arming here.
+                }
+
                 is CommandDTO.ImagePickFromLibrary -> {
                     _imagePickEvent.value = "library"
                 }

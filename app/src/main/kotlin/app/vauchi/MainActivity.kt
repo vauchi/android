@@ -26,6 +26,7 @@ import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.People
@@ -68,7 +69,6 @@ import app.vauchi.proximity.AccelerometerProximityService
 import app.vauchi.proximity.AudioProximityService
 import app.vauchi.proximity.LocationCaptureService
 import app.vauchi.ui.AppPasswordScreen
-import app.vauchi.ui.CORE_CADENCE_TICK_INTERVAL_MS
 import app.vauchi.ui.KeyInvalidatedRecoveryScreen
 import app.vauchi.ui.MainViewModel
 import app.vauchi.ui.MultiStageExchangeScreen
@@ -85,9 +85,9 @@ import app.vauchi.ui.coreui.MaterialIconName
 import app.vauchi.ui.coreui.NativeWrapperHint
 import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
+import app.vauchi.ui.coreui.ScreenAction
 import app.vauchi.ui.coreui.UserAction
 import app.vauchi.ui.coreui.materialIconNameForCoreIcon
-import app.vauchi.ui.pollLoop
 import app.vauchi.ui.startupErrorKindFor
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
@@ -336,6 +336,7 @@ private fun imageVectorForCoreTab(coreIcon: String): ImageVector =
         MaterialIconName.MORE_HORIZ -> Icons.Default.MoreHoriz
     }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     viewModel: MainViewModel = viewModel(),
@@ -373,20 +374,6 @@ fun MainScreen(
     LaunchedEffect(uiState, localizationManager.currentLocale) {
         if (uiState is UiState.Ready) {
             coreAppViewModel.loadTabs(localizationManager.currentLocale)
-        }
-    }
-
-    // App-level core pump. Bounded-wait exchange engines (BLE/NFC/cable
-    // discovery) enforce their stall-timeout only when the frontend calls
-    // pollNotifications on a cadence; core's contract is that this pump runs
-    // "every loop regardless of screen" (vauchi-app engine.rs). Scoping it to
-    // the QR screen left the BLE "Searching…" screen unticked, so its 60s
-    // deadline never fired (discovery ran forever). One Ready-scoped loop
-    // ticks every core-driven screen + future bounded-wait modes; the QR
-    // screen keeps its own faster loop for frame throughput.
-    LaunchedEffect(uiState) {
-        if (uiState is UiState.Ready) {
-            pollLoop(CORE_CADENCE_TICK_INTERVAL_MS) { coreAppViewModel.tickCore() }
         }
     }
 
@@ -883,7 +870,10 @@ fun MainScreen(
         val observer =
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME && uiState is UiState.Ready) {
-                    viewModel.sync()
+                    // Forward foreground lifecycle to core. Core owns the
+                    // consequence (relay catch-up sync + re-render), retiring the
+                    // frontend's ON_RESUME -> sync() decision (ADR-044 Am2a).
+                    coreAppViewModel.handleAction(UserAction.AppForegrounded)
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -916,36 +906,11 @@ fun MainScreen(
         }
     }
 
-    // The bottom nav is shown only on top-level screens. The active
-    // tab id is core's published `screenId` (when it's one of the
-    // top-level set), since core owns the navigation state of record
-    // post-collapse. Native screens still in the local enum (Home,
-    // MultiStageExchange, NfcExchange, etc.) keep their selection by
-    // delegating through `coreScreen?.screenId` after navigation has
-    // landed on a core screen, OR by leaving `activeTabId` null when
-    // currently on a non-top-level native screen — both behaviours
-    // are unchanged from the pre-collapse mapping.
-    // Canonical tab the active screen belongs to (ADR-043 Am4), from
-    // core's `current_tab_id` — supersedes the local `TOP_LEVEL_SCREEN_IDS`
-    // / `canonicalScreenIdFor` fold, which went stale once core started
-    // stamping canonical screen-ids (`contacts`/`groups`, not the
-    // engine-emitted `contact_list`/`groups_list`). The bottom bar shows
-    // only on tab *roots*: the active screen's own id equals its tab id.
-    // Sub-screens report their parent tab but are not roots, so the bar
-    // stays hidden there (unchanged behaviour).
-    // `remember` keyed on the screen id so the synchronous engine
-    // lookup runs only when navigation changes the screen — not on
-    // every recomposition (which would hammer the UniFFI mutex on
-    // the main thread).
-    val currentTab = remember(coreScreen?.screenId) { coreAppViewModel.currentTabId() }
-    val homeTabId = tabs.firstOrNull { it.isHome }?.id
-    val isTopLevel = currentTab != null && coreScreen?.screenId == currentTab
-
     // Follow-core: the native exchange wrappers are reached by core
     // navigating to a screen whose `native_wrapper_hint` is not None.
     // Mirror that hint into the local `currentScreen` so the matching
     // `when` arm renders. Leaving a native wrapper resets to Home so the
-    // inverted CoreScreenView branch takes over.
+    // generic CoreScreenView branch takes over.
     val wrapperHint = coreScreen?.nativeWrapperHint
     LaunchedEffect(wrapperHint) {
         when (wrapperHint) {
@@ -967,52 +932,81 @@ fun MainScreen(
         }
     }
 
-    // System BACK handling. Without an interceptor, every non-Home
-    // screen would finish the Activity and exit the app — see problem
-    // record `2026-05-21-android-back-stack-and-bottom-nav-broken`.
-    //
-    // Path A screens (Contacts, Groups, Settings, More, deep screens
-    // routed through `CoreScreenView`): forward to core's
-    // `navigateBack()` to pop the engine's nav history.
-    //
-    // Path B native screens (`Screen.MultiStageExchange` and friends):
-    // route back to My Card. Setting `currentScreen` alone isn't
-    // enough — core may be on `contact_list`, which would make Path A
-    // win on the next recomposition; nudging the engine to `MyInfo`
-    // keeps the local enum and core state consistent.
-    //
-    // Screens that own their own back gesture (NfcTap, Ble, etc.)
-    // compose their own `BackHandler` lower in the tree; Compose
-    // dispatches to the inner-most handler so those still win.
-    // System BACK. Deep core screens pop via can_go_back()/navigateBack().
-    // Core marks the bottom-nav tab roots (my_info, contacts, exchange,
-    // groups, more) as back-stoppers, so can_go_back() is false there — but
-    // a *secondary* tab root must still go Home (My Card), not exit the app
-    // (the regression the old `coreVariantForBack != null` gate prevented).
-    // `currentTab` is core's tab id for the active screen; only the home tab
-    // (and the boot states) leave BACK to the OS.
-    val coreCanGoBack = uiState is UiState.Ready && coreAppViewModel.canGoBack()
-    val onSecondaryTab = currentTab != null && currentTab != homeTabId
-    val canGoBack =
-        uiState is UiState.Ready &&
-            (coreCanGoBack || onSecondaryTab || currentScreen != Screen.Home)
+    // System BACK handling (ADR-044 Am2a): the screen itself advertises
+    // whether it offers a back affordance via `nav_actions`. When the
+    // reserved `go_back` action is present, the shell forwards the gesture
+    // to core as `UserAction::NavigateBack`. At a back-stopping root core
+    // returns `ActionResult::PerformNativeBack` and the Activity finishes.
+    val canGoBack = uiState is UiState.Ready && coreScreen?.navActions?.any { it.id == "go_back" } == true
     androidx.activity.compose.BackHandler(enabled = canGoBack) {
-        if (coreCanGoBack) {
-            coreAppViewModel.navigateBack()
-        } else {
-            currentScreen = Screen.Home
-            homeTabId?.let { coreAppViewModel.navigateToTabById(it) }
+        coreAppViewModel.handleAction(UserAction.NavigateBack)
+    }
+
+    // Consume native-back events emitted by core.
+    val nativeBackEvent by coreAppViewModel.nativeBackEvent.collectAsState()
+    LaunchedEffect(nativeBackEvent) {
+        if (nativeBackEvent == true) {
+            coreAppViewModel.consumeNativeBackEvent()
+            (context as? Activity)?.finish()
         }
     }
 
+    // Render core-driven top-app-bar chrome from `nav_actions`. The back
+    // affordance is handled by the system-back handler above; a leading
+    // icon is also offered for accessibility.
+    val navActions = coreScreen?.navActions ?: emptyList()
+    val hasGoBack = navActions.any { it.id == "go_back" }
+
     Scaffold(
+        topBar = {
+            if (uiState is UiState.Ready) {
+                coreScreen?.let { screen ->
+                    TopAppBar(
+                        title = { Text(screen.title) },
+                        navigationIcon = {
+                            if (hasGoBack) {
+                                IconButton(
+                                    onClick = { coreAppViewModel.handleAction(UserAction.NavigateBack) },
+                                    modifier = Modifier.testTag("top_bar.back"),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowBack,
+                                        contentDescription = localizationManager.t("a11y.back"),
+                                    )
+                                }
+                            }
+                        },
+                        actions = {
+                            for (action in navActions.filter { it.id != "go_back" }) {
+                                if (action.id == "open_settings") {
+                                    IconButton(
+                                        onClick = { coreAppViewModel.handleAction(UserAction.ActionPressed(action.id)) },
+                                        modifier = Modifier.testTag("top_bar.${action.id}"),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Settings,
+                                            contentDescription = action.label,
+                                        )
+                                    }
+                                } else {
+                                    TextButton(
+                                        onClick = { coreAppViewModel.handleAction(UserAction.ActionPressed(action.id)) },
+                                        modifier = Modifier.testTag("top_bar.${action.id}"),
+                                    ) {
+                                        Text(action.label)
+                                    }
+                                }
+                            }
+                        },
+                    )
+                }
+            }
+        },
         bottomBar = {
-            if (isTopLevel && uiState is UiState.Ready && tabs.isNotEmpty()) {
+            val navTabId = coreScreen?.navTabId
+            if (navTabId != null && coreScreen?.screenId == navTabId && uiState is UiState.Ready && tabs.isNotEmpty()) {
                 NavigationBar {
                     for (tab in tabs) {
-                        // Route the tap through core's nav; the default
-                        // `CoreScreenView` arm picks up the resulting
-                        // `coreScreen.screenId` and renders.
                         NavigationBarItem(
                             modifier = Modifier.testTag("tab_${tab.id}"),
                             icon = {
@@ -1022,33 +1016,8 @@ fun MainScreen(
                                 )
                             },
                             label = { Text(tab.label) },
-                            // `currentTab` is the canonical tab id core
-                            // resolves for the active screen, so it compares
-                            // directly to `tab.id` — no engine-id fold needed.
-                            selected = currentTab == tab.id,
+                            selected = tab.id == navTabId,
                             onClick = {
-                                // TODO(HUMBLE): W, P2. Hardcodes "my_info" tab id
-                                // and uses local Screen enum for home. Fix: core
-                                // exposes home-tab metadata so the shell never
-                                // branches on tab ids. (see _private problem record
-                                // 2026-07-06-mobile-domain-shell-violations)
-                                // Native top-level cases (my_info -> Home;
-                                // exchange now routes through core's
-                                // `exchange_mode_selection`) still need
-                                // the local enum until their per-pair
-                                // retirement, **and** also need to nudge
-                                // core away from a deep screen — without the
-                                // `navigateTo` the engine stays on (say)
-                                // `contact_list` so Path A still wins and
-                                // the tap appears to do nothing.
-                                if (tab.id == homeTabId) {
-                                    currentScreen = Screen.Home
-                                }
-                                // Forward the opaque tab action_id as
-                                // `UserAction::NavigateToTab` (ADR-043 Am4) —
-                                // the typed action path, replacing the
-                                // `navigate_to_json` round-trip so that surface
-                                // can be retired (tier0-d Tier-0 cleanup).
                                 coreAppViewModel.handleAction(
                                     UserAction.NavigateToTab(actionId = tab.actionId),
                                 )
@@ -1063,30 +1032,14 @@ fun MainScreen(
         },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            // Activity-enum-collapse Phase 1 dispatch: core wins when
-            // it has navigated to one of the 7 Pure Humble UI screens
-            // covered by `coreScreenIdToVariant`. The local `Screen`
-            // enum below handles only the still-native screens
-            // (hardware-aware MultiStageExchange, NFC, Recovery,
-            // QrDiagnostic) and the pre-Ready boot
-            // states (Home). Theme + language pickers retired Phase
-            // 2a/A3a (`2026-05-01-android-humble-ui-deep-retirement`)
-            // — they now live as `Component::Dropdown`s inside the
-            // existing core-driven Settings screen.
-            // Dispatch inversion (CoreScreenIdMap rework): render every core
-            // screen via CoreScreenView by default; only native wrapper
-            // screens and the home-tab root (MyInfo chrome) fall through to
-            // the local `when (currentScreen)` below. ADR-043: the frontend
-            // no longer interprets screen_ids via a domain map for wrappers.
-            // TODO(HUMBLE): D/W, P1. The home tab (My Card) still renders through
-            // the native `ReadyScreen` chrome, so the shell must recognise its
-            // "my_info" screen id to fall through to the local `when` instead of
-            // the generic CoreScreenView. Fix: core marks the home tab / renders
-            // My Card as a ScreenModel, retiring `ReadyScreen`; then this branch
-            // and the whole `isHomeTab` gate disappear. (see _private problem
-            // record 2026-07-06-mobile-domain-shell-violations)
-            val isHomeTab = homeTabId != null && coreScreen?.screenId == homeTabId
-            if (wrapperHint == NativeWrapperHint.None && !isHomeTab && uiState is UiState.Ready) {
+            // Activity-enum-collapse Phase 1 dispatch: core wins for every
+            // non-wrapper screen — including the home tab, which now renders
+            // through CoreScreenView with core-driven top-bar chrome. The local
+            // `Screen` enum below handles only the still-native wrapper screens
+            // (hardware-aware MultiStageExchange, NFC, Recovery, QrDiagnostic)
+            // and the pre-Ready boot states (Home). ADR-044 Am2a retires the
+            // `isHomeTab` / `ReadyScreen` native chrome gate.
+            if (wrapperHint == NativeWrapperHint.None && uiState is UiState.Ready) {
                 CoreScreenView(
                     viewModel = coreAppViewModel,
                     screenName = coreScreen?.screenId ?: "",
@@ -1122,11 +1075,16 @@ fun MainScreen(
                             }
 
                             is UiState.Ready -> {
-                                ReadyScreen(
-                                    coreAppViewModel = coreAppViewModel,
-                                    onSettings = { coreAppViewModel.handleAction(UserAction.ActionPressed("open_settings")) },
-                                    isOnline = isOnline,
-                                )
+                                Column(modifier = Modifier.fillMaxSize()) {
+                                    if (!isOnline) {
+                                        OfflineBanner()
+                                    }
+                                    CoreScreenView(
+                                        viewModel = coreAppViewModel,
+                                        screenName = coreScreen?.screenId ?: "",
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
                             }
 
                             is UiState.AuthRequired -> {
@@ -1254,64 +1212,6 @@ fun LoadingScreen() {
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(16.dp))
             Text(localizationManager.t("app.loading"))
-        }
-    }
-}
-
-// Phase 1B.1 (core-gui-architecture-alignment): the home (My Card)
-// screen is now a thin Android shell around
-// `CoreScreenView(screenName = "MyInfo")`. Core owns the card header,
-// avatar, field list, add/edit/delete (via `form_dialog`), and the
-// first-exchange prompt — see `core/vauchi-app/src/ui/my_info.rs`.
-// The shell keeps the Android-specific chrome that isn't in the
-// cross-platform ScreenModel: the Vauchi title bar, sync chip + settings
-// icon, and the offline banner. Exchange / Contacts navigation is now
-// handled entirely by the parent Scaffold's NavigationBar (driven by
-// core's `tab_info`); the legacy bottom Exchange / Contacts pill
-// shortcuts were dropped — they bypassed the mode picker (only
-// reaching QR mode), duplicated the bottom-nav, and confused users
-// about why the same destination had two different entry points.
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ReadyScreen(
-    coreAppViewModel: CoreAppViewModel,
-    onSettings: () -> Unit,
-    isOnline: Boolean = true,
-) {
-    val context = LocalContext.current
-    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(localizationManager.t("app.name")) },
-                actions = {
-                    // Sync status + trigger is core-driven: every top-level
-                    // screen carries a `Component.Indicator(id="sync")` injected
-                    // by core's `apply_sync_chrome_overlay` (tap → `sync_now`).
-                    // The old app-bar `SyncStatusChip` duplicated it, so it was
-                    // removed (2026-06-05-screen-ux-declutter). Humble UI: core
-                    // owns sync presentation; the shell keeps only the gear.
-                    IconButton(onClick = onSettings, modifier = Modifier.testTag("home.settings")) {
-                        Icon(Icons.Default.Settings, contentDescription = localizationManager.t("a11y.settings_icon"))
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-        ) {
-            if (!isOnline) {
-                OfflineBanner()
-            }
-            CoreScreenView(
-                viewModel = coreAppViewModel,
-                screenName = "MyInfo",
-                modifier = Modifier.fillMaxSize(),
-            )
         }
     }
 }

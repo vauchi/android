@@ -1109,4 +1109,63 @@ class ModelsTest {
         val decoded = json.decodeFromString(Component.serializer(), encoded)
         assertEquals(original, decoded)
     }
+
+    // ── ADR-044 Amendment 2a wire variants ──────────────────────────
+
+    @Test
+    fun `serialize NavigateBack as bare string`() {
+        val action = UserAction.NavigateBack
+        val serialized = json.encodeToString(UserAction.serializer(), action)
+        assertEquals("\"NavigateBack\"", serialized)
+    }
+
+    @Test
+    fun `deserialize NavigateBack from bare string`() {
+        val result = json.decodeFromString<UserAction>("\"NavigateBack\"")
+        assertTrue(result is UserAction.NavigateBack)
+    }
+
+    @Test
+    fun `serialize AppForegrounded as bare string`() {
+        val action = UserAction.AppForegrounded
+        val serialized = json.encodeToString(UserAction.serializer(), action)
+        assertEquals("\"AppForegrounded\"", serialized)
+    }
+
+    @Test
+    fun `deserialize AppForegrounded from bare string`() {
+        val result = json.decodeFromString<UserAction>("\"AppForegrounded\"")
+        assertTrue(result is UserAction.AppForegrounded)
+    }
+
+    @Test
+    fun `deserialize PerformNativeBack result`() {
+        val result = json.decodeFromString<ActionResult>("\"PerformNativeBack\"")
+        assertTrue(result is ActionResult.PerformNativeBack)
+    }
+
+    @Test
+    fun `deserialize ScreenModel with nav_actions and nav_tab_id`() {
+        val input =
+            """
+            {
+                "screen_id": "contacts",
+                "title": "Contacts",
+                "components": [],
+                "actions": [
+                    {"id": "add", "label": "Add", "style": "Primary", "enabled": true}
+                ],
+                "nav_tab_id": "contacts",
+                "nav_actions": [
+                    {"id": "back", "label": "Back", "style": "Secondary", "enabled": true}
+                ]
+            }
+            """.trimIndent()
+
+        val screen = json.decodeFromString<ScreenModel>(input)
+        assertEquals("contacts", screen.navTabId)
+        assertEquals(1, screen.navActions.size)
+        assertEquals("back", screen.navActions[0].id)
+        assertEquals("Back", screen.navActions[0].label)
+    }
 }

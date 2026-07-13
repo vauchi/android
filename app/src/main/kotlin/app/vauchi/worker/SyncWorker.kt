@@ -9,6 +9,10 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import app.vauchi.data.VauchiRepository
+import app.vauchi.ui.coreui.MobilePendingNotificationDTO
+import app.vauchi.ui.coreui.WakeupOutcome
+import app.vauchi.ui.coreui.toMobile
+import kotlinx.serialization.json.Json
 
 class SyncWorker(
     context: Context,
@@ -48,7 +52,20 @@ class SyncWorker(
             runCatching { repository.runContentUpdateCycle() }
                 .onFailure { Log.w(TAG, "[ContentUpdate] skipped: ${it.javaClass.simpleName}") }
 
-            val notifications = repository.pollNotifications()
+            val notifications =
+                runCatching {
+                    val outcomeJson = repository.appEngine.onWakeup()
+                    val outcome = Json.decodeFromString<WakeupOutcome>(outcomeJson)
+                    // Background ticks may emit ScheduleWakeup hints; the periodic
+                    // WorkManager task already arms the next wakeup, so ignore them.
+                    if (outcome.commands.isNotEmpty()) {
+                        Log.d(TAG, "on_wakeup produced ${outcome.commands.size} command(s); ignoring in background")
+                    }
+                    outcome.notifications.map { it.toMobile() }
+                }.getOrElse {
+                    Log.e(TAG, "on_wakeup failed: ${it.message}", it)
+                    emptyList()
+                }
             for (notification in notifications) {
                 app.vauchi.util.NotificationHelper
                     .showNotification(applicationContext, notification)

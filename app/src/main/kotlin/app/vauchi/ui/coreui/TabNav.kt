@@ -71,9 +71,9 @@ sealed interface TabNavFlush {
  * Decide whether the queued startup nav [pendingId] may replay.
  *
  * A queued nav is a *default-landing courtesy*: it may only replay while
- * the app still rests on core's bootstrap screen — [currentScreenId] null
- * (first screen not yet delivered) or core's post-identity default screen.
- * Any other screen means a navigation with real intent landed
+ * the app still rests on core's bootstrap screen — [currentNavTabId] null
+ * (first screen not yet delivered, or a transient/bootstrap screen with no
+ * bottom-nav tab). Any non-null tab id means a real navigation landed
  * between queue and flush (deep-link consent, a programmatic settings
  * nav, a user tap) and replaying would clobber it
  * (`2026-07-01-android-startup-nav-race-no-tab`, review finding).
@@ -81,11 +81,10 @@ sealed interface TabNavFlush {
 fun decideTabNavFlush(
     pendingId: String,
     tabs: List<MobileTabInfo>,
-    currentScreenId: String?,
+    currentNavTabId: String?,
 ): TabNavFlush {
-    val homeTabId = tabs.firstOrNull { it.isHome }?.id
-    if (currentScreenId != null && currentScreenId != homeTabId) {
-        return TabNavFlush.DropSuperseded(currentScreenId)
+    if (currentNavTabId != null) {
+        return TabNavFlush.DropSuperseded(currentNavTabId)
     }
     return when (val decision = decideTabNav(tabs, pendingId)) {
         is TabNavDecision.Dispatch -> TabNavFlush.Replay(decision.actionId)
