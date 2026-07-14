@@ -699,10 +699,11 @@ fun InlineConfirmComponentDestructiveScreenshot() {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 InlineConfirmComponent(
-                    componentId = "confirm-delete",
                     warning = "Are you sure you want to delete this contact?",
                     confirmText = "Delete",
                     cancelText = "Cancel",
+                    confirmActionId = "confirm-delete",
+                    cancelActionId = "cancel-delete",
                     destructive = true,
                     onAction = {},
                 )
@@ -719,10 +720,11 @@ fun InlineConfirmComponentNonDestructiveScreenshot() {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 InlineConfirmComponent(
-                    componentId = "confirm-merge",
                     warning = "Merge these two contacts?",
                     confirmText = "Merge",
                     cancelText = "Keep Separate",
+                    confirmActionId = "confirm-merge",
+                    cancelActionId = "cancel-merge",
                     destructive = false,
                     onAction = {},
                 )
@@ -739,10 +741,11 @@ fun InlineConfirmComponentDestructiveDarkScreenshot() {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 InlineConfirmComponent(
-                    componentId = "confirm-delete",
                     warning = "Are you sure you want to delete this contact?",
                     confirmText = "Delete",
                     cancelText = "Cancel",
+                    confirmActionId = "confirm-delete",
+                    cancelActionId = "cancel-delete",
                     destructive = true,
                     onAction = {},
                 )
@@ -766,6 +769,12 @@ fun EditableTextComponentDisplayScreenshot() {
                     componentId = "display-name",
                     label = "Display Name",
                     value = "Alice",
+                    editText = "Edit",
+                    saveText = "Save",
+                    cancelText = "Cancel",
+                    editActionId = "edit-display-name",
+                    saveActionId = "save-display-name",
+                    cancelActionId = "cancel-display-name",
                     editing = false,
                     validationError = null,
                     onAction = {},
@@ -786,6 +795,12 @@ fun EditableTextComponentEditingScreenshot() {
                     componentId = "display-name",
                     label = "Display Name",
                     value = "Alice",
+                    editText = "Edit",
+                    saveText = "Save",
+                    cancelText = "Cancel",
+                    editActionId = "edit-display-name",
+                    saveActionId = "save-display-name",
+                    cancelActionId = "cancel-display-name",
                     editing = true,
                     validationError = null,
                     onAction = {},
@@ -806,6 +821,12 @@ fun EditableTextComponentErrorScreenshot() {
                     componentId = "display-name",
                     label = "Display Name",
                     value = "",
+                    editText = "Edit",
+                    saveText = "Save",
+                    cancelText = "Cancel",
+                    editActionId = "edit-display-name",
+                    saveActionId = "save-display-name",
+                    cancelActionId = "cancel-display-name",
                     editing = true,
                     validationError = "Name cannot be empty",
                     onAction = {},
@@ -826,6 +847,12 @@ fun EditableTextComponentDisplayDarkScreenshot() {
                     componentId = "display-name",
                     label = "Display Name",
                     value = "Alice",
+                    editText = "Edit",
+                    saveText = "Save",
+                    cancelText = "Cancel",
+                    editActionId = "edit-display-name",
+                    saveActionId = "save-display-name",
+                    cancelActionId = "cancel-display-name",
                     editing = false,
                     validationError = null,
                     onAction = {},
