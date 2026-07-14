@@ -35,7 +35,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.components.ActionListComponent
 import app.vauchi.ui.coreui.components.BannerComponent
-import app.vauchi.ui.coreui.components.ConfirmationDialogComponent
 import app.vauchi.ui.coreui.components.DividerComponent
 import app.vauchi.ui.coreui.components.DropdownComponent
 import app.vauchi.ui.coreui.components.EditableTextComponent
@@ -91,6 +90,7 @@ fun ScreenRenderer(
     modifier: Modifier = Modifier,
     toastMessage: String? = null,
     toastUndoActionId: String? = null,
+    toastUndoLabel: String? = null,
     onToastDismiss: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -218,10 +218,7 @@ fun ScreenRenderer(
         ToastOverlay(
             message = toastMessage ?: "",
             visible = toastMessage != null,
-            // TODO(HUMBLE): W, P2. Hardcoded English "Undo" toast label. Fix:
-            // core supplies undo label key. (see _private problem record
-            // 2026-07-06-mobile-domain-shell-violations)
-            undoLabel = if (toastUndoActionId != null) "Undo" else null,
+            undoLabel = toastUndoLabel,
             onUndo =
                 toastUndoActionId?.let { actionId ->
                     { onAction(UserAction.UndoPressed(actionId = actionId)) }
@@ -246,7 +243,6 @@ private fun componentSlotKey(
         is Component.ActionList -> "action_list:${component.id}"
         is Component.ImageCircle -> "avatar:${component.id}"
         is Component.Banner -> "banner@$index"
-        is Component.ConfirmationDialog -> "confirm:${component.id}"
         is Component.Dropdown -> "dropdown:${component.id}"
         is Component.EditableText -> "editable:${component.id}"
         is Component.FieldList -> "field_list:${component.id}"
@@ -259,7 +255,6 @@ private fun componentSlotKey(
         is Component.QrCode -> "qr:${component.id}"
         is Component.SectionedActionList -> "sectioned_action_list:${component.id}"
         is Component.SettingsGroup -> "settings:${component.id}"
-        is Component.ShowToast -> "toast:${component.id}"
         is Component.Slider -> "slider:${component.id}"
         is Component.StatusIndicator -> "status:${component.id}"
         is Component.Text -> "text:${component.id}"
@@ -363,6 +358,7 @@ fun ComponentRenderer(
 
         is Component.FieldList -> {
             FieldListComponent(
+                title = component.title,
                 fields = component.fields,
                 visibilityMode = component.visibilityMode,
                 availableGroups = component.availableGroups,
@@ -502,34 +498,19 @@ fun ComponentRenderer(
                 data = component.data,
                 mode = component.mode,
                 label = component.label,
+                a11y = component.a11y,
                 onAction = onAction,
                 modifier = modifier,
             )
-        }
-
-        is Component.ConfirmationDialog -> {
-            ConfirmationDialogComponent(
-                componentId = component.id,
-                title = component.title,
-                message = component.message,
-                confirmText = component.confirmText,
-                destructive = component.destructive,
-                onAction = onAction,
-                modifier = modifier,
-            )
-        }
-
-        is Component.ShowToast -> {
-            // Core never emits Component.ShowToast (only ActionResult.ShowToast).
-            // If core adds this variant, wire it to ToastOverlay here.
         }
 
         is Component.InlineConfirm -> {
             InlineConfirmComponent(
-                componentId = component.id,
                 warning = component.warning,
                 confirmText = component.confirmText,
                 cancelText = component.cancelText,
+                confirmActionId = component.confirmActionId,
+                cancelActionId = component.cancelActionId,
                 destructive = component.destructive,
                 onAction = onAction,
                 modifier = modifier,
@@ -541,6 +522,12 @@ fun ComponentRenderer(
                 componentId = component.id,
                 label = component.label,
                 value = component.value,
+                editText = component.editText,
+                saveText = component.saveText,
+                cancelText = component.cancelText,
+                editActionId = component.editActionId,
+                saveActionId = component.saveActionId,
+                cancelActionId = component.cancelActionId,
                 editing = component.editing,
                 validationError = component.validationError,
                 onAction = onAction,

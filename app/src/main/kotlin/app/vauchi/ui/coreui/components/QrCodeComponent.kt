@@ -23,7 +23,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,6 +41,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -46,6 +51,7 @@ import app.vauchi.camera.CameraFailure
 import app.vauchi.ui.components.PermissionRationaleDialog
 import app.vauchi.ui.components.QrCodeAnalyzer
 import app.vauchi.ui.components.rememberPermissionState
+import app.vauchi.ui.coreui.A11y
 import app.vauchi.ui.coreui.LocalUseFrontCamera
 import app.vauchi.ui.coreui.QrMode
 import app.vauchi.ui.coreui.UserAction
@@ -77,23 +83,27 @@ fun QrCodeComponent(
     data: String,
     mode: QrMode,
     label: String?,
+    a11y: A11y?,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         when (mode) {
             QrMode.Display -> {
-                QrDisplay(data = data, modifier = Modifier.fillMaxWidth())
+                QrDisplay(
+                    data = data,
+                    accessibilityLabel = a11y?.label ?: label,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             QrMode.Scan -> {
                 QrScanner(
                     componentId = componentId,
+                    accessibilityLabel = a11y?.label ?: label,
                     onAction = onAction,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -114,10 +124,9 @@ fun QrCodeComponent(
 @Composable
 private fun QrDisplay(
     data: String,
+    accessibilityLabel: String?,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     // Recompute the bitmap whenever core hands us new payload bytes
     // (multipart QR rotates every ~300 ms during exchange).
     val bitmap = remember(data) { generateQrBitmap(data) }
@@ -130,19 +139,16 @@ private fun QrDisplay(
         if (bitmap != null) {
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = localizationManager.t("qr.a11y_label"),
+                contentDescription = accessibilityLabel,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit,
             )
         } else {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                // TODO(HUMBLE): W, P2. Hardcoded English QR placeholder label.
-                // Fix: core supplies label key. (see _private problem record
-                // 2026-07-06-mobile-domain-shell-violations)
-                Text(
-                    text = "Generating QR…",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = accessibilityLabel,
+                    tint = MaterialTheme.colorScheme.error,
                 )
             }
         }
@@ -152,6 +158,7 @@ private fun QrDisplay(
 @Composable
 private fun QrScanner(
     componentId: String,
+    accessibilityLabel: String?,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -205,7 +212,13 @@ private fun QrScanner(
     }
 
     Surface(
-        modifier = modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp)),
+        modifier =
+            modifier
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .semantics {
+                    accessibilityLabel?.let { contentDescription = it }
+                },
         color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         androidx.compose.runtime.key(useFrontCamera) {

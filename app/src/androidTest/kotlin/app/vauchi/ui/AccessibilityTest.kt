@@ -81,6 +81,7 @@ class AccessibilityTest {
                             title = "Connection",
                             detail = "Connected",
                             status = Status.Success,
+                            statusLabel = "Connected",
                             a11y =
                                 A11y(
                                     label = "Connection status: connected",

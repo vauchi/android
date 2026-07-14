@@ -61,7 +61,13 @@ class ActionResultHostTest {
     fun main_tree_hosts_show_toast() {
         mountMainTree()
 
-        applyOnUi(ActionResult.ShowToast(message = TOAST_PROBE, undoActionId = null))
+        applyOnUi(
+            ActionResult.ShowToast(
+                message = TOAST_PROBE,
+                undoActionId = "undo_probe",
+                undoLabel = "Rückgängig",
+            ),
+        )
 
         composeTestRule
             .onNodeWithText(TOAST_PROBE)
@@ -69,6 +75,9 @@ class ActionResultHostTest {
                 "Main tree dropped ActionResult.ShowToast — no toast host " +
                     "observes CoreAppViewModel.toastMessage in CoreScreenView",
             )
+        composeTestRule.onNodeWithText("Rückgängig").assertExists(
+            "Main tree dropped the core-owned toast action label",
+        )
     }
 
     @Test

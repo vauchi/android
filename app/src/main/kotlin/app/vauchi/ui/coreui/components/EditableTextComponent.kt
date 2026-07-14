@@ -10,23 +10,23 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.UserAction
-import app.vauchi.util.LocalizationManager
 
 /**
  * Renders a core EditableText component that toggles between display and edit mode.
@@ -36,13 +36,17 @@ fun EditableTextComponent(
     componentId: String,
     label: String,
     value: String,
+    editText: String,
+    saveText: String,
+    cancelText: String,
+    editActionId: String,
+    saveActionId: String,
+    cancelActionId: String,
     editing: Boolean,
     validationError: String?,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     Column(modifier = modifier.padding(vertical = 4.dp)) {
         Text(
             text = label,
@@ -66,6 +70,36 @@ fun EditableTextComponent(
                     },
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        onAction(UserAction.ActionPressed(actionId = cancelActionId))
+                    },
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .semantics { contentDescription = cancelText },
+                ) {
+                    Text(cancelText)
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Button(
+                    onClick = {
+                        onAction(UserAction.ActionPressed(actionId = saveActionId))
+                    },
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .semantics { contentDescription = saveText },
+                ) {
+                    Text(saveText)
+                }
+            }
         } else {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -77,14 +111,11 @@ fun EditableTextComponent(
                     modifier = Modifier.weight(1f),
                 )
 
-                // TODO(HUMBLE): T, P1. Mints "{id}:edit" action id. Fix: core
-                // supplies explicit edit_action_id. (see _private problem record
-                // 2026-07-06-mobile-domain-shell-violations)
                 IconButton(
                     onClick = {
-                        onAction(UserAction.ActionPressed(actionId = "$componentId:edit"))
+                        onAction(UserAction.ActionPressed(actionId = editActionId))
                     },
-                    modifier = Modifier.semantics { contentDescription = localizationManager.t("a11y.edit_field").replace("{label}", label) },
+                    modifier = Modifier.semantics { contentDescription = editText },
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,

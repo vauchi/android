@@ -223,6 +223,7 @@ sealed class Component {
 
     data class FieldList(
         val id: String,
+        val title: String = "",
         val fields: kotlin.collections.List<Field>,
         val visibilityMode: VisibilityMode,
         val availableGroups: kotlin.collections.List<String>,
@@ -289,7 +290,7 @@ sealed class Component {
         val title: String,
         val detail: String? = null,
         val status: Status,
-        val statusLabel: String? = null,
+        val statusLabel: String,
         val a11y: A11y? = null,
     ) : Component()
 
@@ -310,26 +311,13 @@ sealed class Component {
         val a11y: A11y? = null,
     ) : Component()
 
-    data class ConfirmationDialog(
-        val id: String,
-        val title: String,
-        val message: String,
-        val confirmText: String,
-        val destructive: Boolean,
-    ) : Component()
-
-    data class ShowToast(
-        val id: String,
-        val message: String,
-        val undoActionId: String? = null,
-        val durationMs: Int,
-    ) : Component()
-
     data class InlineConfirm(
         val id: String,
         val warning: String,
         val confirmText: String,
         val cancelText: String,
+        val confirmActionId: String,
+        val cancelActionId: String,
         val destructive: Boolean,
         val a11y: A11y? = null,
     ) : Component()
@@ -338,6 +326,12 @@ sealed class Component {
         val id: String,
         val label: String,
         val value: String,
+        val editText: String,
+        val saveText: String,
+        val cancelText: String,
+        val editActionId: String,
+        val saveActionId: String,
+        val cancelActionId: String,
         val editing: Boolean,
         val validationError: String? = null,
         val a11y: A11y? = null,
@@ -449,6 +443,7 @@ private data class ToggleListContent(
 @Serializable
 private data class FieldListContent(
     val id: String,
+    val title: String = "",
     val fields: List<Field>,
     @SerialName("visibility_mode") val visibilityMode: VisibilityMode,
     @SerialName("available_scopes") val availableGroups: List<String>,
@@ -514,7 +509,7 @@ private data class StatusIndicatorContent(
     val title: String,
     val detail: String? = null,
     val status: Status,
-    @SerialName("status_label") val statusLabel: String? = null,
+    @SerialName("status_label") val statusLabel: String,
     val a11y: A11y? = null,
 )
 
@@ -538,28 +533,13 @@ private data class QrCodeContent(
 )
 
 @Serializable
-private data class ConfirmationDialogContent(
-    val id: String,
-    val title: String,
-    val message: String,
-    @SerialName("confirm_text") val confirmText: String,
-    val destructive: Boolean,
-)
-
-@Serializable
-private data class ShowToastContent(
-    val id: String,
-    val message: String,
-    @SerialName("undo_action_id") val undoActionId: String? = null,
-    @SerialName("duration_ms") val durationMs: Int,
-)
-
-@Serializable
 private data class InlineConfirmContent(
     val id: String,
     val warning: String,
     @SerialName("confirm_text") val confirmText: String,
     @SerialName("cancel_text") val cancelText: String,
+    @SerialName("confirm_action_id") val confirmActionId: String,
+    @SerialName("cancel_action_id") val cancelActionId: String,
     val destructive: Boolean,
     val a11y: A11y? = null,
 )
@@ -569,6 +549,12 @@ private data class EditableTextContent(
     val id: String,
     val label: String,
     val value: String,
+    @SerialName("edit_text") val editText: String,
+    @SerialName("save_text") val saveText: String,
+    @SerialName("cancel_text") val cancelText: String,
+    @SerialName("edit_action_id") val editActionId: String,
+    @SerialName("save_action_id") val saveActionId: String,
+    @SerialName("cancel_action_id") val cancelActionId: String,
     val editing: Boolean,
     @SerialName("validation_error") val validationError: String? = null,
     val a11y: A11y? = null,
@@ -681,6 +667,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                             jsonDecoder.json.decodeFromJsonElement(element["FieldList"]!!)
                         Component.FieldList(
                             id = c.id,
+                            title = c.title,
                             fields = c.fields,
                             visibilityMode = c.visibilityMode,
                             availableGroups = c.availableGroups,
@@ -779,29 +766,6 @@ internal object ComponentSerializer : KSerializer<Component> {
                         Component.QrCode(id = c.id, data = c.data, mode = c.mode, label = c.label, a11y = c.a11y)
                     }
 
-                    "ConfirmationDialog" in element -> {
-                        val c: ConfirmationDialogContent =
-                            jsonDecoder.json.decodeFromJsonElement(element["ConfirmationDialog"]!!)
-                        Component.ConfirmationDialog(
-                            id = c.id,
-                            title = c.title,
-                            message = c.message,
-                            confirmText = c.confirmText,
-                            destructive = c.destructive,
-                        )
-                    }
-
-                    "ShowToast" in element -> {
-                        val c: ShowToastContent =
-                            jsonDecoder.json.decodeFromJsonElement(element["ShowToast"]!!)
-                        Component.ShowToast(
-                            id = c.id,
-                            message = c.message,
-                            undoActionId = c.undoActionId,
-                            durationMs = c.durationMs,
-                        )
-                    }
-
                     "InlineConfirm" in element -> {
                         val c: InlineConfirmContent =
                             jsonDecoder.json.decodeFromJsonElement(element["InlineConfirm"]!!)
@@ -810,6 +774,8 @@ internal object ComponentSerializer : KSerializer<Component> {
                             warning = c.warning,
                             confirmText = c.confirmText,
                             cancelText = c.cancelText,
+                            confirmActionId = c.confirmActionId,
+                            cancelActionId = c.cancelActionId,
                             destructive = c.destructive,
                             a11y = c.a11y,
                         )
@@ -822,6 +788,12 @@ internal object ComponentSerializer : KSerializer<Component> {
                             id = c.id,
                             label = c.label,
                             value = c.value,
+                            editText = c.editText,
+                            saveText = c.saveText,
+                            cancelText = c.cancelText,
+                            editActionId = c.editActionId,
+                            saveActionId = c.saveActionId,
+                            cancelActionId = c.cancelActionId,
                             editing = c.editing,
                             validationError = c.validationError,
                             a11y = c.a11y,
@@ -950,6 +922,7 @@ internal object ComponentSerializer : KSerializer<Component> {
                 val content =
                     FieldListContent(
                         id = value.id,
+                        title = value.title,
                         fields = value.fields,
                         visibilityMode = value.visibilityMode,
                         availableGroups = value.availableGroups,
@@ -1056,31 +1029,6 @@ internal object ComponentSerializer : KSerializer<Component> {
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("QrCode" to inner)))
             }
 
-            is Component.ConfirmationDialog -> {
-                val content =
-                    ConfirmationDialogContent(
-                        id = value.id,
-                        title = value.title,
-                        message = value.message,
-                        confirmText = value.confirmText,
-                        destructive = value.destructive,
-                    )
-                val inner = jsonEncoder.json.encodeToJsonElement(content)
-                jsonEncoder.encodeJsonElement(JsonObject(mapOf("ConfirmationDialog" to inner)))
-            }
-
-            is Component.ShowToast -> {
-                val content =
-                    ShowToastContent(
-                        id = value.id,
-                        message = value.message,
-                        undoActionId = value.undoActionId,
-                        durationMs = value.durationMs,
-                    )
-                val inner = jsonEncoder.json.encodeToJsonElement(content)
-                jsonEncoder.encodeJsonElement(JsonObject(mapOf("ShowToast" to inner)))
-            }
-
             is Component.InlineConfirm -> {
                 val content =
                     InlineConfirmContent(
@@ -1088,6 +1036,8 @@ internal object ComponentSerializer : KSerializer<Component> {
                         warning = value.warning,
                         confirmText = value.confirmText,
                         cancelText = value.cancelText,
+                        confirmActionId = value.confirmActionId,
+                        cancelActionId = value.cancelActionId,
                         destructive = value.destructive,
                         a11y = value.a11y,
                     )
@@ -1101,6 +1051,12 @@ internal object ComponentSerializer : KSerializer<Component> {
                         id = value.id,
                         label = value.label,
                         value = value.value,
+                        editText = value.editText,
+                        saveText = value.saveText,
+                        cancelText = value.cancelText,
+                        editActionId = value.editActionId,
+                        saveActionId = value.saveActionId,
+                        cancelActionId = value.cancelActionId,
                         editing = value.editing,
                         validationError = value.validationError,
                         a11y = value.a11y,
@@ -2155,6 +2111,7 @@ sealed class ActionResult {
     data class ShowToast(
         val message: String,
         val undoActionId: String?,
+        val undoLabel: String?,
     ) : ActionResult()
 
     data object WipeComplete : ActionResult()
@@ -2425,6 +2382,7 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                         ActionResult.ShowToast(
                             message = obj["message"]!!.jsonPrimitive.content,
                             undoActionId = obj["undo_action_id"]?.jsonPrimitive?.contentOrNull,
+                            undoLabel = obj["undo_label"]?.jsonPrimitive?.contentOrNull,
                         )
                     }
 
@@ -2629,6 +2587,10 @@ internal object ActionResultSerializer : KSerializer<ActionResult> {
                         put(
                             "undo_action_id",
                             if (value.undoActionId != null) JsonPrimitive(value.undoActionId) else JsonNull,
+                        )
+                        put(
+                            "undo_label",
+                            if (value.undoLabel != null) JsonPrimitive(value.undoLabel) else JsonNull,
                         )
                     }
                 jsonEncoder.encodeJsonElement(JsonObject(mapOf("ShowToast" to JsonObject(inner))))

@@ -30,10 +30,11 @@ import app.vauchi.ui.coreui.UserAction
  */
 @Composable
 fun InlineConfirmComponent(
-    componentId: String,
     warning: String,
     confirmText: String,
     cancelText: String,
+    confirmActionId: String,
+    cancelActionId: String,
     destructive: Boolean,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -58,12 +59,9 @@ fun InlineConfirmComponent(
                         .fillMaxWidth()
                         .padding(top = 12.dp),
             ) {
-                // TODO(HUMBLE): T, P1. Mints "{id}:cancel" action id. Fix:
-                // core supplies explicit cancel_action_id. (see _private problem
-                // record 2026-07-06-mobile-domain-shell-violations)
                 OutlinedButton(
                     onClick = {
-                        onAction(UserAction.ActionPressed(actionId = "$componentId:cancel"))
+                        onAction(UserAction.ActionPressed(actionId = cancelActionId))
                     },
                     modifier =
                         Modifier
@@ -76,12 +74,9 @@ fun InlineConfirmComponent(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 if (destructive) {
-                    // TODO(HUMBLE): T, P1. Mints "{id}:confirm" action id. Fix:
-                    // core supplies explicit confirm_action_id. (see _private
-                    // problem record 2026-07-06-mobile-domain-shell-violations)
                     Button(
                         onClick = {
-                            onAction(UserAction.ActionPressed(actionId = "$componentId:confirm"))
+                            onAction(UserAction.ActionPressed(actionId = confirmActionId))
                         },
                         colors =
                             ButtonDefaults.buttonColors(
@@ -98,7 +93,7 @@ fun InlineConfirmComponent(
                 } else {
                     Button(
                         onClick = {
-                            onAction(UserAction.ActionPressed(actionId = "$componentId:confirm"))
+                            onAction(UserAction.ActionPressed(actionId = confirmActionId))
                         },
                         modifier =
                             Modifier

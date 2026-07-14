@@ -205,6 +205,7 @@ class ModelsTest {
             {
                 "FieldList": {
                     "id": "fields",
+                    "title": "Kontaktfelder",
                     "fields": [
                         {"id": "f1", "field_type": "Phone", "label": "Mobile", "value": "+1234", "icon": "phone", "visibility": "Shown"},
                         {"id": "f2", "field_type": "Email", "label": "Work", "value": "a@b.com", "icon": "envelope", "visibility": "Hidden"}
@@ -217,6 +218,7 @@ class ModelsTest {
 
         val component = json.decodeFromString<Component>(input)
         val fieldList = component as Component.FieldList
+        assertEquals("Kontaktfelder", fieldList.title)
         assertEquals(2, fieldList.fields.size)
         assertEquals("Phone", fieldList.fields[0].fieldType)
         assertEquals("phone", fieldList.fields[0].icon)
@@ -284,6 +286,33 @@ class ModelsTest {
         val input = """"Divider""""
         val component = json.decodeFromString<Component>(input)
         assertTrue(component is Component.Divider)
+    }
+
+    @Test
+    fun `generic components preserve core copy and opaque action ids`() {
+        val inline =
+            json.decodeFromString<Component>(
+                """{"InlineConfirm":{"id":"visual-only-id","warning":"Continue?","confirm_text":"Yes","cancel_text":"No","confirm_action_id":"opaque/confirm#7","cancel_action_id":"opaque/cancel#8","destructive":false}}""",
+            ) as Component.InlineConfirm
+        assertEquals("opaque/confirm#7", inline.confirmActionId)
+        assertEquals("opaque/cancel#8", inline.cancelActionId)
+
+        val editable =
+            json.decodeFromString<Component>(
+                """{"EditableText":{"id":"visual-only-id","label":"Note","value":"Hello","edit_text":"Change note","save_text":"Keep it","cancel_text":"Leave it","edit_action_id":"opaque/edit#1","save_action_id":"opaque/save#2","cancel_action_id":"opaque/cancel#3","editing":false,"validation_error":null}}""",
+            ) as Component.EditableText
+        assertEquals("Change note", editable.editText)
+        assertEquals("Keep it", editable.saveText)
+        assertEquals("Leave it", editable.cancelText)
+        assertEquals("opaque/edit#1", editable.editActionId)
+        assertEquals("opaque/save#2", editable.saveActionId)
+        assertEquals("opaque/cancel#3", editable.cancelActionId)
+
+        val imageCircle =
+            json.decodeFromString<Component>(
+                """{"ImageCircle":{"id":"visual-only-id","image_data":null,"initials":"AG","brightness":0.0,"editable":true,"edit_action_id":"opaque/image-edit#4"}}""",
+            ) as Component.ImageCircle
+        assertEquals("opaque/image-edit#4", imageCircle.editActionId)
     }
 
     // ── UiFieldVisibility ───────────────────────────────────────────
@@ -480,11 +509,13 @@ class ModelsTest {
 
     @Test
     fun `ActionResult ShowToast deserialization`() {
-        val input = """{"ShowToast": {"message": "Saved", "undo_action_id": "undo_1"}}"""
+        val input =
+            """{"ShowToast": {"message": "Saved", "undo_action_id": "undo_1", "undo_label": "Rückgängig"}}"""
         val result = json.decodeFromString<ActionResult>(input)
         assertTrue(result is ActionResult.ShowToast)
         assertEquals("Saved", (result as ActionResult.ShowToast).message)
         assertEquals("undo_1", result.undoActionId)
+        assertEquals("Rückgängig", result.undoLabel)
     }
 
     @Test
@@ -1066,6 +1097,26 @@ class ModelsTest {
         val encoded = json.encodeToString(Component.serializer(), original)
         val decoded = json.decodeFromString(Component.serializer(), encoded)
         assertEquals(original, decoded)
+    }
+
+    @Test
+    fun `StatusIndicator preserves the core-localized label`() {
+        val input =
+            """
+            {
+              "StatusIndicator": {
+                "id": "sync-status",
+                "icon": null,
+                "title": "Synchronisation",
+                "detail": null,
+                "status": "Success",
+                "status_label": "Erfolg"
+              }
+            }
+            """.trimIndent()
+        val component = json.decodeFromString<Component>(input)
+        assertTrue(component is Component.StatusIndicator)
+        assertEquals("Erfolg", (component as Component.StatusIndicator).statusLabel)
     }
 
     @Test

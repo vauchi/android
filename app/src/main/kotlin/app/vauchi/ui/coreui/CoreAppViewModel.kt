@@ -87,6 +87,9 @@ class CoreAppViewModel(
     private val _toastUndoActionId = MutableStateFlow<String?>(null)
     val toastUndoActionId: StateFlow<String?> = _toastUndoActionId.asStateFlow()
 
+    private val _toastUndoLabel = MutableStateFlow<String?>(null)
+    val toastUndoLabel: StateFlow<String?> = _toastUndoLabel.asStateFlow()
+
     private val _alertMessage = MutableStateFlow<Pair<String, String>?>(null)
     val alertMessage: StateFlow<Pair<String, String>?> = _alertMessage.asStateFlow()
 
@@ -757,6 +760,7 @@ class CoreAppViewModel(
     fun dismissToast() {
         _toastMessage.value = null
         _toastUndoActionId.value = null
+        _toastUndoLabel.value = null
     }
 
     /**
@@ -768,9 +772,11 @@ class CoreAppViewModel(
     fun showToast(
         message: String,
         undoActionId: String? = null,
+        undoLabel: String? = null,
     ) {
         _toastMessage.value = message
         _toastUndoActionId.value = undoActionId
+        _toastUndoLabel.value = undoLabel
     }
 
     fun dismissAlert() {
@@ -816,6 +822,7 @@ class CoreAppViewModel(
             is ActionResult.ShowToast -> {
                 _toastMessage.value = result.message
                 _toastUndoActionId.value = result.undoActionId
+                _toastUndoLabel.value = result.undoLabel
             }
 
             is ActionResult.ShowAlert -> {

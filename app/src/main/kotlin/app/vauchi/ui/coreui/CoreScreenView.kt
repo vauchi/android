@@ -71,6 +71,7 @@ fun CoreScreenView(
     val screen by viewModel.screen.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
     val toastUndoActionId by viewModel.toastUndoActionId.collectAsState()
+    val toastUndoLabel by viewModel.toastUndoLabel.collectAsState()
     val alertMessage by viewModel.alertMessage.collectAsState()
     val imagePickEvent by viewModel.imagePickEvent.collectAsState()
     val useFrontCamera by viewModel.useFrontCamera.collectAsState()
@@ -191,6 +192,7 @@ fun CoreScreenView(
                     },
                     toastMessage = toastMessage,
                     toastUndoActionId = toastUndoActionId,
+                    toastUndoLabel = toastUndoLabel,
                     onToastDismiss = { viewModel.dismissToast() },
                 )
             }

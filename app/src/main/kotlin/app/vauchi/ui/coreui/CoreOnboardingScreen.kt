@@ -59,6 +59,7 @@ fun CoreOnboardingScreen(
     // observing it and is silently dropped.
     val toastMessage by coreAppViewModel.toastMessage.collectAsState()
     val toastUndoActionId by coreAppViewModel.toastUndoActionId.collectAsState()
+    val toastUndoLabel by coreAppViewModel.toastUndoLabel.collectAsState()
 
     // Cold start: ensure PAE's current screen is loaded so the user
     // sees the Onboarding step PAE reports. With no identity, that's
@@ -136,6 +137,7 @@ fun CoreOnboardingScreen(
                         modifier = Modifier.fillMaxSize(),
                         toastMessage = toastMessage,
                         toastUndoActionId = toastUndoActionId,
+                        toastUndoLabel = toastUndoLabel,
                         onToastDismiss = coreAppViewModel::dismissToast,
                     )
                 }
@@ -145,4 +147,3 @@ fun CoreOnboardingScreen(
         }
     }
 }
-

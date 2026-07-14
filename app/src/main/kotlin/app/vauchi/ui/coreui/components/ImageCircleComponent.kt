@@ -10,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -28,13 +27,11 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.coreui.A11y
 import app.vauchi.ui.coreui.UserAction
-import app.vauchi.util.LocalizationManager
 
 /**
  * Renders a core ImageCircle component.
@@ -57,11 +54,6 @@ fun ImageCircleComponent(
     modifier: Modifier = Modifier,
     a11y: A11y? = null,
 ) {
-    val context = LocalContext.current
-    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
-    // Resolved in composable scope — .semantics {} lambdas are not composable.
-    val avatarPreviewFallback = localizationManager.t("a11y.avatar_preview")
-    val avatarImageFallback = localizationManager.t("a11y.avatar_image")
     val bgColorValue =
         bgColor?.let { colorFromIntList(it) }
             ?: MaterialTheme.colorScheme.primary
@@ -110,7 +102,7 @@ fun ImageCircleComponent(
                         Modifier
                     },
                 ).semantics {
-                    contentDescription = a11y?.label ?: avatarPreviewFallback
+                    contentDescription = a11y?.label ?: initials
                 },
         contentAlignment = Alignment.Center,
     ) {
@@ -125,7 +117,7 @@ fun ImageCircleComponent(
         if (bitmap != null) {
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = a11y?.label ?: avatarImageFallback,
+                contentDescription = a11y?.label ?: initials,
                 modifier =
                     Modifier
                         .fillMaxSize()
@@ -164,7 +156,7 @@ fun ImageCircleComponent(
             ) {
                 Icon(
                     imageVector = Icons.Default.CameraAlt,
-                    contentDescription = localizationManager.t("a11y.edit_avatar"),
+                    contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(32.dp),
                 )

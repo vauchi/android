@@ -23,7 +23,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -32,7 +31,6 @@ import app.vauchi.ui.coreui.Field
 import app.vauchi.ui.coreui.UiFieldVisibility
 import app.vauchi.ui.coreui.UserAction
 import app.vauchi.ui.coreui.VisibilityMode
-import app.vauchi.util.LocalizationManager
 
 /**
  * Renders a core FieldList component as rows with visibility controls.
@@ -42,6 +40,7 @@ import app.vauchi.util.LocalizationManager
  */
 @Composable
 fun FieldListComponent(
+    title: String = "",
     fields: List<Field>,
     visibilityMode: VisibilityMode,
     availableGroups: List<String>,
@@ -49,12 +48,10 @@ fun FieldListComponent(
     modifier: Modifier = Modifier,
     a11y: A11y? = null,
 ) {
-    // Resolved in composable scope — .semantics {} lambdas are not composable.
-    val fieldsFallback = LocalizationManager.getInstance(LocalContext.current).t("a11y.contact_fields")
     Column(
         modifier =
             modifier
-                .semantics { contentDescription = a11y?.label ?: fieldsFallback },
+                .semantics { contentDescription = a11y?.label ?: title },
     ) {
         fields.forEachIndexed { index, field ->
             FieldRow(
