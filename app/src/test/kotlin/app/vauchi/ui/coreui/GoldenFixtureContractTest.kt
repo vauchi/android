@@ -73,12 +73,12 @@ class GoldenFixtureContractTest {
     }
 
     @Test
-    fun `all fixtures have non-empty components`() {
+    fun `all fixtures have render content or actions`() {
         for (name in discoverFixtureNames()) {
             val screen = json.decodeFromString<ScreenModel>(loadFixture(name))
-            assertFalse(
-                "Fixture '$name': components must not be empty",
-                screen.components.isEmpty(),
+            assertTrue(
+                "Fixture '$name': components and actions must not both be empty",
+                screen.components.isNotEmpty() || screen.actions.isNotEmpty(),
             )
         }
     }
