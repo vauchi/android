@@ -1053,12 +1053,13 @@ class CoreAppViewModel(
                 }
 
                 else -> {
-                    // NFC initiator command dispatch (T1.1). When core emits
-                    // NfcActivate/NfcSendApdu/NfcDeactivate, relay to the
-                    // reader and route its hardware events back to the engine.
-                    // BLE / Audio and the HCE responder side remain deferred;
-                    // initiator-vs-responder role negotiation is an open design
-                    // question (`2026-05-29-nfc-exchange-mode-entry-wiring`).
+                    // NFC command dispatch. When core emits NfcActivate/
+                    // NfcSendApdu/NfcDeactivate, relay to the reader (initiator)
+                    // or HCE responder and route hardware events back to the
+                    // engine. Both sides landed — only the two-device hardware
+                    // acceptance gate remains open
+                    // (`2026-05-29-nfc-exchange-mode-entry-wiring`, status
+                    // `testing`).
                     val handled =
                         dispatchNfcCommand(
                             cmd,
