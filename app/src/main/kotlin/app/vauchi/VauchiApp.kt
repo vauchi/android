@@ -12,11 +12,18 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import app.vauchi.worker.SyncWorker
+import uniffi.vauchi_platform.initMobileLogging
 import java.util.concurrent.TimeUnit
 
 class VauchiApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        // Before anything else: WorkManager below can run a SyncWorker
+        // this same process launch, and Rust-side log::warn!/error! calls
+        // (BLE handshake, exchange, sync failure paths) are silent until
+        // this installs the Logcat backend (2026-06-08-magic-audio-
+        // proximity-driver deferred this permanent version).
+        initMobileLogging()
         instance = this
         schedulePeriodicSync()
     }
