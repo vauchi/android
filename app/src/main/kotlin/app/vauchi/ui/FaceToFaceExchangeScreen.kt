@@ -163,16 +163,19 @@ fun FaceToFaceCameraPreview(
                 cameraProviderFuture.addListener({
                     val cameraProvider = cameraProviderFuture.get()
 
-                    // 240p optimal for rxing on Samsung S7 — 9ms decode,
-                    // 100% scan rate on animated V4 QR. 320x240 with the
-                    // CLOSEST_LOWER_THEN_HIGHER fallback rule lets newer
-                    // devices pick the closest supported resolution.
+                    // 480p, not 240p: the 240p bench (9 ms, 100 % on animated
+                    // V4) only holds for crisp, frame-filling captures.
+                    // Handheld screen-to-screen scanning fails at 240p under
+                    // blur sigma >= 1 or < 65 % frame fill; 480p decodes
+                    // through sigma 2 and 35 % fill at <= 5 ms — host repro in
+                    // 2026-07-17-real-device-frontend-smoke.md (QR decode
+                    // envelope).
                     val resolutionSelector =
                         ResolutionSelector
                             .Builder()
                             .setResolutionStrategy(
                                 ResolutionStrategy(
-                                    android.util.Size(320, 240),
+                                    android.util.Size(640, 480),
                                     ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER,
                                 ),
                             ).build()

@@ -251,15 +251,21 @@ private fun QrScanner(
                             {
                                 val cameraProvider = cameraProviderFuture.get()
 
-                                // 240p via FaceToFaceExchangeScreen pattern — rxing
-                                // tryHarder hits ~9 ms decode at this resolution with
-                                // 100 % rate on V4-V10 multipart QRs.
+                                // 480p, not 240p: the 240p bench numbers (9 ms, 100 %
+                                // on V4-V10) only hold for crisp, frame-filling
+                                // captures. Handheld screen-to-screen scanning adds
+                                // defocus/shake; at 240p a V10 INIT QR fails to
+                                // decode at blur sigma >= 1 or < 65 % frame fill,
+                                // while 480p decodes through sigma 2 and 35 % fill
+                                // at <= 5 ms — host repro in
+                                // 2026-07-17-real-device-frontend-smoke.md (QR
+                                // decode envelope).
                                 val resolutionSelector =
                                     ResolutionSelector
                                         .Builder()
                                         .setResolutionStrategy(
                                             ResolutionStrategy(
-                                                android.util.Size(320, 240),
+                                                android.util.Size(640, 480),
                                                 ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER,
                                             ),
                                         ).build()
