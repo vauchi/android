@@ -63,7 +63,7 @@ stages:
   - deploy
 
 variables:
-  VAUCHI_SCRIPTS_REF: "ci-templates-v2026.07.2"
+  VAUCHI_SCRIPTS_REF: "5f6614ba3de5f462978d5222b682c27d2dfe8d3a"
   ANDROID_COMPILE_SDK: "35"
   ANDROID_BUILD_TOOLS: "35.0.0"
   GIT_DEPTH: "1"
