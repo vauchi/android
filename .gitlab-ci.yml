@@ -299,6 +299,21 @@ lint:cross-cutting-blocking:
       curl --silent --fail \
         "${CI_API_V4_URL}/projects/vauchi%2Fscripts/repository/files/scripts%2Fhumble_check.baseline.json/raw?ref=${VAUCHI_SCRIPTS_REF}" \
         -o .ratchet-scripts/humble_check.baseline.json
+    # View-layer pure-renderer lints (same set iOS runs in
+    # check:humble-ui-ratchets + the android-only domain-imports fence).
+    # Fetched from vauchi/scripts at the pinned ref; each exits non-zero
+    # on violation.
+    - |
+      for script in \
+          check-no-isimported-in-views.sh \
+          check-no-domain-conditionals-in-views.sh \
+          check-no-direct-clipboard-writes.sh \
+          check-no-domain-imports-in-views.sh; do
+        curl --silent --fail \
+          "${CI_API_V4_URL}/projects/vauchi%2Fscripts/repository/files/scripts%2F${script}/raw?ref=${VAUCHI_SCRIPTS_REF}" \
+          -o ".ratchet-scripts/${script}"
+        chmod +x ".ratchet-scripts/${script}"
+      done
     # Always pull the latest locales/main. GitLab runners can preserve
     # `../locales` across job retries on the same machine, and a stale
     # clone causes the gate to fire on keys the current
@@ -317,6 +332,12 @@ lint:cross-cutting-blocking:
     - bash scripts/check-no-hardcoded-strings.sh
         app/src/main/kotlin/app/vauchi
     - python3 .ratchet-scripts/humble_check.py --repo "${CI_PROJECT_NAME}" --repo-path "${CI_PROJECT_DIR}" --config .ratchet-scripts/humble_check_rules.json --check .ratchet-scripts/humble_check.baseline.json
+    # View-layer pure-renderer lints (previously local-only via
+    # `just lint android`; promoted to blocking 2026-07-18).
+    - .ratchet-scripts/check-no-isimported-in-views.sh "${CI_PROJECT_DIR}"
+    - .ratchet-scripts/check-no-domain-conditionals-in-views.sh "${CI_PROJECT_DIR}"
+    - .ratchet-scripts/check-no-direct-clipboard-writes.sh "${CI_PROJECT_DIR}"
+    - .ratchet-scripts/check-no-domain-imports-in-views.sh "${CI_PROJECT_DIR}" --strict
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
