@@ -29,9 +29,12 @@ class ExchangeModePermissionsTest {
     }
 
     @Test
-    fun glance_requires_only_camera() {
+    fun glance_requires_camera_and_bluetooth_on_api31() {
         val perms = ExchangeModePermissions.forMode("glance", sdkInt = api31)
-        assertEquals(listOf(Manifest.permission.CAMERA), perms)
+        assertTrue(perms.contains(Manifest.permission.CAMERA))
+        assertTrue(perms.contains(Manifest.permission.BLUETOOTH_SCAN))
+        assertTrue(perms.contains(Manifest.permission.BLUETOOTH_CONNECT))
+        assertTrue(perms.contains(Manifest.permission.BLUETOOTH_ADVERTISE))
     }
 
     @Test

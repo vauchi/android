@@ -293,9 +293,11 @@ class CoreAppViewModel(
     private val _modePermissionRequest = MutableStateFlow<List<String>>(emptyList())
     val modePermissionRequest: StateFlow<List<String>> =
         _modePermissionRequest.asStateFlow()
+    private val modePermissionActionGate = ModePermissionActionGate()
 
-    fun consumeModePermissionRequest() {
+    fun resolveModePermissionRequest(allGranted: Boolean) {
         _modePermissionRequest.value = emptyList()
+        modePermissionActionGate.resolve(allGranted)?.let(::dispatchAction)
     }
 
     /**
@@ -616,11 +618,16 @@ class CoreAppViewModel(
         // with capability list. (see _private problem record
         // 2026-07-06-mobile-domain-shell-violations)
         if (action is UserAction.ListItemSelected && action.itemId.startsWith("mode:")) {
-            val perms = ExchangeModePermissions.forMode(action.itemId)
+            val perms = modePermissionActionGate.defer(action)
             if (perms.isNotEmpty()) {
                 _modePermissionRequest.value = perms
+                return
             }
         }
+        dispatchAction(action)
+    }
+
+    private fun dispatchAction(action: UserAction) {
         viewModelScope.launch {
             try {
                 _actionInFlight.value = true

@@ -68,8 +68,8 @@ object ExchangeModePermissions {
         return when (modeItemId.removePrefix("mode:")) {
             "hover" -> camera + mic
 
-            // multi-stage QR + ultrasonic audio proximity
-            "glance" -> camera
+            // one-sided QR bootstrap + BLE card transfer
+            "glance" -> camera + ble
 
             // one-sided/multi-stage QR scan
             "magic" -> ble + mic

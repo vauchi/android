@@ -611,7 +611,11 @@ fun MainScreen(
     val modePermissionLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions(),
-        ) { coreAppViewModel.consumeModePermissionRequest() }
+        ) { results ->
+            coreAppViewModel.resolveModePermissionRequest(
+                allGranted = results.values.all { it },
+            )
+        }
     LaunchedEffect(modePermissionRequest) {
         val perms = modePermissionRequest
         if (perms.isEmpty()) return@LaunchedEffect
@@ -621,7 +625,7 @@ fun MainScreen(
                     PackageManager.PERMISSION_GRANTED
             }
         if (ungranted.isEmpty()) {
-            coreAppViewModel.consumeModePermissionRequest()
+            coreAppViewModel.resolveModePermissionRequest(allGranted = true)
         } else {
             modePermissionLauncher.launch(ungranted.toTypedArray())
         }
