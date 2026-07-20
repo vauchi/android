@@ -15,17 +15,22 @@ import app.vauchi.exchange.ExchangeModePermissions
 internal class ModePermissionActionGate(
     private val permissionsForMode: (String) -> List<String> = ExchangeModePermissions::forMode,
 ) {
-    private var pendingAction: UserAction.ListItemSelected? = null
+    private var pendingDispatch: (() -> Unit)? = null
 
-    fun defer(action: UserAction.ListItemSelected): List<String> {
-        val permissions = permissionsForMode(action.itemId)
-        pendingAction = action.takeIf { permissions.isNotEmpty() }
+    fun defer(
+        modeItemId: String,
+        dispatch: () -> Unit,
+    ): List<String> {
+        val permissions = permissionsForMode(modeItemId)
+        pendingDispatch = dispatch.takeIf { permissions.isNotEmpty() }
         return permissions
     }
 
-    fun resolve(allGranted: Boolean): UserAction.ListItemSelected? {
-        val action = pendingAction
-        pendingAction = null
-        return action.takeIf { allGranted }
+    fun resolve(allGranted: Boolean) {
+        val dispatch = pendingDispatch
+        pendingDispatch = null
+        if (allGranted) {
+            dispatch?.invoke()
+        }
     }
 }

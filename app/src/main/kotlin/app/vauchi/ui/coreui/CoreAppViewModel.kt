@@ -297,7 +297,7 @@ class CoreAppViewModel(
 
     fun resolveModePermissionRequest(allGranted: Boolean) {
         _modePermissionRequest.value = emptyList()
-        modePermissionActionGate.resolve(allGranted)?.let(::dispatchAction)
+        modePermissionActionGate.resolve(allGranted)
     }
 
     /**
@@ -610,6 +610,7 @@ class CoreAppViewModel(
             onCameraPermissionDenied()
             return
         }
+        val actionJson = json.encodeToString(UserAction.serializer(), action)
         // Permissions step: when a mode is picked, surface the OS permissions
         // its ritual needs so the Activity can request them up front, before the
         // ritual screen. See _private/docs/problems/2026-06-06-exchange-ritual-flow/.
@@ -618,20 +619,22 @@ class CoreAppViewModel(
         // with capability list. (see _private problem record
         // 2026-07-06-mobile-domain-shell-violations)
         if (action is UserAction.ListItemSelected && action.itemId.startsWith("mode:")) {
-            val perms = modePermissionActionGate.defer(action)
+            val perms =
+                modePermissionActionGate.defer(action.itemId) {
+                    submitActionJson(actionJson)
+                }
             if (perms.isNotEmpty()) {
                 _modePermissionRequest.value = perms
                 return
             }
         }
-        dispatchAction(action)
+        submitActionJson(actionJson)
     }
 
-    private fun dispatchAction(action: UserAction) {
+    private fun submitActionJson(actionJson: String) {
         viewModelScope.launch {
             try {
                 _actionInFlight.value = true
-                val actionJson = json.encodeToString(UserAction.serializer(), action)
                 val resultJson =
                     withContext(Dispatchers.IO) {
                         appEngine.handleActionJson(actionJson = actionJson)

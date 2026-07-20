@@ -5,33 +5,37 @@
 package app.vauchi.ui.coreui
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ModePermissionActionGateTest {
-    private val glance =
-        UserAction.ListItemSelected(
-            componentId = "exchange_modes",
-            itemId = "mode:glance",
-        )
-
     @Test
     fun mode_action_waits_until_permissions_are_granted() {
         val gate =
             ModePermissionActionGate { listOf("camera", "bluetooth") }
+        var dispatchCount = 0
 
-        assertEquals(listOf("camera", "bluetooth"), gate.defer(glance))
-        assertEquals(glance, gate.resolve(allGranted = true))
-        assertNull(gate.resolve(allGranted = true))
+        assertEquals(
+            listOf("camera", "bluetooth"),
+            gate.defer("mode:glance") { dispatchCount += 1 },
+        )
+        assertEquals(0, dispatchCount)
+        gate.resolve(allGranted = true)
+        assertEquals(1, dispatchCount)
+        gate.resolve(allGranted = true)
+        assertEquals(1, dispatchCount)
     }
 
     @Test
     fun denied_permissions_discard_the_pending_mode_action() {
         val gate = ModePermissionActionGate { listOf("camera") }
+        var dispatchCount = 0
 
-        assertTrue(gate.defer(glance).isNotEmpty())
-        assertNull(gate.resolve(allGranted = false))
-        assertNull(gate.resolve(allGranted = true))
+        assertTrue(
+            gate.defer("mode:glance") { dispatchCount += 1 }.isNotEmpty(),
+        )
+        gate.resolve(allGranted = false)
+        gate.resolve(allGranted = true)
+        assertEquals(0, dispatchCount)
     }
 }
