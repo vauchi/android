@@ -873,16 +873,31 @@ fun MainScreen(
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME && uiState is UiState.Ready) {
-                    // Forward foreground lifecycle to core. Core owns the
-                    // consequence (relay catch-up sync + re-render), retiring the
-                    // frontend's ON_RESUME -> sync() decision (ADR-044 Am2a).
-                    coreAppViewModel.handleAction(UserAction.AppForegrounded)
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> {
+                        if (uiState is UiState.Ready) {
+                            // Forward foreground lifecycle to core. Core owns the
+                            // consequence (relay catch-up sync + re-render), retiring
+                            // the frontend's ON_RESUME -> sync() decision (ADR-044 Am2a).
+                            coreAppViewModel.handleAction(UserAction.AppForegrounded)
+                        }
+                        // Drive the foreground app-heartbeat so core's sub-minute
+                        // deadlines (e.g. the 60 s BLE stall timeout) actually fire in
+                        // the foreground; WorkManager only covers background wakeups.
+                        coreAppViewModel.startForegroundHeartbeat()
+                    }
+
+                    Lifecycle.Event.ON_STOP -> {
+                        coreAppViewModel.stopForegroundHeartbeat()
+                    }
+
+                    else -> {}
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            coreAppViewModel.stopForegroundHeartbeat()
         }
     }
 

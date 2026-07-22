@@ -18,12 +18,15 @@ import app.vauchi.nfc.NfcResponderPort
 import app.vauchi.nfc.VauchiHceResponder
 import app.vauchi.nfc.dispatchNfcCommand
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -80,6 +83,20 @@ class CoreAppViewModel(
      * link: real intent supersedes the courtesy landing.
      */
     private var pendingTabNavId: String? = null
+
+    /**
+     * Foreground app-heartbeat driver (ADR-044 Am2a). Core owns *when* the
+     * next wakeup is due and re-arms via `Command::ScheduleWakeup`; the shell
+     * owns only the native timer. iOS uses a foreground `DispatchSourceTimer`
+     * (`WakeupService`); Android services the SHORT foreground cadence here
+     * with a coroutine loop, reserving WorkManager (`SyncWorker`, ~15-min
+     * floor + Doze) for background/long-horizon wakeups. Without a foreground
+     * driver the BLE stall deadline (`ble_engine.rs` `BLE_STEP_TIMEOUT_SECS =
+     * 60`) never trips in the foreground, so a stalled exchange renders
+     * "Exchanging…" forever with no timeout/cancel (device pass 2026-07-22;
+     * `problems/2026-06-11-exchange-waits-forever-without-capabilities`).
+     */
+    private var foregroundWakeupJob: Job? = null
 
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
@@ -756,6 +773,48 @@ class CoreAppViewModel(
         return outcome
     }
 
+    /**
+     * Start the foreground heartbeat loop (call on foreground / `ON_RESUME`).
+     * Idempotent — a no-op if already running. Each tick runs [onWakeup]
+     * (polling core: advancing the exchange stall deadline and posting any due
+     * notifications), then waits the core-dictated interval from the emitted
+     * `ScheduleWakeup` before the next tick, until [stopForegroundHeartbeat] or
+     * `viewModelScope` cancellation. See [foregroundWakeupJob] for why this is
+     * required (WorkManager cannot service a sub-minute foreground deadline).
+     */
+    fun startForegroundHeartbeat() {
+        if (foregroundWakeupJob?.isActive == true) return
+        foregroundWakeupJob =
+            viewModelScope.launch {
+                while (isActive) {
+                    val nextSecs =
+                        try {
+                            onWakeup()
+                                .commands
+                                .filterIsInstance<CommandDTO.ScheduleWakeup>()
+                                .firstOrNull()
+                                ?.earliestSecs
+                                ?.toLong()
+                                ?: DEFAULT_FOREGROUND_WAKEUP_SECS
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Foreground wakeup tick failed", e)
+                            DEFAULT_FOREGROUND_WAKEUP_SECS
+                        }
+                    delay(nextSecs * 1000L)
+                }
+            }
+    }
+
+    /**
+     * Stop the foreground heartbeat (call on background / `ON_STOP`). Background
+     * wakeups ride WorkManager; keeping a sub-minute loop alive off-screen would
+     * drain battery for no benefit.
+     */
+    fun stopForegroundHeartbeat() {
+        foregroundWakeupJob?.cancel()
+        foregroundWakeupJob = null
+    }
+
     fun invalidateAll() {
         viewModelScope.launch {
             try {
@@ -912,8 +971,10 @@ class CoreAppViewModel(
         for (cmd in commands) {
             when (cmd) {
                 is CommandDTO.ScheduleWakeup -> {
-                    // Core hints when the next wakeup is due. Android uses a
-                    // periodic WorkManager task, so no explicit re-arming here.
+                    // Foreground re-arm is consumed by the startForegroundHeartbeat
+                    // loop, which reads this interval from the wakeup outcome and
+                    // schedules the next tick. Background wakeups ride WorkManager
+                    // (SyncWorker). Nothing to do here.
                 }
 
                 is CommandDTO.ImagePickFromLibrary -> {
@@ -1089,6 +1150,13 @@ class CoreAppViewModel(
 
     companion object {
         private const val TAG = "CoreAppVM"
+
+        /**
+         * Fallback foreground heartbeat cadence if core emits no
+         * `ScheduleWakeup` interval (core's `compute_next_wakeup` default
+         * is 30 s).
+         */
+        private const val DEFAULT_FOREGROUND_WAKEUP_SECS = 30L
     }
 }
 
