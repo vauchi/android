@@ -175,6 +175,7 @@ class BleCentral(
                 return "Invalid device id: $deviceId"
             }
         return try {
+            Log.i(TAG, "connect() -> connectGatt $deviceId")
             gatt = device.connectGatt(context, false, gattCallback, TRANSPORT_LE)
             null
         } catch (e: SecurityException) {
@@ -348,6 +349,7 @@ class BleCentral(
                 status: Int,
                 newState: Int,
             ) {
+                Log.i(TAG, "onConnectionStateChange newState=$newState status=$status")
                 when (newState) {
                     BluetoothProfile.STATE_CONNECTED -> {
                         if (!g.requestMtu(REQUESTED_MTU)) g.discoverServices()
