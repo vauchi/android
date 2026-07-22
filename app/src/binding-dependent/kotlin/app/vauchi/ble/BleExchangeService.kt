@@ -20,6 +20,7 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
+import uniffi.vauchi_platform.MobileBleLinkDirection
 import uniffi.vauchi_platform.MobileEvent
 import java.util.UUID
 
@@ -157,7 +158,13 @@ class BleExchangeService(
             ) {
                 when (newState) {
                     BluetoothProfile.STATE_CONNECTED -> {
-                        eventCallback(MobileEvent.BleConnected(gatt.device.address))
+                        // GATT client callback → we dialed out → central → Outbound.
+                        eventCallback(
+                            MobileEvent.BleConnected(
+                                deviceId = gatt.device.address,
+                                direction = MobileBleLinkDirection.OUTBOUND,
+                            ),
+                        )
                         gatt.discoverServices()
                     }
 

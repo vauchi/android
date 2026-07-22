@@ -37,6 +37,7 @@ import uniffi.vauchi_platform.DomainCommand
 import uniffi.vauchi_platform.DomainCommandResult
 import uniffi.vauchi_platform.MobileAhaMoment
 import uniffi.vauchi_platform.MobileAhaMomentType
+import uniffi.vauchi_platform.MobileBleLinkDirection
 import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.MobileLocale
 import uniffi.vauchi_platform.MobileTabInfo
@@ -409,9 +410,16 @@ class CoreAppViewModel(
         )
     }
 
-    /** A GATT connection (central or peripheral side) was established. */
-    fun onBleConnected(deviceId: String) {
-        sendHardwareEvent(MobileEvent.BleConnected(deviceId = deviceId))
+    /**
+     * A GATT connection was established. `direction` is the physical link role:
+     * the central (dialed out) reports `OUTBOUND`, the peripheral (connected to)
+     * reports `INBOUND`. Core derives the handshake role from it (F0).
+     */
+    fun onBleConnected(
+        deviceId: String,
+        direction: MobileBleLinkDirection,
+    ) {
+        sendHardwareEvent(MobileEvent.BleConnected(deviceId = deviceId, direction = direction))
     }
 
     /** The GATT connection dropped. */

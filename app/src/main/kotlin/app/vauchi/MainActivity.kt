@@ -95,6 +95,7 @@ import app.vauchi.util.NotificationHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uniffi.vauchi_platform.MobileBleLinkDirection
 import uniffi.vauchi_platform.MobilePendingNotification
 import uniffi.vauchi_platform.coreVersion
 
@@ -723,7 +724,7 @@ fun MainScreen(
                         advData: ByteArray,
                     ) = coreAppViewModel.onBleDeviceDiscovered(id, rssi, advData)
 
-                    override fun onConnected(deviceId: String) = coreAppViewModel.onBleConnected(deviceId)
+                    override fun onConnected(deviceId: String) = coreAppViewModel.onBleConnected(deviceId, MobileBleLinkDirection.OUTBOUND)
 
                     override fun onDisconnected(reason: String) = coreAppViewModel.onBleDisconnected(reason)
 
@@ -744,7 +745,7 @@ fun MainScreen(
             BlePeripheral(
                 context,
                 object : BlePeripheralListener {
-                    override fun onConnected(deviceId: String) = coreAppViewModel.onBleConnected(deviceId)
+                    override fun onConnected(deviceId: String) = coreAppViewModel.onBleConnected(deviceId, MobileBleLinkDirection.INBOUND)
 
                     override fun onDisconnected(reason: String) = coreAppViewModel.onBleDisconnected(reason)
 
@@ -828,9 +829,13 @@ fun MainScreen(
     // itself (`onCoreNavigatedAway`), scoped to that composable's
     // lifetime, mirroring iOS's `FaceToFaceCoreShell.onChange`.
 
-    // --reset-for-testing: create test identity so app skips onboarding (DEBUG only)
+    // --reset-for-testing: create test identity so app skips onboarding (DEBUG only).
+    // Must also fire from `Onboarding` — a wiped (`pm clear`) device boots with no
+    // identity straight to onboarding and never reaches `Ready`, so gating on Ready
+    // alone left `reset_for_testing` a no-op on a truly fresh install (iOS seeds
+    // unconditionally; this reaches parity). Seeding drives Onboarding → Ready.
     LaunchedEffect(resetForTesting, uiState) {
-        if (resetForTesting && uiState is UiState.Ready) {
+        if (resetForTesting && (uiState is UiState.Ready || uiState is UiState.Onboarding)) {
             viewModel.seedTestIdentityIfNeeded()
         }
     }
