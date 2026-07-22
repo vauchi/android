@@ -5,6 +5,7 @@
 package app.vauchi.ble
 
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
@@ -71,7 +72,14 @@ class BleCentral(
             ?.takeIf { it.isEnabled }
 
     private var scanCallback: ScanCallback? = null
-    private val discovered = mutableSetOf<String>()
+
+    // Cache the scanned `BluetoothDevice` objects by address (also the
+    // report-once dedup set). Connecting MUST reuse the scanned object: it
+    // carries the peer's true LE address type (iOS advertises a *random*
+    // resolvable address), whereas `adapter.getRemoteDevice(addressString)`
+    // rebuilds it as PUBLIC → the controller can't resolve the RPA and the
+    // connection fails at establishment with GATT status 133.
+    private val discovered = mutableMapOf<String, BluetoothDevice>()
 
     private var gatt: BluetoothGatt? = null
     private val notifyQueue = ArrayDeque<BluetoothGattCharacteristic>()
@@ -134,7 +142,10 @@ class BleCentral(
                     // Report each peer once (a continuous low-latency scan repeats
                     // the same device; without this core emits a BleConnect per
                     // result and churns the connection).
-                    if (!discovered.add(address)) return
+                    // Cache the scanned device (true address type) and report
+                    // once: `put` returns the previous value, non-null ⇒ already
+                    // seen this scan.
+                    if (discovered.put(address, result.device) != null) return
                     listener.onDeviceDiscovered(address, result.rssi.toShort(), peerToken)
                 }
 
@@ -168,12 +179,17 @@ class BleCentral(
         val adapter = adapter() ?: return "BLE adapter off"
         stopScanning()
         disconnect()
+        // Prefer the cached scanned device (preserves the peer's LE address
+        // type — critical for connecting to iOS's random resolvable address,
+        // see the `discovered` field). Fall back to a reconstructed device only
+        // if the cache missed (e.g. a re-connect after the scan table cleared).
         val device =
-            try {
-                adapter.getRemoteDevice(deviceId)
-            } catch (e: IllegalArgumentException) {
-                return "Invalid device id: $deviceId"
-            }
+            discovered[deviceId]
+                ?: try {
+                    adapter.getRemoteDevice(deviceId)
+                } catch (e: IllegalArgumentException) {
+                    return "Invalid device id: $deviceId"
+                }
         return try {
             Log.i(TAG, "connect() -> connectGatt $deviceId")
             gatt = device.connectGatt(context, false, gattCallback, TRANSPORT_LE)
@@ -371,6 +387,7 @@ class BleCentral(
                 mtu: Int,
                 status: Int,
             ) {
+                Log.i(TAG, "onMtuChanged mtu=$mtu status=$status")
                 g.discoverServices()
             }
 
