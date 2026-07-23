@@ -2167,15 +2167,20 @@ sealed class CommandDTO {
     ) : CommandDTO()
 
     data class BleWriteCharacteristic(
+        val deviceId: String,
         val uuid: String,
         val data: List<Int>,
     ) : CommandDTO()
 
     data class BleReadCharacteristic(
+        val deviceId: String,
         val uuid: String,
     ) : CommandDTO()
 
-    data object BleDisconnect : CommandDTO()
+    data class BleDisconnect(
+        val deviceId: String,
+        val direction: BleLinkDirectionDTO,
+    ) : CommandDTO()
 
     /**
      * Core's hint for when the next platform wakeup should fire. The shell
@@ -2665,7 +2670,6 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
             is JsonPrimitive -> {
                 when (element.content) {
                     "QrRequestScan" -> CommandDTO.QrRequestScan
-                    "BleDisconnect" -> CommandDTO.BleDisconnect
                     "NfcDeactivate" -> CommandDTO.NfcDeactivate
                     "AudioStop" -> CommandDTO.AudioStop
                     "AccelerometerStart" -> CommandDTO.AccelerometerStart
@@ -2719,6 +2723,7 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                     "BleWriteCharacteristic" in element -> {
                         val obj = element["BleWriteCharacteristic"] as JsonObject
                         CommandDTO.BleWriteCharacteristic(
+                            deviceId = obj["device_id"]!!.jsonPrimitive.content,
                             uuid = obj["uuid"]!!.jsonPrimitive.content,
                             data = obj["data"]!!.jsonArray.map { it.jsonPrimitive.int },
                         )
@@ -2727,7 +2732,16 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                     "BleReadCharacteristic" in element -> {
                         val obj = element["BleReadCharacteristic"] as JsonObject
                         CommandDTO.BleReadCharacteristic(
+                            deviceId = obj["device_id"]!!.jsonPrimitive.content,
                             uuid = obj["uuid"]!!.jsonPrimitive.content,
+                        )
+                    }
+
+                    "BleDisconnect" in element -> {
+                        val obj = element["BleDisconnect"] as JsonObject
+                        CommandDTO.BleDisconnect(
+                            deviceId = obj["device_id"]!!.jsonPrimitive.content,
+                            direction = BleLinkDirectionDTO.valueOf(obj["direction"]!!.jsonPrimitive.content),
                         )
                     }
 
@@ -2864,6 +2878,11 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
         val jsonEncoder = encoder as JsonEncoder
         jsonEncoder.encodeJsonElement(JsonPrimitive("CommandDTO"))
     }
+}
+
+enum class BleLinkDirectionDTO {
+    Outbound,
+    Inbound,
 }
 
 // ── Envelope wrappers (Phase 2b) ────────────────────────────────────
