@@ -30,10 +30,14 @@ import java.util.ArrayDeque
 interface BlePeripheralListener {
     fun onConnected(deviceId: String)
 
-    fun onDisconnected(reason: String)
+    fun onDisconnected(
+        deviceId: String,
+        reason: String,
+    )
 
     /** A connected central wrote to one of our characteristics (received data). */
     fun onCharacteristicReceived(
+        deviceId: String,
         uuid: String,
         data: ByteArray,
     )
@@ -70,6 +74,7 @@ class BlePeripheral(
     private val subscribers = mutableSetOf<BluetoothDevice>()
 
     private data class PendingNotify(
+        val deviceId: String,
         val uuid: String,
         val data: ByteArray,
     )
@@ -222,11 +227,20 @@ class BlePeripheral(
 
     /** Notify the connected central on [uuid] with [data] (peripheral → central). */
     fun notify(
+        deviceId: String,
         uuid: String,
         data: ByteArray,
     ) {
-        synchronized(notifyLock) { notifyQueue.add(PendingNotify(uuid, data)) }
+        synchronized(notifyLock) { notifyQueue.add(PendingNotify(deviceId, uuid, data)) }
         processNextNotify()
+    }
+
+    /** Disconnect only the addressed inbound central. */
+    fun disconnect(deviceId: String) {
+        val server = gattServer ?: return
+        subscribers
+            .firstOrNull { BleLinkAddress.matches(deviceId, it.address) }
+            ?.let(server::cancelConnection)
     }
 
     @Suppress("DEPRECATION")
@@ -241,7 +255,10 @@ class BlePeripheral(
             }
         val service = server.getService(BleUuids.uuid(BleUuids.SERVICE))
         val ch = service?.getCharacteristic(BleUuids.uuid(pending.uuid))
-        val device = subscribers.firstOrNull()
+        val device =
+            subscribers.firstOrNull {
+                BleLinkAddress.matches(pending.deviceId, it.address)
+            }
         if (ch == null || device == null) {
             finishNotify()
             return
@@ -282,7 +299,7 @@ class BlePeripheral(
 
                     BluetoothProfile.STATE_DISCONNECTED -> {
                         subscribers.remove(device)
-                        listener.onDisconnected("central disconnected: $status")
+                        listener.onDisconnected(device.address, "central disconnected: $status")
                     }
                 }
             }
@@ -296,7 +313,11 @@ class BlePeripheral(
                 offset: Int,
                 value: ByteArray,
             ) {
-                listener.onCharacteristicReceived(characteristic.uuid.toString(), value)
+                listener.onCharacteristicReceived(
+                    device.address,
+                    characteristic.uuid.toString(),
+                    value,
+                )
                 if (responseNeeded) {
                     gattServer?.sendResponse(device, requestId, 0 /* GATT_SUCCESS */, offset, value)
                 }

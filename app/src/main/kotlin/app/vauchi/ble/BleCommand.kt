@@ -4,6 +4,8 @@
 
 package app.vauchi.ble
 
+import uniffi.vauchi_platform.MobileBleLinkDirection
+
 /**
  * Activity-bound BLE work items derived from core's BLE `Command`s.
  *
@@ -33,21 +35,27 @@ sealed interface BleCommand {
         val deviceId: String,
     ) : BleCommand
 
-    /** `Command::BleDisconnect` — tear down the current connection. */
-    data object Disconnect : BleCommand
+    /** `Command::BleDisconnect` — tear down exactly one physical link. */
+    data class Disconnect(
+        val deviceId: String,
+        val direction: MobileBleLinkDirection,
+    ) : BleCommand
 
     /**
-     * `Command::BleWriteCharacteristic` — send [data] on [uuid]. Routed by the
-     * UUID: a responder-notify characteristic ([BleUuids.peripheralNotifyChars])
-     * is a peripheral notify; otherwise a central GATT write.
+     * `Command::BleWriteCharacteristic` — send [data] on [uuid] over the
+     * addressed physical link.
      */
     data class Write(
+        val deviceId: String,
+        val direction: MobileBleLinkDirection,
         val uuid: String,
         val data: ByteArray,
     ) : BleCommand
 
     /** `Command::BleReadCharacteristic` — central reads [uuid]. */
     data class Read(
+        val deviceId: String,
+        val direction: MobileBleLinkDirection,
         val uuid: String,
     ) : BleCommand
 }

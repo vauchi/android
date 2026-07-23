@@ -422,25 +422,53 @@ class CoreAppViewModel(
         sendHardwareEvent(MobileEvent.BleConnected(deviceId = deviceId, direction = direction))
     }
 
-    /** The GATT connection dropped. */
-    fun onBleDisconnected(reason: String) {
-        sendHardwareEvent(MobileEvent.BleDisconnected(reason = reason))
+    /** One addressed GATT link dropped. */
+    fun onBleDisconnected(
+        deviceId: String,
+        direction: MobileBleLinkDirection,
+        reason: String,
+    ) {
+        sendHardwareEvent(
+            MobileEvent.BleDisconnected(
+                deviceId = deviceId,
+                direction = direction,
+                reason = reason,
+            ),
+        )
     }
 
     /** Data received from the peer (central notification / peripheral write). */
     fun onBleCharacteristicNotified(
+        deviceId: String,
+        direction: MobileBleLinkDirection,
         uuid: String,
         data: ByteArray,
     ) {
-        sendHardwareEvent(MobileEvent.BleCharacteristicNotified(uuid = uuid, data = data))
+        sendHardwareEvent(
+            MobileEvent.BleCharacteristicNotified(
+                deviceId = deviceId,
+                direction = direction,
+                uuid = uuid,
+                data = data,
+            ),
+        )
     }
 
     /** A characteristic read completed (central side). */
     fun onBleCharacteristicRead(
+        deviceId: String,
+        direction: MobileBleLinkDirection,
         uuid: String,
         data: ByteArray,
     ) {
-        sendHardwareEvent(MobileEvent.BleCharacteristicRead(uuid = uuid, data = data))
+        sendHardwareEvent(
+            MobileEvent.BleCharacteristicRead(
+                deviceId = deviceId,
+                direction = direction,
+                uuid = uuid,
+                data = data,
+            ),
+        )
     }
 
     /**
@@ -1105,12 +1133,19 @@ class CoreAppViewModel(
                 }
 
                 is CommandDTO.BleDisconnect -> {
-                    _bleCommands.tryEmit(BleCommand.Disconnect)
+                    _bleCommands.tryEmit(
+                        BleCommand.Disconnect(
+                            deviceId = cmd.deviceId,
+                            direction = cmd.direction.toMobileDirection(),
+                        ),
+                    )
                 }
 
                 is CommandDTO.BleWriteCharacteristic -> {
                     _bleCommands.tryEmit(
                         BleCommand.Write(
+                            deviceId = cmd.deviceId,
+                            direction = cmd.direction.toMobileDirection(),
                             uuid = cmd.uuid,
                             data = cmd.data.map { it.toByte() }.toByteArray(),
                         ),
@@ -1118,7 +1153,13 @@ class CoreAppViewModel(
                 }
 
                 is CommandDTO.BleReadCharacteristic -> {
-                    _bleCommands.tryEmit(BleCommand.Read(cmd.uuid))
+                    _bleCommands.tryEmit(
+                        BleCommand.Read(
+                            deviceId = cmd.deviceId,
+                            direction = cmd.direction.toMobileDirection(),
+                            uuid = cmd.uuid,
+                        ),
+                    )
                 }
 
                 is CommandDTO.Unknown -> {
@@ -1252,3 +1293,9 @@ sealed interface OrientationLockRequest {
     /** Restore the platform-default orientation behaviour. */
     data object Restore : OrientationLockRequest
 }
+
+private fun BleLinkDirectionDTO.toMobileDirection(): MobileBleLinkDirection =
+    when (this) {
+        BleLinkDirectionDTO.Outbound -> MobileBleLinkDirection.OUTBOUND
+        BleLinkDirectionDTO.Inbound -> MobileBleLinkDirection.INBOUND
+    }

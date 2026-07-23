@@ -36,14 +36,19 @@ interface BleCentralListener {
 
     fun onConnected(deviceId: String)
 
-    fun onDisconnected(reason: String)
+    fun onDisconnected(
+        deviceId: String,
+        reason: String,
+    )
 
     fun onCharacteristicNotified(
+        deviceId: String,
         uuid: String,
         data: ByteArray,
     )
 
     fun onCharacteristicRead(
+        deviceId: String,
         uuid: String,
         data: ByteArray,
     )
@@ -86,11 +91,13 @@ class BleCentral(
 
     private sealed interface GattOp {
         data class Write(
+            val deviceId: String,
             val uuid: String,
             val data: ByteArray,
         ) : GattOp
 
         data class Read(
+            val deviceId: String,
             val uuid: String,
         ) : GattOp
     }
@@ -215,19 +222,35 @@ class BleCentral(
         }
     }
 
+    /** Disconnect only the addressed outbound link. */
+    fun disconnect(deviceId: String) {
+        val actual = gatt?.device?.address ?: return
+        if (BleLinkAddress.matches(deviceId, actual)) disconnect()
+    }
+
     // ── Characteristic write / read (S3) ─────────────────────────────────────
 
     /** Queue a GATT write to [uuid] (initiator → responder). */
     fun writeCharacteristic(
+        deviceId: String,
         uuid: String,
         data: ByteArray,
     ) {
-        enqueue(GattOp.Write(uuid, data))
+        val actual = gatt?.device?.address ?: return
+        if (BleLinkAddress.matches(deviceId, actual)) {
+            enqueue(GattOp.Write(deviceId, uuid, data))
+        }
     }
 
     /** Queue a GATT read of [uuid]; result arrives via onCharacteristicRead. */
-    fun readCharacteristic(uuid: String) {
-        enqueue(GattOp.Read(uuid))
+    fun readCharacteristic(
+        deviceId: String,
+        uuid: String,
+    ) {
+        val actual = gatt?.device?.address ?: return
+        if (BleLinkAddress.matches(deviceId, actual)) {
+            enqueue(GattOp.Read(deviceId, uuid))
+        }
     }
 
     private fun enqueue(op: GattOp) {
@@ -258,6 +281,10 @@ class BleCentral(
         g: BluetoothGatt,
         op: GattOp,
     ) {
+        if (!BleLinkAddress.matches(opDeviceId(op), g.device.address)) {
+            finishOp()
+            return
+        }
         inflightOp = op
         val service = g.getService(BleUuids.uuid(BleUuids.SERVICE))
         val ch = service?.getCharacteristic(BleUuids.uuid(opUuid(op)))
@@ -358,6 +385,12 @@ class BleCentral(
             is GattOp.Read -> op.uuid
         }
 
+    private fun opDeviceId(op: GattOp): String =
+        when (op) {
+            is GattOp.Write -> op.deviceId
+            is GattOp.Read -> op.deviceId
+        }
+
     private val gattCallback =
         object : BluetoothGattCallback() {
             override fun onConnectionStateChange(
@@ -372,7 +405,7 @@ class BleCentral(
                     }
 
                     BluetoothProfile.STATE_DISCONNECTED -> {
-                        listener.onDisconnected("status=$status")
+                        listener.onDisconnected(g.device.address, "status=$status")
                         try {
                             g.close()
                         } catch (_: Exception) {
@@ -396,7 +429,7 @@ class BleCentral(
                 status: Int,
             ) {
                 if (status != BluetoothGatt.GATT_SUCCESS) {
-                    listener.onDisconnected("service discovery failed: $status")
+                    listener.onDisconnected(g.device.address, "service discovery failed: $status")
                     return
                 }
                 val service = g.getService(BleUuids.uuid(BleUuids.SERVICE))
@@ -414,7 +447,10 @@ class BleCentral(
                         discoveryRetries++
                         opHandler.postDelayed({ gatt?.discoverServices() }, DISCOVERY_RETRY_MS)
                     } else {
-                        listener.onDisconnected("incomplete service discovery (no handshake char)")
+                        listener.onDisconnected(
+                            g.device.address,
+                            "incomplete service discovery (no handshake char)",
+                        )
                     }
                     return
                 }
@@ -441,6 +477,7 @@ class BleCentral(
                 characteristic: BluetoothGattCharacteristic,
             ) {
                 listener.onCharacteristicNotified(
+                    g.device.address,
                     characteristic.uuid.toString(),
                     characteristic.value ?: ByteArray(0),
                 )
@@ -454,6 +491,7 @@ class BleCentral(
             ) {
                 if (status == BluetoothGatt.GATT_SUCCESS) {
                     listener.onCharacteristicRead(
+                        g.device.address,
                         characteristic.uuid.toString(),
                         characteristic.value ?: ByteArray(0),
                     )

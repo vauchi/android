@@ -726,17 +726,36 @@ fun MainScreen(
 
                     override fun onConnected(deviceId: String) = coreAppViewModel.onBleConnected(deviceId, MobileBleLinkDirection.OUTBOUND)
 
-                    override fun onDisconnected(reason: String) = coreAppViewModel.onBleDisconnected(reason)
+                    override fun onDisconnected(
+                        deviceId: String,
+                        reason: String,
+                    ) = coreAppViewModel.onBleDisconnected(
+                        deviceId,
+                        MobileBleLinkDirection.OUTBOUND,
+                        reason,
+                    )
 
                     override fun onCharacteristicNotified(
+                        deviceId: String,
                         uuid: String,
                         data: ByteArray,
-                    ) = coreAppViewModel.onBleCharacteristicNotified(uuid, data)
+                    ) = coreAppViewModel.onBleCharacteristicNotified(
+                        deviceId,
+                        MobileBleLinkDirection.OUTBOUND,
+                        uuid,
+                        data,
+                    )
 
                     override fun onCharacteristicRead(
+                        deviceId: String,
                         uuid: String,
                         data: ByteArray,
-                    ) = coreAppViewModel.onBleCharacteristicRead(uuid, data)
+                    ) = coreAppViewModel.onBleCharacteristicRead(
+                        deviceId,
+                        MobileBleLinkDirection.OUTBOUND,
+                        uuid,
+                        data,
+                    )
                 },
             )
         }
@@ -747,12 +766,25 @@ fun MainScreen(
                 object : BlePeripheralListener {
                     override fun onConnected(deviceId: String) = coreAppViewModel.onBleConnected(deviceId, MobileBleLinkDirection.INBOUND)
 
-                    override fun onDisconnected(reason: String) = coreAppViewModel.onBleDisconnected(reason)
+                    override fun onDisconnected(
+                        deviceId: String,
+                        reason: String,
+                    ) = coreAppViewModel.onBleDisconnected(
+                        deviceId,
+                        MobileBleLinkDirection.INBOUND,
+                        reason,
+                    )
 
                     override fun onCharacteristicReceived(
+                        deviceId: String,
                         uuid: String,
                         data: ByteArray,
-                    ) = coreAppViewModel.onBleCharacteristicNotified(uuid, data)
+                    ) = coreAppViewModel.onBleCharacteristicNotified(
+                        deviceId,
+                        MobileBleLinkDirection.INBOUND,
+                        uuid,
+                        data,
+                    )
                 },
             )
         }
@@ -789,20 +821,37 @@ fun MainScreen(
                         }
                 }
 
-                BleCommand.Disconnect -> {
-                    bleCentral.disconnect()
+                is BleCommand.Disconnect -> {
+                    when (cmd.direction) {
+                        MobileBleLinkDirection.OUTBOUND -> bleCentral.disconnect(cmd.deviceId)
+                        MobileBleLinkDirection.INBOUND -> blePeripheral.disconnect(cmd.deviceId)
+                    }
                 }
 
                 is BleCommand.Write -> {
-                    if (cmd.uuid in BleUuids.peripheralNotifyChars) {
-                        blePeripheral.notify(cmd.uuid, cmd.data)
-                    } else {
-                        bleCentral.writeCharacteristic(cmd.uuid, cmd.data)
+                    when (cmd.direction) {
+                        MobileBleLinkDirection.OUTBOUND -> {
+                            bleCentral.writeCharacteristic(cmd.deviceId, cmd.uuid, cmd.data)
+                        }
+
+                        MobileBleLinkDirection.INBOUND -> {
+                            blePeripheral.notify(cmd.deviceId, cmd.uuid, cmd.data)
+                        }
                     }
                 }
 
                 is BleCommand.Read -> {
-                    bleCentral.readCharacteristic(cmd.uuid)
+                    when (cmd.direction) {
+                        MobileBleLinkDirection.OUTBOUND -> {
+                            bleCentral.readCharacteristic(cmd.deviceId, cmd.uuid)
+                        }
+
+                        MobileBleLinkDirection.INBOUND -> {
+                            coreAppViewModel.onBleOperationFailed(
+                                "Inbound BLE characteristic reads are unsupported",
+                            )
+                        }
+                    }
                 }
             }
         }

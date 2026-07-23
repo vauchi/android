@@ -169,7 +169,13 @@ class BleExchangeService(
                     }
 
                     BluetoothProfile.STATE_DISCONNECTED -> {
-                        eventCallback(MobileEvent.BleDisconnected("disconnected (status=$status)"))
+                        eventCallback(
+                            MobileEvent.BleDisconnected(
+                                deviceId = gatt.device.address,
+                                direction = MobileBleLinkDirection.OUTBOUND,
+                                reason = "disconnected (status=$status)",
+                            ),
+                        )
                         discoveredCharacteristics.clear()
                     }
                 }
@@ -230,6 +236,8 @@ class BleExchangeService(
                     val uuid = characteristic.uuid.toString().lowercase()
                     eventCallback(
                         MobileEvent.BleCharacteristicRead(
+                            deviceId = gatt.device.address,
+                            direction = MobileBleLinkDirection.OUTBOUND,
                             uuid = uuid,
                             data = value,
                         ),
@@ -245,6 +253,8 @@ class BleExchangeService(
                 val uuid = characteristic.uuid.toString().lowercase()
                 eventCallback(
                     MobileEvent.BleCharacteristicNotified(
+                        deviceId = gatt.device.address,
+                        direction = MobileBleLinkDirection.OUTBOUND,
                         uuid = uuid,
                         data = value,
                     ),
