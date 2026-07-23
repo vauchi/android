@@ -116,9 +116,13 @@ object BleUuids {
     val notifyCharacteristics: Set<String> =
         setOf(EXCHANGE_PAYLOAD, CARD_EXCHANGE, CHALLENGE, HANDSHAKE_NOTIFY, DATA_NOTIFY)
 
-    /** Write characteristics that use Write-With-Response (vs no-response). */
+    /**
+     * Write characteristics that use Write-With-Response (vs no-response).
+     * HANDSHAKE_NOTIFY is bidirectional: the responder notifies phase data,
+     * then the initiator writes the final reciprocity acknowledgement.
+     */
     val writeWithResponse: Set<String> =
-        setOf(CARD_EXCHANGE, CHALLENGE, HANDSHAKE_WRITE)
+        setOf(CARD_EXCHANGE, CHALLENGE, HANDSHAKE_WRITE, HANDSHAKE_NOTIFY)
 
     /**
      * Routing for `Command::BleWriteCharacteristic` — the UUID encodes the

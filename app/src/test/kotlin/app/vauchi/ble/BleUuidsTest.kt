@@ -85,4 +85,13 @@ class BleUuidsTest {
             BleUuids.serviceUuidToToken(uuid),
         )
     }
+
+    @Test
+    fun handshake_notify_supports_reciprocity_ack_writes() {
+        assertEquals(
+            "the initiator writes its post-exchange reciprocity ack on the responder's notify characteristic",
+            true,
+            BleUuids.HANDSHAKE_NOTIFY in BleUuids.writeWithResponse,
+        )
+    }
 }
