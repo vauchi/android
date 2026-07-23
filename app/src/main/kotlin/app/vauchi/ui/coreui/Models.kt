@@ -2168,12 +2168,14 @@ sealed class CommandDTO {
 
     data class BleWriteCharacteristic(
         val deviceId: String,
+        val direction: BleLinkDirectionDTO,
         val uuid: String,
         val data: List<Int>,
     ) : CommandDTO()
 
     data class BleReadCharacteristic(
         val deviceId: String,
+        val direction: BleLinkDirectionDTO,
         val uuid: String,
     ) : CommandDTO()
 
@@ -2724,6 +2726,7 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                         val obj = element["BleWriteCharacteristic"] as JsonObject
                         CommandDTO.BleWriteCharacteristic(
                             deviceId = obj["device_id"]!!.jsonPrimitive.content,
+                            direction = BleLinkDirectionDTO.valueOf(obj["direction"]!!.jsonPrimitive.content),
                             uuid = obj["uuid"]!!.jsonPrimitive.content,
                             data = obj["data"]!!.jsonArray.map { it.jsonPrimitive.int },
                         )
@@ -2733,6 +2736,7 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                         val obj = element["BleReadCharacteristic"] as JsonObject
                         CommandDTO.BleReadCharacteristic(
                             deviceId = obj["device_id"]!!.jsonPrimitive.content,
+                            direction = BleLinkDirectionDTO.valueOf(obj["direction"]!!.jsonPrimitive.content),
                             uuid = obj["uuid"]!!.jsonPrimitive.content,
                         )
                     }

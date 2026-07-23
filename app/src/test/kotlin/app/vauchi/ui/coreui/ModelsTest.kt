@@ -584,22 +584,25 @@ class ModelsTest {
     @Test
     fun `CommandDTO BleWriteCharacteristic deserialization`() {
         val input =
-            """{"BleWriteCharacteristic": {"device_id": "peer-1", "uuid": "char-uuid", "data": [255, 0]}}"""
+            """{"BleWriteCharacteristic": {"device_id": "peer-1", "direction": "Inbound", "uuid": "char-uuid", "data": [255, 0]}}"""
         val result = json.decodeFromString(CommandDTOSerializer, input)
         assertTrue(result is CommandDTO.BleWriteCharacteristic)
         result as CommandDTO.BleWriteCharacteristic
         assertEquals("peer-1", result.deviceId)
+        assertEquals(BleLinkDirectionDTO.Inbound, result.direction)
         assertEquals("char-uuid", result.uuid)
         assertEquals(listOf(255, 0), result.data)
     }
 
     @Test
     fun `CommandDTO BleReadCharacteristic deserialization preserves target link`() {
-        val input = """{"BleReadCharacteristic": {"device_id": "peer-2", "uuid": "char-uuid"}}"""
+        val input =
+            """{"BleReadCharacteristic": {"device_id": "peer-2", "direction": "Outbound", "uuid": "char-uuid"}}"""
         val result = json.decodeFromString(CommandDTOSerializer, input)
         assertTrue(result is CommandDTO.BleReadCharacteristic)
         result as CommandDTO.BleReadCharacteristic
         assertEquals("peer-2", result.deviceId)
+        assertEquals(BleLinkDirectionDTO.Outbound, result.direction)
         assertEquals("char-uuid", result.uuid)
     }
 
