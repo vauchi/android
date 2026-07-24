@@ -291,6 +291,34 @@ private fun QrScanner(
                                                 executor,
                                                 QrCodeAnalyzer(
                                                     onQrCodeDetected = { code ->
+                                                        // Diagnostics: the 4-char frame-type
+                                                        // prefix is a public format constant
+                                                        // (qr_codec.rs PREFIX_LEN), never
+                                                        // payload — logging it stays inside
+                                                        // logging-rules.md ("never log QR
+                                                        // data"); anything else logs a generic tag.
+                                                        val frameType = code.take(4)
+                                                        val known =
+                                                            frameType in
+                                                                setOf(
+                                                                    "INIT",
+                                                                    "INI2",
+                                                                    "IN2D",
+                                                                    "INID",
+                                                                    "DATA",
+                                                                    "VRFY",
+                                                                    "CONF",
+                                                                    "RDYY",
+                                                                    "COMB",
+                                                                    "FAIL",
+                                                                    "SHAK",
+                                                                )
+                                                        Log.i(
+                                                            "Vauchi",
+                                                            "[QrScan] decoded type=" +
+                                                                (if (known) frameType else "????") +
+                                                                " len=${code.length}",
+                                                        )
                                                         // Forward to core. exchange/qr.rs
                                                         // pattern-matches on TextChanged with
                                                         // the QR component id and routes the
