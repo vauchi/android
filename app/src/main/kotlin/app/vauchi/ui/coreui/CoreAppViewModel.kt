@@ -1069,6 +1069,11 @@ class CoreAppViewModel(
                     // action. The QR scanner Composable observes
                     // [useFrontCamera] via `LocalUseFrontCamera` and
                     // re-binds CameraX when the value changes.
+                    Log.i(
+                        "Vauchi",
+                        "[QrCamera] SwitchCamera cmd useFront=${cmd.useFront} " +
+                            "(was ${_useFrontCamera.value})",
+                    )
                     _useFrontCamera.value = cmd.useFront
                 }
 

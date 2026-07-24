@@ -228,6 +228,16 @@ private fun QrScanner(
             // session). Scoped to the `key(useFrontCamera)` block so a
             // subsequent successful flip starts with a clean slate.
             val bindFailure = remember { mutableStateOf<String?>(null) }
+            // Camera-lifecycle diagnostics (round 7,
+            // investigations/2026-07-24-camera-lifecycle-socratic-synthesis):
+            // pins compose/dispose of THIS scanner instance so device logs
+            // discriminate composition-teardown from bind-collision deaths.
+            DisposableEffect(Unit) {
+                Log.i("Vauchi", "[QrCamera] scanner composed front=$useFrontCamera")
+                onDispose {
+                    Log.i("Vauchi", "[QrCamera] scanner DISPOSED front=$useFrontCamera")
+                }
+            }
             androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -304,6 +314,10 @@ private fun QrScanner(
                                         .also { it.surfaceProvider = previewView.surfaceProvider }
 
                                 try {
+                                    Log.i(
+                                        "Vauchi",
+                                        "[QrCamera] unbindAll+bind start front=$useFrontCamera",
+                                    )
                                     cameraProvider.unbindAll()
                                     cameraProvider.bindToLifecycle(
                                         lifecycleOwner,
@@ -315,6 +329,7 @@ private fun QrScanner(
                                         preview,
                                         imageAnalyzer,
                                     )
+                                    Log.i("Vauchi", "[QrCamera] bind OK front=$useFrontCamera")
                                     bindFailure.value = null
                                 } catch (e: Exception) {
                                     // CameraX surface acquisition can fail mid-recompose
