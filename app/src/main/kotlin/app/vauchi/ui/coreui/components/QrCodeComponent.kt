@@ -58,6 +58,7 @@ import app.vauchi.ui.coreui.UserAction
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.generateQrBitmap
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Renders a core `Component::QrCode`.
@@ -228,13 +229,22 @@ private fun QrScanner(
             // session). Scoped to the `key(useFrontCamera)` block so a
             // subsequent successful flip starts with a clean slate.
             val bindFailure = remember { mutableStateOf<String?>(null) }
-            // Camera-lifecycle diagnostics (round 7,
-            // investigations/2026-07-24-camera-lifecycle-socratic-synthesis):
-            // pins compose/dispose of THIS scanner instance so device logs
-            // discriminate composition-teardown from bind-collision deaths.
+            // WHY: CameraX binds on the MAIN executor via an async
+            // `ProcessCameraProvider` listener, so a scanner instance that
+            // is disposed (the multi-stage screen double-composes on entry —
+            // investigations/2026-07-24-camera-lifecycle-socratic-synthesis)
+            // still fires its listener afterwards and runs `unbindAll()` —
+            // tearing down the LIVE instance's binding — then binds onto its
+            // own already-destroyed PreviewView surface. That bind-order
+            // roulette is the observed 3-7 s camera death. This flag lets a
+            // disposed instance's late listener no-op instead of clobbering
+            // the survivor. Minimal guard, not the full session-owner
+            // refactor (that stays a follow-up).
+            val bindActive = remember { AtomicBoolean(true) }
             DisposableEffect(Unit) {
                 Log.i("Vauchi", "[QrCamera] scanner composed front=$useFrontCamera")
                 onDispose {
+                    bindActive.set(false)
                     Log.i("Vauchi", "[QrCamera] scanner DISPOSED front=$useFrontCamera")
                 }
             }
@@ -341,6 +351,16 @@ private fun QrScanner(
                                         .build()
                                         .also { it.surfaceProvider = previewView.surfaceProvider }
 
+                                if (!bindActive.get()) {
+                                    // Disposed before this async listener fired:
+                                    // do NOT unbindAll (would strand the live
+                                    // instance) or bind onto a dead surface.
+                                    Log.i(
+                                        "Vauchi",
+                                        "[QrCamera] skip bind — scanner disposed front=$useFrontCamera",
+                                    )
+                                    return@addListener
+                                }
                                 try {
                                     Log.i(
                                         "Vauchi",
