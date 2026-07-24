@@ -165,10 +165,16 @@ class VauchiHceService : HostApduService() {
         // dead taps that never establish a TransceiveContext still
         // get a clean SW_OK rather than an OS-side timeout.
         if (isSelectAid(commandApdu)) {
+            Log.i(TAG, "[Nfc] SELECT AID received -> SW_OK (tap established)")
             return SW_OK
         }
 
-        val ctx = activeTransceiveContext ?: return SW_CONDITIONS_NOT_SATISFIED
+        val ctx = activeTransceiveContext
+        if (ctx == null) {
+            Log.i(TAG, "[Nfc] data APDU (${commandApdu.size}B) but no TransceiveContext -> not-satisfied")
+            return SW_CONDITIONS_NOT_SATISFIED
+        }
+        Log.i(TAG, "[Nfc] data APDU received (${commandApdu.size}B)")
         return processViaTransceiveShim(ctx, commandApdu)
     }
 
@@ -215,15 +221,26 @@ class VauchiHceService : HostApduService() {
             }
         }
 
+        // Diagnostics: the binder block is the 110 ms bottleneck
+        // (2026-05-20-nfc-hce-responder-sync-boundary). Log the actual
+        // elapsed time so a device tap shows whether core's response
+        // arrives inside the OS ~125 ms HCE deadline, and by how much.
+        // Timing + response size only — never APDU content (logging-rules).
+        val blockStartNs = System.nanoTime()
         return try {
-            runBlocking {
-                withTimeout(BINDER_BLOCK_TIMEOUT_MS) {
-                    deferred.await()
+            val response =
+                runBlocking {
+                    withTimeout(BINDER_BLOCK_TIMEOUT_MS) {
+                        deferred.await()
+                    }
                 }
-            }
+            val elapsedMs = (System.nanoTime() - blockStartNs) / 1_000_000
+            Log.i(TAG, "[Nfc] binder block fulfilled in ${elapsedMs}ms (${response.size}B response)")
+            response
         } catch (_: TimeoutCancellationException) {
+            val elapsedMs = (System.nanoTime() - blockStartNs) / 1_000_000
             ctx.pendingResponse = null
-            Log.e(TAG, "HCE binder block timed out after ${BINDER_BLOCK_TIMEOUT_MS}ms")
+            Log.e(TAG, "[Nfc] binder block TIMED OUT after ${elapsedMs}ms (budget ${BINDER_BLOCK_TIMEOUT_MS}ms)")
             SW_CONDITIONS_NOT_SATISFIED
         } catch (e: Exception) {
             ctx.pendingResponse = null
