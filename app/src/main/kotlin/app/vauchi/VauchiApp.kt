@@ -23,7 +23,12 @@ class VauchiApp : Application() {
         // (BLE handshake, exchange, sync failure paths) are silent until
         // this installs the Logcat backend (2026-06-08-magic-audio-
         // proximity-driver deferred this permanent version).
-        initMobileLogging()
+        // Log the install status via Kotlin's Logcat path (which works even
+        // on devices where the Rust tracing bridge fails to attach), so an
+        // install failure is observable without the bridge it would need to
+        // report itself (S7 dev-logging investigation 2026-07-25).
+        val logStatus = initMobileLogging()
+        Log.i("Vauchi", "[boot] mobile logging: $logStatus")
         instance = this
         schedulePeriodicSync()
     }
