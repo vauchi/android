@@ -217,7 +217,7 @@ dependencies {
         implementation("net.java.dev.jna:jna:5.14.0@aar")
     } else {
         // Remote: published AAR includes JNA + JNI libs + Kotlin bindings
-        implementation("app.vauchi:vauchi-platform:0.56.0")
+        implementation("app.vauchi:vauchi-platform:0.56.1")
     }
 
     // Testing
@@ -244,7 +244,7 @@ dependencies {
     if (useLocalBindings) {
         screenshotTestImplementation("net.java.dev.jna:jna:5.14.0@aar")
     } else {
-        screenshotTestImplementation("app.vauchi:vauchi-platform:0.56.0")
+        screenshotTestImplementation("app.vauchi:vauchi-platform:0.56.1")
     }
     screenshotTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
     screenshotTestImplementation("androidx.compose.ui:ui")
