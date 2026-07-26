@@ -18,11 +18,16 @@ import org.junit.Test
 /**
  * The status badge label must never be a hardcoded English literal
  * (ADR-038): the core-resolved wire label (`status_label`) renders
- * verbatim, and while the vauchi-platform pin predates that field the
- * fallback resolves the `status.*` catalog key. Rendering under a
- * non-English locale is the only observable difference between the
- * catalog path and a hardcoded literal — in English they produce
- * identical text.
+ * verbatim. Rendering under a non-English locale (German here) is what
+ * makes the assertion meaningful — a hardcoded English literal would
+ * still read "Success", so the German-locale run proves the badge shows
+ * the core-provided value and nothing else.
+ *
+ * The pre-`status_label` catalog fallback that older tests exercised is
+ * gone: the current binding always supplies `status_label` and the
+ * component requires it non-null, so the fallback path no longer exists
+ * to test (CC-24 — behaviour removed by the binding upgrade; the
+ * verbatim-render contract below is the surviving coverage).
  */
 class StatusIndicatorI18nTest {
     @get:Rule
@@ -62,29 +67,6 @@ class StatusIndicatorI18nTest {
             .onNodeWithText("Wire label probe 9c2a")
             .assertExists(
                 "Status badge did not render the core-resolved status_label verbatim",
-            )
-        composeTestRule.onNodeWithText("Success").assertDoesNotExist()
-    }
-
-    @Test
-    fun status_badge_without_wire_label_falls_back_to_locale_catalog() {
-        composeTestRule.setContent {
-            VauchiTheme {
-                StatusIndicatorComponent(
-                    icon = null,
-                    title = "probe-title",
-                    detail = null,
-                    status = Status.Success,
-                    statusLabel = null,
-                )
-            }
-        }
-
-        composeTestRule
-            .onNodeWithText("Erfolg")
-            .assertExists(
-                "Pre-status_label fallback did not resolve status.success from " +
-                    "the catalog under the German locale — label is not routed through t()",
             )
         composeTestRule.onNodeWithText("Success").assertDoesNotExist()
     }
