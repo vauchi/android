@@ -65,6 +65,10 @@ fun CoreScreenView(
     // (dispatch inversion); it only renders viewModel.screen.
     @Suppress("UNUSED_PARAMETER") screenName: String,
     modifier: Modifier = Modifier,
+    // True when the surrounding chrome (the Activity's top app bar) already
+    // shows `screen.title`; forwarded to ScreenRenderer so the in-body header
+    // skips its own title.
+    titleShownInTopBar: Boolean = false,
 ) {
     val context = LocalContext.current
     val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
@@ -190,6 +194,7 @@ fun CoreScreenView(
                         applyLocaleFromUserAction(context, action)
                         viewModel.handleAction(action)
                     },
+                    titleShownInTopBar = titleShownInTopBar,
                     toastMessage = toastMessage,
                     toastUndoActionId = toastUndoActionId,
                     toastUndoLabel = toastUndoLabel,

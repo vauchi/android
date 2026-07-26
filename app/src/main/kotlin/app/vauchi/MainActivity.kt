@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextAlign
@@ -1035,7 +1036,13 @@ fun MainScreen(
             if (uiState is UiState.Ready) {
                 coreScreen?.let { screen ->
                     TopAppBar(
-                        title = { Text(screen.title) },
+                        title = {
+                            // Carries the screen's heading semantic — while
+                            // this chrome shows `screen.title`, the in-body
+                            // ScreenHeader skips its own copy
+                            // (titleShownInTopBar = true below).
+                            Text(screen.title, modifier = Modifier.semantics { heading() })
+                        },
                         navigationIcon = {
                             if (hasGoBack) {
                                 IconButton(
@@ -1117,6 +1124,9 @@ fun MainScreen(
                     viewModel = coreAppViewModel,
                     screenName = coreScreen?.screenId ?: "",
                     modifier = Modifier.fillMaxSize(),
+                    // The Scaffold top bar above already renders
+                    // `screen.title`; the in-body header must not repeat it.
+                    titleShownInTopBar = true,
                 )
             } else {
                 when (currentScreen) {
@@ -1156,6 +1166,9 @@ fun MainScreen(
                                         viewModel = coreAppViewModel,
                                         screenName = coreScreen?.screenId ?: "",
                                         modifier = Modifier.fillMaxSize(),
+                                        // Same top-bar chrome as the default
+                                        // branch above — skip the in-body title.
+                                        titleShownInTopBar = true,
                                     )
                                 }
                             }

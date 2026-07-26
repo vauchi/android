@@ -88,6 +88,9 @@ fun ScreenRenderer(
     screen: ScreenModel,
     onAction: (UserAction) -> Unit,
     modifier: Modifier = Modifier,
+    // True when the surrounding chrome (the Activity's top app bar) already
+    // shows `screen.title`; the in-body header then skips its own title.
+    titleShownInTopBar: Boolean = false,
     toastMessage: String? = null,
     toastUndoActionId: String? = null,
     toastUndoLabel: String? = null,
@@ -138,7 +141,11 @@ fun ScreenRenderer(
                             .testTag("pinned_list"),
                 ) {
                     item(key = "screen_header") {
-                        ScreenHeader(screen = screen, localizer = localizer)
+                        ScreenHeader(
+                            screen = screen,
+                            localizer = localizer,
+                            titleShownInTopBar = titleShownInTopBar,
+                        )
                     }
                     screen.components.forEachIndexed { index, component ->
                         if (component is Component.List) {
@@ -185,7 +192,11 @@ fun ScreenRenderer(
                                 },
                             ),
                 ) {
-                    ScreenHeader(screen = screen, localizer = localizer)
+                    ScreenHeader(
+                        screen = screen,
+                        localizer = localizer,
+                        titleShownInTopBar = titleShownInTopBar,
+                    )
 
                     // Components — key by id so Compose preserves slot
                     // identity (and any AndroidView state, like the
@@ -265,11 +276,19 @@ private fun componentSlotKey(
         Component.Unknown -> "unknown@$index"
     }
 
-/** Progress, title, and subtitle — shared by every layout path. */
+/**
+ * Progress, title, and subtitle — shared by every layout path.
+ *
+ * When [titleShownInTopBar] is true the surrounding chrome (the Activity's
+ * top app bar) already renders `screen.title`, so the in-body title is
+ * skipped to avoid rendering it twice. The subtitle still renders, and the
+ * heading semantic survives on the top-bar title element.
+ */
 @Composable
 private fun ScreenHeader(
     screen: ScreenModel,
     localizer: LocalizationManager,
+    titleShownInTopBar: Boolean,
 ) {
     screen.progress?.let { progress ->
         LinearProgressIndicator(
@@ -293,11 +312,13 @@ private fun ScreenHeader(
         Spacer(modifier = Modifier.height(16.dp))
     }
 
-    Text(
-        text = localizer.resolveCoreLabel(screen.title),
-        style = MaterialTheme.typography.headlineSmall,
-        modifier = Modifier.semantics { heading() },
-    )
+    if (!titleShownInTopBar) {
+        Text(
+            text = localizer.resolveCoreLabel(screen.title),
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.semantics { heading() },
+        )
+    }
 
     screen.subtitle?.let {
         Spacer(modifier = Modifier.height(4.dp))

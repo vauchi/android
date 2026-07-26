@@ -61,6 +61,9 @@ fun RecoveryScreen(
                     viewModel = coreAppViewModel,
                     screenName = "Recovery",
                     modifier = Modifier.fillMaxSize(),
+                    // Rendered inside MainActivity's Scaffold whose top bar
+                    // already shows `screen.title`; skip the in-body title.
+                    titleShownInTopBar = true,
                 )
             }
 
@@ -71,6 +74,9 @@ fun RecoveryScreen(
                     viewModel = coreAppViewModel,
                     screenName = "RecoveryHelp",
                     modifier = Modifier.fillMaxSize(),
+                    // Rendered inside MainActivity's Scaffold whose top bar
+                    // already shows `screen.title`; skip the in-body title.
+                    titleShownInTopBar = true,
                 )
             }
         }

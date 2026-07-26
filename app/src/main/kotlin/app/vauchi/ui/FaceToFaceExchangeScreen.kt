@@ -116,6 +116,9 @@ fun MultiStageExchangeScreen(
         viewModel = coreAppViewModel,
         screenName = "MultiStageExchange",
         modifier = Modifier.fillMaxSize(),
+        // Rendered inside MainActivity's Scaffold whose top bar already
+        // shows `screen.title`; the in-body header must not repeat it.
+        titleShownInTopBar = true,
     )
 }
 
