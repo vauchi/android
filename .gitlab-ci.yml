@@ -378,7 +378,10 @@ check:design-drift:
     DESIGN_DRIFT_PROTOCOL: "presentation"
     DESIGN_DRIFT_MATCH_MODE: "grep"
     DESIGN_DRIFT_GREP_FILE: "app/src/main/kotlin/app/vauchi/ui/presentation"
-    CORE_REF: "main"
+    # Pin to the core tag that produced the vauchi-platform AAR pinned in
+    # app/build.gradle.kts — the same ref test:screenshots derives from the
+    # AAR version — so drift is checked against exactly the shipped core.
+    CORE_REF: "v0.59.0"
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
@@ -579,7 +582,7 @@ test:screenshots:
   # Falls back to main if tag missing — verify tags exist before bumping AAR.
   variables:
     VRT_PLATFORM: android
-    VRT_SCREENSHOT_DIR: app/src/screenshotTestDebug/reference/app/vauchi/CoreUIComponentScreenshotTestsKt
+    VRT_SCREENSHOT_DIR: app/src/screenshotTestDebug/reference/app/vauchi/ScreenshotTestsKt
   script:
     # Build host-platform native library so layoutlib can load UniFFI types.
     # Uses the same core ref that produced the published AAR bindings.
