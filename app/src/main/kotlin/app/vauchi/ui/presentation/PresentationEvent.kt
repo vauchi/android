@@ -160,6 +160,7 @@ sealed interface PresentationEvent {
         fun deepLinkOpened(uri: String): PresentationEvent = Raw(variant("DeepLinkOpened") { put("uri", uri) })
 
         val appBackgrounded: PresentationEvent = Raw("\"AppBackgrounded\"")
+        val presentationInvalidated: PresentationEvent = Raw("\"PresentationInvalidated\"")
     }
 }
 

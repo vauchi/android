@@ -34,7 +34,7 @@ include:
   - template: Security/Dependency-Scanning.gitlab-ci.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
   - project: 'vauchi/scripts'
-    ref: ci-templates-v2026.07.2
+    ref: feature/contextual-command-surface
     file:
       - '/ci-templates/timeouts.yml'
       - '/ci-templates/reuse.yml'
@@ -351,32 +351,32 @@ lint:images:
 check:design-drift:
   extends: .design-drift-job
   variables:
-    DESIGN_DRIFT_COMPONENT_DIR: "app/src/main/kotlin/app/vauchi/ui/coreui/components"
-    DESIGN_DRIFT_FILE_EXT: ".kt"
-    DESIGN_DRIFT_FILE_SUFFIX: "Component"
-    DESIGN_DRIFT_CASE: "pascal"
+    DESIGN_DRIFT_PROTOCOL: "presentation"
+    DESIGN_DRIFT_MATCH_MODE: "grep"
+    DESIGN_DRIFT_GREP_FILE: "app/src/main/kotlin/app/vauchi/ui/presentation"
+    CORE_REF: "feature/contextual-command-surface"
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         compare_to: refs/heads/$CI_DEFAULT_BRANCH
         paths:
-          - "app/src/main/kotlin/app/vauchi/ui/coreui/components/**"
+          - "app/src/main/kotlin/app/vauchi/ui/presentation/**"
           - ".gitlab-ci.yml"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         paths:
-          - "app/src/main/kotlin/app/vauchi/ui/coreui/components/**"
+          - "app/src/main/kotlin/app/vauchi/ui/presentation/**"
           - ".gitlab-ci.yml"
 
-# Parser-parity gate: verify the kotlinx.serialization sealed dispatch
-# in `app/src/main/kotlin/app/vauchi/ui/coreui/Models.kt` covers every
-# variant declared in core's canonical `Component` enum. Catches
-# silent drift when core adds a variant.
+# Parser-parity gate for Core's canonical PresentationNode enum.
 check:parser-parity:
   extends: .parser-parity-job
   variables:
     FRONTEND_NAME: "android"
-    PARSER_FILE: "app/src/main/kotlin/app/vauchi/ui/coreui/Models.kt"
+    PARSER_FILE: "app/src/main/kotlin/app/vauchi/ui/presentation/PresentationParser.kt"
+    PARSER_PROTOCOL: "presentation"
+    PARSER_SCRIPT_REF: "feature/contextual-command-surface"
+    CORE_REF: "feature/contextual-command-surface"
 
 # Removed symbols: detect stale references to removed features
 check:removed-symbols:

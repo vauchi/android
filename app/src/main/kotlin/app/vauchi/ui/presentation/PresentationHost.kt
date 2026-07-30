@@ -44,6 +44,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import app.vauchi.ui.coreui.CoreAppViewModel
@@ -313,7 +314,7 @@ fun PresentationHost(
                         text = { Text(message) },
                         confirmButton = {
                             TextButton(onClick = viewModel::dismissAlert) {
-                                Text("OK")
+                                Text(stringResource(android.R.string.ok))
                             }
                         },
                     )

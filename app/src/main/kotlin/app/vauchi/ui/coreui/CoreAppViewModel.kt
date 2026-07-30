@@ -700,18 +700,13 @@ class CoreAppViewModel(
 
     private fun attachEventListener() {
         val listener =
-            ScreenInvalidationListener { screenIds ->
+            ScreenInvalidationListener {
                 // Core may fire this on the same thread that dispatched an
                 // event. Hopping back into the engine there
                 // would deadlock the internal Mutex — bounce through
                 // viewModelScope first.
                 viewModelScope.launch {
-                    withContext(Dispatchers.IO) {
-                        for (id in screenIds) {
-                            runCatching { appEngine.invalidateScreenJson("\"$id\"") }
-                        }
-                    }
-                    loadInitialPresentation()
+                    dispatchPresentation(PresentationEvent.presentationInvalidated)
                 }
             }
         try {

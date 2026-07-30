@@ -14,16 +14,16 @@ import uniffi.vauchi_platform.PlatformEventListener
  * .PlatformAppEngine] (which requires the native UniFFI library
  * — only loadable on device).
  *
- * Core invokes [onScreensInvalidated] from whatever thread dispatched
+ * Core invokes [onPresentationInvalidated] from whatever thread dispatched
  * the underlying event. The caller supplying [onInvalidated] is
  * responsible for marshalling to a safe context (e.g. launching into
  * `viewModelScope`) before touching the engine — UniFFI's Mutex
  * deadlocks if the callback re-enters the engine on the same stack.
  */
 class ScreenInvalidationListener(
-    private val onInvalidated: (List<String>) -> Unit,
+    private val onInvalidated: () -> Unit,
 ) : PlatformEventListener {
-    override fun onScreensInvalidated(screenIds: List<String>) {
-        onInvalidated(screenIds)
+    override fun onPresentationInvalidated() {
+        onInvalidated()
     }
 }

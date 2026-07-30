@@ -5,12 +5,11 @@
 package app.vauchi.ui.coreui
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Test
 
 /**
  * Phase 2B (core-gui-architecture-alignment): thin wrapper around
- * [uniffi.vauchi_platform.PlatformEventListener] that forwards screen
+ * [uniffi.vauchi_platform.PlatformEventListener] that forwards presentation
  * invalidations to a Kotlin callback. Unit-testable in the JVM layer
  * because it never touches the native [PlatformAppEngine]; the
  * integration wiring into [CoreAppViewModel] is exercised on device
@@ -18,22 +17,11 @@ import org.junit.Test
  */
 class ScreenInvalidationListenerTest {
     @Test
-    fun `forwards screen ids verbatim to the callback`() {
-        var received: List<String>? = null
-        val listener = ScreenInvalidationListener { received = it }
-
-        listener.onScreensInvalidated(listOf("home", "contacts"))
-
-        assertNotNull(received)
-        assertEquals(listOf("home", "contacts"), received)
-    }
-
-    @Test
-    fun `tolerates an empty invalidation list`() {
+    fun `forwards presentation invalidation to the callback`() {
         var invocations = 0
         val listener = ScreenInvalidationListener { invocations++ }
 
-        listener.onScreensInvalidated(emptyList())
+        listener.onPresentationInvalidated()
 
         assertEquals(1, invocations)
     }

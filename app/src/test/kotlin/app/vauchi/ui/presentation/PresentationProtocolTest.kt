@@ -106,6 +106,15 @@ class PresentationProtocolTest {
         assertEquals("\"reduced\"", environment.getValue("motion").toString())
     }
 
+    // @scenario: generic_presentation_protocol.feature :: User interaction returns as an opaque event
+    @Test
+    fun `presentation invalidation is a canonical unit event`() {
+        assertEquals(
+            "\"PresentationInvalidated\"",
+            PresentationEvent.presentationInvalidated.toJson(),
+        )
+    }
+
     @Test
     fun `native shortcut policy resolves contextual roles and causal undo`() {
         val undo =
