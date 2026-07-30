@@ -791,14 +791,7 @@ class CoreAppViewModel(
     }
 
     fun invalidateAll() {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) { appEngine.invalidateAll() }
-                loadInitialPresentation()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to invalidate", e)
-            }
-        }
+        dispatchPresentation(PresentationEvent.presentationInvalidated)
     }
 
     fun dismissToast() {

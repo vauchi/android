@@ -83,7 +83,7 @@ class LocalizationManager(
         // context has been pushed, so the onboarding/first screen reflects
         // the real translations instead of "Missing: ..." placeholders.
         try {
-            appEngine.invalidateAll()
+            appEngine.dispatchJson("\"PresentationInvalidated\"")
         } catch (e: Exception) {
             Log.w(TAG, "Failed to invalidate engine after locale attach: ${e.javaClass.simpleName}", e)
         }
