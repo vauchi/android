@@ -119,21 +119,24 @@ workflow:
     # licenses are accepted. The self-hosted runner's /opt/android-sdk lost
     # its accepted-licenses state (2026-07-30: build-tools;36.0.0 and
     # platforms;android-35 installs refused), so accept them up front.
-    # Best-effort: when no sdkmanager is present this is a no-op and the
+    # `sdkmanager --licenses` just persists license hashes as files under
+    # $ANDROID_HOME/licenses/ — the runner has no sdkmanager installed, so
+    # write those marker files directly (same hashes sdkmanager writes).
+    # Best-effort: if the directory is not writable this is a no-op and the
     # build fails exactly as before, never worse.
     - |
-      SDKMANAGER=""
-      for candidate in \
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-          "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager \
-          "$ANDROID_HOME/tools/bin/sdkmanager"; do
-        if [ -x "$candidate" ]; then SDKMANAGER="$candidate"; break; fi
-      done
-      if [ -n "$SDKMANAGER" ]; then
-        yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
-        echo "✅ Android SDK licenses accepted via $SDKMANAGER"
+      LICENSES_DIR="$ANDROID_HOME/licenses"
+      if mkdir -p "$LICENSES_DIR" 2>/dev/null && [ -w "$LICENSES_DIR" ]; then
+        printf '%s\n' \
+          24333f8a63b6825ea9c5514f83c2829b004d1fee \
+          8933bad161af4178b1185d1a37fbf41ea5269c55 \
+          d56f5187479451eabf01fb78af6dfcb131a6481e \
+          > "$LICENSES_DIR/android-sdk-license"
+        echo "84831b9409646a918e30573bab4c9c91346d8abd" \
+          > "$LICENSES_DIR/android-sdk-preview-license"
+        echo "✅ Android SDK license markers written to $LICENSES_DIR"
       else
-        echo "⚠️  sdkmanager not found under $ANDROID_HOME — skipping license acceptance"
+        echo "⚠️  $LICENSES_DIR not writable — skipping license acceptance"
       fi
 
 .android-docker-job:
