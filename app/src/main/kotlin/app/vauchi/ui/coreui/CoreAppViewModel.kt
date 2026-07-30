@@ -11,12 +11,17 @@ import androidx.lifecycle.viewModelScope
 import app.vauchi.ble.BleCommand
 import app.vauchi.ble.BleFailure
 import app.vauchi.camera.CameraFailure
-import app.vauchi.exchange.ExchangeModePermissions
 import app.vauchi.nfc.NfcReaderPort
 import app.vauchi.nfc.NfcReaderService
 import app.vauchi.nfc.NfcResponderPort
 import app.vauchi.nfc.VauchiHceResponder
 import app.vauchi.nfc.dispatchNfcCommand
+import app.vauchi.ui.presentation.OverlayKind
+import app.vauchi.ui.presentation.PresentationCommand
+import app.vauchi.ui.presentation.PresentationEvent
+import app.vauchi.ui.presentation.PresentationProtocol
+import app.vauchi.ui.presentation.PresentationReducer
+import app.vauchi.ui.presentation.PresentationState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -28,10 +33,17 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import uniffi.vauchi_platform.DomainCommand
 import uniffi.vauchi_platform.DomainCommandResult
@@ -39,51 +51,27 @@ import uniffi.vauchi_platform.MobileAhaMoment
 import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileBleLinkDirection
 import uniffi.vauchi_platform.MobileEvent
-import uniffi.vauchi_platform.MobileLocale
-import uniffi.vauchi_platform.MobileTabInfo
-import uniffi.vauchi_platform.MobileTabLayout
 import uniffi.vauchi_platform.PlatformAppEngine
 
 /**
- * ViewModel that bridges [PlatformAppEngine] to Compose UI for core-driven screens.
+ * ViewModel that bridges [PlatformAppEngine] to the generic Compose presentation host.
  *
- * This is the Android equivalent of iOS/macOS AppViewModel. A single instance
- * is shared across all core-driven tabs — one engine, one DB connection.
- *
- * Core describes what to render via [ScreenModel]. User interactions flow back
- * as [UserAction] JSON. Core returns [ActionResult] directing the UI.
+ * Core owns immutable presentation state and reduces typed events into commands.
+ * Android renders that state and performs only native effects. One instance is
+ * shared by the entire host — one engine, one database connection.
  */
 class CoreAppViewModel(
     private val appEngine: PlatformAppEngine,
     private val nfcReader: NfcReaderPort = NfcReaderService(),
     private val nfcResponder: NfcResponderPort = VauchiHceResponder(),
+    private val onPresentationCommitted: () -> Unit = {},
 ) : ViewModel() {
     private val json = Json { ignoreUnknownKeys = true }
+    private val presentationMutex = Mutex()
 
-    private val _screen = MutableStateFlow<ScreenModel?>(null)
-    val screen: StateFlow<ScreenModel?> = _screen.asStateFlow()
-
-    /**
-     * Top-level tabs as core describes them — `id` (snake_case
-     * `screen_id`), `label` (locale-resolved), `icon` (SF Symbol name
-     * Android maps to a Material Icon), `badge_count`. Empty before
-     * identity exists or before the first [loadTabs] call. Driven by
-     * `PlatformAppEngine.navItems(MOBILE, locale)`; reload via [loadTabs] when
-     * identity transitions or the user changes locale.
-     */
-    private val _tabs = MutableStateFlow<List<MobileTabInfo>>(emptyList())
-    val tabs: StateFlow<List<MobileTabInfo>> = _tabs.asStateFlow()
-
-    /**
-     * A tab navigation requested before [loadTabs] populated [_tabs]
-     * (cold-start/restore race, `2026-07-01-android-startup-nav-race-no-tab`).
-     * Replayed by [flushPendingTabNav] once tabs arrive. Two startup
-     * effects can each issue one (device-testing programmatic nav, then
-     * the dynamic default landing) — the slot is FIRST-wins so the
-     * explicit early nav beats the later default. Cleared by any deep
-     * link: real intent supersedes the courtesy landing.
-     */
-    private var pendingTabNavId: String? = null
+    private val _presentationState = MutableStateFlow(PresentationState())
+    val presentationState: StateFlow<PresentationState> =
+        _presentationState.asStateFlow()
 
     /**
      * Foreground app-heartbeat driver (ADR-044 Am2a). Core owns *when* the
@@ -102,12 +90,6 @@ class CoreAppViewModel(
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
 
-    private val _toastUndoActionId = MutableStateFlow<String?>(null)
-    val toastUndoActionId: StateFlow<String?> = _toastUndoActionId.asStateFlow()
-
-    private val _toastUndoLabel = MutableStateFlow<String?>(null)
-    val toastUndoLabel: StateFlow<String?> = _toastUndoLabel.asStateFlow()
-
     private val _alertMessage = MutableStateFlow<Pair<String, String>?>(null)
     val alertMessage: StateFlow<Pair<String, String>?> = _alertMessage.asStateFlow()
 
@@ -121,20 +103,13 @@ class CoreAppViewModel(
         _openUrlEvent.value = null
     }
 
-    /**
-     * Fires once when core reports onboarding is finished
-     * (`ActionResult::OnboardingComplete`). The shell should flip app state
-     * from onboarding to ready and render the current screen.
-     * (`2026-07-06-mobile-domain-shell-violations` A13).
-     */
-    private val _onboardingCompleteEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val onboardingCompleteEvent: SharedFlow<Unit> = _onboardingCompleteEvent.asSharedFlow()
+    private val _exportFileRequest =
+        MutableStateFlow<ExportFileRequest?>(null)
+    val exportFileRequest: StateFlow<ExportFileRequest?> =
+        _exportFileRequest.asStateFlow()
 
-    private val _backupExportData = MutableStateFlow<String?>(null)
-    val backupExportData: StateFlow<String?> = _backupExportData.asStateFlow()
-
-    fun consumeBackupExportData() {
-        _backupExportData.value = null
+    fun consumeExportFileRequest() {
+        _exportFileRequest.value = null
     }
 
     /**
@@ -189,7 +164,7 @@ class CoreAppViewModel(
     }
 
     /**
-     * True while a dispatched [UserAction] is executing in core. Hosts
+     * True while a presentation event is being reduced by core. Hosts
      * render a blocking progress scrim once this has been true for a
      * beat — long-running engine work (e.g. a 10k-contact backup
      * restore) otherwise runs behind a fully interactive, unchanged
@@ -297,25 +272,6 @@ class CoreAppViewModel(
 
     fun consumeAccelerometerRequest() {
         _accelerometerActiveRequest.value = null
-    }
-
-    /**
-     * Per-mode permission requests. When the user selects an exchange mode, the
-     * Android permissions that mode's ritual needs (camera / microphone /
-     * Bluetooth, per [ExchangeModePermissions]) are surfaced here so the
-     * Activity can request them up front — the "Permissions" step of the
-     * Group → Mode → Permissions → Ritual flow. Empty means "no pending
-     * request"; the ViewModel has no `Context`, so the Activity owns the
-     * launcher (the same split as the accelerometer / NFC reader-mode requests).
-     */
-    private val _modePermissionRequest = MutableStateFlow<List<String>>(emptyList())
-    val modePermissionRequest: StateFlow<List<String>> =
-        _modePermissionRequest.asStateFlow()
-    private val modePermissionActionGate = ModePermissionActionGate()
-
-    fun resolveModePermissionRequest(allGranted: Boolean) {
-        _modePermissionRequest.value = emptyList()
-        modePermissionActionGate.resolve(allGranted)
     }
 
     /**
@@ -558,14 +514,8 @@ class CoreAppViewModel(
                 withContext(Dispatchers.IO) {
                     appEngine.handleHardwareEvent(event = event)
                 }
-            // core 0.51.44+: handleHardwareEvent returns the
-            // `{"action_result": <ActionResult>|null, "commands": [<CommandDTO>]}`
-            // envelope so hardware events deliver the Commands they produce
-            // (KeyOffer / data writes / lifecycle hooks) — previously stranded.
-            val envelope = json.decodeFromString<HardwareEventEnvelope>(resultJson)
-            envelope.actionResult?.let { applyResult(it) }
-            if (envelope.commands.isNotEmpty()) {
-                handleExchangeCommands(envelope.commands)
+            presentationMutex.withLock {
+                applyPresentationEnvelope(resultJson)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to send hardware event", e)
@@ -580,15 +530,179 @@ class CoreAppViewModel(
     private var eventListener: ScreenInvalidationListener? = null
 
     init {
-        loadScreen()
+        loadInitialPresentation()
         attachEventListener()
+    }
+
+    fun loadInitialPresentation() {
+        viewModelScope.launch {
+            try {
+                presentationMutex.withLock {
+                    val commandJson =
+                        withContext(Dispatchers.IO) {
+                            appEngine.initialCommandsJson()
+                        }
+                    applyPresentationEnvelope(commandJson)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load presentation", e)
+                _error.value = "Failed to load presentation: ${e.message}"
+            }
+        }
+    }
+
+    fun dispatchPresentation(event: PresentationEvent) {
+        dispatchPresentationEvents(event)
+    }
+
+    fun activateAndDispatch(
+        surfaceId: String,
+        event: PresentationEvent,
+    ) {
+        dispatchPresentationEvents(
+            PresentationEvent.SurfaceActivated(surfaceId),
+            event,
+        )
+    }
+
+    fun dismissPresentationOverlay() {
+        val overlay = _presentationState.value.overlay ?: return
+        _presentationState.value =
+            _presentationState.value.copy(overlay = null)
+        dispatchPresentation(
+            PresentationEvent.OverlayDismissed(
+                surfaceId = overlay.surfaceId,
+                kind = overlay.overlay.kind,
+            ),
+        )
+    }
+
+    private fun dispatchPresentationEvents(vararg events: PresentationEvent) {
+        viewModelScope.launch {
+            try {
+                _actionInFlight.value = true
+                presentationMutex.withLock {
+                    for (event in events) {
+                        val commandJson =
+                            withContext(Dispatchers.IO) {
+                                appEngine.dispatchJson(eventJson = event.toJson())
+                            }
+                        applyPresentationEnvelope(commandJson)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to dispatch presentation event", e)
+                _error.value = "Presentation failed: ${e.message}"
+            } finally {
+                _actionInFlight.value = false
+            }
+        }
+    }
+
+    private fun applyPresentationEnvelope(commandJson: String) {
+        val envelope = PresentationProtocol.decodeEnvelope(commandJson)
+        val result =
+            PresentationReducer.apply(
+                _presentationState.value,
+                envelope.commands,
+            )
+        _presentationState.value = result.state
+        handlePresentationEffects(result.effects)
+        onPresentationCommitted()
+    }
+
+    private fun handlePresentationEffects(effects: List<PresentationCommand.Effect>) {
+        for (effect in effects) {
+            when (effect.variant) {
+                "PresentAlert" -> {
+                    val alert =
+                        effect.payload.jsonObject
+                            .getValue("alert")
+                            .jsonObject
+                    _alertMessage.value =
+                        alert.getValue("title").jsonPrimitive.content to
+                        alert.getValue("message").jsonPrimitive.content
+                }
+
+                "ShowToast" -> {
+                    val toast =
+                        effect.payload.jsonObject
+                            .getValue("toast")
+                            .jsonObject
+                    showToast(toast.getValue("message").jsonPrimitive.content)
+                }
+
+                "OpenExternalUrl" -> {
+                    _openUrlEvent.value =
+                        effect.payload.jsonObject
+                            .getValue("url")
+                            .jsonPrimitive
+                            .content
+                }
+
+                "ExportFile" -> {
+                    val file =
+                        effect.payload.jsonObject
+                            .getValue("file")
+                            .jsonObject
+                    _exportFileRequest.value =
+                        ExportFileRequest(
+                            suggestedName =
+                                file
+                                    .getValue("suggested_name")
+                                    .jsonPrimitive
+                                    .content,
+                            mimeType =
+                                file
+                                    .getValue("mime_type")
+                                    .jsonPrimitive
+                                    .content,
+                            data =
+                                file
+                                    .getValue("data")
+                                    .jsonArray
+                                    .map {
+                                        it.jsonPrimitive.content
+                                            .toInt()
+                                            .toByte()
+                                    }.toByteArray(),
+                        )
+                }
+
+                "PerformNativeBack" -> {
+                    _nativeBackEvent.value = true
+                }
+
+                "ResetApplication" -> {
+                    loadInitialPresentation()
+                }
+
+                "PostNotification" -> {
+                    Log.d(TAG, "Notification effect delegated to native scheduler")
+                }
+
+                else -> {
+                    val wrapped =
+                        JsonObject(
+                            mapOf(effect.variant to effect.payload),
+                        )
+                    val command =
+                        runCatching {
+                            json.decodeFromJsonElement<CommandDTO>(wrapped)
+                        }.getOrElse {
+                            CommandDTO.Unknown(effect.variant)
+                        }
+                    handleExchangeCommands(listOf(command))
+                }
+            }
+        }
     }
 
     private fun attachEventListener() {
         val listener =
             ScreenInvalidationListener { screenIds ->
-                // Core may fire this on the same thread that called
-                // handleActionJson. Hopping back into the engine there
+                // Core may fire this on the same thread that dispatched an
+                // event. Hopping back into the engine there
                 // would deadlock the internal Mutex — bounce through
                 // viewModelScope first.
                 viewModelScope.launch {
@@ -597,7 +711,7 @@ class CoreAppViewModel(
                             runCatching { appEngine.invalidateScreenJson("\"$id\"") }
                         }
                     }
-                    loadScreen()
+                    loadInitialPresentation()
                 }
             }
         try {
@@ -612,183 +726,12 @@ class CoreAppViewModel(
     internal val hasEventListener: Boolean
         get() = eventListener != null
 
-    /**
-     * Refresh [tabs] from `PlatformAppEngine.navItems(MOBILE, locale)`.
-     * Call on startup, after identity creation (pre-identity returns
-     * just Onboarding; post-identity returns the five mobile top-level
-     * tabs), and whenever the active locale changes so labels stay in
-     * sync. Errors are logged and leave the previous tabs in place.
-     */
-    fun loadTabs(locale: MobileLocale) {
-        viewModelScope.launch {
-            try {
-                _tabs.value =
-                    withContext(Dispatchers.IO) {
-                        appEngine.navItems(layout = MobileTabLayout.MOBILE, locale = locale)
-                    }
-                flushPendingTabNav()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to load tabs", e)
-            }
-        }
-    }
-
-    fun loadScreen() {
-        viewModelScope.launch {
-            try {
-                val screenJson =
-                    withContext(Dispatchers.IO) {
-                        appEngine.currentScreenJson()
-                    }
-                _screen.value = json.decodeFromString<ScreenModel>(screenJson)
-                _error.value = null
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to load screen", e)
-                _error.value = "Failed to load screen: ${e.message}"
-            }
-        }
-    }
-
-    fun handleAction(action: UserAction) {
-        // T0.3: the QR scanner reports a camera-permission denial as a sentinel
-        // ActionPressed. Intercept it HERE — the single chokepoint every render
-        // path's onAction funnels through (CoreScreenView AND CoreOnboardingScreen)
-        // — and forward it to core as a hardware event, never as a serialized
-        // UserAction (it must never reach handleActionJson / core's action path).
-        // TODO(HUMBLE): T/W, P1. Mints/intercepts a sentinel action id for camera
-        // denial instead of core emitting a dedicated hardware event. Fix: core
-        // provides CameraPermissionDenied event or explicit action id.
-        // (see _private problem record 2026-07-06-mobile-domain-shell-violations)
-        if (action is UserAction.ActionPressed && action.actionId == CameraFailure.DENIED_ACTION_ID) {
-            onCameraPermissionDenied()
-            return
-        }
-        val actionJson = json.encodeToString(UserAction.serializer(), action)
-        // Permissions step: when a mode is picked, surface the OS permissions
-        // its ritual needs so the Activity can request them up front, before the
-        // ritual screen. See _private/docs/problems/2026-06-06-exchange-ritual-flow/.
-        // TODO(HUMBLE): D/T, P1. Parses "mode:" item ids and maps exchange mode
-        // to Android permissions. Fix: core emits a Command::RequestPermissions
-        // with capability list. (see _private problem record
-        // 2026-07-06-mobile-domain-shell-violations)
-        if (action is UserAction.ListItemSelected && action.itemId.startsWith("mode:")) {
-            val perms =
-                modePermissionActionGate.defer(action.itemId) {
-                    submitActionJson(actionJson)
-                }
-            if (perms.isNotEmpty()) {
-                _modePermissionRequest.value = perms
-                return
-            }
-        }
-        submitActionJson(actionJson)
-    }
-
-    private fun submitActionJson(actionJson: String) {
-        viewModelScope.launch {
-            try {
-                _actionInFlight.value = true
-                val resultJson =
-                    withContext(Dispatchers.IO) {
-                        appEngine.handleActionJson(actionJson = actionJson)
-                    }
-                // Phase 2b: handleActionJson returns
-                // `{"action_result": <ActionResult>, "commands": [<CommandDTO>]}`.
-                // The lifecycle commands carry brightness / idle-timer
-                // requests emitted by
-                // `WorkflowEngine::screen_entered/screen_exited`.
-                val envelope = json.decodeFromString<ActionResultEnvelope>(resultJson)
-                applyResult(envelope.actionResult)
-                if (envelope.commands.isNotEmpty()) {
-                    handleExchangeCommands(envelope.commands)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to handle action", e)
-                _error.value = "Action failed: ${e.message}"
-            } finally {
-                _actionInFlight.value = false
-            }
-        }
-    }
-
-    /**
-     * Forward a bottom-nav tab navigation by canonical tab id, looking up the
-     * opaque `actionId` from the live [tabs] list and dispatching
-     * [UserAction.NavigateToTab]. The id is treated opaquely — the shell does
-     * not enumerate or interpret specific tab ids. Replaces
-     * `navigateTo(screenName)` → `navigate_to_json` for tab targets so the
-     * frontend stops constructing core screen names (ADR-043 Am4 §1;
-     * CoreScreenIdMap rework).
-     */
-    fun navigateToTabById(canonicalId: String) {
-        when (val decision = decideTabNav(_tabs.value, canonicalId)) {
-            is TabNavDecision.Dispatch -> {
-                handleAction(UserAction.NavigateToTab(actionId = decision.actionId))
-            }
-
-            is TabNavDecision.Queue -> {
-                if (pendingTabNavId == null) {
-                    pendingTabNavId = canonicalId
-                }
-            }
-
-            is TabNavDecision.Unknown -> {
-                Log.e(TAG, "navigateToTabById: no tab for id=$canonicalId")
-            }
-        }
-    }
-
-    /**
-     * Replay a nav requested before tabs loaded. Called on [loadTabs]'
-     * success path (a failed load keeps the request queued for the next
-     * attempt). [decideTabNavFlush] owns the semantics: replay only while
-     * the app still rests on core's bootstrap screen, keep queued while
-     * tabs are still empty, drop silently when superseded by a real
-     * navigation, and error only when tabs are loaded but the id is
-     * genuinely absent.
-     */
-    private fun flushPendingTabNav() {
-        val pending = pendingTabNavId ?: return
-        when (val outcome = decideTabNavFlush(pending, _tabs.value, _screen.value?.navTabId)) {
-            is TabNavFlush.Replay -> {
-                pendingTabNavId = null
-                handleAction(UserAction.NavigateToTab(actionId = outcome.actionId))
-            }
-
-            is TabNavFlush.Keep -> {
-                Unit
-            }
-
-            is TabNavFlush.DropSuperseded -> {
-                pendingTabNavId = null
-            }
-
-            is TabNavFlush.DropUnknown -> {
-                pendingTabNavId = null
-                Log.e(TAG, "navigateToTabById: no tab for id=$pending")
-            }
-        }
-    }
-
-    /**
-     * Fires when core reports a back-stopping root via
-     * `ActionResult::PerformNativeBack`. The Activity should finish / minimize
-     * itself. One-shot StateFlow — consumed by [consumeNativeBackEvent].
-     */
+    /** Core requested native back after reducing a generic back event. */
     private val _nativeBackEvent = MutableStateFlow<Boolean?>(null)
     val nativeBackEvent: StateFlow<Boolean?> = _nativeBackEvent.asStateFlow()
 
     fun consumeNativeBackEvent() {
         _nativeBackEvent.value = null
-    }
-
-    /**
-     * Forward the system-back gesture to core as `UserAction::NavigateBack`.
-     * Core returns `ActionResult::PerformNativeBack` when there is nothing to
-     * pop; [nativeBackEvent] is emitted so the Activity can finish.
-     */
-    fun navigateBack() {
-        handleAction(UserAction.NavigateBack)
     }
 
     /**
@@ -806,6 +749,7 @@ class CoreAppViewModel(
         if (outcome.commands.isNotEmpty()) {
             handleExchangeCommands(outcome.commands)
         }
+        loadInitialPresentation()
         return outcome
     }
 
@@ -855,7 +799,7 @@ class CoreAppViewModel(
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) { appEngine.invalidateAll() }
-                loadScreen()
+                loadInitialPresentation()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to invalidate", e)
             }
@@ -864,24 +808,13 @@ class CoreAppViewModel(
 
     fun dismissToast() {
         _toastMessage.value = null
-        _toastUndoActionId.value = null
-        _toastUndoLabel.value = null
     }
 
     /**
-     * Surface a transient toast directly. Mirrors the
-     * `ActionResult::ShowToast` path but lets non-action callers
-     * drop a message into the same Snackbar pipeline. Shape mirrors
-     * iOS `AppViewModel.showToast(...)`.
+     * Surface a transient toast through the native Snackbar pipeline.
      */
-    fun showToast(
-        message: String,
-        undoActionId: String? = null,
-        undoLabel: String? = null,
-    ) {
+    fun showToast(message: String) {
         _toastMessage.value = message
-        _toastUndoActionId.value = undoActionId
-        _toastUndoLabel.value = undoLabel
     }
 
     fun dismissAlert() {
@@ -902,101 +835,9 @@ class CoreAppViewModel(
             null
         }
 
-    // Internal (not private) so the host-reachability guards can drive the
-    // real `ActionResult` dispatch arms instead of a parallel helper
-    // (`2026-06-11-silent-failure-mode-umbrella` goal 2).
-    internal fun applyResult(result: ActionResult) {
-        when (result) {
-            is ActionResult.UpdateScreen -> {
-                _screen.value = result.screen
-            }
-
-            is ActionResult.NavigateTo -> {
-                _screen.value = result.screen
-            }
-
-            is ActionResult.ValidationError -> {
-                // Core patches validation into screen components via AppEngine
-                loadScreen()
-            }
-
-            is ActionResult.Complete, is ActionResult.WipeComplete -> {
-                loadScreen()
-            }
-
-            is ActionResult.ShowToast -> {
-                _toastMessage.value = result.message
-                _toastUndoActionId.value = result.undoActionId
-                _toastUndoLabel.value = result.undoLabel
-            }
-
-            is ActionResult.ShowAlert -> {
-                _alertMessage.value = Pair(result.title, result.message)
-            }
-
-            is ActionResult.OpenUrl -> {
-                _openUrlEvent.value = result.url
-            }
-
-            is ActionResult.Commands -> {
-                handleExchangeCommands(result.commands)
-            }
-
-            is ActionResult.ShowFormDialog -> {
-                // Dialog presentation handled by NavigateTo — no separate action needed
-            }
-
-            is ActionResult.PreviewAs -> {
-                // Card preview handled by NavigateTo — no separate action needed
-            }
-
-            is ActionResult.BackupExportComplete -> {
-                // Core executed the backup — surface the data for sharing.
-                // The encrypted hex is in result.data; emit to UI for save/share.
-                _backupExportData.value = result.data
-                loadScreen()
-            }
-
-            is ActionResult.OnboardingComplete -> {
-                // Core has already navigated to the chosen post-onboarding
-                // screen. Notify the shell so it flips app state from
-                // onboarding to ready; then load the current screen so the
-                // UI renders the destination.
-                _onboardingCompleteEvent.tryEmit(Unit)
-                loadScreen()
-            }
-
-            is ActionResult.PerformNativeBack -> {
-                // Back-stopping root: the Activity finishes / minimizes itself.
-                _nativeBackEvent.value = true
-            }
-
-            is ActionResult.BiometricUnlockOutcome -> {
-                // Consumed by MainViewModel.retryInit(), which reports
-                // the biometric hardware event and decodes the outcome
-                // directly — it never flows through this screen pipeline.
-            }
-
-            // Resolved to NavigateTo/Commands by AppEngine.route_result in
-            // core — frontends never observe these raw (ADR-043 Am4).
-            // CompleteWith and StartDeviceLink are kept decode-only for
-            // backward compatibility with older core versions.
-            is ActionResult.OpenContact,
-            is ActionResult.EditContact,
-            is ActionResult.OpenEntryDetail,
-            is ActionResult.CompleteWith,
-            is ActionResult.StartDeviceLink,
-            is ActionResult.RequestCamera,
-            is ActionResult.Unknown,
-            -> { /* no-op */ }
-        }
-    }
-
     /**
-     * Dispatch a list of [CommandDTO]s emitted by core. Called from
-     * [applyResult] for `ActionResult.Commands`, from [handleAction]'s
-     * action-result envelope drain, and from [onWakeup] so lifecycle /
-     * exchange commands reach the right platform handlers.
+     * Dispatch native [CommandDTO] effects emitted by core presentation or
+     * hardware-event processing.
      *
      * ADR-031: hardware exchange commands (BLE, NFC, Audio, brightness,
      * idle-timer) are handled by the exchange session and the

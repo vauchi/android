@@ -6,7 +6,6 @@ package app.vauchi.util
 
 import android.content.Context
 import android.content.SharedPreferences
-import app.vauchi.ui.coreui.UserAction
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -133,52 +132,5 @@ class LocalizationManagerSharedPrefsTest {
         val mgr = newManager()
 
         assertNull("falls back to null locale on corruption", mgr.selectedLocaleCode)
-    }
-
-    private fun singletonManager(): LocalizationManager =
-        LocalizationManager.getInstance(RuntimeEnvironment.getApplication())
-
-    @Test
-    fun `applyLocaleFromUserAction persists explicit language pick`() {
-        val mgr = singletonManager()
-
-        applyLocaleFromUserAction(
-            RuntimeEnvironment.getApplication(),
-            UserAction.ListItemSelected(componentId = "language", itemId = "fr"),
-        )
-
-        assertEquals("fr", prefs.getString("selected_locale_code", null))
-        assertFalse(prefs.getBoolean("follow_system", true))
-        assertEquals("fr", mgr.selectedLocaleCode)
-    }
-
-    @Test
-    fun `applyLocaleFromUserAction resets to system for follow_system`() {
-        prefs
-            .edit()
-            .putString("selected_locale_code", "de")
-            .putBoolean("follow_system", false)
-            .commit()
-        val mgr = singletonManager()
-
-        applyLocaleFromUserAction(
-            RuntimeEnvironment.getApplication(),
-            UserAction.ListItemSelected(componentId = "language", itemId = "follow_system"),
-        )
-
-        assertTrue(prefs.getBoolean("follow_system", false))
-        assertFalse(prefs.contains("selected_locale_code"))
-        assertTrue(mgr.followSystem)
-    }
-
-    @Test
-    fun `applyLocaleFromUserAction ignores non language selections`() {
-        applyLocaleFromUserAction(
-            RuntimeEnvironment.getApplication(),
-            UserAction.ListItemSelected(componentId = "theme", itemId = "dark"),
-        )
-
-        assertTrue(prefs.getBoolean("follow_system", true))
-        assertFalse(prefs.contains("selected_locale_code"))
     }
 }

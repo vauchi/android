@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
@@ -72,23 +73,14 @@ import app.vauchi.proximity.LocationCaptureService
 import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.KeyInvalidatedRecoveryScreen
 import app.vauchi.ui.MainViewModel
-import app.vauchi.ui.MultiStageExchangeScreen
-import app.vauchi.ui.NfcTapExchangeScreen
-import app.vauchi.ui.QrDiagnosticScreen
-import app.vauchi.ui.RecoveryScreen
 import app.vauchi.ui.StartupErrorKind
 import app.vauchi.ui.UiState
 import app.vauchi.ui.coreui.BrightnessRequest
 import app.vauchi.ui.coreui.CoreAppViewModel
-import app.vauchi.ui.coreui.CoreOnboardingScreen
-import app.vauchi.ui.coreui.CoreScreenView
-import app.vauchi.ui.coreui.MaterialIconName
-import app.vauchi.ui.coreui.NativeWrapperHint
 import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
-import app.vauchi.ui.coreui.ScreenAction
-import app.vauchi.ui.coreui.UserAction
-import app.vauchi.ui.coreui.materialIconNameForCoreIcon
+import app.vauchi.ui.presentation.PresentationEvent
+import app.vauchi.ui.presentation.PresentationHost
 import app.vauchi.ui.startupErrorKindFor
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
@@ -99,6 +91,7 @@ import kotlinx.coroutines.withContext
 import uniffi.vauchi_platform.MobileBleLinkDirection
 import uniffi.vauchi_platform.MobilePendingNotification
 import uniffi.vauchi_platform.coreVersion
+import java.io.File
 
 class MainActivity : FragmentActivity() {
     /** Mutable state for deep link URI, observed by Compose. */
@@ -203,17 +196,6 @@ class MainActivity : FragmentActivity() {
         handleIncomingIntent(intent)
     }
 
-    override fun onStop() {
-        super.onStop()
-        // Trigger auto-lock if enabled when app goes to background (C1)
-        try {
-            val viewModel = ViewModelProvider(this)[MainViewModel::class.java]
-            viewModel.handleAppBackgrounded()
-        } catch (e: Exception) {
-            // viewModel might not be available or initialization failed
-        }
-    }
-
     private val _navigateTo = mutableStateOf<String?>(null)
 
     private fun handleIncomingIntent(intent: Intent?) {
@@ -278,67 +260,6 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-// Home tab root keeps Android-specific top-app-bar chrome; all other
-// top-level screens render through the default CoreScreenView branch.
-// Wrapper routing uses core's native_wrapper_hint instead of matching
-// domain screen_ids (2026-07-06-mobile-domain-shell-violations A2).
-// The "my_info" check remains a HUMBLE-EXCEPTION because core does not
-// yet expose home-tab metadata; the app bar is shell-owned chrome.
-// TODO(HUMBLE): W, P2. Hardcodes "my_info" home-tab id. Fix: core marks
-// the home tab in tab metadata. (see _private problem record
-// 2026-07-06-mobile-domain-shell-violations)
-
-enum class Screen {
-    // Pre-Ready boot/auth states. Home renders one of:
-    // LoadingScreen / CoreOnboardingScreen / AuthenticationGate /
-    // AppPasswordScreen / ErrorScreen / ReadyScreen, dispatched by
-    // `UiState`. ReadyScreen is itself core-driven.
-    Home,
-
-    // Native screens awaiting per-pair retirement (Phase 2+ of
-    // `2026-04-30-android-activity-enum-collapse`). Each one is its
-    // own Pure Humble UI pair, sequenced low-risk-first.
-    NfcExchange,
-    Recovery,
-    QrDiagnostic,
-
-    // Hardware-presentation wrapper (orientation lock, brightness,
-    // keep-screen-on) around a `CoreScreenView`. Stays native — not
-    // a pure 1:1 shell, so the default core-driven render path doesn't
-    // apply. ADR-031 hardware-event flow is the eventual migration.
-    MultiStageExchange,
-    // Pure Humble UI cases (Contacts, Settings, Devices, Labels,
-    // ArchivedContacts, ContactMerge, DeviceReplacement, Help)
-    // collapsed in Phase 1 — they render through the core-driven
-    // dispatch above the `when (currentScreen)` block. ContactDetail
-    // and LabelDetail were removed earlier (2026-04-28 audit
-    // follow-up); core resolves the navigation to NavigateTo(ScreenModel)
-    // in route_result and the frontend observes `coreAppViewModel.screen`.
-}
-
-/**
- * Resolve the SF-Symbol icon name from core's `MobileTabInfo.icon`
- * to a concrete Material `ImageVector`. Pure platform-presentation
- * (no logic), kept beside `MainScreen` so `androidx.compose.material`
- * imports stay in this file. The semantic mapping (which Material
- * Icon fits which SF Symbol) lives in
- * [app.vauchi.ui.coreui.materialIconNameForCoreIcon] so it can be
- * unit-tested without Compose.
- */
-// TODO(HUMBLE): W, P2. Maps core tab icon tokens to Material icons by
-// SF-Symbol name; domain vocabulary in view layer. Fix: core supplies a
-// platform-agnostic icon_token catalog. (see _private problem record
-// 2026-07-06-mobile-domain-shell-violations)
-private fun imageVectorForCoreTab(coreIcon: String): ImageVector =
-    when (materialIconNameForCoreIcon(coreIcon)) {
-        MaterialIconName.PERSON -> Icons.Default.Person
-        MaterialIconName.PEOPLE -> Icons.Default.People
-        MaterialIconName.QR_CODE -> Icons.Default.QrCode
-        MaterialIconName.GROUP -> Icons.Default.Group
-        MaterialIconName.MORE_HORIZ -> Icons.Default.MoreHoriz
-    }
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     viewModel: MainViewModel = viewModel(),
@@ -350,34 +271,24 @@ fun MainScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
-    val isOnline by viewModel.isOnline.collectAsState()
-    var currentScreen by remember { mutableStateOf(Screen.Home) }
-    // selectedContactId / selectedLabelId removed — contact-detail and
-    // group-detail navigation are resolved in core (route_result emits
-    // NavigateTo); the frontend just renders `coreAppViewModel.screen`.
     var showRestoreDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
 
-    // Core-driven screen renderer (SP-19)
+    // The Android shell renders Core's immutable presentation snapshot and
+    // forwards typed events. Domain navigation and action priority never live
+    // in Compose.
     val coreAppViewModel =
         remember(viewModel) {
-            CoreAppViewModel(viewModel.appEngine)
+            CoreAppViewModel(
+                appEngine = viewModel.appEngine,
+                onPresentationCommitted = viewModel::reconcilePresentationState,
+            )
         }
 
-    // Bottom-nav tabs come from core (`navItems(MOBILE, locale)`) — labels,
-    // icons, and the tab set itself are core-owned. Reload when
-    // identity is created (uiState transitions to Ready) and whenever
-    // the active locale changes so labels stay in sync.
     val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
-    val tabs by coreAppViewModel.tabs.collectAsState()
-    LaunchedEffect(uiState, localizationManager.currentLocale) {
-        if (uiState is UiState.Ready) {
-            coreAppViewModel.loadTabs(localizationManager.currentLocale)
-        }
-    }
 
     // Handle OpenUrl events from core-driven screens
     val openUrlEvent by coreAppViewModel.openUrlEvent.collectAsState()
@@ -389,38 +300,41 @@ fun MainScreen(
         }
     }
 
-    // F2-NEW-7: surface the encrypted backup blob via Android's share
-    // sheet so the user can route it to a file (Files / Drive / email
-    // attachment / etc.). Without this, core's
-    // `PlatformAppEngine.export_full_backup` returned the hex blob,
-    // CoreAppViewModel staged it in `_backupExportData`, but no UI
-    // consumer existed — the backup→restore round-trip was unreachable
-    // through the shipping app. The blob is the encrypted backup
-    // password protected by the user's chosen passphrase, so sending
-    // it through the system share sheet is appropriate (the user
-    // chooses the destination; core has already applied the
-    // passphrase-derived encryption).
-    //
-    // TODO(HUMBLE): W, P2. Hardcoded English share-sheet labels
-    // ("Vauchi backup", "Save Vauchi backup"). Fix: core supplies
-    // localized title/subject. (see _private problem record
-    // 2026-07-06-mobile-domain-shell-violations)
-    val backupExportData by coreAppViewModel.backupExportData.collectAsState()
-    LaunchedEffect(backupExportData) {
-        backupExportData?.let { hex ->
-            val intent =
+    // Core owns the file bytes, name, and MIME type. Android only materializes
+    // them into its cache and opens the native share destination chooser.
+    val exportFileRequest by coreAppViewModel.exportFileRequest.collectAsState()
+    LaunchedEffect(exportFileRequest) {
+        exportFileRequest?.let { request ->
+            val safeName =
+                request.suggestedName
+                    .substringAfterLast('/')
+                    .substringAfterLast('\\')
+                    .ifBlank { "vauchi-export" }
+            val export = File(context.cacheDir, safeName)
+            withContext(Dispatchers.IO) {
+                export.writeBytes(request.data)
+            }
+            val uri =
+                FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    export,
+                )
+            val sendIntent =
                 Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_SUBJECT, localizationManager.t("backup.share_subject"))
-                    putExtra(Intent.EXTRA_TEXT, hex)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    type = request.mimeType
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_ACTIVITY_NEW_TASK,
+                    )
                 }
-            val chooser =
-                Intent.createChooser(intent, localizationManager.t("backup.share_chooser_title")).apply {
+            context.startActivity(
+                Intent.createChooser(sendIntent, null).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-            context.startActivity(chooser)
-            coreAppViewModel.consumeBackupExportData()
+                },
+            )
+            coreAppViewModel.consumeExportFileRequest()
         }
     }
 
@@ -600,36 +514,6 @@ fun MainScreen(
                     Log.w("MainActivity", "NFC disableReaderMode on dispose: ${e.javaClass.simpleName}")
                 }
             }
-        }
-    }
-
-    // Permissions step (Group -> Mode -> Permissions -> Ritual): when the
-    // ViewModel surfaces the OS permissions a freshly-selected mode needs
-    // (camera / microphone / Bluetooth, per ExchangeModePermissions), request
-    // any not already granted before the ritual screen. The camera is also
-    // gated at the QR scanner itself; requesting up front keeps the ritual a
-    // fast, uninterrupted handshake.
-    val modePermissionRequest by coreAppViewModel.modePermissionRequest.collectAsState()
-    val modePermissionLauncher =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions(),
-        ) { results ->
-            coreAppViewModel.resolveModePermissionRequest(
-                allGranted = results.values.all { it },
-            )
-        }
-    LaunchedEffect(modePermissionRequest) {
-        val perms = modePermissionRequest
-        if (perms.isEmpty()) return@LaunchedEffect
-        val ungranted =
-            perms.filter {
-                ContextCompat.checkSelfPermission(context, it) !=
-                    PackageManager.PERMISSION_GRANTED
-            }
-        if (ungranted.isEmpty()) {
-            coreAppViewModel.resolveModePermissionRequest(allGranted = true)
-        } else {
-            modePermissionLauncher.launch(ungranted.toTypedArray())
         }
     }
 
@@ -865,20 +749,6 @@ fun MainScreen(
         }
     }
 
-    val coreScreen by coreAppViewModel.screen.collectAsState()
-
-    // NOTE (Bug 2, `2026-05-30-exchange-screen-nav-visual-bugs`): an
-    // earlier Activity-enum-collapse note claimed `MultiStageExchange`
-    // renders through the default `CoreScreenView` arm so no core→local
-    // mirror was needed. That was wrong — `coreScreenIdToVariant` returns
-    // null for `exchange_*` (see `CoreScreenIdMap`), so the multi-stage
-    // screen still renders through the local `when (currentScreen)` arm
-    // below. Dropping the mirror left Cancel/Back frozen: core's
-    // `navigate_back` changed core's screen but nothing popped the local
-    // enum. The follow-core logic now lives in `MultiStageExchangeScreen`
-    // itself (`onCoreNavigatedAway`), scoped to that composable's
-    // lifetime, mirroring iOS's `FaceToFaceCoreShell.onChange`.
-
     // --reset-for-testing: create test identity so app skips onboarding (DEBUG only).
     // Must also fire from `Onboarding` — a wiped (`pm clear`) device boots with no
     // identity straight to onboarding and never reaches `Ready`, so gating on Ready
@@ -890,37 +760,22 @@ fun MainScreen(
         }
     }
 
-    // Handle programmatic navigation (device testing: --es navigate <id>).
-    // Must wait for UiState.Ready — auth must complete before navigating.
-    // Any target other than the two native boot targets is forwarded to core
-    // as an opaque tab id, so the shell no longer enumerates domain tab ids.
-    // TODO(HUMBLE): W, P2. `home`/`settings` still map to native targets. Fix:
-    // core exposes a stable programmatic-navigation action so device tests
-    // address every screen opaquely. (see _private problem record
-    // 2026-07-06-mobile-domain-shell-violations)
+    // The debug launch hook remains accepted for device-test compatibility,
+    // but navigation is no longer interpreted by the Android shell. A Core
+    // debug event can replace this acknowledgement without reviving a local
+    // screen enum.
     LaunchedEffect(navigateTo, uiState) {
-        val target = navigateTo
-        // `navigateTo` is only ever set from a BuildConfig.DEBUG-guarded intent
-        // extra (see the intent handler), but guard the consumer too so R8
-        // tree-shakes this programmatic-navigation path out of release builds —
-        // external apps must never drive in-app navigation in production.
-        if (BuildConfig.DEBUG && target != null && uiState is UiState.Ready) {
-            when (target) {
-                "home" -> currentScreen = Screen.Home
-                "settings" -> coreAppViewModel.handleAction(UserAction.ActionPressed("open_settings"))
-                else -> coreAppViewModel.navigateToTabById(target)
-            }
+        if (BuildConfig.DEBUG && navigateTo != null && uiState is UiState.Ready) {
             onNavigateConsumed()
         }
     }
 
-    // Handle incoming deep link URI — forward every vauchi:// URI to core
-    // as UserAction::LinkOpened. Core parses the URI and routes to the
-    // consent gate, device-link join screen, or ShowAlert. The consent gate
-    // renders via the standard CoreScreenView; no native dialog is needed.
+    // Deep links are events; Core decides whether and where they navigate.
     LaunchedEffect(deepLinkUri) {
         deepLinkUri?.let { uri ->
-            coreAppViewModel.handleAction(UserAction.LinkOpened(uri = uri.toString()))
+            coreAppViewModel.dispatchPresentation(
+                PresentationEvent.deepLinkOpened(uri.toString()),
+            )
             onDeepLinkConsumed()
         }
     }
@@ -930,19 +785,14 @@ fun MainScreen(
             LifecycleEventObserver { _, event ->
                 when (event) {
                     Lifecycle.Event.ON_RESUME -> {
-                        if (uiState is UiState.Ready) {
-                            // Forward foreground lifecycle to core. Core owns the
-                            // consequence (relay catch-up sync + re-render), retiring
-                            // the frontend's ON_RESUME -> sync() decision (ADR-044 Am2a).
-                            coreAppViewModel.handleAction(UserAction.AppForegrounded)
-                        }
-                        // Drive the foreground app-heartbeat so core's sub-minute
-                        // deadlines (e.g. the 60 s BLE stall timeout) actually fire in
-                        // the foreground; WorkManager only covers background wakeups.
+                        coreAppViewModel.loadInitialPresentation()
                         coreAppViewModel.startForegroundHeartbeat()
                     }
 
                     Lifecycle.Event.ON_STOP -> {
+                        coreAppViewModel.dispatchPresentation(
+                            PresentationEvent.appBackgrounded,
+                        )
                         coreAppViewModel.stopForegroundHeartbeat()
                     }
 
@@ -964,59 +814,7 @@ fun MainScreen(
         }
     }
 
-    // Dynamic default screen: land on Contacts if user has contacts.
-    // Activity-enum collapse: Contacts is no longer in the local enum;
-    // route via core's nav so the default `CoreScreenView` arm renders.
-    LaunchedEffect(uiState) {
-        val state = uiState
-        if (state is UiState.Ready && currentScreen == Screen.Home && state.contactCount > 0u) {
-            // TODO(HUMBLE): D/W, P1. Frontend decides the post-boot default
-            // landing (contacts when the user has contacts) and hardcodes the
-            // "contacts" tab id. Fix: core emits the default landing screen via
-            // NavigateTo once identity is ready, so the shell renders it through
-            // the generic CoreScreenView path without naming a tab. (see _private
-            // problem record 2026-07-06-mobile-domain-shell-violations)
-            coreAppViewModel.navigateToTabById("contacts")
-        }
-    }
-
-    // Follow-core: the native exchange wrappers are reached by core
-    // navigating to a screen whose `native_wrapper_hint` is not None.
-    // Mirror that hint into the local `currentScreen` so the matching
-    // `when` arm renders. Leaving a native wrapper resets to Home so the
-    // generic CoreScreenView branch takes over.
-    val wrapperHint = coreScreen?.nativeWrapperHint
-    LaunchedEffect(wrapperHint) {
-        when (wrapperHint) {
-            NativeWrapperHint.MultiStageExchange -> {
-                currentScreen = Screen.MultiStageExchange
-            }
-
-            NativeWrapperHint.NfcExchange -> {
-                currentScreen = Screen.NfcExchange
-            }
-
-            NativeWrapperHint.None,
-            null,
-            -> {
-                if (currentScreen == Screen.MultiStageExchange || currentScreen == Screen.NfcExchange) {
-                    currentScreen = Screen.Home
-                }
-            }
-        }
-    }
-
-    // System BACK handling (ADR-044 Am2a): the screen itself advertises
-    // whether it offers a back affordance via `nav_actions`. When the
-    // reserved `go_back` action is present, the shell forwards the gesture
-    // to core as `UserAction::NavigateBack`. At a back-stopping root core
-    // returns `ActionResult::PerformNativeBack` and the Activity finishes.
-    val canGoBack = uiState is UiState.Ready && coreScreen?.navActions?.any { it.id == "go_back" } == true
-    androidx.activity.compose.BackHandler(enabled = canGoBack) {
-        coreAppViewModel.handleAction(UserAction.NavigateBack)
-    }
-
-    // Consume native-back events emitted by core.
+    // Core emits this effect only when its own history is exhausted.
     val nativeBackEvent by coreAppViewModel.nativeBackEvent.collectAsState()
     LaunchedEffect(nativeBackEvent) {
         if (nativeBackEvent == true) {
@@ -1025,265 +823,93 @@ fun MainScreen(
         }
     }
 
-    // Render core-driven top-app-bar chrome from `nav_actions`. The back
-    // affordance is handled by the system-back handler above; a leading
-    // icon is also offered for accessibility.
-    val navActions = coreScreen?.navActions ?: emptyList()
-    val hasGoBack = navActions.any { it.id == "go_back" }
-
     Scaffold(
-        topBar = {
-            if (uiState is UiState.Ready) {
-                coreScreen?.let { screen ->
-                    TopAppBar(
-                        title = {
-                            // Carries the screen's heading semantic — while
-                            // this chrome shows `screen.title`, the in-body
-                            // ScreenHeader skips its own copy
-                            // (titleShownInTopBar = true below).
-                            Text(screen.title, modifier = Modifier.semantics { heading() })
-                        },
-                        navigationIcon = {
-                            if (hasGoBack) {
-                                IconButton(
-                                    onClick = { coreAppViewModel.handleAction(UserAction.NavigateBack) },
-                                    modifier = Modifier.testTag("top_bar.back"),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowBack,
-                                        contentDescription = localizationManager.t("a11y.back"),
-                                    )
-                                }
-                            }
-                        },
-                        actions = {
-                            for (action in navActions.filter { it.id != "go_back" }) {
-                                if (action.id == "open_settings") {
-                                    IconButton(
-                                        onClick = { coreAppViewModel.handleAction(UserAction.ActionPressed(action.id)) },
-                                        modifier = Modifier.testTag("top_bar.${action.id}"),
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Settings,
-                                            contentDescription = action.label,
-                                        )
-                                    }
-                                } else {
-                                    TextButton(
-                                        onClick = { coreAppViewModel.handleAction(UserAction.ActionPressed(action.id)) },
-                                        modifier = Modifier.testTag("top_bar.${action.id}"),
-                                    ) {
-                                        Text(action.label)
-                                    }
-                                }
-                            }
-                        },
-                    )
-                }
-            }
-        },
-        bottomBar = {
-            val navTabId = coreScreen?.navTabId
-            if (navTabId != null && coreScreen?.screenId == navTabId && uiState is UiState.Ready && tabs.isNotEmpty()) {
-                NavigationBar {
-                    for (tab in tabs) {
-                        NavigationBarItem(
-                            modifier = Modifier.testTag("tab_${tab.id}"),
-                            icon = {
-                                Icon(
-                                    imageVector = imageVectorForCoreTab(tab.icon),
-                                    contentDescription = tab.label,
-                                )
-                            },
-                            label = { Text(tab.label) },
-                            selected = tab.id == navTabId,
-                            onClick = {
-                                coreAppViewModel.handleAction(
-                                    UserAction.NavigateToTab(actionId = tab.actionId),
-                                )
-                            },
-                        )
-                    }
-                }
-            }
-        },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
         },
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            // Activity-enum-collapse Phase 1 dispatch: core wins for every
-            // non-wrapper screen — including the home tab, which now renders
-            // through CoreScreenView with core-driven top-bar chrome. The local
-            // `Screen` enum below handles only the still-native wrapper screens
-            // (hardware-aware MultiStageExchange, NFC, Recovery, QrDiagnostic)
-            // and the pre-Ready boot states (Home). ADR-044 Am2a retires the
-            // `isHomeTab` / `ReadyScreen` native chrome gate.
-            if (wrapperHint == NativeWrapperHint.None && uiState is UiState.Ready) {
-                CoreScreenView(
-                    viewModel = coreAppViewModel,
-                    screenName = coreScreen?.screenId ?: "",
-                    modifier = Modifier.fillMaxSize(),
-                    // The Scaffold top bar above already renders
-                    // `screen.title`; the in-body header must not repeat it.
-                    titleShownInTopBar = true,
-                )
-            } else {
-                when (currentScreen) {
-                    Screen.Home -> {
-                        when (val state = uiState) {
-                            is UiState.Loading -> {
-                                LoadingScreen()
-                            }
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+        ) {
+            when (val state = uiState) {
+                is UiState.Loading -> {
+                    LoadingScreen()
+                }
 
-                            is UiState.Onboarding -> {
-                                CoreOnboardingScreen(
-                                    coreAppViewModel = coreAppViewModel,
-                                    onIdentityCreated = { viewModel.onCoreOnboardingComplete() },
-                                )
+                is UiState.Onboarding,
+                is UiState.Ready,
+                -> {
+                    PresentationHost(
+                        viewModel = coreAppViewModel,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
 
-                                if (showRestoreDialog) {
-                                    RestoreIdentityDialog(
-                                        onDismiss = { showRestoreDialog = false },
-                                        onRestore = { backupData, password ->
-                                            coroutineScope.launch {
-                                                val success = viewModel.importFullBackup(backupData, password)
-                                                if (success) {
-                                                    showRestoreDialog = false
-                                                }
-                                            }
-                                        },
-                                    )
-                                }
-                            }
+                is UiState.AuthRequired -> {
+                    AuthenticationGate(
+                        onAuthenticated = { viewModel.retryInit() },
+                        onError = { kind, detail ->
+                            viewModel.setError(kind, detail)
+                        },
+                    )
+                }
 
-                            is UiState.Ready -> {
-                                Column(modifier = Modifier.fillMaxSize()) {
-                                    if (!isOnline) {
-                                        OfflineBanner()
-                                    }
-                                    CoreScreenView(
-                                        viewModel = coreAppViewModel,
-                                        screenName = coreScreen?.screenId ?: "",
-                                        modifier = Modifier.fillMaxSize(),
-                                        // Same top-bar chrome as the default
-                                        // branch above — skip the in-body title.
-                                        titleShownInTopBar = true,
-                                    )
-                                }
-                            }
-
-                            is UiState.AuthRequired -> {
-                                AuthenticationGate(
-                                    onAuthenticated = { viewModel.retryInit() },
-                                    onError = { kind, detail ->
-                                        viewModel.setError(kind, detail)
-                                    },
-                                )
-                            }
-
-                            is UiState.AppPasswordRequired -> {
-                                var authError by remember {
-                                    mutableStateOf<String?>(null)
-                                }
-                                AppPasswordScreen(
-                                    onAuthenticate = { pin ->
-                                        authError = null
-                                        viewModel.authenticateAppPassword(
-                                            pin,
-                                        ) { msg -> authError = msg }
-                                    },
-                                    onCancel = {
-                                        viewModel.cancelAppPassword()
-                                    },
-                                    errorMessage = authError,
-                                )
-                            }
-
-                            is UiState.Error -> {
-                                ErrorScreen(
-                                    kind = state.kind,
-                                    detail = state.detail,
-                                    onRetry = { viewModel.refresh() },
-                                )
-                            }
-
-                            is UiState.KeyInvalidatedRecovery -> {
-                                KeyInvalidatedRecoveryScreen(
-                                    onRestoreFromBackup = { showRestoreDialog = true },
-                                    onStartFresh = { viewModel.onRecoveryStartFresh() },
-                                )
-
-                                if (showRestoreDialog) {
-                                    RestoreIdentityDialog(
-                                        onDismiss = { showRestoreDialog = false },
-                                        onRestore = { backupData, password ->
-                                            coroutineScope.launch {
-                                                val success = viewModel.importFullBackup(backupData, password)
-                                                if (success) {
-                                                    showRestoreDialog = false
-                                                }
-                                            }
-                                        },
-                                    )
-                                }
-                            }
-                        }
+                is UiState.AppPasswordRequired -> {
+                    var authError by remember {
+                        mutableStateOf<String?>(null)
                     }
+                    AppPasswordScreen(
+                        onAuthenticate = { pin ->
+                            authError = null
+                            viewModel.authenticateAppPassword(
+                                pin,
+                            ) { msg -> authError = msg }
+                        },
+                        onCancel = {
+                            viewModel.cancelAppPassword()
+                        },
+                        errorMessage = authError,
+                    )
+                }
 
-                    Screen.MultiStageExchange -> {
-                        MultiStageExchangeScreen(
-                            coreAppViewModel = coreAppViewModel,
-                            // When core navigates off multi_stage_exchange
-                            // (Cancel/Back → navigate_back, or completion),
-                            // follow it in the local enum. Without this the
-                            // enum stays pinned here and the screen looks
-                            // frozen (Bug 2,
-                            // `2026-05-30-exchange-screen-nav-visual-bugs`).
-                            onCoreNavigatedAway = {
-                                currentScreen = Screen.Home
+                is UiState.Error -> {
+                    ErrorScreen(
+                        kind = state.kind,
+                        detail = state.detail,
+                        onRetry = { viewModel.refresh() },
+                    )
+                }
+
+                is UiState.KeyInvalidatedRecovery -> {
+                    KeyInvalidatedRecoveryScreen(
+                        onRestoreFromBackup = { showRestoreDialog = true },
+                        onStartFresh = { viewModel.onRecoveryStartFresh() },
+                    )
+
+                    if (showRestoreDialog) {
+                        RestoreIdentityDialog(
+                            onDismiss = { showRestoreDialog = false },
+                            onRestore = { backupData, password ->
+                                coroutineScope.launch {
+                                    val success =
+                                        viewModel.importFullBackup(
+                                            backupData,
+                                            password,
+                                        )
+                                    if (success) {
+                                        showRestoreDialog = false
+                                    }
+                                }
                             },
                         )
                     }
-
-                    Screen.NfcExchange -> {
-                        NfcTapExchangeScreen(coreAppViewModel = coreAppViewModel)
-                    }
-
-                    Screen.Recovery -> {
-                        RecoveryScreen(
-                            coreAppViewModel = coreAppViewModel,
-                            onBack = { coreAppViewModel.navigateToTabById("more") },
-                        )
-                    }
-
-                    Screen.QrDiagnostic -> {
-                        // Guard with BuildConfig.DEBUG so R8 can tree-shake the
-                        // real QrDiagnosticScreen out of release APKs. In release,
-                        // the no-op stub from src/release/ is compiled instead and
-                        // the condition evaluates to a compile-time false.
-                        if (BuildConfig.DEBUG) {
-                            QrDiagnosticScreen(
-                                onBack = { coreAppViewModel.handleAction(UserAction.ActionPressed("open_settings")) },
-                            )
-                        } else {
-                            coreAppViewModel.handleAction(UserAction.ActionPressed("open_settings"))
-                        }
-                    }
-
-                    // The 8 Pure Humble UI cases collapsed in
-                    // 2026-04-30-android-activity-enum-collapse Phase 1 +
-                    // 1.1 (Contacts, Settings, Devices, Labels,
-                    // ArchivedContacts, ContactMerge, DeviceReplacement,
-                    // Help) plus More (Phase 2,
-                    // 2026-05-01-more-engine-extension-android-retirement)
-                    // render through the `if (coreVariant != null)` branch
-                    // above. They no longer have a local `Screen` enum
-                    // value.
                 }
             }
         }
-    } // Scaffold
+    }
 }
 
 @Composable

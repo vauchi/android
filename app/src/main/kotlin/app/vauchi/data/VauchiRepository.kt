@@ -274,12 +274,11 @@ class VauchiRepository internal constructor(
      * it should be shown now, or `null` if already seen. Errors are swallowed
      * so a milestone failure never breaks the calling flow.
      */
-    fun tryTriggerAhaMoment(momentType: MobileAhaMomentType): MobileAhaMoment? {
-        return runCatching {
+    fun tryTriggerAhaMoment(momentType: MobileAhaMomentType): MobileAhaMoment? =
+        runCatching {
             val result = appEngine.dispatchDomainCommand(DomainCommand.TryTriggerAhaMoment(momentType))
             (result as? DomainCommandResult.AhaMomentOpt)?.moment
         }.getOrNull()
-    }
 
     fun hasIdentity(): Boolean {
         ensureInitialized()
@@ -353,17 +352,6 @@ class VauchiRepository internal constructor(
         ensureInitialized()
         return appEngine.initDemoContactIfNeeded()
     }
-
-    /**
-     * Handle app backgrounded event (C1 auto-lock).
-     */
-    fun handleAppBackgrounded(): String? =
-        try {
-            appEngine.handleAppBackgrounded()
-        } catch (e: Exception) {
-            Log.e("VauchiRepository", "handleAppBackgrounded failed", e)
-            null
-        }
 
     /**
      * Poll for OS notifications produced by the app engine (E).

@@ -13,7 +13,6 @@ import app.vauchi.data.AuthenticationRequiredException
 import app.vauchi.data.DeviceNotSecureException
 import app.vauchi.data.KeyInvalidatedRecoveryRequired
 import app.vauchi.data.VauchiRepository
-import app.vauchi.ui.coreui.ActionResult
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NetworkMonitor
 import kotlinx.coroutines.Dispatchers
@@ -25,9 +24,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileContactCard
-import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.MobileException
 import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.PlatformAppEngine
@@ -117,9 +118,35 @@ class MainViewModel(
 
     private val _lastSyncTime = MutableStateFlow<Instant?>(null)
     val lastSyncTime: StateFlow<Instant?> = _lastSyncTime.asStateFlow()
+    private var presentationReconciliationInFlight = false
 
     fun clearSnackbar() {
         _snackbarMessage.value = null
+    }
+
+    /**
+     * Reconcile the native startup gate after a Core presentation transition.
+     * No surface or action identifier is interpreted here: identity existence
+     * is the boundary between startup onboarding and the normal app.
+     */
+    fun reconcilePresentationState() {
+        if (_uiState.value !is UiState.Onboarding || presentationReconciliationInFlight) {
+            return
+        }
+        presentationReconciliationInFlight = true
+        viewModelScope.launch {
+            try {
+                val identityExists =
+                    withContext(Dispatchers.IO) {
+                        repository.hasIdentity()
+                    }
+                if (identityExists && _uiState.value is UiState.Onboarding) {
+                    onCoreOnboardingComplete()
+                }
+            } finally {
+                presentationReconciliationInFlight = false
+            }
+        }
     }
 
     fun showMessage(message: String) {
@@ -160,12 +187,11 @@ class MainViewModel(
     }
 
     /**
-     * Forward `NetworkMonitor` reachability into core so the
-     * offline `Component::Banner` is injected into every emitted
-     * `ScreenModel` while offline (audit
+     * Forward `NetworkMonitor` reachability into core so presentation state
+     * reflects offline status (audit
      * `2026-04-28-lifecycle-session-residue-umbrella` P2-D).
-     * The frontend keeps `isOnline` for legacy collectors but the
-     * banner-render decision lives in core.
+     * The frontend keeps `isOnline` for native startup feedback; the
+     * presentation decision lives in core.
      */
     private fun observeNetworkStateForCore() {
         viewModelScope.launch {
@@ -348,28 +374,22 @@ class MainViewModel(
             // ADR-031: biometric success is reported as a hardware
             // event; core consults its duress state (sleeping in Rust
             // for ≥ BIOMETRIC_UNLOCK_MIN_DURATION) and returns the
-            // outcome as ActionResult.BiometricUnlockOutcome. Dispatch
-            // off the main thread.
+            // outcome. Dispatch off the main thread. This startup-auth seam
+            // predates the generic presentation store; only the scalar outcome
+            // is read, never the retired screen/action-result model.
             val outcome =
                 try {
                     withContext(Dispatchers.IO) {
-                        appEngine.handleHardwareEvent(MobileEvent.BiometricUnlockSucceeded)
+                        appEngine.dispatchJson("\"BiometricUnlockSucceeded\"")
                     }?.let { resultJson ->
-                        (
-                            biometricJson.decodeFromString<ActionResult>(resultJson)
-                                as? ActionResult.BiometricUnlockOutcome
-                        )?.outcome
+                        parseAuthenticationRequirement(resultJson)
                     }
                 } catch (_: Exception) {
                     null
                 }
 
-            // TODO(HUMBLE): D, P1. Maps BiometricUnlockOutcome string to
-            // screen state (duress PIN gate). Fix: core emits NavigateTo or
-            // explicit screen state. (see _private problem record
-            // 2026-07-06-mobile-domain-shell-violations)
             when (outcome) {
-                "PromptForDuressPin" -> {
+                "app_password" -> {
                     _uiState.value = UiState.AppPasswordRequired
                 }
 
@@ -382,6 +402,22 @@ class MainViewModel(
             }
         }
     }
+
+    private fun parseAuthenticationRequirement(resultJson: String): String? =
+        runCatching {
+            biometricJson
+                .parseToJsonElement(resultJson)
+                .jsonObject
+                .getValue("commands")
+                .jsonArray
+                .firstNotNullOfOrNull { command ->
+                    command.jsonObject["SetAuthenticationRequirement"]
+                        ?.jsonObject
+                        ?.get("requirement")
+                        ?.jsonPrimitive
+                        ?.content
+                }
+        }.getOrNull()
 
     /** Return to biometric screen (cancel app password entry). */
     fun cancelAppPassword() {
@@ -551,17 +587,6 @@ class MainViewModel(
             } catch (e: Exception) {
                 // Silently fail - demo is optional
             }
-        }
-    }
-
-    /**
-     * Handle app backgrounded event (C1 auto-lock).
-     */
-    fun handleAppBackgrounded() {
-        val screenJson = repository.handleAppBackgrounded()
-        if (screenJson != null) {
-            // Core navigated to Lock screen — require re-authentication
-            _uiState.value = UiState.AuthRequired
         }
     }
 

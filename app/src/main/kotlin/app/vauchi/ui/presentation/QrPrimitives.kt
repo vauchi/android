@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package app.vauchi.ui.coreui.components
+package app.vauchi.ui.presentation
 
 import android.util.Log
 import androidx.camera.core.CameraSelector
@@ -47,83 +47,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import app.vauchi.camera.CameraFailure
 import app.vauchi.ui.components.PermissionRationaleDialog
 import app.vauchi.ui.components.QrCodeAnalyzer
 import app.vauchi.ui.components.rememberPermissionState
-import app.vauchi.ui.coreui.A11y
 import app.vauchi.ui.coreui.LocalUseFrontCamera
-import app.vauchi.ui.coreui.QrMode
-import app.vauchi.ui.coreui.UserAction
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.generateQrBitmap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Renders a core `Component::QrCode`.
- *
- * Display mode: encodes `data` to a QR bitmap via the rxing-backed
- * [generateQrBitmap] (Rust via UniFFI) and shows it inline. The
- * `data` string is the full payload core wants the peer to scan
- * (typically rotates every ~300 ms during multipart exchange).
- *
- * Scan mode: opens a CameraX preview with [QrCodeAnalyzer] running
- * the rxing tryHarder pipeline on the Y-plane. Each detected payload
- * is reported back to core as `UserAction.TextChanged(componentId,
- * value)` — `core/vauchi-app/src/ui/exchange/qr.rs` interprets this
- * as `QrActionOutcome::QrScanned { data }` for the ScanQr step.
- *
- * Replaces the long-standing placeholder ("QR Code" text label /
- * "Tap to Scan" no-op button) which was unimplemented when the
- * core-driven exchange flow first landed (2026-04 rendering layer).
- */
 @Composable
-fun QrCodeComponent(
-    componentId: String,
-    data: String,
-    mode: QrMode,
-    label: String?,
-    a11y: A11y?,
-    onAction: (UserAction) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        when (mode) {
-            QrMode.Display -> {
-                QrDisplay(
-                    data = data,
-                    accessibilityLabel = a11y?.label ?: label,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-
-            QrMode.Scan -> {
-                QrScanner(
-                    componentId = componentId,
-                    accessibilityLabel = a11y?.label ?: label,
-                    onAction = onAction,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-
-        label?.let {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun QrDisplay(
+internal fun QrDisplay(
     data: String,
     accessibilityLabel: String?,
     modifier: Modifier = Modifier,
@@ -157,10 +91,10 @@ private fun QrDisplay(
 }
 
 @Composable
-private fun QrScanner(
-    componentId: String,
+internal fun QrScanner(
     accessibilityLabel: String?,
-    onAction: (UserAction) -> Unit,
+    onScanned: (String) -> Unit,
+    onPermissionDenied: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -187,15 +121,10 @@ private fun QrScanner(
             permission = android.Manifest.permission.CAMERA,
             title = localizationManager.t("permission.camera.title"),
             rationale = localizationManager.t("permission.camera.rationale"),
-            // T0.3: on a definitive camera denial, forward it to core (via the
-            // sentinel ActionPressed CoreScreenView intercepts) so the exchange
-            // ledger / CameraGate fails the QR leg visibly instead of leaving
-            // core waiting forever.
-            // TODO(HUMBLE): T/W, P1. Mints a sentinel action id for camera
-            // denial. Fix: core consumes a hardware event directly.
-            // (see _private problem record 2026-07-06-mobile-domain-shell-violations)
+            // Permission denial is reported through the generic host's native
+            // capability callback; this primitive never invents an action id.
             onDenied = {
-                onAction(UserAction.ActionPressed(CameraFailure.DENIED_ACTION_ID))
+                onPermissionDenied()
             },
         )
     LaunchedEffect(Unit) { cameraPermission.request() }
@@ -329,16 +258,9 @@ private fun QrScanner(
                                                                 (if (known) frameType else "????") +
                                                                 " len=${code.length}",
                                                         )
-                                                        // Forward to core. exchange/qr.rs
-                                                        // pattern-matches on TextChanged with
-                                                        // the QR component id and routes the
-                                                        // payload through QrScanned.
-                                                        onAction(
-                                                            UserAction.TextChanged(
-                                                                componentId = componentId,
-                                                                value = code,
-                                                            ),
-                                                        )
+                                                        // Forward the opaque payload to the
+                                                        // generic node binding.
+                                                        onScanned(code)
                                                     },
                                                 ),
                                             )
