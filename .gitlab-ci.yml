@@ -116,27 +116,48 @@ workflow:
   cache: {}  # No GitLab cache — self-hosted runner has persistent ~/.gradle
   before_script:
     # Gradle auto-installs missing SDK packages, but only when the SDK
-    # licenses are accepted. The self-hosted runner's /opt/android-sdk lost
-    # its accepted-licenses state (2026-07-30: build-tools;36.0.0 and
-    # platforms;android-35 installs refused), so accept them up front.
-    # `sdkmanager --licenses` just persists license hashes as files under
-    # $ANDROID_HOME/licenses/ — the runner has no sdkmanager installed, so
-    # write those marker files directly (same hashes sdkmanager writes).
-    # Best-effort: if the directory is not writable this is a no-op and the
-    # build fails exactly as before, never worse.
+    # licenses are accepted. The self-hosted runner's /opt/android-sdk is
+    # read-only for the runner user, ships no sdkmanager, and is missing
+    # packages (2026-07-30: build-tools;36.0.0 and platforms;android-35
+    # installs refused — verified in pipelines 2717839043/2720166012).
+    # Work around it with a writable overlay in the runner user's $HOME:
+    # real per-category dirs (so Gradle can install missing packages into
+    # them) whose existing contents are symlinks into the read-only SDK,
+    # plus the license marker files `sdkmanager --licenses` would have
+    # written (hashes verified against a real SDK install). The overlay
+    # persists on the runner, so package downloads happen once. If it
+    # cannot be built, ANDROID_HOME stays put and the build fails exactly
+    # as before, never worse.
     - |
-      LICENSES_DIR="$ANDROID_HOME/licenses"
-      if mkdir -p "$LICENSES_DIR" 2>/dev/null && [ -w "$LICENSES_DIR" ]; then
+      SDK_SRC="$ANDROID_HOME"
+      SDK_WR="$HOME/.vauchi-android-sdk"
+      if [ -d "$SDK_SRC" ] && mkdir -p "$SDK_WR"; then
+        for entry in "$SDK_SRC"/*; do
+          base=$(basename "$entry")
+          if [ ! -d "$entry" ]; then
+            [ -e "$SDK_WR/$base" ] || ln -s "$entry" "$SDK_WR/$base"
+            continue
+          fi
+          [ "$base" = "licenses" ] && continue
+          mkdir -p "$SDK_WR/$base"
+          for pkg in "$entry"/*; do
+            p=$(basename "$pkg")
+            [ -e "$SDK_WR/$base/$p" ] || ln -s "$pkg" "$SDK_WR/$base/$p"
+          done
+        done
+        mkdir -p "$SDK_WR/licenses"
         printf '%s\n' \
           24333f8a63b6825ea9c5514f83c2829b004d1fee \
           8933bad161af4178b1185d1a37fbf41ea5269c55 \
           d56f5187479451eabf01fb78af6dfcb131a6481e \
-          > "$LICENSES_DIR/android-sdk-license"
+          > "$SDK_WR/licenses/android-sdk-license"
         echo "84831b9409646a918e30573bab4c9c91346d8abd" \
-          > "$LICENSES_DIR/android-sdk-preview-license"
-        echo "✅ Android SDK license markers written to $LICENSES_DIR"
+          > "$SDK_WR/licenses/android-sdk-preview-license"
+        export ANDROID_HOME="$SDK_WR"
+        export ANDROID_SDK_ROOT="$SDK_WR"
+        echo "✅ Using writable SDK overlay at $SDK_WR (licenses accepted)"
       else
-        echo "⚠️  $LICENSES_DIR not writable — skipping license acceptance"
+        echo "⚠️  Cannot build SDK overlay — using $SDK_SRC as-is"
       fi
 
 .android-docker-job:
