@@ -34,7 +34,10 @@ include:
   - template: Security/Dependency-Scanning.gitlab-ci.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
   - project: 'vauchi/scripts'
-    ref: feature/contextual-command-surface
+    # main, not a ci-templates tag: presentation-mode design-drift /
+    # parser-parity support is merged but not yet tagged (checked
+    # 2026-07-30, ci-templates-v2026.07.11 lacks DESIGN_DRIFT_PROTOCOL).
+    ref: main
     file:
       - '/ci-templates/timeouts.yml'
       - '/ci-templates/reuse.yml'
@@ -111,6 +114,27 @@ workflow:
   variables:
     ANDROID_HOME: /opt/android-sdk
   cache: {}  # No GitLab cache — self-hosted runner has persistent ~/.gradle
+  before_script:
+    # Gradle auto-installs missing SDK packages, but only when the SDK
+    # licenses are accepted. The self-hosted runner's /opt/android-sdk lost
+    # its accepted-licenses state (2026-07-30: build-tools;36.0.0 and
+    # platforms;android-35 installs refused), so accept them up front.
+    # Best-effort: when no sdkmanager is present this is a no-op and the
+    # build fails exactly as before, never worse.
+    - |
+      SDKMANAGER=""
+      for candidate in \
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+          "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager \
+          "$ANDROID_HOME/tools/bin/sdkmanager"; do
+        if [ -x "$candidate" ]; then SDKMANAGER="$candidate"; break; fi
+      done
+      if [ -n "$SDKMANAGER" ]; then
+        yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+        echo "✅ Android SDK licenses accepted via $SDKMANAGER"
+      else
+        echo "⚠️  sdkmanager not found under $ANDROID_HOME — skipping license acceptance"
+      fi
 
 .android-docker-job:
   image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/cimg/android:2025.01
@@ -354,7 +378,7 @@ check:design-drift:
     DESIGN_DRIFT_PROTOCOL: "presentation"
     DESIGN_DRIFT_MATCH_MODE: "grep"
     DESIGN_DRIFT_GREP_FILE: "app/src/main/kotlin/app/vauchi/ui/presentation"
-    CORE_REF: "feature/contextual-command-surface"
+    CORE_REF: "main"
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
@@ -375,8 +399,8 @@ check:parser-parity:
     FRONTEND_NAME: "android"
     PARSER_FILE: "app/src/main/kotlin/app/vauchi/ui/presentation/PresentationParser.kt"
     PARSER_PROTOCOL: "presentation"
-    PARSER_SCRIPT_REF: "feature/contextual-command-surface"
-    CORE_REF: "feature/contextual-command-surface"
+    PARSER_SCRIPT_REF: "main"
+    CORE_REF: "main"
 
 # Removed symbols: detect stale references to removed features
 check:removed-symbols:
