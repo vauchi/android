@@ -226,6 +226,12 @@ dependencies {
     testImplementation("org.mockito:mockito-core:5.14.2")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
     testImplementation("org.robolectric:robolectric:4.16.1")
+    // Robolectric 4.16.1 shades ASM 9.8, which cannot read JDK 26 class
+    // files (major version 70) — unit tests die with
+    // "IllegalArgumentException at ClassReader" on JDK 26 runners
+    // (robolectric/robolectric#11204). Force ASM 9.10 on the test
+    // classpath; drop this pin once Robolectric 4.17 stable ships.
+    testImplementation("org.ow2.asm:asm:9.10.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
     testImplementation("androidx.test:core:1.6.1")
