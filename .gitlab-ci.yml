@@ -159,6 +159,35 @@ workflow:
       else
         echo "⚠️  Cannot build SDK overlay — using $SDK_SRC as-is"
       fi
+    # AGP's JdkImageTransform shells out to jlink from the JVM running
+    # Gradle. The runner's /usr/lib/jvm/java-26-jdk jlink fails
+    # deterministically (build:debug, pipelines 2720166012/2720212818)
+    # while the same build passes on JDK 17. Self-test jlink so the
+    # failure mode is visible in the trace, and if it is broken, fall
+    # back to a stable JDK (17/21) when the runner has one.
+    - |
+      JAVA_BIN=$(readlink -f "$(command -v java)" 2>/dev/null || true)
+      JLINK="${JAVA_BIN%/bin/java}/bin/jlink"
+      if [ -x "$JLINK" ]; then
+        SELFTEST="/tmp/jlink-selftest-${CI_JOB_ID:-local}"
+        if "$JLINK" --module-path "${JLINK%/bin/jlink}/../jmods" \
+             --add-modules java.base --output "$SELFTEST" \
+             --disable-plugin system-modules 2>&1; then
+          echo "✅ jlink self-test OK ($JLINK)"
+        else
+          echo "⚠️  jlink self-test FAILED ($JLINK) — output above"
+          for jdk in /usr/lib/jvm/*17* /usr/lib/jvm/*21*; do
+            if [ -x "$jdk/bin/java" ] && [ -x "$jdk/bin/jlink" ]; then
+              grep -q "^org.gradle.java.home=" gradle.properties \
+                || echo "org.gradle.java.home=$jdk" >> gradle.properties
+              export JAVA_HOME="$jdk"
+              echo "✅ Falling back to JDK at $jdk"
+              break
+            fi
+          done
+        fi
+        rm -rf "$SELFTEST"
+      fi
 
 .android-docker-job:
   image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/cimg/android:2025.01
