@@ -34,10 +34,7 @@ include:
   - template: Security/Dependency-Scanning.gitlab-ci.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
   - project: 'vauchi/scripts'
-    # main, not a ci-templates tag: presentation-mode design-drift /
-    # parser-parity support is merged but not yet tagged (checked
-    # 2026-07-30, ci-templates-v2026.07.11 lacks DESIGN_DRIFT_PROTOCOL).
-    ref: main
+    ref: ci-templates-v2026.07.12
     file:
       - '/ci-templates/timeouts.yml'
       - '/ci-templates/reuse.yml'
@@ -66,7 +63,7 @@ stages:
   - deploy
 
 variables:
-  VAUCHI_SCRIPTS_REF: "5f6614ba3de5f462978d5222b682c27d2dfe8d3a"
+  VAUCHI_SCRIPTS_REF: "ci-templates-v2026.07.12"
   ANDROID_COMPILE_SDK: "35"
   ANDROID_BUILD_TOOLS: "35.0.0"
   GIT_DEPTH: "1"
@@ -426,7 +423,7 @@ check:parser-parity:
     FRONTEND_NAME: "android"
     PARSER_FILE: "app/src/main/kotlin/app/vauchi/ui/presentation/PresentationParser.kt"
     PARSER_PROTOCOL: "presentation"
-    PARSER_SCRIPT_REF: "main"
+    PARSER_SCRIPT_REF: "ci-templates-v2026.07.12"
     CORE_REF: "main"
 
 # Removed symbols: detect stale references to removed features
