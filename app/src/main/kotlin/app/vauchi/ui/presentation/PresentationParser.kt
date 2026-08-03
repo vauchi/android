@@ -166,7 +166,7 @@ object PresentationProtocol {
                 PresentationNode.Text(
                     value.nullableString("id"),
                     value.string("content"),
-                    parseTextRole(value.string("style")),
+                    textRoleOrBody(value.string("style")),
                     accessibility(value),
                 )
             }
@@ -335,6 +335,20 @@ object PresentationProtocol {
             label = value.nullableString("label"),
             accessibility = accessibility(value),
         )
+
+    // An unknown style means Core and shell disagree about the protocol.
+    // Render the text as body rather than dropping the surface — losing a
+    // whole screen over a font distinction is disproportionate.
+    //
+    // KNOWN GAP: this fallback is silent at runtime. Logging it would need
+    // `android.util.Log` here, and this parser is deliberately free of
+    // Android imports so it stays runnable as a plain JVM unit test (the
+    // project sets no `unitTests.returnDefaultValues`, so an Android call
+    // would throw "not mocked"). Emitting the diagnostic properly needs a
+    // seam threaded from `decodeEnvelope` to the single caller in
+    // `CoreAppViewModel`. Covered by test, not by telemetry: see
+    // `TextRoleTest.an unknown text style still renders its text as body`.
+    private fun textRoleOrBody(wire: String): TextRole = parseTextRole(wire) ?: TextRole.Body
 
     private fun accessibility(value: JsonObject): AccessibilitySpec {
         val item = value.objectValue("accessibility")

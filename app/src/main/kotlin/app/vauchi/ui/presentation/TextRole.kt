@@ -40,9 +40,18 @@ data class TextRoleStyle(
 /**
  * Resolve a role to its presentation.
  *
- * Deliberately has no `else` branch: adding a variant to Core must break
- * this build rather than degrade silently, which is how `Monospace` and
- * `Muted` were previously rendered as plain body text.
+ * Deliberately has no `else` branch, so adding a variant to [TextRole]
+ * fails compilation here rather than degrading silently — which is how
+ * `Monospace` and `Muted` came to render as plain body text.
+ *
+ * That guard is weaker than it looks, and the gap is worth naming:
+ * [TextRole] is a hand-maintained mirror of Core's `PresentationTextStyle`
+ * (`core/vauchi-core/src/platform/presentation/surface/nodes.rs`). A
+ * variant added in Rust does **not** break this build. It breaks only
+ * once someone adds the Kotlin variant, and until then
+ * [parseTextRole] returns null and the text renders as body. Closing
+ * that properly needs the enum generated from the Rust source rather
+ * than mirrored by hand.
  */
 fun textRoleStyle(role: TextRole): TextRoleStyle =
     when (role) {
@@ -54,19 +63,28 @@ fun textRoleStyle(role: TextRole): TextRoleStyle =
     }
 
 /**
- * Decode the wire value Core serialises for `PresentationTextStyle`.
+ * Decode the wire value Core serialises for `PresentationTextStyle`,
+ * or null if this shell does not know it.
  *
- * Rejects unknown values instead of defaulting: a value this shell does
- * not understand means Core and shell disagree about the protocol, and
- * failing closed surfaces that at the binding bump rather than as
- * silently wrong text (ADR-066 unknown-input rule).
+ * Returning null rather than throwing is deliberate. An earlier version
+ * threw, citing ADR-066's unknown-input rule — but that rule
+ * (ADR-066:105) governs **events**, shell to Core, and exists to stop a
+ * misbehaving shell corrupting Core state. It does not apply in the
+ * command direction. Applying it here inverted its intent: a newer Core
+ * could not drive an older shell, which is the opposite of what
+ * `#[non_exhaustive]` on the Rust enum exists to allow.
+ *
+ * Failing closed is right for actions and state transitions. For a font
+ * distinction it is disproportionate — it would abandon an entire
+ * surface over cosmetics. The caller falls back to [TextRole.Body] and
+ * logs, so the text still reaches the user and the skew stays visible.
  */
-fun parseTextRole(wire: String): TextRole =
+fun parseTextRole(wire: String): TextRole? =
     when (wire) {
         "heading" -> TextRole.Heading
         "body" -> TextRole.Body
         "caption" -> TextRole.Caption
         "monospace" -> TextRole.Monospace
         "muted" -> TextRole.Muted
-        else -> throw PresentationProtocolException("unknown text style '$wire'")
+        else -> null
     }

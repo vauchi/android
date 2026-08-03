@@ -6,7 +6,7 @@ package app.vauchi.ui.presentation
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -82,17 +82,52 @@ class TextRoleTest {
     }
 
     @Test
-    fun `unknown text style is rejected rather than silently defaulted`() {
+    fun `unknown text style yields null so the caller can fall back`() {
         // Core projects the retired `Title` variant as "heading"
         // (prepared_surface/project.rs), so "title" is not a wire value.
-        val failure =
-            assertFailsWith<PresentationProtocolException> {
-                parseTextRole("title")
-            }
-
-        assertTrue(
-            failure.message!!.contains("title"),
-            "rejection must name the offending value, got: ${failure.message}",
-        )
+        assertNull(parseTextRole("title"))
+        assertNull(parseTextRole(""))
     }
+
+    @Test
+    fun `an unknown text style still renders its text as body`() {
+        val node =
+            PresentationProtocol
+                .decodeEnvelope(envelopeWithTextNode(style = "some_future_role"))
+                .commands
+                .filterIsInstance<PresentationCommand.ReplaceSurface>()
+                .single()
+                .surface
+                .nodes
+                .filterIsInstance<PresentationNode.Text>()
+                .single()
+
+        assertEquals(TextRole.Body, node.style)
+        assertEquals("hello", node.content)
+    }
+
+    private fun envelopeWithTextNode(style: String): String =
+        """
+        {"commands":[{"ReplaceSurface":{"surface":{
+          "surface_id":"main",
+          "revision":1,
+          "title":"t",
+          "subtitle":null,
+          "accessibility_label":"t",
+          "layout":"scroll",
+          "tokens":{
+            "spacing_small":4,
+            "spacing_medium":8,
+            "spacing_large":16,
+            "corner_radius":8,
+            "minimum_target_size":44
+          },
+          "nodes":[{"Text":{
+            "id":null,
+            "content":"hello",
+            "style":"$style",
+            "accessibility":{"label":"hello","description":null}
+          }}]
+        }}}]}
+        """.trimIndent()
 }
