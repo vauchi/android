@@ -18,6 +18,14 @@ import kotlin.test.assertTrue
  * the failure it guards: a `when` with every branch present still proves
  * only that `Monospace` was *handled*, never that it resolved to a
  * monospaced face. Both checks are needed.
+ *
+ * CC-27 evidence — observed failing, then passing once corrected. With
+ * `Monospace` returning `monospaced = false`, which compiles cleanly and
+ * keeps the `when` exhaustive, `monospace resolves to a monospaced face`
+ * and `every text role resolves to a distinct presentation` both failed
+ * (6 tests, 2 failures) while the other four stayed green. Restoring
+ * `monospaced = true` returned 6/0. That mutation is the exact shape of
+ * the bug this shell shipped.
  */
 class TextRoleTest {
     @Test
