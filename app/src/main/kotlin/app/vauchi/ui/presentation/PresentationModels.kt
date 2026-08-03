@@ -260,14 +260,14 @@ data class PresentationState(
     val overlay: RevisionedOverlay? = null,
 ) {
     val activeSurfaceId: String?
-        get() = profile?.activeSurface
+        get() = profile?.activeSurface ?: surfaces.keys.sorted().firstOrNull()
 
     val activeBar: ContextBar?
         get() = activeSurfaceId?.let(bars::get)?.bar
 
     val visibleSurfaceIds: List<String>
         get() {
-            val value = profile ?: return emptyList()
+            val value = profile ?: return activeSurfaceId?.let(::listOf) ?: emptyList()
             return if (value.paneLayout == PaneLayout.Split) {
                 listOfNotNull(value.primarySurface, value.detailSurface)
             } else {

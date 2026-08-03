@@ -39,6 +39,21 @@ class PresentationProtocolTest {
         assertEquals(emptyList(), result.effects)
     }
 
+    // @scenario: generic_presentation_protocol.feature :: Every shell renders the same prepared presentation
+    @Test
+    fun `surface remains active while profile is pending`() {
+        val result =
+            PresentationReducer.apply(
+                PresentationState(),
+                PresentationProtocol
+                    .decodeEnvelope(envelope(replaceSurface(1)))
+                    .commands,
+            )
+
+        assertEquals("main", result.state.activeSurfaceId)
+        assertEquals(listOf("main"), result.state.visibleSurfaceIds)
+    }
+
     @Test
     fun `re-emitting the same revision re-applies instead of failing`() {
         // Core's revision advances only on user actions, so racing full
