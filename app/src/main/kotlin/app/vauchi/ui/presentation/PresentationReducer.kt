@@ -20,7 +20,18 @@ object PresentationReducer {
                 is PresentationCommand.ReplaceSurface -> {
                     val surface = command.surface
                     val previous = surfaces[surface.surfaceId]
-                    if (previous != null && surface.revision <= previous.revision) {
+                    // Core's revision advances only on user actions, so racing
+                    // full rebuilds (wakeup re-load, invalidation dispatch)
+                    // legitimately re-emit the same surface at the same
+                    // revision. Only a strictly older revision is stale; equal
+                    // re-applies, last-writer wins.
+                    //
+                    // This mirrors iOS, which has always compared strictly
+                    // (`PresentationState.swift`). Android rejected equal, and
+                    // because envelopes apply atomically that discarded every
+                    // other command batched with it — failing on every cold
+                    // launch with "stale surface revision for my_info".
+                    if (previous != null && surface.revision < previous.revision) {
                         throw PresentationProtocolException(
                             "stale surface revision for ${surface.surfaceId}",
                         )

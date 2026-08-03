@@ -40,6 +40,36 @@ class PresentationProtocolTest {
     }
 
     @Test
+    fun `re-emitting the same revision re-applies instead of failing`() {
+        // Core's revision advances only on user actions, so racing full
+        // rebuilds re-emit the same surface at the same revision. iOS has
+        // always treated that as a legitimate re-apply
+        // (PresentationState.swift); Android rejected it, which failed
+        // every cold launch with "stale surface revision for my_info".
+        val current =
+            PresentationReducer
+                .apply(
+                    PresentationState(),
+                    PresentationProtocol
+                        .decodeEnvelope(
+                            envelope(replaceSurface(2)),
+                        ).commands,
+                ).state
+
+        val result =
+            PresentationReducer.apply(
+                current,
+                PresentationProtocol
+                    .decodeEnvelope(
+                        envelope(replaceSurface(2)),
+                    ).commands,
+            )
+
+        assertEquals(2uL, result.state.surfaces["main"]?.revision)
+        assertEquals(emptyList(), result.effects)
+    }
+
+    @Test
     fun `stale transaction leaves prior state untouched`() {
         val current =
             PresentationReducer
