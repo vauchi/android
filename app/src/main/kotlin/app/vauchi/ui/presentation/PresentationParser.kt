@@ -166,7 +166,7 @@ object PresentationProtocol {
                 PresentationNode.Text(
                     value.nullableString("id"),
                     value.string("content"),
-                    value.string("style"),
+                    parseTextRole(value.string("style")),
                     accessibility(value),
                 )
             }

@@ -50,11 +50,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
@@ -71,21 +73,28 @@ internal fun PresentationNodeRenderer(
 ) {
     when (node) {
         is PresentationNode.Text -> {
+            val role = textRoleStyle(node.style)
+            val base =
+                when (role.typography) {
+                    TextTypography.TitleLarge -> MaterialTheme.typography.titleLarge
+                    TextTypography.BodyLarge -> MaterialTheme.typography.bodyLarge
+                    TextTypography.BodySmall -> MaterialTheme.typography.bodySmall
+                }
             Text(
                 text = node.content,
-                style =
-                    when (node.style) {
-                        "title" -> MaterialTheme.typography.headlineSmall
-                        "heading" -> MaterialTheme.typography.titleLarge
-                        "caption" -> MaterialTheme.typography.bodySmall
-                        else -> MaterialTheme.typography.bodyLarge
+                style = if (role.monospaced) base.copy(fontFamily = FontFamily.Monospace) else base,
+                color =
+                    if (role.muted) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        Color.Unspecified
                     },
                 modifier =
                     modifier
                         .fillMaxWidth()
                         .semantics {
                             contentDescription = node.accessibility.label
-                            if (node.style == "title" || node.style == "heading") {
+                            if (node.style == TextRole.Heading) {
                                 heading()
                             }
                         },

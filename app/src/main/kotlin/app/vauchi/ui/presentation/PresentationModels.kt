@@ -95,7 +95,7 @@ sealed interface PresentationNode {
     data class Text(
         val id: String?,
         val content: String,
-        val style: String,
+        val style: TextRole,
         val accessibility: AccessibilitySpec,
     ) : PresentationNode
 
