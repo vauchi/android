@@ -102,6 +102,7 @@ internal fun PresentationNodeRenderer(
         }
 
         is PresentationNode.Input -> {
+            val inputState = remember(node.bindingId) { PresentationInputState(node.value) }
             val focusRequester = remember(node.bindingId) { FocusRequester() }
             LaunchedEffect(focusedBindingId, node.bindingId) {
                 if (shouldRestoreFocus(focusedBindingId, node.bindingId)) {
@@ -109,13 +110,14 @@ internal fun PresentationNodeRenderer(
                 }
             }
             OutlinedTextField(
-                value = node.value,
+                value = inputState.value,
                 onValueChange = {
+                    val acceptedValue = inputState.accept(it, node.maxLength)
                     onEvent(
                         PresentationEvent.textValue(
                             surfaceId,
                             node.bindingId,
-                            it.take(node.maxLength ?: Int.MAX_VALUE),
+                            acceptedValue,
                         ),
                     )
                 },
