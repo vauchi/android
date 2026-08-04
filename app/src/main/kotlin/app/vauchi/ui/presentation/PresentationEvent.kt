@@ -97,7 +97,7 @@ sealed interface PresentationEvent {
             ValueChanged(
                 surfaceId,
                 bindingId,
-                buildJsonObject { put("Text", value) },
+                buildJsonObject { put("text", value) },
             )
 
         fun booleanValue(
@@ -108,7 +108,7 @@ sealed interface PresentationEvent {
             ValueChanged(
                 surfaceId,
                 bindingId,
-                buildJsonObject { put("Boolean", value) },
+                buildJsonObject { put("boolean", value) },
             )
 
         fun choiceValue(
@@ -120,7 +120,7 @@ sealed interface PresentationEvent {
                 surfaceId,
                 bindingId,
                 buildJsonObject {
-                    put("Choice", value?.let(::JsonPrimitive) ?: JsonNull)
+                    put("choice", value?.let(::JsonPrimitive) ?: JsonNull)
                 },
             )
 
@@ -132,7 +132,7 @@ sealed interface PresentationEvent {
             ValueChanged(
                 surfaceId,
                 bindingId,
-                buildJsonObject { put("Number", value) },
+                buildJsonObject { put("number", value) },
             )
 
         fun environmentChanged(
