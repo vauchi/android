@@ -219,7 +219,60 @@ class PresentationProtocolTest {
         )
     }
 
+    // Core makes the context-bar menu buttons toggle by rewriting a repeat
+    // PresentOverlay into DismissOverlay. Without a shell mapping the command
+    // fell through to Effect and the menu stayed open on every second tap —
+    // observed on a Pixel 3a against a core carrying the toggle.
+    @Test
+    fun `dismiss overlay closes the open overlay`() {
+        val opened =
+            PresentationReducer
+                .apply(
+                    PresentationState(),
+                    PresentationProtocol
+                        .decodeEnvelope(
+                            envelope(replaceSurface(1), presentOverlay(1, "navigation")),
+                        ).commands,
+                ).state
+        assertEquals(OverlayKind.Navigation, opened.overlay?.overlay?.kind)
+
+        val result =
+            PresentationReducer.apply(
+                opened,
+                PresentationProtocol
+                    .decodeEnvelope(envelope(dismissOverlay(1, "navigation")))
+                    .commands,
+            )
+
+        assertNull(result.state.overlay, "a dismissed overlay must leave no overlay state")
+        assertEquals(emptyList(), result.effects, "DismissOverlay must not fall through to Effect")
+    }
+
     private fun envelope(vararg commands: String): String = """{"commands":[${commands.joinToString(",")}]}"""
+
+    private fun presentOverlay(
+        revision: Int,
+        kind: String,
+    ): String =
+        """
+        {"PresentOverlay":{
+          "surface_id":"main",
+          "revision":$revision,
+          "overlay":{"kind":"$kind","title":"More","items":[]}
+        }}
+        """.trimIndent()
+
+    private fun dismissOverlay(
+        revision: Int,
+        kind: String,
+    ): String =
+        """
+        {"DismissOverlay":{
+          "surface_id":"main",
+          "revision":$revision,
+          "kind":"$kind"
+        }}
+        """.trimIndent()
 
     private fun replaceSurface(revision: Int): String =
         """

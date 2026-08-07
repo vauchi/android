@@ -228,6 +228,12 @@ sealed interface PresentationCommand {
         val overlay: OverlaySpec,
     ) : PresentationCommand
 
+    data class DismissOverlay(
+        val surfaceId: String,
+        val revision: ULong,
+        val kind: OverlayKind,
+    ) : PresentationCommand
+
     data class SetProfile(
         val profile: PresentationProfile,
     ) : PresentationCommand

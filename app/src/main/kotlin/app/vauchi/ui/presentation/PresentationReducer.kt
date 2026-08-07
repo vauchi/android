@@ -69,6 +69,20 @@ object PresentationReducer {
                         )
                 }
 
+                is PresentationCommand.DismissOverlay -> {
+                    // Core rewrites a repeat PresentOverlay into this when the
+                    // same overlay is already open, so the context-bar buttons
+                    // toggle. Matching on kind as well as surface keeps a stale
+                    // dismiss from closing an overlay Core has since replaced.
+                    val open = overlay
+                    if (open != null &&
+                        open.surfaceId == command.surfaceId &&
+                        open.overlay.kind == command.kind
+                    ) {
+                        overlay = null
+                    }
+                }
+
                 is PresentationCommand.SetProfile -> {
                     profile = command.profile
                 }

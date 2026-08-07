@@ -63,6 +63,14 @@ object PresentationProtocol {
                 )
             }
 
+            "DismissOverlay" -> {
+                PresentationCommand.DismissOverlay(
+                    surfaceId = body.string("surface_id"),
+                    revision = body.ulong("revision"),
+                    kind = overlayKind(body.string("kind")),
+                )
+            }
+
             "SetPresentationProfile" -> {
                 PresentationCommand.SetProfile(
                     profile(body.objectValue("profile")),
@@ -122,15 +130,17 @@ object PresentationProtocol {
 
     private fun overlay(value: JsonObject): OverlaySpec =
         OverlaySpec(
-            kind =
-                when (value.string("kind")) {
-                    "navigation" -> OverlayKind.Navigation
-                    "action_menu" -> OverlayKind.ActionMenu
-                    else -> throw PresentationProtocolException("unknown overlay kind")
-                },
+            kind = overlayKind(value.string("kind")),
             title = value.nullableString("title"),
             items = value.array("items").map { action(it.jsonObject) },
         )
+
+    private fun overlayKind(value: String): OverlayKind =
+        when (value) {
+            "navigation" -> OverlayKind.Navigation
+            "action_menu" -> OverlayKind.ActionMenu
+            else -> throw PresentationProtocolException("unknown overlay kind")
+        }
 
     private fun profile(value: JsonObject): PresentationProfile =
         PresentationProfile(
