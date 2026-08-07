@@ -67,6 +67,7 @@ import app.vauchi.ble.BleCommand
 import app.vauchi.ble.BlePeripheral
 import app.vauchi.ble.BlePeripheralListener
 import app.vauchi.ble.BleUuids
+import app.vauchi.exchange.ExchangeModePermissions
 import app.vauchi.proximity.AccelerometerProximityService
 import app.vauchi.proximity.AudioProximityService
 import app.vauchi.proximity.LocationCaptureService
@@ -673,71 +674,114 @@ fun MainScreen(
                 },
             )
         }
+
+    fun executeBleCommand(cmd: BleCommand) {
+        when (cmd) {
+            is BleCommand.StartScan -> {
+                bleCentral
+                    .startScanning(cmd.serviceUuid)
+                    ?.let {
+                        Log.w("MainActivity", "BLE scan: $it")
+                        coreAppViewModel.onBleOperationFailed(it)
+                    }
+            }
+
+            is BleCommand.StartAdvertise -> {
+                // Core owns the tiebreak (ADR-043): cmd.payload is this
+                // device's identity-derived token; advertise it so the peer's
+                // core can compare and decide who connects.
+                blePeripheral
+                    .startAdvertising(cmd.serviceUuid, cmd.payload)
+                    ?.let {
+                        Log.w("MainActivity", "BLE advertise: $it")
+                        coreAppViewModel.onBleOperationFailed(it)
+                    }
+            }
+
+            is BleCommand.Connect -> {
+                bleCentral
+                    .connect(cmd.deviceId)
+                    ?.let {
+                        Log.w("MainActivity", "BLE connect: $it")
+                        coreAppViewModel.onBleOperationFailed(it)
+                    }
+            }
+
+            is BleCommand.Disconnect -> {
+                when (cmd.direction) {
+                    MobileBleLinkDirection.OUTBOUND -> bleCentral.disconnect(cmd.deviceId)
+                    MobileBleLinkDirection.INBOUND -> blePeripheral.disconnect(cmd.deviceId)
+                }
+            }
+
+            is BleCommand.Write -> {
+                when (cmd.direction) {
+                    MobileBleLinkDirection.OUTBOUND -> {
+                        bleCentral.writeCharacteristic(cmd.deviceId, cmd.uuid, cmd.data)
+                    }
+
+                    MobileBleLinkDirection.INBOUND -> {
+                        blePeripheral.notify(cmd.deviceId, cmd.uuid, cmd.data)
+                    }
+                }
+            }
+
+            is BleCommand.Read -> {
+                when (cmd.direction) {
+                    MobileBleLinkDirection.OUTBOUND -> {
+                        bleCentral.readCharacteristic(cmd.deviceId, cmd.uuid)
+                    }
+
+                    MobileBleLinkDirection.INBOUND -> {
+                        coreAppViewModel.onBleOperationFailed(
+                            "Inbound BLE characteristic reads are unsupported",
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // Android 12+ gates scan/advertise/connect behind runtime permissions, and
+    // nothing was requesting them: core's BLE commands went straight to
+    // BleCentral, which returned "Missing BLUETOOTH_SCAN permission" while the
+    // user watched a scan that could never find anyone. Request at execution
+    // time and replay the command that triggered the prompt — same shape as the
+    // location capture above. Android 11 and below hid this because the legacy
+    // ACCESS_FINE_LOCATION path *is* requested elsewhere.
+    val blePermissions = remember { ExchangeModePermissions.bluetooth().toTypedArray() }
+    val deferredBleCommands = remember { mutableStateListOf<BleCommand>() }
+    val blePermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions(),
+        ) { grants ->
+            val replay = deferredBleCommands.toList()
+            deferredBleCommands.clear()
+            val denied = grants.filterValues { !it }.keys
+            if (denied.isEmpty()) {
+                replay.forEach { executeBleCommand(it) }
+            } else {
+                coreAppViewModel.onBleOperationFailed("Bluetooth permission denied: $denied")
+            }
+        }
     LaunchedEffect(Unit) {
         coreAppViewModel.bleCommands.collect { cmd ->
-            when (cmd) {
-                is BleCommand.StartScan -> {
-                    bleCentral
-                        .startScanning(cmd.serviceUuid)
-                        ?.let {
-                            Log.w("MainActivity", "BLE scan: $it")
-                            coreAppViewModel.onBleOperationFailed(it)
-                        }
+            val missing =
+                blePermissions.filterNot {
+                    ContextCompat.checkSelfPermission(context, it) ==
+                        PackageManager.PERMISSION_GRANTED
                 }
-
-                is BleCommand.StartAdvertise -> {
-                    // Core owns the tiebreak (ADR-043): cmd.payload is this
-                    // device's identity-derived token; advertise it so the peer's
-                    // core can compare and decide who connects.
-                    blePeripheral
-                        .startAdvertising(cmd.serviceUuid, cmd.payload)
-                        ?.let {
-                            Log.w("MainActivity", "BLE advertise: $it")
-                            coreAppViewModel.onBleOperationFailed(it)
-                        }
-                }
-
-                is BleCommand.Connect -> {
-                    bleCentral
-                        .connect(cmd.deviceId)
-                        ?.let {
-                            Log.w("MainActivity", "BLE connect: $it")
-                            coreAppViewModel.onBleOperationFailed(it)
-                        }
-                }
-
-                is BleCommand.Disconnect -> {
-                    when (cmd.direction) {
-                        MobileBleLinkDirection.OUTBOUND -> bleCentral.disconnect(cmd.deviceId)
-                        MobileBleLinkDirection.INBOUND -> blePeripheral.disconnect(cmd.deviceId)
-                    }
-                }
-
-                is BleCommand.Write -> {
-                    when (cmd.direction) {
-                        MobileBleLinkDirection.OUTBOUND -> {
-                            bleCentral.writeCharacteristic(cmd.deviceId, cmd.uuid, cmd.data)
-                        }
-
-                        MobileBleLinkDirection.INBOUND -> {
-                            blePeripheral.notify(cmd.deviceId, cmd.uuid, cmd.data)
-                        }
-                    }
-                }
-
-                is BleCommand.Read -> {
-                    when (cmd.direction) {
-                        MobileBleLinkDirection.OUTBOUND -> {
-                            bleCentral.readCharacteristic(cmd.deviceId, cmd.uuid)
-                        }
-
-                        MobileBleLinkDirection.INBOUND -> {
-                            coreAppViewModel.onBleOperationFailed(
-                                "Inbound BLE characteristic reads are unsupported",
-                            )
-                        }
-                    }
-                }
+            if (missing.isEmpty()) {
+                executeBleCommand(cmd)
+                return@collect
+            }
+            // Queue first, then prompt only on the transition into an empty
+            // queue: core emits scan and advertise back to back, and two
+            // launches would stack two system dialogs on one decision.
+            val alreadyPrompting = deferredBleCommands.isNotEmpty()
+            deferredBleCommands.add(cmd)
+            if (!alreadyPrompting) {
+                blePermissionLauncher.launch(blePermissions)
             }
         }
     }

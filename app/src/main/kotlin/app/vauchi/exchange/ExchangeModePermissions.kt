@@ -45,25 +45,37 @@ object ExchangeModePermissions {
     // frontend transforms domain capability set into platform request. Fix:
     // core emits Command::RequestPermissions with capability list. (see
     // _private problem record 2026-07-06-mobile-domain-shell-violations)
+    /**
+     * Bluetooth runtime permissions for [sdkInt].
+     *
+     * Exposed on its own because the mode-selection step is not the only
+     * place that needs them: core's BLE commands can reach the shell without
+     * it having run, and an ungranted `BLUETOOTH_SCAN` makes `startScanning`
+     * fail with no visible prompt — the device scans forever in silence.
+     * `MainActivity` therefore requests these at execution time too, and both
+     * call sites must ask for the same set.
+     */
+    fun bluetooth(sdkInt: Int = Build.VERSION.SDK_INT): List<String> =
+        if (sdkInt >= Build.VERSION_CODES.S) {
+            // Android 12+: runtime Bluetooth permissions.
+            listOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.BLUETOOTH_ADVERTISE,
+            )
+        } else {
+            // Pre-Android 12: BLUETOOTH/BLUETOOTH_ADMIN are install-time;
+            // BLE *scanning* requires location at runtime.
+            listOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
     fun forMode(
         modeItemId: String,
         sdkInt: Int = Build.VERSION.SDK_INT,
     ): List<String> {
         val camera = listOf(Manifest.permission.CAMERA)
         val mic = listOf(Manifest.permission.RECORD_AUDIO)
-        val ble =
-            if (sdkInt >= Build.VERSION_CODES.S) {
-                // Android 12+: runtime Bluetooth permissions.
-                listOf(
-                    Manifest.permission.BLUETOOTH_SCAN,
-                    Manifest.permission.BLUETOOTH_CONNECT,
-                    Manifest.permission.BLUETOOTH_ADVERTISE,
-                )
-            } else {
-                // Pre-Android 12: BLUETOOTH/BLUETOOTH_ADMIN are install-time;
-                // BLE *scanning* requires location at runtime.
-                listOf(Manifest.permission.ACCESS_FINE_LOCATION)
-            }
+        val ble = bluetooth(sdkInt)
 
         return when (modeItemId.removePrefix("mode:")) {
             "hover" -> camera + mic
