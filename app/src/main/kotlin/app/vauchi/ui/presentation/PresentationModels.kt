@@ -271,6 +271,23 @@ data class PresentationState(
     val activeBar: ContextBar?
         get() = activeSurfaceId?.let(bars::get)?.bar
 
+    /**
+     * The overlay, but only while the surface it was raised over is still the
+     * active one at the revision it was raised at.
+     *
+     * Core clears its own open-overlay state on every dispatch, so it expects
+     * an overlay to die with its surface and sends no dismissal when an item
+     * inside it navigates. Rendering [overlay] unscoped left the menu on
+     * screen after a selection, and the next menu tap re-presented it instead
+     * of toggling it shut.
+     */
+    val activeOverlay: RevisionedOverlay?
+        get() =
+            overlay?.takeIf {
+                it.surfaceId == activeSurfaceId &&
+                    surfaces[it.surfaceId]?.revision == it.revision
+            }
+
     val visibleSurfaceIds: List<String>
         get() {
             val value = profile ?: return activeSurfaceId?.let(::listOf) ?: emptyList()

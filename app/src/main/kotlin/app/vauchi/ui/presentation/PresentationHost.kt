@@ -295,7 +295,7 @@ fun PresentationHost(
                     }
                 }
 
-                state.overlay?.let { overlay ->
+                state.activeOverlay?.let { overlay ->
                     PresentationOverlay(
                         overlay = overlay,
                         windowClass = profile.windowClass,

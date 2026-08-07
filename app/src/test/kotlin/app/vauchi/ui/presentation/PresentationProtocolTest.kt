@@ -248,6 +248,40 @@ class PresentationProtocolTest {
         assertEquals(emptyList(), result.effects, "DismissOverlay must not fall through to Effect")
     }
 
+    // Picking an item in the menu navigates, but Core sends no dismissal: it
+    // clears its own open-overlay state on every dispatch and expects the
+    // overlay to be scoped to the surface that owns it. Rendering it
+    // unconditionally desynchronised the two — on a Pixel 3a the menu stayed
+    // up after selecting "Exchange", and the next menu tap re-presented it
+    // instead of closing, because Core believed nothing was open.
+    @Test
+    fun `an overlay does not outlive the surface that owns it`() {
+        val opened =
+            PresentationReducer
+                .apply(
+                    PresentationState(),
+                    PresentationProtocol
+                        .decodeEnvelope(
+                            envelope(replaceSurface(1), presentOverlay(1, "navigation")),
+                        ).commands,
+                ).state
+        assertEquals(OverlayKind.Navigation, opened.activeOverlay?.overlay?.kind)
+
+        val navigated =
+            PresentationReducer
+                .apply(
+                    opened,
+                    PresentationProtocol
+                        .decodeEnvelope(envelope(replaceSurface(2)))
+                        .commands,
+                ).state
+
+        assertNull(
+            navigated.activeOverlay,
+            "an overlay bound to an older surface revision must stop rendering",
+        )
+    }
+
     private fun envelope(vararg commands: String): String = """{"commands":[${commands.joinToString(",")}]}"""
 
     private fun presentOverlay(
