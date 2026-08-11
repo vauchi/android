@@ -6,10 +6,9 @@ package app.vauchi.ui
 
 import android.content.Intent
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -20,20 +19,29 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
- * Structural UI tests — verify the rendered view hierarchy exposes specific
- * labelled elements (content descriptions / text) that screen readers rely on.
- * Uses `reset_for_testing` to bypass onboarding and land on the home screen.
+ * Structural UI tests — verify the rendered hierarchy exposes the labels screen
+ * readers rely on. Uses `reset_for_testing` to seed an identity and land on the
+ * home surface.
  *
  * Traces to: features/accessibility.feature
  *
- * Note on CC-20 (Test Quality Rules): earlier versions asserted
- * `isNotEmpty()` on `onAllNodes(hasClickAction())` — near-tautology that passes
- * for any non-empty screen. The assertions below query specific
- * `contentDescription` values that exist in `MainActivity.kt`, so a real
- * regression (missing tab, missing a11y label) will fail the test.
+ * These assertions deliberately name no Core-supplied copy. Under ADR-066 the
+ * shell renders what Core sends and must not know what a surface is "about", so
+ * pinning visible wording pins something the shell does not own.
+ *
+ * That is not hypothetical. The previous revision asserted a five-entry
+ * bottom-nav strip by name and gated `@Before` on the first tab's
+ * contentDescription. ADR-066 replaced the strip with one Core-driven surface
+ * plus the context bar, so the gate waited 5s for a tab that no longer existed
+ * and every test here died in setup — including the labelled-affordance check
+ * below. A precondition naming removed UI turns any real finding into a
+ * timeout, and a timeout reads as a broken test rather than a broken app.
+ *
+ * A companion count assertion ("home renders ≥5 text nodes") was removed for
+ * the same reason: its floor was calibrated on the deleted tab strip, and the
+ * `@Before` gate below already proves the surface rendered.
  */
 @RunWith(AndroidJUnit4::class)
 class StructuralUITest {
@@ -53,14 +61,16 @@ class StructuralUITest {
             }
         scenario = ActivityScenario.launch(intent)
         composeTestRule.waitForIdle()
-        // Bottom nav is gated by `uiState is UiState.Ready` in MainActivity.kt.
-        // `waitForIdle()` only settles Compose recomposition, not async state
-        // load — wait for the first tab's contentDescription to appear so the
-        // tree is stable before assertions. Fails fast if the app never
-        // reaches Ready within READY_TIMEOUT_MS.
+        // `waitForIdle()` settles recomposition but not the async seed. Gating
+        // merely on "some actionable node" is too weak — the pre-seed frame has
+        // a few, all labelled, so the assertion below ran against a half-drawn
+        // screen and passed without inspecting the real surface.
+        //
+        // This names the fixture `seedTestIdentityIfNeeded()` creates, not any
+        // Core-supplied copy, so it stays honest under ADR-066.
         composeTestRule.waitUntil(READY_TIMEOUT_MS) {
             composeTestRule
-                .onAllNodesWithContentDescription(EXPECTED_BOTTOM_NAV_LABELS.first())
+                .onAllNodesWithText(SEEDED_IDENTITY_NAME)
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
@@ -71,34 +81,18 @@ class StructuralUITest {
         scenario.close()
     }
 
-    // -- Navigation Structure --
-
-    /**
-     * Every bottom-nav entry declared in MainActivity.kt must be rendered with
-     * the expected content description. Fails if a tab goes missing or loses
-     * its accessibility label.
-     */
-    @Test
-    fun bottomNavigation_rendersAllExpectedTabs() {
-        composeTestRule.waitForIdle()
-        for (tabLabel in EXPECTED_BOTTOM_NAV_LABELS) {
-            composeTestRule
-                .onAllNodesWithContentDescription(tabLabel)
-                .fetchSemanticsNodes()
-                .let { nodes ->
-                    assertTrue(
-                        nodes.isNotEmpty(),
-                        "Bottom-nav tab '$tabLabel' missing — no node with that contentDescription",
-                    )
-                }
-        }
-    }
-
     // -- Accessible Labels --
 
     /**
-     * Every clickable in the live hierarchy must expose either text or a
+     * Every actionable node in the live hierarchy must expose either text or a
      * contentDescription — required by TalkBack.
+     *
+     * `hasClickAction()` also matches toggleables, since Compose gives a
+     * `Switch` an `OnClick` action.
+     *
+     * Note on CC-20: an earlier revision asserted `isNotEmpty()` on the same
+     * query, which passes for any non-empty screen. This inspects each node's
+     * semantics instead, so an affordance losing its label fails it.
      */
     @Test
     fun allClickableElements_haveAccessibleLabels() {
@@ -112,57 +106,37 @@ class StructuralUITest {
         // extra handling, not the assertion.
         require(nodes.isNotEmpty()) { "Home screen rendered no clickable nodes" }
 
-        val unlabeled = mutableListOf<Int>()
-        for ((i, node) in nodes.withIndex()) {
+        val unlabeled = mutableListOf<String>()
+        for (node in nodes) {
             val hasText =
                 SemanticsProperties.Text in node.config &&
                     node.config[SemanticsProperties.Text].any { it.text.isNotEmpty() }
             val hasDesc =
                 SemanticsProperties.ContentDescription in node.config &&
                     node.config[SemanticsProperties.ContentDescription].any { it.isNotEmpty() }
-            if (!hasText && !hasDesc) unlabeled.add(i)
+            // Report position and role, not an index — an actionable node with
+            // no label has nothing else to identify it by.
+            if (!hasText && !hasDesc) {
+                val role =
+                    if (SemanticsProperties.Role in node.config) {
+                        node.config[SemanticsProperties.Role].toString()
+                    } else {
+                        "no-role"
+                    }
+                unlabeled += "$role@${node.boundsInRoot}"
+            }
         }
         assertEquals(
             0,
             unlabeled.size,
-            "Clickable nodes without text or contentDescription: $unlabeled (of ${nodes.size} total)",
-        )
-    }
-
-    // -- Content Rendering --
-
-    /**
-     * Home screen should render at least one node with text semantics — keeps
-     * a minimal smoke signal, but the real coverage is in the tab-presence
-     * and labelled-clickables tests above.
-     */
-    @Test
-    fun homeScreen_rendersTextContent() {
-        composeTestRule.waitForIdle()
-        val textNodes =
-            composeTestRule
-                .onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text))
-                .fetchSemanticsNodes()
-        // The tab strip alone contributes ≥5 text/label nodes, plus any
-        // screen content. A floor of 5 catches "home screen failed to
-        // render" without being overly specific.
-        assertTrue(
-            textNodes.size >= 5,
-            "Home screen should render ≥5 text nodes (tab bar + content); found ${textNodes.size}",
+            "Actionable nodes without text or contentDescription: $unlabeled (of ${nodes.size} total)",
         )
     }
 
     private companion object {
-        /**
-         * Mirrors the contentDescription literals on each `NavigationBarItem`
-         * in `MainActivity.kt`. Update both sides together when the bottom-nav
-         * structure changes. These are NOT localized yet (tracked in the P0
-         * frontend-pure-renderer-violations record, §4 i18n Gap); when Android
-         * i18n is wired, replace with resource lookups.
-         */
-        val EXPECTED_BOTTOM_NAV_LABELS =
-            listOf("My Card", "Contacts", "Exchange", "Groups", "More")
+        /** Mirrors the identity `MainViewModel.seedTestIdentityIfNeeded()` creates. */
+        const val SEEDED_IDENTITY_NAME = "Test User"
 
-        const val READY_TIMEOUT_MS = 5_000L
+        const val READY_TIMEOUT_MS = 15_000L
     }
 }
