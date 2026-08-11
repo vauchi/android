@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -53,6 +54,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -141,20 +143,32 @@ internal fun PresentationNodeRenderer(
         }
 
         is PresentationNode.Toggle -> {
+            // The row owns the toggle and the Switch is decoration
+            // (`onCheckedChange = null`). Giving both an action published two
+            // actionable nodes, and the Switch's carried no label — a screen
+            // reader then announced a switch without saying which group it
+            // governs, on the control that decides who sees a card field.
+            // `toggleable` also supplies ToggleableState, so the on/off state
+            // reaches assistive tech instead of only the visual knob position.
             Row(
                 modifier =
                     modifier
                         .fillMaxWidth()
                         .heightIn(min = 48.dp)
-                        .clickable(enabled = node.enabled) {
-                            onEvent(
-                                PresentationEvent.booleanValue(
-                                    surfaceId,
-                                    node.bindingId,
-                                    !node.value,
-                                ),
-                            )
-                        }.semantics {
+                        .toggleable(
+                            value = node.value,
+                            enabled = node.enabled,
+                            role = Role.Switch,
+                            onValueChange = { checked ->
+                                onEvent(
+                                    PresentationEvent.booleanValue(
+                                        surfaceId,
+                                        node.bindingId,
+                                        checked,
+                                    ),
+                                )
+                            },
+                        ).semantics {
                             contentDescription = node.accessibility.label
                         },
                 verticalAlignment = Alignment.CenterVertically,
@@ -163,15 +177,7 @@ internal fun PresentationNodeRenderer(
                 Text(node.label, modifier = Modifier.weight(1f))
                 Switch(
                     checked = node.value,
-                    onCheckedChange = {
-                        onEvent(
-                            PresentationEvent.booleanValue(
-                                surfaceId,
-                                node.bindingId,
-                                it,
-                            ),
-                        )
-                    },
+                    onCheckedChange = null,
                     enabled = node.enabled,
                 )
             }
