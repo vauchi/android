@@ -8,10 +8,10 @@ import android.content.Intent
 import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
@@ -26,28 +26,35 @@ import org.junit.runner.RunWith
 
 /**
  * Instrumented test for the card field-add flow, driven through Compose
- * **semantics** (testTags + `performTextInput`) instead of blind
- * `uiautomator` coordinate taps.
+ * **semantics** instead of blind `uiautomator` coordinate taps.
  *
- * Motivation: the on-device device-test session (2026-07-26) drove this
- * flow with coordinate taps + `adb input text`, which garbled the value
+ * Motivation: the on-device session (2026-07-26) drove this flow with
+ * coordinate taps + `adb input text`, which garbled the value
  * (`+12025550199` → `Riaggc9669`), failed the Phone field's validation,
  * and could not reliably actuate the Compose form. `performTextInput`
  * enters the exact value; the E.164 number passes validation, so the field
  * persists and renders under the owner card.
+ *
+ * Addressed by Core's accessibility labels, not test tags. This test used
+ * `add_field`, `field_value` and `submit`, none of which exist in the app —
+ * the only tags it defines are `error.retry` and the two `recovery.*`. They
+ * predate ADR-066, when the shell owned its screens, and their loss left
+ * the test failing in `@Before` for reasons that read as a UI regression.
+ * Nor can they simply be reinstated: Core mints interaction and binding ids
+ * per surface revision, and the shell cannot name an affordance itself
+ * without the domain knowledge ADR-066 denies it. See
+ * `e2e/maestro/README.md`, which settles the same question for the Maestro
+ * flows.
  *
  * Two harness realities this test pins down for the next author:
  *  - `reset_for_testing` seeds a throwaway identity but, on a fresh
  *    install, does NOT advance Onboarding → Ready on the same launch (the
  *    async seed lands after the screen resolves, leaving the app on the
  *    Welcome screen). The `@Before` recreates the activity until the seeded
- *    identity resolves to the My Card home. Harness bug filed 2026-07-26.
- *  - Flipping a field to shared (its per-field visibility control) opens
- *    from the card field row; asserting that through semantics needs the
- *    field-detail's composition root and is tracked as follow-up. The
- *    two-device device-scoped-mailbox DELIVERY it gates is certified by the
- *    e2e `rg4-rg5` lane + core unit tests (`scanner_fans_out_*`,
- *    `ack_routes_*`) regardless of this UI path.
+ *    identity resolves to the card home. Harness bug filed 2026-07-26.
+ *  - Adding an entry is reached through the context bar's secondary role,
+ *    not from the surface: ADR-066 moved it into that overlay, so the flow
+ *    is Actions → Add Entry rather than a button on the card.
  *
  * Traces to: features/contact_card.feature
  */
@@ -68,17 +75,16 @@ class CardFieldVisibilityInstrumentedTest {
                 putExtra("reset_for_testing", true)
             }
         scenario = ActivityScenario.launch(intent)
-        // reset_for_testing seeds an identity, but on a fresh install the
-        // Onboarding → Ready transition does not fire on the same launch.
-        // Recreating re-runs onCreate, which then observes the seeded
-        // identity and resolves to the My Card home; poll-then-recreate
-        // until its add-field affordance appears.
+        // Gate on the seeded identity rendering, which is the fixture this
+        // test creates rather than any Core-supplied copy. Recreating
+        // re-runs onCreate, which then observes the seeded identity and
+        // resolves to the card home.
         var homeReady = false
         for (attempt in 0 until MAX_HOME_ATTEMPTS) {
             try {
                 composeTestRule.waitUntil(HOME_POLL_MS) {
                     composeTestRule
-                        .onAllNodesWithTag(ADD_FIELD_TAG)
+                        .onAllNodesWithText(SEEDED_IDENTITY_NAME)
                         .fetchSemanticsNodes()
                         .isNotEmpty()
                 }
@@ -90,7 +96,7 @@ class CardFieldVisibilityInstrumentedTest {
             }
         }
         check(homeReady) {
-            "App never reached the My Card home — reset_for_testing seed did " +
+            "App never reached the card home — reset_for_testing seed did " +
                 "not resolve to Ready within $MAX_HOME_ATTEMPTS attempts"
         }
     }
@@ -102,12 +108,24 @@ class CardFieldVisibilityInstrumentedTest {
 
     @Test
     fun addingAPhoneFieldWithAValidNumber_rendersItOnTheOwnerCard() {
-        composeTestRule.onNodeWithTag(ADD_FIELD_TAG).performClick()
+        // Add Entry lives in the context bar's secondary overlay (ADR-066),
+        // so open that first. The role button is icon-only, hence addressed
+        // by its accessibility label rather than by text.
+        // Addressed by contentDescription throughout: the renderer sets it
+        // from Core's accessibility label, and the visible text lands on a
+        // separate node, so a text matcher finds nothing.
+        openActionsOverlay()
+        composeTestRule.onAllNodesWithContentDescription(ADD_ENTRY).onFirst().performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onAllNodesWithText(PHONE_TYPE).onFirst().performClick()
+
+        composeTestRule.onAllNodesWithContentDescription(PHONE_TYPE).onFirst().performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithTag(FIELD_VALUE_TAG).performTextInput(PHONE_VALUE)
-        composeTestRule.onNodeWithTag(SUBMIT_TAG).performClick()
+        // useUnmergedTree: the field's own label lives below the merge
+        // boundary, so the merged tree has no node carrying it.
+        composeTestRule
+            .onNodeWithContentDescription(VALUE_FIELD, useUnmergedTree = true)
+            .performTextInput(PHONE_VALUE)
+        composeTestRule.onAllNodesWithContentDescription(SAVE).onFirst().performClick()
         composeTestRule.waitForIdle()
 
         // The saved field renders on the owner card — proves the exact E.164
@@ -125,13 +143,51 @@ class CardFieldVisibilityInstrumentedTest {
             .assertExists("The added phone field did not render on the owner card")
     }
 
+    /**
+     * The secondary role button *toggles* its overlay, so a single tap only
+     * opens it from a known-closed state. Assuming that made this flaky —
+     * one run reached the value field, the next could not find Add Entry.
+     * Tap until the overlay's contents are actually present.
+     */
+    private fun overlayIsOpen() =
+        composeTestRule
+            .onAllNodesWithContentDescription(ADD_ENTRY)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+
+    private fun openActionsOverlay() {
+        repeat(OVERLAY_OPEN_ATTEMPTS) {
+            if (overlayIsOpen()) return
+            composeTestRule.onNodeWithContentDescription(ACTIONS_ROLE).performClick()
+            try {
+                // Wait for the overlay rather than probing straight after
+                // `waitForIdle()`. Probing immediately reads the frame before
+                // it animates in, and because the button toggles, the retry
+                // then closes what the first tap opened — the loop oscillates
+                // and ends closed.
+                composeTestRule.waitUntil(OVERLAY_WAIT_MS) { overlayIsOpen() }
+                return
+            } catch (timeout: ComposeTimeoutException) {
+                composeTestRule.waitForIdle()
+            }
+        }
+        check(overlayIsOpen()) { "Actions overlay never exposed $ADD_ENTRY" }
+    }
+
     private companion object {
         const val READY_TIMEOUT_MS = 20_000L
+        const val OVERLAY_OPEN_ATTEMPTS = 3
+        const val OVERLAY_WAIT_MS = 3_000L
         const val HOME_POLL_MS = 5_000L
         const val MAX_HOME_ATTEMPTS = 6
-        const val ADD_FIELD_TAG = "add_field"
-        const val FIELD_VALUE_TAG = "field_value"
-        const val SUBMIT_TAG = "submit"
+
+        /** Mirrors the identity `MainViewModel.seedTestIdentityIfNeeded()` creates. */
+        const val SEEDED_IDENTITY_NAME = "Test User"
+
+        const val ACTIONS_ROLE = "Actions"
+        const val ADD_ENTRY = "Add Entry"
+        const val SAVE = "Save"
+        const val VALUE_FIELD = "Value input"
         const val PHONE_TYPE = "Phone"
         const val PHONE_VALUE = "+12025550199"
     }
