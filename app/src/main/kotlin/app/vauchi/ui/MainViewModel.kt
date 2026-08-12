@@ -179,7 +179,27 @@ class MainViewModel(
             // touching the shared engine with a content cycle that may reload
             // cached locale/theme overlays can race against the initial render
             // and transiently produce "Missing: ..." placeholders.
-            if (!repository.hasIdentity()) {
+            val hasIdentity =
+                try {
+                    repository.hasIdentity()
+                } catch (e: AuthenticationRequiredException) {
+                    // Storage initialises lazily behind this call, and on
+                    // release builds its key requires user authentication
+                    // (`setUserAuthenticationRequired(!DEBUG)`), so it throws
+                    // until the user has authenticated. The `runCatching`
+                    // below covered the cycle but not this precondition, so a
+                    // best-effort background leg took the whole process down
+                    // on launch — release-only, which is why no device test
+                    // ever saw it.
+                    //
+                    // Skipped rather than surfaced: `checkIdentity` and
+                    // `loadUserData` already map this to `UiState.AuthRequired`
+                    // and drive the prompt. Setting state from here would race
+                    // the foreground, and this leg is contracted not to touch
+                    // the UI.
+                    return@launch
+                }
+            if (!hasIdentity) {
                 return@launch
             }
             runCatching { repository.runContentUpdateCycle() }
