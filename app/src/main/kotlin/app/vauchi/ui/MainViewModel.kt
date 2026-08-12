@@ -99,6 +99,24 @@ class MainViewModel(
     val appEngine: PlatformAppEngine
         get() = repository.appEngine
 
+    /**
+     * The engine, or `null` when storage cannot be opened because the user
+     * has not authenticated.
+     *
+     * Acquiring the engine initialises storage, and on release builds that
+     * key requires user authentication, so the plain [appEngine] getter
+     * throws before the user has unlocked. A composable cannot recover from
+     * a throw, so composition asks for the engine this way and renders the
+     * pre-auth tree when it is absent; [refresh] then routes the state to
+     * `AuthRequired`, which drives the prompt.
+     */
+    fun appEngineOrNull(): PlatformAppEngine? =
+        try {
+            repository.appEngine
+        } catch (e: AuthenticationRequiredException) {
+            null
+        }
+
     private val localizationManager = LocalizationManager.getInstance(application)
     private val networkMonitor = NetworkMonitor(application)
 

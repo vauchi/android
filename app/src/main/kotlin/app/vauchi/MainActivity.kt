@@ -86,6 +86,7 @@ import app.vauchi.ui.startupErrorKindFor
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NotificationHelper
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -278,13 +279,56 @@ fun MainScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
 
+    // Hoisted above the engine gate below: snackbars belong to MainViewModel,
+    // not to Core, so they must still surface on the pre-auth screens.
+    LaunchedEffect(snackbarMessage) {
+        snackbarMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearSnackbar()
+        }
+    }
+
+    // Render the pre-auth states *before* touching the engine. Acquiring it
+    // initialises storage, whose key requires user authentication on release
+    // builds, so composing the engine-backed tree first threw on the main
+    // thread and killed the process — the shell could never reach the
+    // `AuthRequired` branch it already had
+    // (`2026-08-12-android-release-build-crashes-on-launch`).
+    val needsEngine = uiState is UiState.Onboarding || uiState is UiState.Ready
+    // Remembered per gate transition, not read on every recomposition: the
+    // accessor runs `ensureInitialized()`, and calling that from the
+    // composition body on each pass put storage setup on the main thread
+    // often enough to stall the instrumented suite.
+    val engine = remember(needsEngine) { if (needsEngine) viewModel.appEngineOrNull() else null }
+    if (engine == null) {
+        // Null in an engine-backed state means authentication lapsed between
+        // the state resolving and this composition. `refresh` re-runs the
+        // identity check, which maps that to `AuthRequired` and prompts.
+        val authLapsed = uiState is UiState.Onboarding || uiState is UiState.Ready
+        LaunchedEffect(authLapsed) {
+            if (authLapsed) viewModel.refresh()
+        }
+        Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                PreAuthContent(
+                    state = if (authLapsed) UiState.Loading else uiState,
+                    viewModel = viewModel,
+                    showRestoreDialog = showRestoreDialog,
+                    onShowRestoreDialog = { showRestoreDialog = it },
+                    coroutineScope = coroutineScope,
+                )
+            }
+        }
+        return
+    }
+
     // The Android shell renders Core's immutable presentation snapshot and
     // forwards typed events. Domain navigation and action priority never live
     // in Compose.
     val coreAppViewModel =
-        remember(viewModel) {
+        remember(engine) {
             CoreAppViewModel(
-                appEngine = viewModel.appEngine,
+                appEngine = engine,
                 onPresentationCommitted = viewModel::reconcilePresentationState,
             )
         }
@@ -850,14 +894,6 @@ fun MainScreen(
         }
     }
 
-    // Show snackbar when message changes
-    LaunchedEffect(snackbarMessage) {
-        snackbarMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearSnackbar()
-        }
-    }
-
     // Core emits this effect only when its own history is exhausted.
     val nativeBackEvent by coreAppViewModel.nativeBackEvent.collectAsState()
     LaunchedEffect(nativeBackEvent) {
@@ -879,10 +915,6 @@ fun MainScreen(
                     .padding(innerPadding),
         ) {
             when (val state = uiState) {
-                is UiState.Loading -> {
-                    LoadingScreen()
-                }
-
                 is UiState.Onboarding,
                 is UiState.Ready,
                 -> {
@@ -892,66 +924,106 @@ fun MainScreen(
                     )
                 }
 
-                is UiState.AuthRequired -> {
-                    AuthenticationGate(
-                        onAuthenticated = { viewModel.retryInit() },
-                        onError = { kind, detail ->
-                            viewModel.setError(kind, detail)
-                        },
+                // The gate above returns before the engine is acquired for
+                // these, so reaching them here would mean the two disagree.
+                // Routed through the same composable either way, so the two
+                // renderings cannot drift apart.
+                else -> {
+                    PreAuthContent(
+                        state = state,
+                        viewModel = viewModel,
+                        showRestoreDialog = showRestoreDialog,
+                        onShowRestoreDialog = { showRestoreDialog = it },
+                        coroutineScope = coroutineScope,
                     )
-                }
-
-                is UiState.AppPasswordRequired -> {
-                    var authError by remember {
-                        mutableStateOf<String?>(null)
-                    }
-                    AppPasswordScreen(
-                        onAuthenticate = { pin ->
-                            authError = null
-                            viewModel.authenticateAppPassword(
-                                pin,
-                            ) { msg -> authError = msg }
-                        },
-                        onCancel = {
-                            viewModel.cancelAppPassword()
-                        },
-                        errorMessage = authError,
-                    )
-                }
-
-                is UiState.Error -> {
-                    ErrorScreen(
-                        kind = state.kind,
-                        detail = state.detail,
-                        onRetry = { viewModel.refresh() },
-                    )
-                }
-
-                is UiState.KeyInvalidatedRecovery -> {
-                    KeyInvalidatedRecoveryScreen(
-                        onRestoreFromBackup = { showRestoreDialog = true },
-                        onStartFresh = { viewModel.onRecoveryStartFresh() },
-                    )
-
-                    if (showRestoreDialog) {
-                        RestoreIdentityDialog(
-                            onDismiss = { showRestoreDialog = false },
-                            onRestore = { backupData, password ->
-                                coroutineScope.launch {
-                                    val success =
-                                        viewModel.importFullBackup(
-                                            backupData,
-                                            password,
-                                        )
-                                    if (success) {
-                                        showRestoreDialog = false
-                                    }
-                                }
-                            },
-                        )
-                    }
                 }
             }
+        }
+    }
+}
+
+/**
+ * The states that render without Core's engine.
+ *
+ * Acquiring the engine initialises storage, whose key requires user
+ * authentication on release builds, so composing it before the user has
+ * authenticated threw `AuthenticationRequiredException` on the main thread
+ * and killed the process — the shell could not render the `AuthRequired`
+ * state it already models, because getting far enough to render *anything*
+ * threw first (`2026-08-12-android-release-build-crashes-on-launch`).
+ *
+ * Defined once and used from both the pre-engine gate and the engine-backed
+ * `when`, so the two cannot describe these states differently.
+ */
+@Composable
+private fun PreAuthContent(
+    state: UiState,
+    viewModel: MainViewModel,
+    showRestoreDialog: Boolean,
+    onShowRestoreDialog: (Boolean) -> Unit,
+    coroutineScope: CoroutineScope,
+) {
+    when (state) {
+        is UiState.Loading -> {
+            LoadingScreen()
+        }
+
+        is UiState.AuthRequired -> {
+            AuthenticationGate(
+                onAuthenticated = { viewModel.retryInit() },
+                onError = { kind, detail ->
+                    viewModel.setError(kind, detail)
+                },
+            )
+        }
+
+        is UiState.AppPasswordRequired -> {
+            var authError by remember { mutableStateOf<String?>(null) }
+            AppPasswordScreen(
+                onAuthenticate = { pin ->
+                    authError = null
+                    viewModel.authenticateAppPassword(pin) { msg -> authError = msg }
+                },
+                onCancel = { viewModel.cancelAppPassword() },
+                errorMessage = authError,
+            )
+        }
+
+        is UiState.Error -> {
+            ErrorScreen(
+                kind = state.kind,
+                detail = state.detail,
+                onRetry = { viewModel.refresh() },
+            )
+        }
+
+        is UiState.KeyInvalidatedRecovery -> {
+            KeyInvalidatedRecoveryScreen(
+                onRestoreFromBackup = { onShowRestoreDialog(true) },
+                onStartFresh = { viewModel.onRecoveryStartFresh() },
+            )
+
+            if (showRestoreDialog) {
+                RestoreIdentityDialog(
+                    onDismiss = { onShowRestoreDialog(false) },
+                    onRestore = { backupData, password ->
+                        coroutineScope.launch {
+                            val success = viewModel.importFullBackup(backupData, password)
+                            if (success) {
+                                onShowRestoreDialog(false)
+                            }
+                        }
+                    },
+                )
+            }
+        }
+
+        // Engine-backed states are rendered by the caller; reaching here
+        // would mean the gate and the `when` disagree.
+        is UiState.Onboarding,
+        is UiState.Ready,
+        -> {
+            Unit
         }
     }
 }
