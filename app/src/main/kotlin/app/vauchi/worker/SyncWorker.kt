@@ -8,6 +8,7 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import app.vauchi.data.AuthenticationRequiredException
 import app.vauchi.data.VauchiRepository
 import app.vauchi.ui.coreui.MobilePendingNotificationDTO
 import app.vauchi.ui.coreui.WakeupOutcome
@@ -23,30 +24,40 @@ class SyncWorker(
         const val WORK_NAME = "vauchi_periodic_sync"
     }
 
+    /**
+     * Seam for tests: the process-wide singleton builds a real
+     * [app.vauchi.data.KeyStoreHelper], so a test cannot otherwise choose
+     * how storage init behaves.
+     */
+    internal var repositoryFactory: (Context) -> VauchiRepository = VauchiRepository::getInstance
+
     override suspend fun doWork(): Result {
         Log.d(TAG, "Starting background sync")
 
         val repository =
             try {
-                VauchiRepository.getInstance(applicationContext)
+                repositoryFactory(applicationContext)
             } catch (e: Exception) {
                 Log.e(TAG, "Repository init failed: ${e.message}", e)
                 return Result.failure()
             }
 
-        // Skip all engine work until the user has completed onboarding.
-        // Without an identity, periodicSyncTick() returns NoIdentity anyway,
-        // but touching the shared engine during the onboarding flow races
-        // against the foreground renderer and can transiently corrupt the
-        // locale catalog / screen state that CoreAppViewModel is displaying.
-        if (!repository.hasIdentity()) {
-            Log.d(TAG, "No identity yet; skipping background sync")
-            return Result.success()
-        }
-
         val maxRetries = 3u
 
         return try {
+            // Skip all engine work until the user has completed onboarding.
+            // Without an identity, periodicSyncTick() returns NoIdentity anyway,
+            // but touching the shared engine during the onboarding flow races
+            // against the foreground renderer and can transiently corrupt the
+            // locale catalog / screen state that CoreAppViewModel is displaying.
+            //
+            // Inside the guard, not above it: storage initialises lazily behind
+            // this call, so on a locked device it throws instead of answering.
+            if (!repository.hasIdentity()) {
+                Log.d(TAG, "No identity yet; skipping background sync")
+                return Result.success()
+            }
+
             repository.appEngine.periodicSyncTick()
 
             runCatching { repository.runContentUpdateCycle() }
@@ -72,6 +83,12 @@ class SyncWorker(
             }
 
             Result.success()
+        } catch (e: AuthenticationRequiredException) {
+            // A locked device cannot release the storage key, and a background
+            // worker has no way to prompt for it. The work is undone, not
+            // broken, so report it as such rather than as a sync failure.
+            Log.d(TAG, "Storage locked; deferring background sync")
+            Result.retry()
         } catch (e: Exception) {
             Log.e(TAG, "Sync failed: ${e.message}", e)
             if (runAttemptCount.toUInt() < maxRetries) {
