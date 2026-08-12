@@ -4,13 +4,10 @@
 
 package app.vauchi.ui
 
-import android.content.Intent
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.test.core.app.ActivityScenario
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.vauchi.MainActivity
 import org.junit.After
@@ -52,33 +49,15 @@ class StructuralUITest {
 
     @Before
     fun launchWithTestIdentity() {
-        val intent =
-            Intent(
-                ApplicationProvider.getApplicationContext(),
-                MainActivity::class.java,
-            ).apply {
-                putExtra("reset_for_testing", true)
-            }
-        scenario = ActivityScenario.launch(intent)
-        composeTestRule.waitForIdle()
-        // `waitForIdle()` settles recomposition but not the async seed. Gating
-        // merely on "some actionable node" is too weak — the pre-seed frame has
-        // a few, all labelled, so the assertion below ran against a half-drawn
-        // screen and passed without inspecting the real surface.
-        //
-        // This names the fixture `seedTestIdentityIfNeeded()` creates, not any
-        // Core-supplied copy, so it stays honest under ADR-066.
-        composeTestRule.waitUntil(READY_TIMEOUT_MS) {
-            composeTestRule
-                .onAllNodesWithText(SEEDED_IDENTITY_NAME)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
+        scenario = launchSeededApp(composeTestRule)
     }
 
     @After
     fun cleanup() {
-        scenario.close()
+        // `launchSeededApp` closes the scenario and throws before assigning
+        // when the app never reaches Ready. Closing an unset lateinit here
+        // would replace its diagnosis with an UninitializedPropertyAccess.
+        if (::scenario.isInitialized) scenario.close()
     }
 
     // -- Accessible Labels --
@@ -131,12 +110,5 @@ class StructuralUITest {
             unlabeled.size,
             "Actionable nodes without text or contentDescription: $unlabeled (of ${nodes.size} total)",
         )
-    }
-
-    private companion object {
-        /** Mirrors the identity `MainViewModel.seedTestIdentityIfNeeded()` creates. */
-        const val SEEDED_IDENTITY_NAME = "Test User"
-
-        const val READY_TIMEOUT_MS = 15_000L
     }
 }

@@ -4,18 +4,15 @@
 
 package app.vauchi.ui
 
-import android.content.Intent
 import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.vauchi.MainActivity
 import org.junit.After
@@ -46,15 +43,13 @@ import org.junit.runner.RunWith
  * `e2e/maestro/README.md`, which settles the same question for the Maestro
  * flows.
  *
- * Two harness realities this test pins down for the next author:
- *  - `reset_for_testing` seeds a throwaway identity but, on a fresh
- *    install, does NOT advance Onboarding → Ready on the same launch (the
- *    async seed lands after the screen resolves, leaving the app on the
- *    Welcome screen). The `@Before` recreates the activity until the seeded
- *    identity resolves to the card home. Harness bug filed 2026-07-26.
- *  - Adding an entry is reached through the context bar's secondary role,
- *    not from the surface: ADR-066 moved it into that overlay, so the flow
- *    is Actions → Add Entry rather than a button on the card.
+ * A harness reality this test pins down for the next author: adding an entry
+ * is reached through the context bar's secondary role, not from the surface.
+ * ADR-066 moved it into that overlay, so the flow is Actions → Add Entry
+ * rather than a button on the card.
+ *
+ * The setup gate lives in [launchSeededApp], which waits on the state the
+ * seed commits rather than on rendered text — see its KDoc for why.
  *
  * Traces to: features/contact_card.feature
  */
@@ -67,43 +62,15 @@ class CardFieldVisibilityInstrumentedTest {
 
     @Before
     fun launchWithTestIdentity() {
-        val intent =
-            Intent(
-                ApplicationProvider.getApplicationContext(),
-                MainActivity::class.java,
-            ).apply {
-                putExtra("reset_for_testing", true)
-            }
-        scenario = ActivityScenario.launch(intent)
-        // Gate on the seeded identity rendering, which is the fixture this
-        // test creates rather than any Core-supplied copy. Recreating
-        // re-runs onCreate, which then observes the seeded identity and
-        // resolves to the card home.
-        var homeReady = false
-        for (attempt in 0 until MAX_HOME_ATTEMPTS) {
-            try {
-                composeTestRule.waitUntil(HOME_POLL_MS) {
-                    composeTestRule
-                        .onAllNodesWithText(SEEDED_IDENTITY_NAME)
-                        .fetchSemanticsNodes()
-                        .isNotEmpty()
-                }
-                homeReady = true
-                break
-            } catch (timeout: ComposeTimeoutException) {
-                scenario.recreate()
-                composeTestRule.waitForIdle()
-            }
-        }
-        check(homeReady) {
-            "App never reached the card home — reset_for_testing seed did " +
-                "not resolve to Ready within $MAX_HOME_ATTEMPTS attempts"
-        }
+        scenario = launchSeededApp(composeTestRule)
     }
 
     @After
     fun cleanup() {
-        scenario.close()
+        // `launchSeededApp` closes the scenario and throws before assigning
+        // when the app never reaches Ready. Closing an unset lateinit here
+        // would replace its diagnosis with an UninitializedPropertyAccess.
+        if (::scenario.isInitialized) scenario.close()
     }
 
     @Test
@@ -119,7 +86,16 @@ class CardFieldVisibilityInstrumentedTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.onAllNodesWithContentDescription(PHONE_TYPE).onFirst().performClick()
-        composeTestRule.waitForIdle()
+        // Wait for the field rather than assuming `waitForIdle()` covers it:
+        // picking a type swaps in the entry form, and probing the frame before
+        // it lands fails with "could not find any node", which reads as a
+        // missing label rather than as arriving early.
+        composeTestRule.waitUntil(OVERLAY_WAIT_MS) {
+            composeTestRule
+                .onAllNodesWithContentDescription(VALUE_FIELD, useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
         // useUnmergedTree: the field's own label lives below the merge
         // boundary, so the merged tree has no node carrying it.
         composeTestRule
@@ -178,11 +154,6 @@ class CardFieldVisibilityInstrumentedTest {
         const val READY_TIMEOUT_MS = 20_000L
         const val OVERLAY_OPEN_ATTEMPTS = 3
         const val OVERLAY_WAIT_MS = 3_000L
-        const val HOME_POLL_MS = 5_000L
-        const val MAX_HOME_ATTEMPTS = 6
-
-        /** Mirrors the identity `MainViewModel.seedTestIdentityIfNeeded()` creates. */
-        const val SEEDED_IDENTITY_NAME = "Test User"
 
         const val ACTIONS_ROLE = "Actions"
         const val ADD_ENTRY = "Add Entry"
