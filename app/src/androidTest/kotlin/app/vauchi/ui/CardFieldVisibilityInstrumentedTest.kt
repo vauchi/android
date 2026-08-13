@@ -76,33 +76,19 @@ class CardFieldVisibilityInstrumentedTest {
     @Test
     fun addingAPhoneFieldWithAValidNumber_rendersItOnTheOwnerCard() {
         // Add Entry lives in the context bar's secondary overlay (ADR-066),
-        // so open that first. The role button is icon-only, hence addressed
-        // by its accessibility label rather than by text.
-        // Addressed by contentDescription throughout: the renderer sets it
-        // from Core's accessibility label, and the visible text lands on a
-        // separate node, so a text matcher finds nothing.
+        // so open that first. Every affordance here is icon-only or renders
+        // its label on a separate node, so all are addressed by their
+        // accessibility label rather than by text.
         openActionsOverlay()
-        composeTestRule.onAllNodesWithContentDescription(ADD_ENTRY).onFirst().performClick()
-        composeTestRule.waitForIdle()
+        tapAndAwait(ADD_ENTRY, expecting = PHONE_TYPE)
+        tapAndAwait(PHONE_TYPE, expecting = VALUE_FIELD)
 
-        composeTestRule.onAllNodesWithContentDescription(PHONE_TYPE).onFirst().performClick()
-        // Wait for the field rather than assuming `waitForIdle()` covers it:
-        // picking a type swaps in the entry form, and probing the frame before
-        // it lands fails with "could not find any node", which reads as a
-        // missing label rather than as arriving early.
-        composeTestRule.waitUntil(OVERLAY_WAIT_MS) {
-            composeTestRule
-                .onAllNodesWithContentDescription(VALUE_FIELD, useUnmergedTree = true)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
         // useUnmergedTree: the field's own label lives below the merge
         // boundary, so the merged tree has no node carrying it.
         composeTestRule
             .onNodeWithContentDescription(VALUE_FIELD, useUnmergedTree = true)
             .performTextInput(PHONE_VALUE)
         composeTestRule.onAllNodesWithContentDescription(SAVE).onFirst().performClick()
-        composeTestRule.waitForIdle()
 
         // The saved field renders on the owner card — proves the exact E.164
         // value was entered (no garbling) and accepted by Phone validation.
@@ -117,6 +103,34 @@ class CardFieldVisibilityInstrumentedTest {
             .onAllNodes(hasText(PHONE_VALUE, substring = true))
             .onFirst()
             .assertExists("The added phone field did not render on the owner card")
+    }
+
+    /**
+     * Taps a Core-driven affordance and waits for the one the next step needs.
+     *
+     * `waitForIdle()` cannot cover this and is not merely early:
+     * `CoreAppViewModel.dispatchPresentationEvents` runs each interaction on
+     * `viewModelScope` with the Core round-trip inside
+     * `withContext(Dispatchers.IO)`, so Compose is legitimately idle while the
+     * replacement surface is still in flight. Compose has no idling resource
+     * for that work, so the only observable this test owns is the arrival of
+     * the next affordance.
+     *
+     * Probing too early fails as "could not find any node", which reads as a
+     * missing accessibility label — a render regression — rather than as the
+     * test arriving before the surface.
+     */
+    private fun tapAndAwait(
+        label: String,
+        expecting: String,
+    ) {
+        composeTestRule.onAllNodesWithContentDescription(label).onFirst().performClick()
+        composeTestRule.waitUntil(CORE_ROUNDTRIP_MS) {
+            composeTestRule
+                .onAllNodesWithContentDescription(expecting, useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
     }
 
     /**
@@ -152,6 +166,7 @@ class CardFieldVisibilityInstrumentedTest {
 
     private companion object {
         const val READY_TIMEOUT_MS = 20_000L
+        const val CORE_ROUNDTRIP_MS = 10_000L
         const val OVERLAY_OPEN_ATTEMPTS = 3
         const val OVERLAY_WAIT_MS = 3_000L
 
