@@ -6,6 +6,8 @@ package app.vauchi.ui.presentation
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +20,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -34,11 +39,27 @@ internal fun PresentationSurface(
     onFocusedBinding: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val focusManager = LocalFocusManager.current
     Surface(
         modifier =
             modifier
                 .fillMaxSize()
-                .clickable(onClick = onActivate)
+                // Any tap anywhere on the surface takes focus out of a
+                // field. Compose reports focus loss only when focus moves
+                // to another focusable, so tapping a toggle row or empty
+                // space otherwise leaves a field focused and Core never
+                // learns the user moved on — which is what makes
+                // `InputFocusEnded` fire at all.
+                //
+                // Watched on the Initial pass because children consume
+                // their taps: a gesture detector here would never see a
+                // press on a chip or a button.
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                        focusManager.clearFocus()
+                    }
+                }.clickable(onClick = onActivate)
                 .semantics {
                     contentDescription = surface.accessibilityLabel
                 },
