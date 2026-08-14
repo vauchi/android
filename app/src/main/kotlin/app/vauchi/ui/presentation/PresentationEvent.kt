@@ -55,6 +55,38 @@ sealed interface PresentationEvent {
             }
     }
 
+    /**
+     * The user pressed the keyboard's own "done" action in a field. Core
+     * decides whether that means anything on this surface; a field whose
+     * screen does not care simply produces no visible change.
+     */
+    data class InputSubmitted(
+        val surfaceId: String,
+        val bindingId: String,
+    ) : PresentationEvent {
+        override fun toJson(): String =
+            variant("InputSubmitted") {
+                put("surface_id", surfaceId)
+                put("binding_id", bindingId)
+            }
+    }
+
+    /**
+     * A field lost focus without the user having submitted. Reported so
+     * Core can offer a way to commit text the user left behind rather
+     * than committing it on their behalf.
+     */
+    data class InputFocusEnded(
+        val surfaceId: String,
+        val bindingId: String,
+    ) : PresentationEvent {
+        override fun toJson(): String =
+            variant("InputFocusEnded") {
+                put("surface_id", surfaceId)
+                put("binding_id", bindingId)
+            }
+    }
+
     data class BackRequested(
         val surfaceId: String,
     ) : PresentationEvent {

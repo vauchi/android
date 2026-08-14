@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -59,6 +60,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
@@ -106,6 +108,7 @@ internal fun PresentationNodeRenderer(
         is PresentationNode.Input -> {
             val inputState = remember(node.bindingId) { PresentationInputState(node.value) }
             val focusRequester = remember(node.bindingId) { FocusRequester() }
+            val wasFocused = remember(node.bindingId) { mutableStateOf(false) }
             LaunchedEffect(focusedBindingId, node.bindingId) {
                 if (shouldRestoreFocus(focusedBindingId, node.bindingId)) {
                     focusRequester.requestFocus()
@@ -128,7 +131,17 @@ internal fun PresentationNodeRenderer(
                 placeholder = node.placeholder?.let { { Text(it) } },
                 isError = node.validationError != null,
                 supportingText = node.validationError?.let { { Text(it) } },
-                keyboardOptions = KeyboardOptions(keyboardType = keyboardType(node.inputKind)),
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = keyboardType(node.inputKind),
+                        imeAction = if (node.inputKind == "multiline") ImeAction.Default else ImeAction.Done,
+                    ),
+                keyboardActions =
+                    KeyboardActions(
+                        onDone = {
+                            onEvent(PresentationEvent.InputSubmitted(surfaceId, node.bindingId))
+                        },
+                    ),
                 singleLine = node.inputKind != "multiline",
                 modifier =
                     modifier
@@ -136,6 +149,17 @@ internal fun PresentationNodeRenderer(
                         .focusRequester(focusRequester)
                         .onFocusChanged {
                             onFocusedBinding(node.bindingId, it.isFocused)
+                            // Report only the transition out of the field,
+                            // and only once it has actually held focus —
+                            // Compose emits unfocused on first composition
+                            // too, which would look like the user leaving a
+                            // field they never entered.
+                            if (!it.isFocused && wasFocused.value) {
+                                onEvent(
+                                    PresentationEvent.InputFocusEnded(surfaceId, node.bindingId),
+                                )
+                            }
+                            wasFocused.value = it.isFocused
                         }.semantics {
                             contentDescription = node.accessibility.label
                         },
