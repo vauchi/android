@@ -875,6 +875,12 @@ gate:app-size:release:
 # (timestamp clamping, deterministic linker order, host environment
 # hermeticity). allow_failure: true keeps the job advisory until the
 # infrastructure work is done. Audited 2026-04-22 T2.5.
+#
+# vauchi-platform lives in vauchi/core; this repo has no Cargo.toml, so
+# the job fetches core the same way the screenshot jobs above do. Until
+# 2026-08 it ran cargo from the project root and died in three seconds on
+# "could not find Cargo.toml" — advisory-and-red reads the same as
+# advisory-and-reproducible, so it never reported anything.
 verify:reproducible-so:
   extends: [.android-job, .timeout-long]
   stage: test
@@ -886,24 +892,68 @@ verify:reproducible-so:
   script:
     - |
       echo "=== Reproducible .so Build Verification ==="
-      export RUSTFLAGS="--remap-path-prefix=${PWD}=/build"
+
+      # Same core ref that produced the AAR pinned in app/build.gradle.kts.
+      AAR_VERSION=$(grep 'vauchi-platform:' app/build.gradle.kts | sed -n 's/.*vauchi-platform:\([0-9.]*\).*/\1/p' | head -1)
+      CORE_REF="v${AAR_VERSION:-main}"
+      CORE_DIR="${CI_PROJECT_DIR}/.core-checkout-repro"
+      rm -rf "$CORE_DIR"
+      mkdir -p "$CORE_DIR"
+      ARCHIVE_URL="${CI_SERVER_URL}/api/v4/projects/vauchi%2Fcore/repository/archive.tar.gz?sha=${CORE_REF}"
+      if curl -fsSL --header "JOB-TOKEN: ${CI_JOB_TOKEN}" "$ARCHIVE_URL" | tar xz --strip-components=1 -C "$CORE_DIR"; then
+        echo "Downloaded core archive at ${CORE_REF}"
+      else
+        echo "Archive download failed for ${CORE_REF} — cloning main"
+        rm -rf "$CORE_DIR"
+        git clone --depth=1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
+      fi
+
+      # themes feeds include_bytes! in vauchi-platform.
+      THEMES_DIR="${CI_PROJECT_DIR}/themes"
+      if [ ! -d "$THEMES_DIR" ]; then
+        git clone --depth=1 --branch=main \
+          "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/themes.git" "$THEMES_DIR"
+      else
+        git -C "$THEMES_DIR" pull --ff-only 2>/dev/null || true
+      fi
+      python3 "$THEMES_DIR/scripts/generate.py"
+
+      # Missing toolchain must not read as "not reproducible" — that is the
+      # failure mode this job spent four months in.
+      NDK_DIR="${ANDROID_NDK_HOME:-}"
+      if [ -z "$NDK_DIR" ]; then
+        NDK_DIR=$(ls -d "${ANDROID_HOME}"/ndk/* 2>/dev/null | sort -V | tail -1 || true)
+      fi
+      if [ -z "$NDK_DIR" ] || [ ! -d "$NDK_DIR" ]; then
+        echo "No Android NDK under ANDROID_NDK_HOME or ${ANDROID_HOME}/ndk — cannot cross-compile."
+        echo "Install the NDK on the runner, or drop this job."
+        exit 1
+      fi
+      export ANDROID_NDK_HOME="$NDK_DIR"
+      echo "Using NDK at ${ANDROID_NDK_HOME}"
+
+      command -v cargo-ndk >/dev/null 2>&1 || cargo binstall cargo-ndk --no-confirm || cargo install cargo-ndk
+      rustup target add aarch64-linux-android
+
+      export CARGO_TARGET_DIR="${CI_PROJECT_DIR}/.cargo-target-repro"
+      export RUSTFLAGS="--remap-path-prefix=${CORE_DIR}=/build"
+      SO_PATH="${CARGO_TARGET_DIR}/aarch64-linux-android/release/libvauchi_platform.so"
 
       # Per-job paths guard against ownership collisions on the shared shell runner.
       BUILD1_SO="/tmp/build1-${CI_JOB_ID}.so"
       BUILD2_SO="/tmp/build2-${CI_JOB_ID}.so"
 
-      # Build 1
       echo "Build 1..."
-      cargo ndk -t aarch64-linux-android build -p vauchi-platform --release
-      cp target/aarch64-linux-android/release/libvauchi_platform.so "$BUILD1_SO"
+      cargo ndk -t aarch64-linux-android build -p vauchi-platform --release \
+        --manifest-path "$CORE_DIR/Cargo.toml"
+      cp "$SO_PATH" "$BUILD1_SO"
 
-      # Clean and rebuild
-      cargo clean -p vauchi-platform
+      cargo clean -p vauchi-platform --manifest-path "$CORE_DIR/Cargo.toml"
       echo "Build 2..."
-      cargo ndk -t aarch64-linux-android build -p vauchi-platform --release
-      cp target/aarch64-linux-android/release/libvauchi_platform.so "$BUILD2_SO"
+      cargo ndk -t aarch64-linux-android build -p vauchi-platform --release \
+        --manifest-path "$CORE_DIR/Cargo.toml"
+      cp "$SO_PATH" "$BUILD2_SO"
 
-      # Compare
       HASH1=$(sha256sum "$BUILD1_SO" | cut -d' ' -f1)
       HASH2=$(sha256sum "$BUILD2_SO" | cut -d' ' -f1)
 
@@ -911,9 +961,9 @@ verify:reproducible-so:
       echo "Build 2: ${HASH2}"
 
       if [ "$HASH1" = "$HASH2" ]; then
-        echo "✓ Builds are reproducible"
+        echo "Builds are reproducible"
       else
-        echo "✗ Builds differ — not reproducible"
+        echo "Builds differ — not reproducible"
         exit 1
       fi
   rules:
