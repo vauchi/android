@@ -3,8 +3,8 @@
 
 > **Mirror:** This repo is a read-only mirror of [gitlab.com/vauchi/android](https://gitlab.com/vauchi/android). Please open issues and merge requests there.
 
-[![Pipeline](https://img.shields.io/endpoint?url=https://vauchi.gitlab.io/android/badges/pipeline.json&label=pipeline)](https://gitlab.com/vauchi/android/-/pipelines)
-[![Coverage](https://img.shields.io/endpoint?url=https://vauchi.gitlab.io/android/badges/coverage.json&label=coverage)](https://gitlab.com/vauchi/android/-/pipelines)
+[![Pipeline](https://img.shields.io/endpoint?url=https://vauchi.gitlab.io/android/badges/pipeline.json&label=pipeline)](https://gitlab.com/vauchi/android)
+[![Coverage](https://img.shields.io/endpoint?url=https://vauchi.gitlab.io/android/badges/coverage.json&label=coverage)](https://gitlab.com/vauchi/android)
 [![REUSE](https://api.reuse.software/badge/gitlab.com/vauchi/android)](https://api.reuse.software/info/gitlab.com/vauchi/android)
 
 > [!NOTE]
