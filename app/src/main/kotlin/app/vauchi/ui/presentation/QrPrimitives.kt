@@ -250,11 +250,30 @@ internal fun QrScanner(
                                                                     "FAIL",
                                                                     "SHAK",
                                                                 )
+                                                        // A short one-way fingerprint, never the
+                                                        // payload — that carries key material
+                                                        // (logging-rules.md). Distinguishes "the
+                                                        // peer is showing one frame" from "we keep
+                                                        // decoding one frame while it cycles",
+                                                        // which counting alone cannot: 145
+                                                        // consecutive identical decodes were
+                                                        // observed against a screen measured to
+                                                        // change six times in nine seconds
+                                                        // (2026-08-18-hover-transfer-stalls-on-the-last-chunk).
+                                                        val fingerprint =
+                                                            java.security.MessageDigest
+                                                                .getInstance("SHA-256")
+                                                                .digest(code.toByteArray())
+                                                                .take(4)
+                                                                .joinToString("") { b ->
+                                                                    "%02x".format(b)
+                                                                }
                                                         Log.i(
                                                             "Vauchi",
                                                             "[QrScan] decoded type=" +
                                                                 (if (known) frameType else "????") +
-                                                                " len=${code.length}",
+                                                                " len=${code.length}" +
+                                                                " fp=$fingerprint",
                                                         )
                                                         // Forward the opaque payload to the
                                                         // generic node binding.
