@@ -19,6 +19,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.float
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
@@ -199,6 +200,15 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                 CommandDTO.ScheduleWakeup(
                     earliestSecs = obj.value("earliest_secs").int.toUInt(),
                     deadlineSecs = obj.value("deadline_secs").int.toUInt(),
+                    // Read explicitly: this deserialiser is hand-written, so a
+                    // @SerialName on the data class is decoration and the field
+                    // would silently stay null. That is what happened — a live
+                    // exchange fell back to earliest_secs and advanced its QR
+                    // once a second against a ~300 ms design, measured on device
+                    // at 1013 ms
+                    // (2026-08-18-hover-transfer-stalls-on-the-last-chunk).
+                    earliestMillis =
+                        (obj["earliest_millis"] as? JsonPrimitive)?.intOrNull?.toUInt(),
                 )
             }
 

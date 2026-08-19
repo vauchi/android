@@ -768,6 +768,7 @@ class CoreAppViewModel(
                     // peer's camera decodes ~30 frames per second
                     // (device-measured 2026-08-19). `earliestMillis` is absent
                     // for the idle heartbeat, which stays on whole seconds.
+                    val tickStart = System.currentTimeMillis()
                     val nextMillis =
                         try {
                             val scheduled =
@@ -782,6 +783,16 @@ class CoreAppViewModel(
                             Log.e(TAG, "Foreground wakeup tick failed", e)
                             DEFAULT_FOREGROUND_WAKEUP_SECS * 1000L
                         }
+                    // The exchange QR advances from this loop, so its period is
+                    // the tick's own cost plus the delay — not the delay alone.
+                    // On device the display moved every 2-4 s while core asked
+                    // for ~300 ms, and only measuring both parts says which one
+                    // is responsible
+                    // (2026-08-18-hover-transfer-stalls-on-the-last-chunk).
+                    val tickMs = System.currentTimeMillis() - tickStart
+                    if (tickMs > 200 || nextMillis < 1000L) {
+                        Log.i(TAG, "[MSX] wakeup tick=${tickMs}ms next=${nextMillis}ms")
+                    }
                     delay(nextMillis)
                 }
             }
