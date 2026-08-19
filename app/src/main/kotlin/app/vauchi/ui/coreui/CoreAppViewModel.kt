@@ -762,20 +762,27 @@ class CoreAppViewModel(
         foregroundWakeupJob =
             viewModelScope.launch {
                 while (isActive) {
-                    val nextSecs =
+                    // Milliseconds, because a live QR exchange advances its
+                    // display from this loop: whole seconds pinned it at one
+                    // frame per second against a ~300 ms design, while the
+                    // peer's camera decodes ~30 frames per second
+                    // (device-measured 2026-08-19). `earliestMillis` is absent
+                    // for the idle heartbeat, which stays on whole seconds.
+                    val nextMillis =
                         try {
-                            onWakeup()
-                                .commands
-                                .filterIsInstance<CommandDTO.ScheduleWakeup>()
-                                .firstOrNull()
-                                ?.earliestSecs
-                                ?.toLong()
-                                ?: DEFAULT_FOREGROUND_WAKEUP_SECS
+                            val scheduled =
+                                onWakeup()
+                                    .commands
+                                    .filterIsInstance<CommandDTO.ScheduleWakeup>()
+                                    .firstOrNull()
+                            scheduled?.earliestMillis?.toLong()
+                                ?: scheduled?.earliestSecs?.toLong()?.times(1000L)
+                                ?: (DEFAULT_FOREGROUND_WAKEUP_SECS * 1000L)
                         } catch (e: Exception) {
                             Log.e(TAG, "Foreground wakeup tick failed", e)
-                            DEFAULT_FOREGROUND_WAKEUP_SECS
+                            DEFAULT_FOREGROUND_WAKEUP_SECS * 1000L
                         }
-                    delay(nextSecs * 1000L)
+                    delay(nextMillis)
                 }
             }
     }

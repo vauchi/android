@@ -74,6 +74,10 @@ sealed class CommandDTO {
     data class ScheduleWakeup(
         @SerialName("earliest_secs") val earliestSecs: UInt,
         @SerialName("deadline_secs") val deadlineSecs: UInt,
+        /// Sub-second override for [earliestSecs] when core is driving work
+        /// finer-grained than a second, such as a live QR exchange whose frame
+        /// is meant to be shown for ~300 ms.
+        @SerialName("earliest_millis") val earliestMillis: UInt? = null,
     ) : CommandDTO()
 
     data class NfcActivate(
