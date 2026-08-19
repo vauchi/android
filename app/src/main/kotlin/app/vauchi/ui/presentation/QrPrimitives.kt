@@ -240,15 +240,13 @@ internal fun QrScanner(
                                                         val known =
                                                             frameType in
                                                                 setOf(
-                                                                    "INIT",
                                                                     "INI2",
                                                                     "IN2D",
-                                                                    "INID",
                                                                     "DATA",
                                                                     "VRFY",
                                                                     "CONF",
                                                                     "RDYY",
-                                                                    "COMB",
+                                                                    "CMBO",
                                                                     "FAIL",
                                                                     "SHAK",
                                                                 )
