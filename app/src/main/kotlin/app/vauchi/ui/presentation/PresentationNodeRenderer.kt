@@ -630,9 +630,18 @@ private fun PresentationListRow(
                     } else {
                         Modifier
                     },
-                ).semantics {
-                    contentDescription = row.accessibility.label
-                },
+                ).then(
+                    // A row that delegates its name to a control must not
+                    // also carry it: the two then read back as separate
+                    // stops with the same words, only the second operable.
+                    if (row.controls.isEmpty() || activation != null) {
+                        Modifier.semantics {
+                            contentDescription = row.accessibility.label
+                        }
+                    } else {
+                        Modifier
+                    },
+                ),
         shape = MaterialTheme.shapes.medium,
         color =
             if (row.selected) {
