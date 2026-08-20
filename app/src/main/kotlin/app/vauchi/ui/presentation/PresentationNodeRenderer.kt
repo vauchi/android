@@ -6,6 +6,7 @@ package app.vauchi.ui.presentation
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -74,6 +75,9 @@ internal fun PresentationNodeRenderer(
     focusedBindingId: String? = null,
     onFocusedBinding: (String, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
+    // A node rendered beside a weighted sibling must not claim the full
+    // width: a toggle that does swallows the row and neither is measured.
+    fillWidth: Boolean = true,
 ) {
     when (node) {
         is PresentationNode.Text -> {
@@ -177,7 +181,7 @@ internal fun PresentationNodeRenderer(
             Row(
                 modifier =
                     modifier
-                        .fillMaxWidth()
+                        .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
                         .heightIn(min = 48.dp)
                         .toggleable(
                             value = node.value,
@@ -198,7 +202,13 @@ internal fun PresentationNodeRenderer(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(node.label, modifier = Modifier.weight(1f))
+                // Only the full-width form spreads label and switch apart;
+                // beside a title the row already owns the label, and a
+                // weighted empty Text would push the switch off the row.
+                Text(
+                    node.label,
+                    modifier = if (fillWidth) Modifier.weight(1f) else Modifier,
+                )
                 Switch(
                     checked = node.value,
                     onCheckedChange = null,
@@ -548,6 +558,55 @@ private fun ChoiceNode(
     }
 }
 
+/**
+ * The avatar Core attaches to a row.
+ *
+ * `imageData` and `fallbackText` were decoded and then dropped, so contact
+ * rows rendered as bare text on Android while iOS showed the initials
+ * circle from the same commands.
+ *
+ * Sized to the Material list-avatar size rather than the surface's
+ * `minimumTargetSize` token, which the parser decodes but no caller plumbs
+ * this far down.
+ */
+@Composable
+private fun RowAvatar(row: PresentationRow) {
+    val bitmap =
+        remember(row.imageData) {
+            row.imageData
+                ?.map(Int::toByte)
+                ?.toByteArray()
+                ?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+        }
+    val fallback = row.fallbackText
+    if (bitmap == null && fallback.isNullOrEmpty()) return
+
+    Box(
+        modifier =
+            Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                // The row already carries the Core-supplied label; a second
+                // description here would read the row twice.
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            Text(
+                fallback.orEmpty(),
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+    }
+}
+
 @Composable
 private fun PresentationListRow(
     surfaceId: String,
@@ -587,21 +646,25 @@ private fun PresentationListRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            RowAvatar(row)
             Column(modifier = Modifier.weight(1f)) {
                 Text(row.title, style = MaterialTheme.typography.titleMedium)
                 row.subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                 row.detail?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-                row.controls.forEach {
-                    PresentationNodeRenderer(
-                        surfaceId,
-                        it,
-                        onEvent,
-                        onCameraPermissionDenied,
-                        focusedBindingId,
-                        onFocusedBinding,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
+            }
+            // Beside the text column, not inside it: the row title names the
+            // setting, so Core sends the control unlabelled and a control
+            // stacked under the text reads as belonging to nothing.
+            row.controls.forEach {
+                PresentationNodeRenderer(
+                    surfaceId,
+                    it,
+                    onEvent,
+                    onCameraPermissionDenied,
+                    focusedBindingId,
+                    onFocusedBinding,
+                    fillWidth = false,
+                )
             }
             if (row.secondaryActions.isNotEmpty()) {
                 Box {
