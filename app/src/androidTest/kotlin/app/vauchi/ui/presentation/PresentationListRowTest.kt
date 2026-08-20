@@ -5,6 +5,7 @@
 package app.vauchi.ui.presentation
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasContentDescriptionExactly
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -12,6 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
@@ -76,6 +78,44 @@ class PresentationListRowTest {
         render(row(title = "Ada", fallbackText = "A"))
 
         composeTestRule.onNodeWithText("A").assertIsDisplayed()
+    }
+
+    /**
+     * A row whose control names the same thing as its title must not
+     * announce that name twice: the row carried the Core label and so did
+     * the control, so TalkBack stopped on "Delivery Receipts" and then on
+     * "Delivery Receipts, switch" — the second stop the only operable one.
+     */
+    @Test
+    fun aRowAndItsControlDoNotBothAnnounceTheSettingName() {
+        val name = "Delivery Receipts"
+        render(
+            row(
+                title = name,
+                controls =
+                    listOf(
+                        PresentationNode.Toggle(
+                            bindingId = "settings.delivery_receipts",
+                            label = "",
+                            value = true,
+                            enabled = true,
+                            accessibility = AccessibilitySpec(name, null),
+                        ),
+                    ),
+            ),
+        )
+
+        val carriers =
+            composeTestRule
+                .onAllNodes(hasContentDescriptionExactly(name))
+                .fetchSemanticsNodes()
+
+        assertEquals(
+            1,
+            carriers.size,
+            "Exactly one node should carry the setting name, but ${carriers.size} do: " +
+                carriers.map { it.boundsInRoot },
+        )
     }
 
     @Test
