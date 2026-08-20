@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -233,26 +235,34 @@ private fun OverlayPanel(
             overlay.overlay.title?.let {
                 Text(it, style = MaterialTheme.typography.titleLarge)
             }
-            overlay.overlay.items.forEach { action ->
-                Button(
-                    onClick = {
-                        onAction(
-                            PresentationEvent.ActionActivated(
-                                overlay.surfaceId,
-                                action.interactionId,
-                            ),
-                        )
-                    },
-                    enabled = action.enabled,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .semantics {
-                                contentDescription = action.accessibilityLabel
-                            },
-                ) {
-                    Row(horizontalArrangement = Arrangement.Center) {
-                        Text(action.label)
+            // Core decides how many items an overlay carries, so the panel
+            // cannot assume they fit the viewport — without this the last
+            // destinations are clipped away with no way to reach them.
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                overlay.overlay.items.forEach { action ->
+                    Button(
+                        onClick = {
+                            onAction(
+                                PresentationEvent.ActionActivated(
+                                    overlay.surfaceId,
+                                    action.interactionId,
+                                ),
+                            )
+                        },
+                        enabled = action.enabled,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .semantics {
+                                    contentDescription = action.accessibilityLabel
+                                },
+                    ) {
+                        Row(horizontalArrangement = Arrangement.Center) {
+                            Text(action.label)
+                        }
                     }
                 }
             }
