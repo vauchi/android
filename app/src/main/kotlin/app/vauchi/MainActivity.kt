@@ -74,6 +74,7 @@ import app.vauchi.proximity.LocationCaptureService
 import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.KeyInvalidatedRecoveryScreen
 import app.vauchi.ui.MainViewModel
+import app.vauchi.util.NetworkMonitor
 import app.vauchi.ui.StartupErrorKind
 import app.vauchi.ui.UiState
 import app.vauchi.ui.coreui.BrightnessRequest
@@ -325,11 +326,15 @@ fun MainScreen(
     // The Android shell renders Core's immutable presentation snapshot and
     // forwards typed events. Domain navigation and action priority never live
     // in Compose.
+    // Remembered on context so the callback registers once, not per
+    // recomposition — an unregistered NetworkCallback leaks.
+    val networkMonitor = remember(context) { NetworkMonitor(context) }
     val coreAppViewModel =
         remember(engine) {
             CoreAppViewModel(
                 appEngine = engine,
                 onPresentationCommitted = viewModel::reconcilePresentationState,
+                localAddresses = networkMonitor.localAddress,
             )
         }
 

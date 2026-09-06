@@ -26,7 +26,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -65,7 +67,25 @@ class CoreAppViewModel(
     private val nfcReader: NfcReaderPort = NfcReaderService(),
     private val nfcResponder: NfcResponderPort = VauchiHceResponder(),
     private val onPresentationCommitted: () -> Unit = {},
+    /**
+     * Where this device is reachable on its current network, or `null` when
+     * it is on none (ADR-070). Injected as a flow rather than a
+     * `NetworkMonitor` so this stays free of a `Context` and testable.
+     */
+    private val localAddresses: Flow<String?> = emptyFlow(),
 ) : ViewModel() {
+    init {
+        // Core cannot enumerate interfaces (ADR-030/031), so it learns where
+        // we are only because the shell reports it. Collected for the
+        // ViewModel's whole life rather than per foreground: the network can
+        // change while a link ceremony is on screen, and a stale address
+        // would point a joiner somewhere it cannot reach.
+        viewModelScope.launch {
+            localAddresses.collect { address ->
+                deliverHardwareEvent(MobileEvent.LocalNetworkAddressChanged(address))
+            }
+        }
+    }
     private val json = Json { ignoreUnknownKeys = true }
     private val presentationMutex = Mutex()
 
