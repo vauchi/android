@@ -18,12 +18,12 @@ val useLocalBindings = project.hasProperty("localBindings") || System.getenv("VA
 
 android {
     namespace = "app.vauchi"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "app.vauchi"
         minSdk = 26  // Android 8.0 - 94.8% coverage
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 4
         versionName = "0.1.3"
 
