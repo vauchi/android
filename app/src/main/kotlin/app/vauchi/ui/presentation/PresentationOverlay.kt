@@ -171,12 +171,15 @@ fun PresentationOverlay(
                 )
         }
 
+    // The scrim is a sibling of the panel, not its parent. As a parent its
+    // `clickable` received every gesture the panel did not consume, and
+    // `clickable(enabled = false)` consumes nothing — so a drag meant for the
+    // list read as a tap on the scrim and dismissed the overlay. On a small
+    // screen that left the destinations below the fold unreachable: verified
+    // on a Galaxy S7, where Backup clipped mid-row and Privacy, Support,
+    // Help, Activity Log, Tags and Places were absent from the tree entirely.
     Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.34f))
-                .clickable(onClick = onDismiss),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment =
             if (navigation) {
                 Alignment.CenterStart
@@ -186,6 +189,13 @@ fun PresentationOverlay(
                 Alignment.BottomEnd
             },
     ) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.34f))
+                    .clickable(onClick = onDismiss),
+        )
         AnimatedVisibility(
             visible = true,
             enter = enter,
@@ -219,7 +229,7 @@ private fun OverlayPanel(
                     } else {
                         Modifier.widthIn(min = 320.dp, max = 420.dp)
                     },
-                ).clickable(enabled = false) {},
+                ),
         shape =
             if (navigation) {
                 MaterialTheme.shapes.extraLarge
