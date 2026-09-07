@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -260,7 +261,26 @@ private fun OverlayPanel(
                                     contentDescription = action.accessibilityLabel
                                 },
                     ) {
-                        Row(horizontalArrangement = Arrangement.Center) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            // Start-aligned, not centred: a centred row puts
+                            // each glyph at an x that depends on its label's
+                            // length, so the icons stop forming a column the
+                            // eye can scan — which is the whole point of
+                            // showing them.
+                            action.iconToken?.let { token ->
+                                Icon(
+                                    imageVector = navigationIcon(token),
+                                    // The button already carries
+                                    // `accessibilityLabel` and the label reads
+                                    // beside it; describing the icon too makes
+                                    // TalkBack announce the destination twice.
+                                    contentDescription = null,
+                                )
+                            }
                             Text(action.label)
                         }
                     }
