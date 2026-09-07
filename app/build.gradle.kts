@@ -1,3 +1,4 @@
+import org.gradle.api.tasks.PathSensitivity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.TimeZone
@@ -170,6 +171,19 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
+}
+
+// Api36BehaviourContractTest reads the manifest and this file at runtime to
+// guard the declarations Android 16 behaviour depends on. Gradle cannot infer
+// those from the test classpath, so without declaring them the task stays
+// up-to-date when the manifest changes and the guard silently never re-runs —
+// observed: injecting an orientation lock left the build green until
+// --rerun-tasks was passed.
+tasks.withType<Test>().configureEach {
+    inputs.file("src/main/AndroidManifest.xml")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file("build.gradle.kts")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 dependencies {
