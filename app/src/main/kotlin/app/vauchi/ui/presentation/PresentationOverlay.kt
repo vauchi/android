@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -223,7 +222,12 @@ private fun OverlayPanel(
             Modifier
                 .then(
                     if (navigation) {
-                        Modifier.fillMaxHeight().widthIn(max = 360.dp)
+                        // Not `fillMaxHeight`: the inner column already
+                        // scrolls, so it grows to the viewport when the menu
+                        // needs it and stops at its content when it does not.
+                        // Forcing full height made a one-item menu cover the
+                        // scrim, so tapping beside it could not dismiss.
+                        Modifier.widthIn(max = 360.dp)
                     } else if (compact) {
                         Modifier.fillMaxWidth()
                     } else {
