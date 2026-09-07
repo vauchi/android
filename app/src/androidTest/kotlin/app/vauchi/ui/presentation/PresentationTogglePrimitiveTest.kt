@@ -5,6 +5,7 @@
 package app.vauchi.ui.presentation
 
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
@@ -77,6 +78,57 @@ class PresentationTogglePrimitiveTest {
             "Toggle exposed ${unlabeled.size} actionable node(s) with no label, " +
                 "of ${actionable.size} actionable: " +
                 unlabeled.map { it.boundsInRoot },
+        )
+    }
+
+    /**
+     * A settings row renders its toggle with `fillWidth = false`, so this is
+     * the shape a screen reader actually meets. Asserting the state — not just
+     * that a labelled node exists — is what distinguishes a switch that
+     * announces "on" from one a blind user can flip but never read back.
+     */
+    @Test
+    fun toggleAnnouncesItsOnStateBesideARowTitle() {
+        composeTestRule.setContent {
+            PresentationNodeRenderer(
+                surfaceId = "surface-test",
+                node =
+                    PresentationNode.Toggle(
+                        bindingId = "settings.delivery-receipts",
+                        label = "",
+                        value = true,
+                        enabled = true,
+                        accessibility = AccessibilitySpec("Delivery Receipts toggle", null),
+                    ),
+                onEvent = {},
+                onCameraPermissionDenied = {},
+                focusedBindingId = null,
+                onFocusedBinding = { _, _ -> },
+                fillWidth = false,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        val toggleable =
+            composeTestRule
+                .onAllNodes(hasClickAction())
+                .fetchSemanticsNodes()
+                .filter { SemanticsProperties.ToggleableState in it.config }
+
+        assertEquals(
+            1,
+            toggleable.size,
+            "expected exactly one node carrying ToggleableState; " +
+                "got ${toggleable.size}. Full tree: " +
+                composeTestRule.onRoot().fetchSemanticsNode().config,
+        )
+        assertEquals(
+            ToggleableState.On,
+            toggleable.single().config[SemanticsProperties.ToggleableState],
+        )
+        assertEquals(
+            listOf("Delivery Receipts toggle"),
+            toggleable.single().config[SemanticsProperties.ContentDescription],
         )
     }
 }
