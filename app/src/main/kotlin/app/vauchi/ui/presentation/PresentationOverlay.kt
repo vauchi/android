@@ -234,12 +234,7 @@ private fun OverlayPanel(
                         Modifier.widthIn(min = 320.dp, max = 420.dp)
                     },
                 ),
-        shape =
-            if (navigation) {
-                MaterialTheme.shapes.extraLarge
-            } else {
-                MaterialTheme.shapes.extraLarge
-            },
+        shape = MaterialTheme.shapes.extraLarge,
         tonalElevation = 8.dp,
         shadowElevation = 12.dp,
     ) {
