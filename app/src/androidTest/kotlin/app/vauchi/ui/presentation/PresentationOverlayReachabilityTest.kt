@@ -7,16 +7,21 @@ package app.vauchi.ui.presentation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.test.assertTrue
 
 /**
  * Core decides how many destinations the navigation overlay carries, so the
@@ -80,5 +85,50 @@ class PresentationOverlayReachabilityTest {
                 .assertIsDisplayed()
                 .assertHeightIsAtLeast(40.dp)
         }
+    }
+
+    /**
+     * The panel grows to the viewport only because a long menu needs it. A
+     * short one that keeps the full height covers the scrim, so the gesture
+     * everyone reaches for first — tap beside the menu to close it — does
+     * nothing: on a Galaxy S7 in onboarding, one destination sat in a panel
+     * spanning the whole content area, roughly 85% of it empty.
+     */
+    @Test
+    fun aShortNavigationMenuLeavesTheScrimReachable() {
+        var dismissed = false
+
+        composeTestRule.setContent {
+            Box(modifier = Modifier.requiredSize(width = 392.dp, height = 800.dp)) {
+                PresentationOverlay(
+                    overlay =
+                        RevisionedOverlay(
+                            surfaceId = "surface-test",
+                            revision = 1uL,
+                            overlay =
+                                OverlaySpec(
+                                    kind = OverlayKind.Navigation,
+                                    title = "More",
+                                    items = listOf(destination(1)),
+                                ),
+                        ),
+                    windowClass = WindowClass.Compact,
+                    reducedMotion = true,
+                    onAction = {},
+                    onDismiss = { dismissed = true },
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onRoot().performTouchInput {
+            click(Offset(centerX, height * 0.92f))
+        }
+        composeTestRule.waitForIdle()
+
+        assertTrue(
+            dismissed,
+            "a tap well below a one-item menu must reach the scrim and dismiss it",
+        )
     }
 }
