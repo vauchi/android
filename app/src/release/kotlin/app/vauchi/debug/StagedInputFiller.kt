@@ -35,5 +35,7 @@ object StagedInputFiller {
         state: PresentationState,
     ): StagedFill? = null
 
+    fun takeStagedFile(context: Context): Pair<ByteArray, String>? = null
+
     fun clearStaged(context: Context) {}
 }

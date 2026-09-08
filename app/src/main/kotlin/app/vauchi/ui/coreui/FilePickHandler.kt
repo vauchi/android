@@ -13,6 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import app.vauchi.BuildConfig
+import app.vauchi.debug.StagedInputFiller
 import androidx.compose.ui.platform.LocalContext
 
 /**
@@ -54,6 +56,16 @@ fun FilePickHandler(viewModel: CoreAppViewModel) {
     LaunchedEffect(filePickRequest) {
         val request = filePickRequest ?: return@LaunchedEffect
         viewModel.consumeFilePickRequest()
+        // Debug-only: answer from a blob staged by `just dt-stage-backup`
+        // rather than opening the system picker, so a full-backup restore
+        // can be driven end to end. Release returns null and R8 drops it.
+        if (BuildConfig.DEBUG) {
+            val staged = StagedInputFiller.takeStagedFile(context)
+            if (staged != null) {
+                viewModel.handleFilePicked(staged.first, staged.second)
+                return@LaunchedEffect
+            }
+        }
         // OpenDocument with an empty filter shows nothing on some
         // OEM pickers — fall back to all documents.
         val mimeTypes = request.mimeTypes.ifEmpty { listOf("*/*") }

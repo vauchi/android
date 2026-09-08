@@ -68,6 +68,29 @@ object StagedInputFiller {
         return StagedFill(surfaceId, input.bindingId, text)
     }
 
+    /**
+     * Answers a `FilePickFromUser` from the staged file instead of opening
+     * the system picker.
+     *
+     * The restore flow takes the backup as a file — a real export is ~2.2 MB
+     * against a 4 KB `MAX_EVENT_INPUT_VALUE_BYTES`, so it cannot arrive as
+     * text (problem record
+     * 2026-09-08-full-backup-restore-cannot-be-pasted). Driving the system
+     * picker from a test would also mean polling a system-owned modal, which
+     * CC-23 forbids; answering here bypasses it entirely.
+     *
+     * Consumes the file, so a fixture cannot satisfy a later pick the
+     * operator did not intend.
+     */
+    fun takeStagedFile(context: Context): Pair<ByteArray, String>? {
+        val staged = java.io.File(context.getExternalFilesDir(null), STAGED_FILE_NAME)
+        if (!staged.isFile) return null
+        val bytes = staged.readBytes()
+        staged.delete()
+        Log.i(TAG, "StagedInputFiller: answering file pick with ${bytes.size} bytes")
+        return bytes to STAGED_FILE_NAME
+    }
+
     /** Deletes the staged file so a fixture cannot leak into a later run. */
     fun clearStaged(context: Context) {
         java.io.File(context.getExternalFilesDir(null), STAGED_FILE_NAME).delete()
