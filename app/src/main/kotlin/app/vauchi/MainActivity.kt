@@ -81,6 +81,7 @@ import app.vauchi.ui.coreui.BrightnessRequest
 import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
+import app.vauchi.debug.StagedInputFiller
 import app.vauchi.ui.presentation.PresentationEvent
 import app.vauchi.ui.presentation.PresentationHost
 import app.vauchi.ui.startupErrorKindFor
@@ -102,6 +103,10 @@ class MainActivity : FragmentActivity() {
 
     /** Set by --reset-for-testing intent extra (DEBUG only). */
     private var _resetForTesting = false
+
+    /** Set by --fill-staged-input (DEBUG only); observable so an intent sent
+     *  while the target screen is already open still takes effect. */
+    private val _fillStagedInput = mutableStateOf(false)
 
     /** Notifications polled while POST_NOTIFICATIONS was not granted. */
     private val pendingNotifications = mutableListOf<MobilePendingNotification>()
@@ -145,6 +150,7 @@ class MainActivity : FragmentActivity() {
         setContent {
             val deepLinkUri by _deepLinkUri
             val navigateTo by _navigateTo
+            val fillStagedInput by _fillStagedInput
             // Defer heavy MainScreen composition until after the first frame
             // renders. This eliminates the 34-frame skip from inflating the
             // entire navigation graph in a single Compose pass.
@@ -177,6 +183,8 @@ class MainActivity : FragmentActivity() {
                             navigateTo = navigateTo,
                             onNavigateConsumed = { _navigateTo.value = null },
                             resetForTesting = _resetForTesting,
+                            fillStagedInput = fillStagedInput,
+                            onStagedInputConsumed = { _fillStagedInput.value = false },
                         )
                     }
                 }
@@ -259,6 +267,13 @@ class MainActivity : FragmentActivity() {
             if (intent?.getBooleanExtra("reset_for_testing", false) == true) {
                 _resetForTesting = true
             }
+            // --fill-staged-input: fill the active surface's first input from the
+            // file staged by `just dt-stage-backup`, for payloads no host-side
+            // input channel can carry (an 18 MB backup paste).
+            // Usage: adb shell am start -n app.vauchi/.MainActivity --ez fill_staged_input true
+            if (intent?.getBooleanExtra("fill_staged_input", false) == true) {
+                _fillStagedInput.value = true
+            }
         }
     }
 }
@@ -271,6 +286,8 @@ fun MainScreen(
     navigateTo: String? = null,
     onNavigateConsumed: () -> Unit = {},
     resetForTesting: Boolean = false,
+    fillStagedInput: Boolean = false,
+    onStagedInputConsumed: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
@@ -861,6 +878,27 @@ fun MainScreen(
         if (BuildConfig.DEBUG && navigateTo != null && uiState is UiState.Ready) {
             onNavigateConsumed()
         }
+    }
+
+    // Fills the active surface's first input from a blob staged by
+    // `just dt-stage-backup`. Debug-only: the release stub returns null and
+    // R8 drops it. Exists because the 10k-contact restore in
+    // 2026-06-11-restore-runs-without-progress-feedback pastes ~18 MB, which
+    // neither `adb shell input text` nor the clipboard can carry.
+    val stagingContext = LocalContext.current
+    val stagingPresentation by coreAppViewModel.presentationState.collectAsState()
+    LaunchedEffect(fillStagedInput, stagingPresentation) {
+        if (!BuildConfig.DEBUG || !fillStagedInput) return@LaunchedEffect
+        val fill =
+            StagedInputFiller.pendingFill(stagingContext, stagingPresentation)
+                ?: return@LaunchedEffect
+        coreAppViewModel.dispatchPresentation(
+            PresentationEvent.textValue(fill.surfaceId, fill.bindingId, fill.text),
+        )
+        // Clear immediately: a staged blob that survives its run silently
+        // refills the next screen that happens to expose an input.
+        StagedInputFiller.clearStaged(stagingContext)
+        onStagedInputConsumed()
     }
 
     // Deep links are events; Core decides whether and where they navigate.
