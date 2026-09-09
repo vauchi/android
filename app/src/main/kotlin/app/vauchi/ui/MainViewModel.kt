@@ -330,33 +330,6 @@ class MainViewModel(
         }
     }
 
-    /** Create test identity for --reset-for-testing (DEBUG only). */
-    // TODO(HUMBLE): D, P2. DEBUG-only test gate creates identity directly from
-    // the UI layer. Fix: core test hook or CLI flag. (see _private problem
-    // record 2026-07-06-mobile-domain-shell-violations)
-    fun seedTestIdentityIfNeeded() {
-        if (!repository.hasIdentity()) {
-            Log.i("Vauchi", "--reset-for-testing: creating test identity")
-            createIdentity("Test User")
-        } else {
-            Log.i("Vauchi", "--reset-for-testing: identity already exists")
-        }
-    }
-
-    fun createIdentity(displayName: String) {
-        viewModelScope.launch {
-            try {
-                _uiState.value = UiState.Loading
-                withContext(Dispatchers.IO) {
-                    repository.createIdentity(displayName)
-                }
-                loadUserData()
-            } catch (e: Exception) {
-                _uiState.value = UiState.Error(StartupErrorKind.Other, e.message)
-            }
-        }
-    }
-
     private suspend fun loadUserData() {
         try {
             val (displayName, publicId, card, contactCount) =

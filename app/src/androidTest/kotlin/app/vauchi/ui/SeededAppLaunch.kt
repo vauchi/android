@@ -16,10 +16,10 @@ import app.vauchi.MainActivity
  * Launches [MainActivity] with the `reset_for_testing` seed and returns only
  * once the app has actually reached [UiState.Ready].
  *
- * Waits on the state the seed commits, not on rendered text.
- * `seedTestIdentityIfNeeded()` delegates to `createIdentity`, which runs on
- * `viewModelScope`, so the first composition resolves before the identity
- * exists. Polling the semantics tree for the seeded display name watches that
+ * Waits on the state the seed commits, not on rendered text. The seed
+ * replays Core's onboarding one dispatched event per surface
+ * (`OnboardingWalker`), so the first composition resolves long before the
+ * identity exists. Polling the semantics tree for the seeded display name watches that
  * transition several hops downstream and cannot tell "still seeding" apart
  * from `AuthRequired`, `Error` or a genuine render regression — so every
  * failure arrived as the same opaque timeout, and on a device still busy from
@@ -29,8 +29,8 @@ import app.vauchi.MainActivity
  * The budget matches what the callers already spent (6 × 5 s of recreate-and-
  * retry); what changes is the observable, not the number. Recreating the
  * activity is gone with it: the seeding `LaunchedEffect` fires from
- * `Onboarding` as well as `Ready`, so a single launch does reach `Ready` on a
- * fresh install — the old loop was compensating for watching the wrong thing.
+ * `Onboarding`, so a single launch does reach `Ready` on a fresh install —
+ * the old loop was compensating for watching the wrong thing.
  *
  * Assertions still go through Compose semantics. Only the arrange phase reads
  * state, so a test can still fail on what the shell renders.

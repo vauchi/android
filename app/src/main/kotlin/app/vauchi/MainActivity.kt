@@ -67,7 +67,7 @@ import app.vauchi.ble.BleCommand
 import app.vauchi.ble.BlePeripheral
 import app.vauchi.ble.BlePeripheralListener
 import app.vauchi.ble.BleUuids
-import app.vauchi.exchange.ExchangeModePermissions
+import app.vauchi.exchange.BluetoothRuntimePermissions
 import app.vauchi.proximity.AccelerometerProximityService
 import app.vauchi.proximity.AudioProximityService
 import app.vauchi.proximity.LocationCaptureService
@@ -81,6 +81,7 @@ import app.vauchi.ui.coreui.BrightnessRequest
 import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
+import app.vauchi.debug.OnboardingWalker
 import app.vauchi.debug.StagedInputFiller
 import app.vauchi.ui.presentation.PresentationEvent
 import app.vauchi.ui.presentation.PresentationHost
@@ -101,7 +102,7 @@ class MainActivity : FragmentActivity() {
     /** Mutable state for deep link URI, observed by Compose. */
     private val _deepLinkUri = mutableStateOf<Uri?>(null)
 
-    /** Set by --reset-for-testing intent extra (DEBUG only). */
+    /** Set by --reset-for-testing intent extra (DEBUG only); walks onboarding. */
     private var _resetForTesting = false
 
     /** Set by --fill-staged-input (DEBUG only); observable so an intent sent
@@ -262,7 +263,7 @@ class MainActivity : FragmentActivity() {
             intent?.getStringExtra("navigate")?.let { target ->
                 _navigateTo.value = target
             }
-            // --reset-for-testing: create test identity so app skips onboarding.
+            // --reset-for-testing: walk Core's onboarding so the app skips it.
             // Usage: adb shell am start -n app.vauchi/.MainActivity --ez reset_for_testing true
             if (intent?.getBooleanExtra("reset_for_testing", false) == true) {
                 _resetForTesting = true
@@ -815,7 +816,7 @@ fun MainScreen(
     // time and replay the command that triggered the prompt — same shape as the
     // location capture above. Android 11 and below hid this because the legacy
     // ACCESS_FINE_LOCATION path *is* requested elsewhere.
-    val blePermissions = remember { ExchangeModePermissions.bluetooth().toTypedArray() }
+    val blePermissions = remember { BluetoothRuntimePermissions.forSdk().toTypedArray() }
     val deferredBleCommands = remember { mutableStateListOf<BleCommand>() }
     val blePermissionLauncher =
         rememberLauncherForActivityResult(
@@ -859,17 +860,6 @@ fun MainScreen(
         }
     }
 
-    // --reset-for-testing: create test identity so app skips onboarding (DEBUG only).
-    // Must also fire from `Onboarding` — a wiped (`pm clear`) device boots with no
-    // identity straight to onboarding and never reaches `Ready`, so gating on Ready
-    // alone left `reset_for_testing` a no-op on a truly fresh install (iOS seeds
-    // unconditionally; this reaches parity). Seeding drives Onboarding → Ready.
-    LaunchedEffect(resetForTesting, uiState) {
-        if (resetForTesting && (uiState is UiState.Ready || uiState is UiState.Onboarding)) {
-            viewModel.seedTestIdentityIfNeeded()
-        }
-    }
-
     // The debug launch hook remains accepted for device-test compatibility,
     // but navigation is no longer interpreted by the Android shell. A Core
     // debug event can replace this acknowledgement without reviving a local
@@ -886,11 +876,11 @@ fun MainScreen(
     // 2026-06-11-restore-runs-without-progress-feedback pastes ~18 MB, which
     // neither `adb shell input text` nor the clipboard can carry.
     val stagingContext = LocalContext.current
-    val stagingPresentation by coreAppViewModel.presentationState.collectAsState()
-    LaunchedEffect(fillStagedInput, stagingPresentation) {
+    val debugHookPresentation by coreAppViewModel.presentationState.collectAsState()
+    LaunchedEffect(fillStagedInput, debugHookPresentation) {
         if (!BuildConfig.DEBUG || !fillStagedInput) return@LaunchedEffect
         val fill =
-            StagedInputFiller.pendingFill(stagingContext, stagingPresentation)
+            StagedInputFiller.pendingFill(stagingContext, debugHookPresentation)
                 ?: return@LaunchedEffect
         coreAppViewModel.dispatchPresentation(
             PresentationEvent.textValue(fill.surfaceId, fill.bindingId, fill.text),
@@ -899,6 +889,23 @@ fun MainScreen(
         // refills the next screen that happens to expose an input.
         StagedInputFiller.clearStaged(stagingContext)
         onStagedInputConsumed()
+    }
+
+    // --reset-for-testing: complete Core's onboarding by replaying user
+    // events so a wiped (`pm clear`) device reaches `Ready` without a
+    // human. Each step is dispatched once per surface revision: a surface
+    // Core refuses to advance yields the same step again and the walk
+    // stops there instead of spinning.
+    val seedInFlight by coreAppViewModel.actionInFlight.collectAsState()
+    var lastSeedStep by remember { mutableStateOf<OnboardingWalker.Step?>(null) }
+    LaunchedEffect(resetForTesting, uiState, debugHookPresentation, seedInFlight) {
+        if (!BuildConfig.DEBUG || !resetForTesting || seedInFlight) return@LaunchedEffect
+        if (uiState !is UiState.Onboarding) return@LaunchedEffect
+        val step = OnboardingWalker.nextStep(debugHookPresentation) ?: return@LaunchedEffect
+        if (step == lastSeedStep) return@LaunchedEffect
+        lastSeedStep = step
+        Log.i("Vauchi", "--reset-for-testing: dispatching ${step.event.toJson()}")
+        coreAppViewModel.dispatchPresentation(step.event)
     }
 
     // Deep links are events; Core decides whether and where they navigate.
