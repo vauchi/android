@@ -33,7 +33,7 @@ import kotlinx.coroutines.withTimeout
  * the legacy `MobileExchangeSession` was retired from core in 0.51.26, so
  * [TransceiveContext] no longer holds a session. It now carries an
  * `onApduReceived` callback whose owner drives the engine
- * (`PlatformAppEngine.handleHardwareEvent(NfcDataReceived(apdu))`) and
+ * (dispatching `NfcDataReceived(apdu)` through the canonical event path) and
  * fulfills the binder block via [fulfillPendingResponse] with the
  * returned `Command::NfcSendApdu` bytes. The binder-block scaffolding
  * below is transport-only and stays intact; the production wiring that
@@ -55,7 +55,7 @@ class VauchiHceService : HostApduService() {
     /**
      * State carried across the binder-thread block: [onApduReceived] is
      * invoked off the binder thread with each inbound APDU; its owner
-     * drives the engine (`PlatformAppEngine.handleHardwareEvent`) and
+     * drives the engine with an `NfcDataReceived` event and
      * fulfills [pendingResponse] via [fulfillPendingResponse] with the
      * `Command.NfcSendApdu` bytes the engine emits.
      */
@@ -184,7 +184,7 @@ class VauchiHceService : HostApduService() {
      * thread that invoked this method blocks on a one-shot
      * [CompletableDeferred] while a worker coroutine invokes
      * [TransceiveContext.onApduReceived], whose owner drives the
-     * engine (`handleHardwareEvent(NfcDataReceived)`). The engine's
+     * engine with `NfcDataReceived`. The engine's
      * `Command.NfcSendApdu` bytes are routed back through
      * [fulfillPendingResponse], unblocking this binder thread.
      *

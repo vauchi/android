@@ -22,6 +22,7 @@ import app.vauchi.ui.presentation.PresentationEvent
 import app.vauchi.ui.presentation.PresentationProtocol
 import app.vauchi.ui.presentation.PresentationReducer
 import app.vauchi.ui.presentation.PresentationState
+import app.vauchi.ui.presentation.toEventJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -264,7 +265,7 @@ class CoreAppViewModel(
     }
 
     /**
-     * Active camera-selector preference for `Component::QrCode`'s
+     * Active camera-selector preference for the QR scanner's
      * scan mode. Flips when core's `MultiStageExchangeEngine` emits
      * `Command::SwitchCamera { use_front }` in response to the
      * `switch_camera` action — the QR scanner Composable reads this
@@ -532,7 +533,7 @@ class CoreAppViewModel(
         try {
             val resultJson =
                 withContext(Dispatchers.IO) {
-                    appEngine.handleHardwareEvent(event = event)
+                    appEngine.dispatchJson(eventJson = event.toEventJson())
                 }
             presentationMutex.withLock {
                 applyPresentationEnvelope(resultJson)

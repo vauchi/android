@@ -38,7 +38,7 @@ interface NfcResponderPort {
     /**
      * Register the HCE responder context. [onApdu] is invoked off the
      * binder thread with each inbound APDU; its owner drives the engine
-     * (`handleHardwareEvent(NfcDataReceived)`).
+     * with `NfcDataReceived`.
      */
     fun register(onApdu: (ByteArray) -> Unit)
 
