@@ -70,6 +70,14 @@ fun MobileEvent.toEventJson(): String =
             variant("NfcDataReceived", "data" to bytes(data))
         }
 
+        is MobileEvent.NfcApduReceived -> {
+            variant("NfcApduReceived", "bytes" to bytes(bytes))
+        }
+
+        is MobileEvent.NfcFailed -> {
+            variant("NfcFailed", "reason" to string(reason))
+        }
+
         is MobileEvent.AudioSamplesRecorded -> {
             variant(
                 "AudioSamplesRecorded",
