@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package app.vauchi.ui.presentation
+package app.vauchi.ui.coreui
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

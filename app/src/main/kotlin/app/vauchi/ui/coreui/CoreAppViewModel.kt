@@ -22,7 +22,6 @@ import app.vauchi.ui.presentation.PresentationEvent
 import app.vauchi.ui.presentation.PresentationProtocol
 import app.vauchi.ui.presentation.PresentationReducer
 import app.vauchi.ui.presentation.PresentationState
-import app.vauchi.ui.presentation.toEventJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

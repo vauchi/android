@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package app.vauchi.ui.presentation
+package app.vauchi.ui.coreui
 
 import kotlinx.serialization.json.JsonPrimitive
 import uniffi.vauchi_platform.MobileBleLinkDirection
