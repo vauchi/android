@@ -25,6 +25,18 @@ class HardwareEventJsonTest {
     }
 
     @Test
+    fun nfc_apdu_events_encode_bytes_and_reason() {
+        assertEquals(
+            """{"NfcApduReceived":{"bytes":[144,0]}}""",
+            MobileEvent.NfcApduReceived(byteArrayOf(-112, 0)).toEventJson(),
+        )
+        assertEquals(
+            """{"NfcFailed":{"reason":"tag lost"}}""",
+            MobileEvent.NfcFailed("tag lost").toEventJson(),
+        )
+    }
+
+    @Test
     fun unit_variants_encode_as_bare_strings() {
         assertEquals(""""FilePickCancelledByUser"""", MobileEvent.FilePickCancelledByUser.toEventJson())
         assertEquals(""""ImagePickCancelled"""", MobileEvent.ImagePickCancelled.toEventJson())
