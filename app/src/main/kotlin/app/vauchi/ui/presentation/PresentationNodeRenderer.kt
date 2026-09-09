@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
@@ -65,6 +66,14 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
+
+/**
+ * Side of a standalone avatar. Core names no size for `Image`, so the
+ * shell picks one; this is large enough to read initials at and well over
+ * the touch-target floor for the tappable case. `RowAvatar` keeps its own
+ * smaller Material list-avatar size.
+ */
+private val AVATAR_SIDE = 96.dp
 
 @Composable
 internal fun PresentationNodeRenderer(
@@ -304,36 +313,61 @@ internal fun PresentationNodeRenderer(
                             BitmapFactory.decodeByteArray(it, 0, it.size)
                         }
                 }
-            val activation = node.activation
-            Surface(
-                modifier =
-                    modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (activation != null) {
-                                Modifier.clickable(enabled = activation.enabled) {
-                                    onEvent(actionEvent(surfaceId, activation))
-                                }
-                            } else {
-                                Modifier
+            val fallback = node.fallbackText
+            // Nothing to show shows nothing. Rendering the Surface anyway
+            // left an empty full-width band carrying the avatar's
+            // accessibility label.
+            if (bitmap != null || !fallback.isNullOrEmpty()) {
+                val activation = node.activation
+                Surface(
+                    modifier =
+                        modifier
+                            // Square whenever the result is an avatar: a
+                            // circle clipped from a `fillMaxWidth` box is a
+                            // stadium as wide as the screen, which is what
+                            // the initials used to sit in.
+                            .then(
+                                if (node.circular || bitmap == null) {
+                                    Modifier.size(AVATAR_SIDE)
+                                } else {
+                                    Modifier.fillMaxWidth()
+                                },
+                            ).then(
+                                if (activation != null) {
+                                    Modifier.clickable(enabled = activation.enabled) {
+                                        onEvent(actionEvent(surfaceId, activation))
+                                    }
+                                } else {
+                                    Modifier
+                                },
+                            ).semantics {
+                                contentDescription = node.accessibility.label
                             },
-                        ).semantics {
-                            contentDescription = node.accessibility.label
+                    shape = if (node.circular) CircleShape else MaterialTheme.shapes.medium,
+                    // Matches `RowAvatar` below, which has always drawn the
+                    // initials on a filled ground.
+                    color =
+                        if (bitmap == null) {
+                            MaterialTheme.colorScheme.secondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surface
                         },
-                shape = if (node.circular) CircleShape else MaterialTheme.shapes.medium,
-            ) {
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else {
-                    Text(
-                        node.fallbackText.orEmpty(),
-                        modifier = Modifier.padding(16.dp),
-                    )
+                ) {
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = null,
+                            contentScale = if (node.circular) ContentScale.Crop else ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                fallback.orEmpty(),
+                                style = MaterialTheme.typography.headlineSmall,
+                            )
+                        }
+                    }
                 }
             }
         }
