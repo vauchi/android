@@ -23,9 +23,8 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
-import uniffi.vauchi_platform.MobileNotificationCategory
+import app.vauchi.util.NotificationPresentation
 import uniffi.vauchi_platform.MobileNotificationPriority
-import uniffi.vauchi_platform.MobilePendingNotification
 
 /**
  * Native effects emitted by Core that Android executes through platform APIs.
@@ -384,24 +383,12 @@ data class WakeupOutcome(
 @Serializable
 data class MobilePendingNotificationDTO(
     @SerialName("event_key") val eventKey: String,
-    val category: MobileNotificationCategoryDTO,
     val title: String,
     val body: String,
     @SerialName("contact_id") val contactId: String,
-    @SerialName("deep_link_uri") val deepLinkUri: String? = null,
-    @SerialName("os_category_id") val osCategoryId: String,
     @SerialName("os_channel_id") val osChannelId: String,
     val priority: MobileNotificationPriorityDTO,
-    @SerialName("os_category_options") val osCategoryOptions: List<String> = emptyList(),
 )
-
-@Serializable
-enum class MobileNotificationCategoryDTO {
-    EmergencyAlert,
-    DuressAlert,
-    ContactAdded,
-    CardUpdate,
-}
 
 @Serializable
 enum class MobileNotificationPriorityDTO {
@@ -410,38 +397,17 @@ enum class MobileNotificationPriorityDTO {
     Urgent,
 }
 
-fun MobilePendingNotificationDTO.toMobile(): MobilePendingNotification =
-    MobilePendingNotification(
+fun MobilePendingNotificationDTO.toPresentation(): NotificationPresentation =
+    NotificationPresentation(
         eventKey = eventKey,
-        category =
-            when (category) {
-                MobileNotificationCategoryDTO.EmergencyAlert -> {
-                    MobileNotificationCategory.EMERGENCY_ALERT
-                }
-
-                MobileNotificationCategoryDTO.DuressAlert -> {
-                    MobileNotificationCategory.DURESS_ALERT
-                }
-
-                MobileNotificationCategoryDTO.ContactAdded -> {
-                    MobileNotificationCategory.CONTACT_ADDED
-                }
-
-                MobileNotificationCategoryDTO.CardUpdate -> {
-                    MobileNotificationCategory.CARD_UPDATE
-                }
-            },
         title = title,
         body = body,
         contactId = contactId,
-        deepLinkUri = deepLinkUri,
-        osCategoryId = osCategoryId,
-        osChannelId = osChannelId,
+        channelId = osChannelId,
         priority =
             when (priority) {
                 MobileNotificationPriorityDTO.Default -> MobileNotificationPriority.DEFAULT
                 MobileNotificationPriorityDTO.High -> MobileNotificationPriority.HIGH
                 MobileNotificationPriorityDTO.Urgent -> MobileNotificationPriority.URGENT
             },
-        osCategoryOptions = osCategoryOptions,
     )

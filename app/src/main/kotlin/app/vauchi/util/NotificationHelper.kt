@@ -15,18 +15,56 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import app.vauchi.MainActivity
 import app.vauchi.R
-import uniffi.vauchi_platform.MobileNotificationCategory
+import uniffi.vauchi_platform.MobileNotificationPriority
 import uniffi.vauchi_platform.MobilePendingNotification
+
+/**
+ * One OS notification as Core prepared it (ADR-066): copy, an opaque
+ * channel id, and a closed presentation priority. The shell never reads a
+ * notification category.
+ */
+data class NotificationPresentation(
+    val eventKey: String,
+    val title: String,
+    val body: String,
+    val contactId: String,
+    val channelId: String,
+    val priority: MobileNotificationPriority,
+)
+
+fun MobilePendingNotification.toPresentation(): NotificationPresentation =
+    NotificationPresentation(
+        eventKey = eventKey,
+        title = title,
+        body = body,
+        contactId = contactId,
+        channelId = osChannelId,
+        priority = priority,
+    )
 
 /**
  * Helper for creating and showing OS notifications.
  */
 object NotificationHelper {
     private const val TAG = "NotificationHelper"
-    
+
     const val CHANNEL_UPDATES = "vauchi_updates"
     const val CHANNEL_ALERTS = "vauchi_alerts"
-    const val CHANNEL_DURESS = "vauchi_duress"
+
+    /** Android channels registered for the opaque channel ids Core emits. */
+    private val registeredChannels =
+        mapOf(
+            "updates" to CHANNEL_UPDATES,
+            "alerts" to CHANNEL_ALERTS,
+        )
+
+    fun androidChannelIdFor(coreChannelId: String): String = registeredChannels[coreChannelId] ?: CHANNEL_UPDATES
+
+    fun priorityFor(priority: MobileNotificationPriority): Int =
+        when (priority) {
+            MobileNotificationPriority.DEFAULT -> NotificationCompat.PRIORITY_DEFAULT
+            MobileNotificationPriority.HIGH, MobileNotificationPriority.URGENT -> NotificationCompat.PRIORITY_HIGH
+        }
 
     /**
      * Create notification channels for Android O+.
@@ -62,27 +100,15 @@ object NotificationHelper {
     }
 
     /**
-     * Show a notification from a [MobilePendingNotification].
+     * Show a notification Core prepared.
      */
-    fun showNotification(context: Context, notification: MobilePendingNotification) {
+    fun showNotification(context: Context, notification: NotificationPresentation) {
         val notificationManager = NotificationManagerCompat.from(context)
 
         createNotificationChannels(context)
 
-        // TODO(HUMBLE): T, P1. Maps MobileNotificationCategory to OS channel and
-        // priority. Fix: core supplies os_channel_id + urgency/presentation hint.
-        // (see _private problem record 2026-07-06-mobile-domain-shell-violations)
-        val channelId = when (notification.category) {
-            MobileNotificationCategory.EMERGENCY_ALERT -> CHANNEL_ALERTS
-            MobileNotificationCategory.CONTACT_ADDED -> CHANNEL_UPDATES
-            MobileNotificationCategory.DURESS_ALERT -> CHANNEL_DURESS
-            MobileNotificationCategory.CARD_UPDATE -> CHANNEL_UPDATES
-        }
-
-        val priority = when (notification.category) {
-            MobileNotificationCategory.EMERGENCY_ALERT -> NotificationCompat.PRIORITY_HIGH
-            else -> NotificationCompat.PRIORITY_DEFAULT
-        }
+        val channelId = androidChannelIdFor(notification.channelId)
+        val priority = priorityFor(notification.priority)
 
         // Tapping the notification opens MainActivity
         val intent = Intent(context, MainActivity::class.java).apply {
@@ -109,7 +135,7 @@ object NotificationHelper {
 
         try {
             notificationManager.notify(notification.eventKey.hashCode(), builder.build())
-            Log.d(TAG, "Notification shown: ${notification.title} (${notification.category})")
+            Log.d(TAG, "Notification shown on channel $channelId")
         } catch (e: SecurityException) {
             Log.e(TAG, "Notification permission missing (POST_NOTIFICATIONS)", e)
         } catch (e: Exception) {

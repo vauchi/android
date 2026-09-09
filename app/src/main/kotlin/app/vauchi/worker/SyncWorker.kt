@@ -10,15 +10,16 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import app.vauchi.data.AuthenticationRequiredException
 import app.vauchi.data.VauchiRepository
-import app.vauchi.ui.coreui.MobilePendingNotificationDTO
 import app.vauchi.ui.coreui.WakeupOutcome
-import app.vauchi.ui.coreui.toMobile
+import app.vauchi.ui.coreui.toPresentation
 import kotlinx.serialization.json.Json
 
 class SyncWorker(
     context: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
+    private val wakeupJson = Json { ignoreUnknownKeys = true }
+
     companion object {
         const val TAG = "SyncWorker"
         const val WORK_NAME = "vauchi_periodic_sync"
@@ -66,13 +67,13 @@ class SyncWorker(
             val notifications =
                 runCatching {
                     val outcomeJson = repository.appEngine.onWakeup()
-                    val outcome = Json.decodeFromString<WakeupOutcome>(outcomeJson)
+                    val outcome = wakeupJson.decodeFromString<WakeupOutcome>(outcomeJson)
                     // Background ticks may emit ScheduleWakeup hints; the periodic
                     // WorkManager task already arms the next wakeup, so ignore them.
                     if (outcome.commands.isNotEmpty()) {
                         Log.d(TAG, "on_wakeup produced ${outcome.commands.size} command(s); ignoring in background")
                     }
-                    outcome.notifications.map { it.toMobile() }
+                    outcome.notifications.map { it.toPresentation() }
                 }.getOrElse {
                     Log.e(TAG, "on_wakeup failed: ${it.message}", it)
                     emptyList()

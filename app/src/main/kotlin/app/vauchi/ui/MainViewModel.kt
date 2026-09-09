@@ -13,6 +13,7 @@ import app.vauchi.data.AuthenticationRequiredException
 import app.vauchi.data.DeviceNotSecureException
 import app.vauchi.data.KeyInvalidatedRecoveryRequired
 import app.vauchi.data.VauchiRepository
+import app.vauchi.util.NotificationPresentation
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NetworkMonitor
 import kotlinx.coroutines.Dispatchers
@@ -631,7 +632,7 @@ class MainViewModel(
     /**
      * Poll for and return OS notifications (E).
      */
-    fun pollNotifications() = repository.pollNotifications()
+    fun pollNotifications(): List<NotificationPresentation> = repository.pollNotifications()
 }
 
 private data class Tuple4<A, B, C, D>(

@@ -10,7 +10,9 @@ import android.content.SharedPreferences
 import android.util.Base64
 import android.util.Log
 import app.vauchi.util.LocalizationManager
+import app.vauchi.util.NotificationPresentation
 import app.vauchi.util.ThemeManager
+import app.vauchi.util.toPresentation
 import app.vauchi.util.pushDeviceCapabilities
 import uniffi.vauchi_platform.DomainCommand
 import uniffi.vauchi_platform.DomainCommandResult
@@ -356,9 +358,9 @@ class VauchiRepository internal constructor(
     /**
      * Poll for OS notifications produced by the app engine (E).
      */
-    fun pollNotifications(): List<uniffi.vauchi_platform.MobilePendingNotification> =
+    fun pollNotifications(): List<NotificationPresentation> =
         try {
-            appEngine.pollNotifications()
+            appEngine.pollNotifications().map { it.toPresentation() }
         } catch (e: Exception) {
             Log.e("VauchiRepository", "pollNotifications failed", e)
             emptyList()

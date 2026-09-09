@@ -88,12 +88,12 @@ import app.vauchi.ui.startupErrorKindFor
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NotificationHelper
+import app.vauchi.util.NotificationPresentation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.vauchi_platform.MobileBleLinkDirection
-import uniffi.vauchi_platform.MobilePendingNotification
 import uniffi.vauchi_platform.coreVersion
 import java.io.File
 
@@ -109,7 +109,7 @@ class MainActivity : FragmentActivity() {
     private val _fillStagedInput = mutableStateOf(false)
 
     /** Notifications polled while POST_NOTIFICATIONS was not granted. */
-    private val pendingNotifications = mutableListOf<MobilePendingNotification>()
+    private val pendingNotifications = mutableListOf<NotificationPresentation>()
 
     /** Launcher for the contextual POST_NOTIFICATIONS request. */
     private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>

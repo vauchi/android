@@ -6,6 +6,7 @@ package app.vauchi.util
 
 import androidx.core.app.NotificationCompat
 import app.vauchi.ui.coreui.WakeupOutcome
+import app.vauchi.ui.coreui.toPresentation
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Test
