@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -223,29 +224,38 @@ fun PresentationHost(
                     SnackbarHost(snackbarHostState)
                 },
                 bottomBar = {
-                    Box(
-                        modifier =
-                            Modifier
-                                .padding(
-                                    horizontal =
-                                        if (profile.windowClass == WindowClass.Compact) {
-                                            0.dp
-                                        } else {
-                                            24.dp
-                                        },
-                                    vertical =
-                                        if (profile.windowClass == WindowClass.Compact) {
-                                            0.dp
-                                        } else {
-                                            12.dp
-                                        },
-                                ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        ContextCommandBar(
+                    Column {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .padding(
+                                        horizontal =
+                                            if (profile.windowClass == WindowClass.Compact) {
+                                                0.dp
+                                            } else {
+                                                24.dp
+                                            },
+                                        vertical =
+                                            if (profile.windowClass == WindowClass.Compact) {
+                                                0.dp
+                                            } else {
+                                                12.dp
+                                            },
+                                    ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            ContextCommandBar(
+                                surfaceId = activeSurfaceId,
+                                bar = state.activeBar,
+                                windowClass = profile.windowClass,
+                                onEvent = {
+                                    viewModel.activateAndDispatch(activeSurfaceId, it)
+                                },
+                            )
+                        }
+                        PersistentNavigationBar(
                             surfaceId = activeSurfaceId,
-                            bar = state.activeBar,
-                            windowClass = profile.windowClass,
+                            navigation = state.activeNavigation,
                             onEvent = {
                                 viewModel.activateAndDispatch(activeSurfaceId, it)
                             },
