@@ -6,6 +6,8 @@
 PNGs = "PNGs"
 PN = "PN"
 mappin = "mappin"
+# OpenType variable-font axis tag (width) in the Bricolage Grotesque family
+wdth = "wdth"
 
 # Locale files contain German, French, Spanish — not English typos
 [type.json]
