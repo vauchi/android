@@ -133,7 +133,7 @@ private fun RoleButton(
         enabled = action.enabled,
         modifier =
             Modifier
-                .heightIn(min = 48.dp)
+                .heightIn(min = minimumTouchTarget(LocalPresentationTokens.current))
                 .semantics {
                     contentDescription = action.accessibilityLabel
                 },

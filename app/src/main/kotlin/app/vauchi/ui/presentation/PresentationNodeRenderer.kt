@@ -14,11 +14,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
@@ -67,14 +67,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
-/**
- * Side of a standalone avatar. Core names no size for `Image`, so the
- * shell picks one; this is large enough to read initials at and well over
- * the touch-target floor for the tappable case. `RowAvatar` keeps its own
- * smaller Material list-avatar size.
- */
-private val AVATAR_SIDE = 96.dp
-
 @Composable
 internal fun PresentationNodeRenderer(
     surfaceId: String,
@@ -88,6 +80,7 @@ internal fun PresentationNodeRenderer(
     // width: a toggle that does swallows the row and neither is measured.
     fillWidth: Boolean = true,
 ) {
+    val tokens = LocalPresentationTokens.current
     when (node) {
         is PresentationNode.Text -> {
             val role = textRoleStyle(node.style)
@@ -191,7 +184,7 @@ internal fun PresentationNodeRenderer(
                 modifier =
                     modifier
                         .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
-                        .heightIn(min = 48.dp)
+                        .heightIn(min = minimumTouchTarget(tokens))
                         .toggleable(
                             value = node.value,
                             enabled = node.enabled,
@@ -325,10 +318,13 @@ internal fun PresentationNodeRenderer(
                             // Square whenever the result is an avatar: a
                             // circle clipped from a `fillMaxWidth` box is a
                             // stadium as wide as the screen, which is what
-                            // the initials used to sit in.
+                            // the initials used to sit in. Diameter is the
+                            // surface's minimumTargetSize token — the same
+                            // floor macOS frames its fallback avatar at —
+                            // rather than a shell-picked constant.
                             .then(
                                 if (node.circular || bitmap == null) {
-                                    Modifier.size(AVATAR_SIDE)
+                                    Modifier.size(minimumTouchTarget(tokens))
                                 } else {
                                     Modifier.fillMaxWidth()
                                 },
@@ -599,9 +595,10 @@ private fun ChoiceNode(
  * rows rendered as bare text on Android while iOS showed the initials
  * circle from the same commands.
  *
- * Sized to the Material list-avatar size rather than the surface's
- * `minimumTargetSize` token, which the parser decodes but no caller plumbs
- * this far down.
+ * Kept at the Material list-avatar size rather than the surface's
+ * `minimumTargetSize` token: the token now reaches the standalone avatar
+ * and the row's own touch target below, but a row's avatar is decoration
+ * beside a much larger tappable row, not itself the target.
  */
 @Composable
 private fun RowAvatar(row: PresentationRow) {
@@ -650,12 +647,14 @@ private fun PresentationListRow(
     focusedBindingId: String?,
     onFocusedBinding: (String, Boolean) -> Unit,
 ) {
+    val tokens = LocalPresentationTokens.current
     var expanded by remember { mutableStateOf(false) }
     val activation = row.activation
     Surface(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .heightIn(min = minimumTouchTarget(tokens))
                 .then(
                     if (activation != null) {
                         Modifier.clickable(enabled = row.enabled && activation.enabled) {

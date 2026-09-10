@@ -167,111 +167,105 @@ fun PresentationHost(
             return@BoxWithConstraints
         }
 
-        Scaffold(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .onPreviewKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown) {
-                            return@onPreviewKeyEvent false
-                        }
-                        val gesture =
-                            when {
-                                event.key == Key.Escape -> {
-                                    ShortcutGesture.Back
-                                }
-
-                                event.isCtrlPressed && event.key == Key.K -> {
-                                    ShortcutGesture.Navigation
-                                }
-
-                                event.isCtrlPressed && event.key == Key.Enter -> {
-                                    ShortcutGesture.Primary
-                                }
-
-                                event.isAltPressed && event.key == Key.DirectionDown -> {
-                                    ShortcutGesture.Secondary
-                                }
-
-                                event.isCtrlPressed && event.key == Key.Z -> {
-                                    ShortcutGesture.Undo
-                                }
-
-                                else -> {
-                                    null
-                                }
-                            }
-                        val action =
-                            gesture?.let { contextualShortcut(state.activeBar, it) }
-                                ?: return@onPreviewKeyEvent false
-                        viewModel.activateAndDispatch(
-                            activeSurfaceId,
-                            PresentationEvent.ActionActivated(
-                                surfaceId = activeSurfaceId,
-                                interactionId = action.interactionId,
-                            ),
-                        )
-                        true
-                    },
-            snackbarHost = {
-                SnackbarHost(snackbarHostState)
-            },
-            bottomBar = {
-                Box(
-                    modifier =
-                        Modifier
-                            .padding(
-                                horizontal =
-                                    if (profile.windowClass == WindowClass.Compact) {
-                                        0.dp
-                                    } else {
-                                        24.dp
-                                    },
-                                vertical =
-                                    if (profile.windowClass == WindowClass.Compact) {
-                                        0.dp
-                                    } else {
-                                        12.dp
-                                    },
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    ContextCommandBar(
-                        surfaceId = activeSurfaceId,
-                        bar = state.activeBar,
-                        windowClass = profile.windowClass,
-                        onEvent = {
-                            viewModel.activateAndDispatch(activeSurfaceId, it)
-                        },
-                    )
-                }
-            },
-        ) { innerPadding ->
-            Box(
+        // ContextCommandBar and PresentationOverlay sit beside, not below,
+        // PresentationSurface — which provides the token for its own
+        // subtree — so they need the active surface's tokens provided
+        // again here to size their own touch targets.
+        val tokens = state.surfaces[activeSurfaceId]?.tokens ?: DefaultPresentationTokens
+        CompositionLocalProvider(LocalPresentationTokens provides tokens) {
+            Scaffold(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(innerPadding),
-            ) {
-                CompositionLocalProvider(LocalUseFrontCamera provides useFrontCamera) {
-                    if (profile.paneLayout == PaneLayout.Split) {
-                        Row(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.spacedBy(1.dp),
-                        ) {
-                            state.surfaces[profile.primarySurface]?.let { surface ->
-                                SurfaceHost(
-                                    surface = surface,
-                                    active = surface.surfaceId == activeSurfaceId,
-                                    viewModel = viewModel,
-                                    focusedBindingId = focusedBindingId,
-                                    onFocusedBinding = onFocusedBinding,
-                                    modifier = Modifier.weight(1f),
-                                )
+                        .onPreviewKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown) {
+                                return@onPreviewKeyEvent false
                             }
-                            profile.detailSurface
-                                ?.let(state.surfaces::get)
-                                ?.let { surface ->
+                            val gesture =
+                                when {
+                                    event.key == Key.Escape -> {
+                                        ShortcutGesture.Back
+                                    }
+
+                                    event.isCtrlPressed && event.key == Key.K -> {
+                                        ShortcutGesture.Navigation
+                                    }
+
+                                    event.isCtrlPressed && event.key == Key.Enter -> {
+                                        ShortcutGesture.Primary
+                                    }
+
+                                    event.isAltPressed && event.key == Key.DirectionDown -> {
+                                        ShortcutGesture.Secondary
+                                    }
+
+                                    event.isCtrlPressed && event.key == Key.Z -> {
+                                        ShortcutGesture.Undo
+                                    }
+
+                                    else -> {
+                                        null
+                                    }
+                                }
+                            val action =
+                                gesture?.let { contextualShortcut(state.activeBar, it) }
+                                    ?: return@onPreviewKeyEvent false
+                            viewModel.activateAndDispatch(
+                                activeSurfaceId,
+                                PresentationEvent.ActionActivated(
+                                    surfaceId = activeSurfaceId,
+                                    interactionId = action.interactionId,
+                                ),
+                            )
+                            true
+                        },
+                snackbarHost = {
+                    SnackbarHost(snackbarHostState)
+                },
+                bottomBar = {
+                    Box(
+                        modifier =
+                            Modifier
+                                .padding(
+                                    horizontal =
+                                        if (profile.windowClass == WindowClass.Compact) {
+                                            0.dp
+                                        } else {
+                                            24.dp
+                                        },
+                                    vertical =
+                                        if (profile.windowClass == WindowClass.Compact) {
+                                            0.dp
+                                        } else {
+                                            12.dp
+                                        },
+                                ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        ContextCommandBar(
+                            surfaceId = activeSurfaceId,
+                            bar = state.activeBar,
+                            windowClass = profile.windowClass,
+                            onEvent = {
+                                viewModel.activateAndDispatch(activeSurfaceId, it)
+                            },
+                        )
+                    }
+                },
+            ) { innerPadding ->
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                ) {
+                    CompositionLocalProvider(LocalUseFrontCamera provides useFrontCamera) {
+                        if (profile.paneLayout == PaneLayout.Split) {
+                            Row(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalArrangement = Arrangement.spacedBy(1.dp),
+                            ) {
+                                state.surfaces[profile.primarySurface]?.let { surface ->
                                     SurfaceHost(
                                         surface = surface,
                                         active = surface.surfaceId == activeSurfaceId,
@@ -281,43 +275,56 @@ fun PresentationHost(
                                         modifier = Modifier.weight(1f),
                                     )
                                 }
-                        }
-                    } else {
-                        state.surfaces[activeSurfaceId]?.let { surface ->
-                            SurfaceHost(
-                                surface = surface,
-                                active = true,
-                                viewModel = viewModel,
-                                focusedBindingId = focusedBindingId,
-                                onFocusedBinding = onFocusedBinding,
-                            )
+                                profile.detailSurface
+                                    ?.let(state.surfaces::get)
+                                    ?.let { surface ->
+                                        SurfaceHost(
+                                            surface = surface,
+                                            active = surface.surfaceId == activeSurfaceId,
+                                            viewModel = viewModel,
+                                            focusedBindingId = focusedBindingId,
+                                            onFocusedBinding = onFocusedBinding,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                    }
+                            }
+                        } else {
+                            state.surfaces[activeSurfaceId]?.let { surface ->
+                                SurfaceHost(
+                                    surface = surface,
+                                    active = true,
+                                    viewModel = viewModel,
+                                    focusedBindingId = focusedBindingId,
+                                    onFocusedBinding = onFocusedBinding,
+                                )
+                            }
                         }
                     }
-                }
 
-                state.activeOverlay?.let { overlay ->
-                    PresentationOverlay(
-                        overlay = overlay,
-                        windowClass = profile.windowClass,
-                        reducedMotion = reducedMotion,
-                        onAction = {
-                            viewModel.activateAndDispatch(overlay.surfaceId, it)
-                        },
-                        onDismiss = viewModel::dismissPresentationOverlay,
-                    )
-                }
+                    state.activeOverlay?.let { overlay ->
+                        PresentationOverlay(
+                            overlay = overlay,
+                            windowClass = profile.windowClass,
+                            reducedMotion = reducedMotion,
+                            onAction = {
+                                viewModel.activateAndDispatch(overlay.surfaceId, it)
+                            },
+                            onDismiss = viewModel::dismissPresentationOverlay,
+                        )
+                    }
 
-                alertMessage?.let { (title, message) ->
-                    AlertDialog(
-                        onDismissRequest = viewModel::dismissAlert,
-                        title = { Text(title) },
-                        text = { Text(message) },
-                        confirmButton = {
-                            TextButton(onClick = viewModel::dismissAlert) {
-                                Text(stringResource(android.R.string.ok))
-                            }
-                        },
-                    )
+                    alertMessage?.let { (title, message) ->
+                        AlertDialog(
+                            onDismissRequest = viewModel::dismissAlert,
+                            title = { Text(title) },
+                            text = { Text(message) },
+                            confirmButton = {
+                                TextButton(onClick = viewModel::dismissAlert) {
+                                    Text(stringResource(android.R.string.ok))
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }
