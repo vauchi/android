@@ -61,10 +61,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import app.vauchi.ui.theme.MonospaceFontFamily
 import kotlin.math.roundToInt
 
 @Composable
@@ -92,7 +92,7 @@ internal fun PresentationNodeRenderer(
                 }
             Text(
                 text = node.content,
-                style = if (role.monospaced) base.copy(fontFamily = FontFamily.Monospace) else base,
+                style = if (role.monospaced) base.copy(fontFamily = MonospaceFontFamily) else base,
                 color =
                     if (role.muted) {
                         MaterialTheme.colorScheme.onSurfaceVariant
