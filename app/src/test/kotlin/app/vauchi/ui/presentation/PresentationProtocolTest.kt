@@ -151,6 +151,61 @@ class PresentationProtocolTest {
         assertEquals("\"reduced\"", environment.getValue("motion").toString())
     }
 
+    @Test
+    fun `navigation items are parsed and reduced per surface`() {
+        val result =
+            PresentationReducer.apply(
+                PresentationState(),
+                PresentationProtocol
+                    .decodeEnvelope(envelope(replaceSurface(1), setNavigation(1, exchangeItem())))
+                    .commands,
+            )
+
+        val items =
+            result.state.navigation["main"]
+                ?.navigation
+                ?.items
+        assertEquals(1, items?.size)
+        assertEquals("surface.1.context.presentation.navigation.exchange", items?.first()?.interactionId)
+        assertEquals("Exchange", items.orEmpty().first().label)
+        assertEquals("Exchange", items.orEmpty().first().accessibilityLabel)
+        assertEquals("qrcode", items.orEmpty().first().iconToken)
+        assertTrue(items.orEmpty().first().selected)
+        assertEquals(0, items.orEmpty().first().badgeCount)
+        assertEquals(emptyList(), result.effects)
+    }
+
+    @Test
+    fun `an empty navigation item list is a valid command`() {
+        val result =
+            PresentationReducer.apply(
+                PresentationState(),
+                PresentationProtocol
+                    .decodeEnvelope(envelope(replaceSurface(1), setNavigation(1, items = "")))
+                    .commands,
+            )
+
+        assertEquals(
+            emptyList(),
+            result.state.navigation["main"]
+                ?.navigation
+                ?.items,
+        )
+        assertEquals(emptyList(), result.state.activeNavigation?.items)
+    }
+
+    @Test
+    fun `navigation revision must match its surface`() {
+        assertFailsWith<PresentationProtocolException> {
+            PresentationReducer.apply(
+                PresentationState(),
+                PresentationProtocol
+                    .decodeEnvelope(envelope(replaceSurface(1), setNavigation(2, exchangeItem())))
+                    .commands,
+            )
+        }
+    }
+
     // @scenario: generic_presentation_protocol.feature :: User interaction returns as an opaque event
     @Test
     fun `presentation invalidation is a canonical unit event`() {
@@ -350,6 +405,30 @@ class PresentationProtocolTest {
             "secondary":null
           }
         }}
+        """.trimIndent()
+
+    private fun setNavigation(
+        revision: Int,
+        items: String,
+    ): String =
+        """
+        {"SetNavigation":{
+          "surface_id":"main",
+          "revision":$revision,
+          "navigation":{"items":[$items]}
+        }}
+        """.trimIndent()
+
+    private fun exchangeItem(): String =
+        """
+        {
+          "interaction_id":"surface.1.context.presentation.navigation.exchange",
+          "label":"Exchange",
+          "accessibility_label":"Exchange",
+          "icon_token":"qrcode",
+          "selected":true,
+          "badge_count":0
+        }
         """.trimIndent()
 
     private fun action(id: String): ActionSpec =
