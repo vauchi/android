@@ -4,6 +4,7 @@
 
 package app.vauchi.ui.presentation
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.unit.dp
@@ -12,6 +13,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.math.abs
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
@@ -42,23 +44,26 @@ class PresentationImageNodeTest {
     private fun render(
         fallbackText: String?,
         circular: Boolean,
+        tokens: PresentationTokens = DefaultPresentationTokens,
     ) {
         composeTestRule.setContent {
-            PresentationNodeRenderer(
-                surfaceId = "surface-test",
-                node =
-                    PresentationNode.Image(
-                        id = null,
-                        data = null,
-                        fallbackText = fallbackText,
-                        circular = circular,
-                        brightness = 1.0,
-                        activation = null,
-                        accessibility = AccessibilitySpec(label, null),
-                    ),
-                onEvent = {},
-                onCameraPermissionDenied = {},
-            )
+            CompositionLocalProvider(LocalPresentationTokens provides tokens) {
+                PresentationNodeRenderer(
+                    surfaceId = "surface-test",
+                    node =
+                        PresentationNode.Image(
+                            id = null,
+                            data = null,
+                            fallbackText = fallbackText,
+                            circular = circular,
+                            brightness = 1.0,
+                            activation = null,
+                            accessibility = AccessibilitySpec(label, null),
+                        ),
+                    onEvent = {},
+                    onCameraPermissionDenied = {},
+                )
+            }
         }
     }
 
@@ -93,9 +98,8 @@ class PresentationImageNodeTest {
     }
 
     /**
-     * The fixed avatar side is a shell choice — Core names no size — but it
-     * has to be large enough to read and to hit. Pinned so a later tidy
-     * cannot quietly shrink it below the touch-target floor.
+     * The default tokens (no surface in the tree yet) still give the
+     * avatar a real touch target rather than a nonsensical 0dp.
      */
     @Test
     fun theAvatarIsAtLeastATouchTargetAcross() {
@@ -112,5 +116,29 @@ class PresentationImageNodeTest {
             widthDp >= 48.dp,
             "the avatar is $widthDp across, under the 48 dp touch-target floor",
         )
+    }
+
+    /**
+     * The avatar side is no longer a shell-picked constant: Core sends
+     * `minimum_target_size` per surface, and the avatar must track it so a
+     * surface asking for a larger floor gets a larger avatar rather than a
+     * hardcoded one that happens to clear the default.
+     */
+    @Test
+    fun theAvatarDiameterTracksTheSurfacesMinimumTargetSizeToken() {
+        render(
+            fallbackText = "BS",
+            circular = true,
+            tokens = DefaultPresentationTokens.copy(minimumTargetSize = 64),
+        )
+
+        val widthPx =
+            composeTestRule
+                .onNodeWithContentDescription(label)
+                .fetchSemanticsNode()
+                .size.width
+        val widthDp = with(composeTestRule.density) { widthPx.toDp() }
+
+        assertEquals(64.dp, widthDp)
     }
 }
