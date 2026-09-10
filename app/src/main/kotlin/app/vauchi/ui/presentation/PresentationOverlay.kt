@@ -16,23 +16,29 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.vauchi.ui.theme.LocalStatusColors
 
 internal enum class OverlayTransitionIdentity {
     NavigationReveal,
@@ -253,48 +260,83 @@ private fun OverlayPanel(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 overlay.overlay.items.forEach { action ->
-                    Button(
-                        onClick = {
-                            onAction(
-                                PresentationEvent.ActionActivated(
-                                    overlay.surfaceId,
-                                    action.interactionId,
-                                ),
-                            )
-                        },
-                        enabled = action.enabled,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .semantics {
-                                    contentDescription = action.accessibilityLabel
-                                },
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            // Start-aligned, not centred: a centred row puts
-                            // each glyph at an x that depends on its label's
-                            // length, so the icons stop forming a column the
-                            // eye can scan — which is the whole point of
-                            // showing them.
-                            action.iconToken?.let { token ->
-                                Icon(
-                                    imageVector = navigationIcon(token),
-                                    // The button already carries
-                                    // `accessibilityLabel` and the label reads
-                                    // beside it; describing the icon too makes
-                                    // TalkBack announce the destination twice.
-                                    contentDescription = null,
-                                )
-                            }
-                            Text(action.label)
-                        }
-                    }
+                    OverlayActionButton(surfaceId = overlay.surfaceId, action = action, onAction = onAction)
                 }
             }
+        }
+    }
+}
+
+/**
+ * One overlay action row, styled from [ActionSpec.tone] via [toneColors] so
+ * a serious action (verify a fingerprint, schedule a deletion) reads as
+ * consequential without borrowing destructive's filled error red.
+ */
+@Composable
+private fun OverlayActionButton(
+    surfaceId: String,
+    action: ActionSpec,
+    onAction: (PresentationEvent) -> Unit,
+) {
+    val style = toneColors(action.tone, MaterialTheme.colorScheme, LocalStatusColors.current)
+    val modifier =
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = minimumTouchTarget(LocalPresentationTokens.current))
+            .semantics {
+                contentDescription = action.accessibilityLabel
+            }
+    val onClick = {
+        onAction(
+            PresentationEvent.ActionActivated(surfaceId, action.interactionId),
+        )
+    }
+    val content: @Composable RowScope.() -> Unit = {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Start-aligned, not centred: a centred row puts each glyph at
+            // an x that depends on its label's length, so the icons stop
+            // forming a column the eye can scan — which is the whole point
+            // of showing them.
+            action.iconToken?.let { token ->
+                Icon(
+                    imageVector = navigationIcon(token),
+                    // The button already carries `accessibilityLabel` and
+                    // the label reads beside it; describing the icon too
+                    // makes TalkBack announce the destination twice.
+                    contentDescription = null,
+                )
+            }
+            Text(action.label)
+        }
+    }
+    when (style.emphasis) {
+        ActionToneEmphasis.Filled -> {
+            Button(
+                onClick = onClick,
+                enabled = action.enabled,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = style.accent,
+                        contentColor = contentColorFor(style.accent),
+                    ),
+                modifier = modifier,
+                content = content,
+            )
+        }
+
+        ActionToneEmphasis.Outlined -> {
+            OutlinedButton(
+                onClick = onClick,
+                enabled = action.enabled,
+                border = BorderStroke(1.dp, style.accent),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = style.accent),
+                modifier = modifier,
+                content = content,
+            )
         }
     }
 }

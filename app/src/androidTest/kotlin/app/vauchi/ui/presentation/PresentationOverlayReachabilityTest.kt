@@ -6,8 +6,10 @@ package app.vauchi.ui.presentation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
@@ -18,6 +20,8 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.vauchi.ui.theme.LocalStatusColors
+import app.vauchi.ui.theme.StatusColors
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,6 +44,16 @@ class PresentationOverlayReachabilityTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    // The overlay's tone-coloured actions read StatusColors for the
+    // warning colour; outside VauchiTheme (this test renders the overlay
+    // standalone) nothing else provides it.
+    private val statusColors =
+        StatusColors(
+            success = Color(0xFF2E7D32),
+            warning = Color(0xFFF9A825),
+            info = Color(0xFF1976D2),
+        )
+
     private fun destination(index: Int) =
         ActionSpec(
             interactionId = "nav.$index",
@@ -56,24 +70,26 @@ class PresentationOverlayReachabilityTest {
         val destinations = (1..10).map(::destination)
 
         composeTestRule.setContent {
-            Box(modifier = Modifier.requiredSize(width = 392.dp, height = 460.dp)) {
-                PresentationOverlay(
-                    overlay =
-                        RevisionedOverlay(
-                            surfaceId = "surface-test",
-                            revision = 1uL,
-                            overlay =
-                                OverlaySpec(
-                                    kind = OverlayKind.Navigation,
-                                    title = "More",
-                                    items = destinations,
-                                ),
-                        ),
-                    windowClass = WindowClass.Compact,
-                    reducedMotion = true,
-                    onAction = {},
-                    onDismiss = {},
-                )
+            CompositionLocalProvider(LocalStatusColors provides statusColors) {
+                Box(modifier = Modifier.requiredSize(width = 392.dp, height = 460.dp)) {
+                    PresentationOverlay(
+                        overlay =
+                            RevisionedOverlay(
+                                surfaceId = "surface-test",
+                                revision = 1uL,
+                                overlay =
+                                    OverlaySpec(
+                                        kind = OverlayKind.Navigation,
+                                        title = "More",
+                                        items = destinations,
+                                    ),
+                            ),
+                        windowClass = WindowClass.Compact,
+                        reducedMotion = true,
+                        onAction = {},
+                        onDismiss = {},
+                    )
+                }
             }
         }
         composeTestRule.waitForIdle()
@@ -99,24 +115,26 @@ class PresentationOverlayReachabilityTest {
         var dismissed = false
 
         composeTestRule.setContent {
-            Box(modifier = Modifier.requiredSize(width = 392.dp, height = 800.dp)) {
-                PresentationOverlay(
-                    overlay =
-                        RevisionedOverlay(
-                            surfaceId = "surface-test",
-                            revision = 1uL,
-                            overlay =
-                                OverlaySpec(
-                                    kind = OverlayKind.Navigation,
-                                    title = "More",
-                                    items = listOf(destination(1)),
-                                ),
-                        ),
-                    windowClass = WindowClass.Compact,
-                    reducedMotion = true,
-                    onAction = {},
-                    onDismiss = { dismissed = true },
-                )
+            CompositionLocalProvider(LocalStatusColors provides statusColors) {
+                Box(modifier = Modifier.requiredSize(width = 392.dp, height = 800.dp)) {
+                    PresentationOverlay(
+                        overlay =
+                            RevisionedOverlay(
+                                surfaceId = "surface-test",
+                                revision = 1uL,
+                                overlay =
+                                    OverlaySpec(
+                                        kind = OverlayKind.Navigation,
+                                        title = "More",
+                                        items = listOf(destination(1)),
+                                    ),
+                            ),
+                        windowClass = WindowClass.Compact,
+                        reducedMotion = true,
+                        onAction = {},
+                        onDismiss = { dismissed = true },
+                    )
+                }
             }
         }
         composeTestRule.waitForIdle()
