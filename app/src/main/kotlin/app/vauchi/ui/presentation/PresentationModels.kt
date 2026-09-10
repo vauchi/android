@@ -13,6 +13,9 @@ data class AccessibilitySpec(
 
 enum class ActionTone {
     Standard,
+
+    /** Consequential but not destructive — warning colour, never error red. */
+    Serious,
     Destructive,
 }
 
