@@ -36,6 +36,19 @@ data class ContextBar(
     val secondary: ActionSpec?,
 )
 
+data class NavigationItem(
+    val interactionId: String,
+    val label: String,
+    val accessibilityLabel: String,
+    val iconToken: String?,
+    val selected: Boolean,
+    val badgeCount: Int,
+)
+
+data class NavigationSpec(
+    val items: List<NavigationItem>,
+)
+
 enum class OverlayKind {
     Navigation,
     ActionMenu,
@@ -225,6 +238,12 @@ sealed interface PresentationCommand {
         val bar: ContextBar,
     ) : PresentationCommand
 
+    data class SetNavigation(
+        val surfaceId: String,
+        val revision: ULong,
+        val navigation: NavigationSpec,
+    ) : PresentationCommand
+
     data class PresentOverlay(
         val surfaceId: String,
         val revision: ULong,
@@ -256,6 +275,11 @@ data class RevisionedBar(
     val bar: ContextBar,
 )
 
+data class RevisionedNavigation(
+    val revision: ULong,
+    val navigation: NavigationSpec,
+)
+
 data class RevisionedOverlay(
     val surfaceId: String,
     val revision: ULong,
@@ -265,6 +289,7 @@ data class RevisionedOverlay(
 data class PresentationState(
     val surfaces: Map<String, SurfaceSpec> = emptyMap(),
     val bars: Map<String, RevisionedBar> = emptyMap(),
+    val navigation: Map<String, RevisionedNavigation> = emptyMap(),
     val profile: PresentationProfile? = null,
     val overlay: RevisionedOverlay? = null,
 ) {
@@ -273,6 +298,9 @@ data class PresentationState(
 
     val activeBar: ContextBar?
         get() = activeSurfaceId?.let(bars::get)?.bar
+
+    val activeNavigation: NavigationSpec?
+        get() = activeSurfaceId?.let(navigation::get)?.navigation
 
     /**
      * The overlay, but only while the surface it was raised over is still the

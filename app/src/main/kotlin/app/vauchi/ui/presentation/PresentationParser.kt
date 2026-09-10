@@ -55,6 +55,14 @@ object PresentationProtocol {
                 )
             }
 
+            "SetNavigation" -> {
+                PresentationCommand.SetNavigation(
+                    surfaceId = body.string("surface_id"),
+                    revision = body.ulong("revision"),
+                    navigation = navigation(body.objectValue("navigation")),
+                )
+            }
+
             "PresentOverlay" -> {
                 PresentationCommand.PresentOverlay(
                     surfaceId = body.string("surface_id"),
@@ -126,6 +134,21 @@ object PresentationProtocol {
                     else -> ActionTone.Standard
                 },
             shortcut = value.nullableString("shortcut"),
+        )
+
+    private fun navigation(value: JsonObject): NavigationSpec =
+        NavigationSpec(
+            items = value.array("items").map { navigationItem(it.jsonObject) },
+        )
+
+    private fun navigationItem(value: JsonObject): NavigationItem =
+        NavigationItem(
+            interactionId = value.string("interaction_id"),
+            label = value.string("label"),
+            accessibilityLabel = value.string("accessibility_label"),
+            iconToken = value.nullableString("icon_token"),
+            selected = value.boolean("selected"),
+            badgeCount = value.int("badge_count"),
         )
 
     private fun overlay(value: JsonObject): OverlaySpec =

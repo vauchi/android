@@ -11,6 +11,7 @@ object PresentationReducer {
     ): ApplyPresentationResult {
         val surfaces = current.surfaces.toMutableMap()
         val bars = current.bars.toMutableMap()
+        val navigation = current.navigation.toMutableMap()
         var profile = current.profile
         var overlay = current.overlay
         val effects = mutableListOf<PresentationCommand.Effect>()
@@ -38,6 +39,7 @@ object PresentationReducer {
                     }
                     surfaces[surface.surfaceId] = surface
                     bars.remove(surface.surfaceId)
+                    navigation.remove(surface.surfaceId)
                     if (overlay?.surfaceId == surface.surfaceId) {
                         overlay = null
                     }
@@ -52,6 +54,17 @@ object PresentationReducer {
                     }
                     bars[command.surfaceId] =
                         RevisionedBar(command.revision, command.bar)
+                }
+
+                is PresentationCommand.SetNavigation -> {
+                    val surface = surfaces[command.surfaceId]
+                    if (surface?.revision != command.revision) {
+                        throw PresentationProtocolException(
+                            "navigation revision does not match ${command.surfaceId}",
+                        )
+                    }
+                    navigation[command.surfaceId] =
+                        RevisionedNavigation(command.revision, command.navigation)
                 }
 
                 is PresentationCommand.PresentOverlay -> {
@@ -113,6 +126,7 @@ object PresentationReducer {
                 PresentationState(
                     surfaces = surfaces,
                     bars = bars,
+                    navigation = navigation,
                     profile = profile,
                     overlay = overlay,
                 ),
