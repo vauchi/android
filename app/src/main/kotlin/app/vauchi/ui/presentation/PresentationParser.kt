@@ -120,10 +120,10 @@ object PresentationProtocol {
             iconToken = value.nullableString("icon_token"),
             enabled = value.boolean("enabled"),
             tone =
-                if (value.nullableString("tone") == "destructive") {
-                    ActionTone.Destructive
-                } else {
-                    ActionTone.Standard
+                when (value.nullableString("tone")) {
+                    "destructive" -> ActionTone.Destructive
+                    "serious" -> ActionTone.Serious
+                    else -> ActionTone.Standard
                 },
             shortcut = value.nullableString("shortcut"),
         )
