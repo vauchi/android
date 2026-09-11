@@ -100,7 +100,7 @@ object PresentationProtocol {
             accessibilityLabel = value.string("accessibility_label"),
             layout = value.string("layout"),
             tokens = tokens(value.objectValue("tokens")),
-            nodes = value.array("nodes").map(::node),
+            nodes = value.array("nodes").mapNotNull(::node),
         )
 
     private fun tokens(value: JsonObject): PresentationTokens =
@@ -162,7 +162,9 @@ object PresentationProtocol {
         when (value) {
             "navigation" -> OverlayKind.Navigation
             "action_menu" -> OverlayKind.ActionMenu
-            else -> throw PresentationProtocolException("unknown overlay kind")
+            // A newer Core's overlay kind still lists actions; an action
+            // menu is the presentation that shows all of them.
+            else -> OverlayKind.ActionMenu
         }
 
     private fun profile(value: JsonObject): PresentationProfile =
@@ -172,20 +174,24 @@ object PresentationProtocol {
                     "compact" -> WindowClass.Compact
                     "medium" -> WindowClass.Medium
                     "expanded" -> WindowClass.Expanded
-                    else -> throw PresentationProtocolException("unknown window class")
+                    else -> WindowClass.Compact
                 },
             paneLayout =
                 when (value.string("pane_layout")) {
                     "single" -> PaneLayout.Single
                     "split" -> PaneLayout.Split
-                    else -> throw PresentationProtocolException("unknown pane layout")
+                    else -> PaneLayout.Single
                 },
             primarySurface = value.string("primary_surface"),
             detailSurface = value.nullableString("detail_surface"),
             activeSurface = value.string("active_surface"),
         )
 
-    private fun node(element: JsonElement): PresentationNode {
+    /**
+     * `null` for a node kind this shell predates: the sibling nodes still
+     * render, which beats dropping the surface (see [textRoleOrBody]).
+     */
+    private fun node(element: JsonElement): PresentationNode? {
         if (element is JsonPrimitive && element.content == "Divider") {
             return PresentationNode.Divider
         }
@@ -283,7 +289,7 @@ object PresentationProtocol {
             }
 
             else -> {
-                throw PresentationProtocolException("unknown node $variant")
+                null
             }
         }
     }
@@ -307,7 +313,7 @@ object PresentationProtocol {
             id = value.nullableString("id"),
             label = value.nullableString("label"),
             horizontal = value.string("axis") == "horizontal",
-            children = value.array("children").map(::node),
+            children = value.array("children").mapNotNull(::node),
             accessibility = accessibility(value),
         )
 
@@ -333,7 +339,7 @@ object PresentationProtocol {
             activation = value.nullableObject("activation")?.let(::action),
             secondaryActions =
                 value.array("secondary_actions").map { action(it.jsonObject) },
-            controls = value.array("controls").map(::node),
+            controls = value.array("controls").mapNotNull(::node),
             accessibility = accessibility(value),
         )
 
