@@ -662,8 +662,16 @@ test:screenshots:
     # Walk the real screens under Robolectric (no device): onboarding via the
     # context bar, then every destination and the action overlay. Runs
     # before the baseline gate so the PNGs upload even without baselines.
+    # The walk skips itself when the host library is absent (test:unit), so
+    # a zero count here means the library did not load — fail, not pass.
     - ./gradlew testDebugUnitTest --tests 'app.vauchi.*ScreenWalk*'
-    - echo "✅ Screen walk wrote $(find app/build/screenshots -name '*.png' | wc -l | tr -d ' ') PNGs"
+    - |
+      WALK_PNGS=$(find app/build/screenshots -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
+      if [ "$WALK_PNGS" -eq 0 ]; then
+        echo "❌ Screen walk wrote no PNGs — host library not loaded?"
+        exit 1
+      fi
+      echo "✅ Screen walk wrote $WALK_PNGS PNGs"
     # Self-detecting snapshot mode (pipefail-safe: check dir exists before find)
     - |
       BASELINE_COUNT=0
