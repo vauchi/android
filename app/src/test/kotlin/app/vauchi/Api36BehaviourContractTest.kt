@@ -22,12 +22,11 @@ import org.junit.Test
  * build, a lint, or any existing test.
  *
  * These read the declaration files directly rather than through
- * `PackageManager`. Robolectric has no merged manifest here — the module sets
- * no `unitTests.isIncludeAndroidResources`, so `RuntimeEnvironment` reports
- * package `org.robolectric.default` and `targetSdkVersion` 23 — and launching
- * `MainActivity` is not possible on the JVM anyway, since it pulls
- * `uniffi.vauchi_platform` and its native library. The files asserted here are
- * exactly the ones a developer edits to break these contracts.
+ * `PackageManager`: Robolectric pins its own SDK level
+ * (`src/test/resources/robolectric.properties`), so `RuntimeEnvironment`
+ * would not report the manifest's `targetSdkVersion` anyway. The files
+ * asserted here are exactly the ones a developer edits to break these
+ * contracts.
  *
  * What this cannot cover: the *visual* half of edge-to-edge — that content is
  * not obscured by the system bars — and the predictive-back gesture itself.
