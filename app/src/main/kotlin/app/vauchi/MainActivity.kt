@@ -6,6 +6,7 @@ package app.vauchi
 
 import android.Manifest
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -362,8 +363,13 @@ fun MainScreen(
     val openUrlEvent by coreAppViewModel.openUrlEvent.collectAsState()
     LaunchedEffect(openUrlEvent) {
         openUrlEvent?.let { url ->
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-            context.startActivity(intent)
+            // A scheme with no handler throws ActivityNotFoundException;
+            // an unopenable link must not crash the app.
+            try {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            } catch (e: ActivityNotFoundException) {
+                Log.w("MainActivity", "No activity can open $url", e)
+            }
             coreAppViewModel.consumeOpenUrlEvent()
         }
     }
