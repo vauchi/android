@@ -105,6 +105,21 @@ android {
         inputs.files(fileTree(hostNativeLibDir))
         systemProperty("robolectric.logging", "stdout")
         systemProperty("vauchi.screenshotDir", layout.buildDirectory.dir("screenshots").get().asFile.absolutePath)
+        // Core's screen catalogue replay (`ScreenCatalogRenderTest`): the
+        // catalogue path arrives as a gradle property so CI can point at
+        // whichever fixture it fetched; the test skips itself without one.
+        providers.gradleProperty("vauchi.screenCatalog").orNull?.let { catalog ->
+            val file = rootProject.file(catalog)
+            systemProperty("vauchi.screenCatalog", file.absolutePath)
+            inputs.file(file)
+        }
+        systemProperty(
+            "vauchi.screenCatalogDir",
+            providers
+                .gradleProperty("vauchi.screenCatalogDir")
+                .map { rootProject.file(it).absolutePath }
+                .getOrElse(layout.buildDirectory.dir("screen-catalog").get().asFile.absolutePath),
+        )
     }
 
     testOptions {

@@ -715,6 +715,68 @@ test:screenshots:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 
+# Renders Core's screen catalogue (one prepared command batch per app
+# screen) through the real Compose renderer under Robolectric — no device,
+# no engine, no JNA — so every MR publishes what each screen looks like in
+# light, dark, and large-font variants. The catalogue is fetched from Core
+# main; until it exists there the presentation contract fixture stands in.
+test:screen-catalog:
+  extends: [.android-job, .timeout-standard]
+  stage: test
+  needs: []
+  allow_failure: true
+  variables:
+    VRT_PLATFORM: android
+    VRT_SCREENSHOT_DIR: app/build/screen-catalog
+  script:
+    - |
+      CATALOG="${CI_PROJECT_DIR}/app/build/screen_catalog_v1.json"
+      CONTRACT="${CI_PROJECT_DIR}/app/build/presentation_contract_v1.json"
+      CORE_FILES="${CI_API_V4_URL}/projects/vauchi%2Fcore/repository/files"
+      mkdir -p "${CI_PROJECT_DIR}/app/build"
+      if curl -fsSL -u "gitlab-ci-token:${CI_JOB_TOKEN}" \
+           "${CORE_FILES}/vauchi-app%2Ffixtures%2Fscreen_catalog_v1.json/raw?ref=main" -o "$CATALOG"; then
+        echo "📚 Catalogue source: core main vauchi-app/fixtures/screen_catalog_v1.json"
+      else
+        echo "⚠️  screen_catalog_v1.json not on core main — converting presentation_contract_v1.json"
+        curl -fsSL -u "gitlab-ci-token:${CI_JOB_TOKEN}" \
+          "${CORE_FILES}/vauchi-app%2Ffixtures%2Fpresentation_contract_v1.json/raw?ref=main" -o "$CONTRACT"
+        python3 - "$CONTRACT" "$CATALOG" <<'PY'
+      import json, sys
+      contract = json.load(open(sys.argv[1]))
+      batches = [contract["initial_commands"]] + [step["commands"] for step in contract["steps"]]
+      screens = []
+      for index, commands in enumerate(batches):
+          surface = next(c["ReplaceSurface"]["surface"] for c in commands if isinstance(c, dict) and "ReplaceSurface" in c)
+          screens.append({"code_id": f"contract_step_{index}", "title": surface["title"], "locale": "en", "commands": commands})
+      json.dump({"schema_version": 1, "screens": screens}, open(sys.argv[2], "w"))
+      print(f"converted {len(screens)} contract batches")
+      PY
+        echo "📚 Catalogue source: converted core main presentation_contract_v1.json"
+      fi
+    - ./gradlew testDebugUnitTest --tests 'app.vauchi.screenshots.ScreenCatalogRenderTest' -Pvauchi.screenCatalog="${CI_PROJECT_DIR}/app/build/screen_catalog_v1.json"
+    # The test skips itself without a catalogue, so zero PNGs means the
+    # property never reached the test JVM — fail, not pass.
+    - |
+      CATALOG_PNGS=$(find app/build/screen-catalog -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
+      if [ "$CATALOG_PNGS" -eq 0 ]; then
+        echo "❌ Screen catalogue rendered no PNGs"
+        exit 1
+      fi
+      echo "✅ Screen catalogue rendered $CATALOG_PNGS PNGs"
+  after_script:
+    - !reference [.vrt-upload-script, script]
+  artifacts:
+    when: always
+    paths:
+      - app/build/screen-catalog/
+    reports:
+      junit: app/build/test-results/testDebugUnitTest/TEST-*ScreenCatalog*.xml
+    expire_in: 7 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 # Committed baselines must map to live preview test functions — orphans
 # from deleted tests masquerade as current UI (2026-06-11: 17 found).
 check:orphan-baselines: # vci02-ok: alpine job intentionally installs its complete tool set
