@@ -100,6 +100,9 @@ android {
     val hostNativeLibDir = file("native-host-libs")
     tasks.withType<Test>().configureEach {
         systemProperty("jna.library.path", hostNativeLibDir.absolutePath)
+        // The walk skips itself without the library, so a run must not be
+        // replayed from cache once the library appears.
+        inputs.files(fileTree(hostNativeLibDir))
         systemProperty("robolectric.logging", "stdout")
         systemProperty("vauchi.screenshotDir", layout.buildDirectory.dir("screenshots").get().asFile.absolutePath)
     }
