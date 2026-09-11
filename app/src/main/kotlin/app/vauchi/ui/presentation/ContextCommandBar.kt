@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -56,6 +57,7 @@ fun ContextCommandBar(
                 RoleButton(
                     action = it,
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    tag = "contextbar.back",
                     onClick = {
                         onEvent(PresentationEvent.BackRequested(surfaceId))
                     },
@@ -65,6 +67,7 @@ fun ContextCommandBar(
                 RoleButton(
                     action = it,
                     icon = Icons.Default.Menu,
+                    tag = "contextbar.navigation",
                     onClick = {
                         onEvent(
                             PresentationEvent.ActionActivated(
@@ -90,6 +93,7 @@ fun ContextCommandBar(
                         Modifier
                             .weight(1f)
                             .heightIn(min = 56.dp)
+                            .testTag("contextbar.primary")
                             .semantics {
                                 contentDescription = it.accessibilityLabel
                             },
@@ -108,6 +112,7 @@ fun ContextCommandBar(
                 RoleButton(
                     action = it,
                     icon = Icons.Default.MoreHoriz,
+                    tag = "contextbar.secondary",
                     onClick = {
                         onEvent(
                             PresentationEvent.ActionActivated(
@@ -126,6 +131,7 @@ fun ContextCommandBar(
 private fun RoleButton(
     action: ActionSpec,
     icon: ImageVector,
+    tag: String,
     onClick: () -> Unit,
 ) {
     FilledTonalIconButton(
@@ -134,6 +140,7 @@ private fun RoleButton(
         modifier =
             Modifier
                 .heightIn(min = minimumTouchTarget(LocalPresentationTokens.current))
+                .testTag(tag)
                 .semantics {
                     contentDescription = action.accessibilityLabel
                 },

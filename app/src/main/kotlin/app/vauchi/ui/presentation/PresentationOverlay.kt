@@ -43,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -200,6 +201,7 @@ fun PresentationOverlay(
                 Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.34f))
+                    .testTag("overlay.scrim")
                     .clickable(onClick = onDismiss),
         )
         AnimatedVisibility(
@@ -259,8 +261,13 @@ private fun OverlayPanel(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                overlay.overlay.items.forEach { action ->
-                    OverlayActionButton(surfaceId = overlay.surfaceId, action = action, onAction = onAction)
+                overlay.overlay.items.forEachIndexed { index, action ->
+                    OverlayActionButton(
+                        surfaceId = overlay.surfaceId,
+                        action = action,
+                        index = index,
+                        onAction = onAction,
+                    )
                 }
             }
         }
@@ -276,6 +283,7 @@ private fun OverlayPanel(
 private fun OverlayActionButton(
     surfaceId: String,
     action: ActionSpec,
+    index: Int,
     onAction: (PresentationEvent) -> Unit,
 ) {
     val style = toneColors(action.tone, MaterialTheme.colorScheme, LocalStatusColors.current)
@@ -283,6 +291,7 @@ private fun OverlayActionButton(
         Modifier
             .fillMaxWidth()
             .heightIn(min = minimumTouchTarget(LocalPresentationTokens.current))
+            .testTag("overlay.action.$index")
             .semantics {
                 contentDescription = action.accessibilityLabel
             }

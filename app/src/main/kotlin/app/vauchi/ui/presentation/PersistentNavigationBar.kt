@@ -23,6 +23,7 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -80,9 +81,9 @@ fun PersistentNavigationBar(
     NavigationBar(modifier = modifier) {
         model.items.forEachIndexed { index, item ->
             if (index == model.centerItemIndex) {
-                ExchangeNavigationItem(surfaceId, item, tokens, onEvent)
+                ExchangeNavigationItem(surfaceId, item, index, tokens, onEvent)
             } else {
-                StandardNavigationItem(surfaceId, item, tokens, onEvent)
+                StandardNavigationItem(surfaceId, item, index, tokens, onEvent)
             }
         }
     }
@@ -92,6 +93,7 @@ fun PersistentNavigationBar(
 private fun RowScope.StandardNavigationItem(
     surfaceId: String,
     item: NavigationItem,
+    index: Int,
     tokens: PresentationTokens,
     onEvent: (PresentationEvent) -> Unit,
 ) {
@@ -109,6 +111,7 @@ private fun RowScope.StandardNavigationItem(
         modifier =
             Modifier
                 .heightIn(min = minimumTouchTarget(tokens))
+                .testTag("navbar.item.$index")
                 .semantics { contentDescription = item.accessibilityLabel },
     )
 }
@@ -122,6 +125,7 @@ private fun RowScope.StandardNavigationItem(
 private fun RowScope.ExchangeNavigationItem(
     surfaceId: String,
     item: NavigationItem,
+    index: Int,
     tokens: PresentationTokens,
     onEvent: (PresentationEvent) -> Unit,
 ) {
@@ -137,6 +141,7 @@ private fun RowScope.ExchangeNavigationItem(
             modifier =
                 Modifier
                     .size(maxOf(ExchangeCircleSize, minimumTouchTarget(tokens)))
+                    .testTag("navbar.item.$index")
                     .semantics { contentDescription = item.accessibilityLabel },
         ) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
