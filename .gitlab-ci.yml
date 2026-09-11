@@ -603,7 +603,9 @@ test:screenshots:
   # Falls back to main if tag missing — verify tags exist before bumping AAR.
   variables:
     VRT_PLATFORM: android
-    VRT_SCREENSHOT_DIR: app/src/screenshotTestDebug/reference/app/vauchi/ScreenshotTestsKt
+    # The Robolectric screen walk writes the real Core-driven screens here;
+    # the layoutlib preview baselines stay under app/src/screenshotTestDebug.
+    VRT_SCREENSHOT_DIR: app/build/screenshots
   script:
     # Build host-platform native library so layoutlib can load UniFFI types.
     # Uses the same core ref that produced the published AAR bindings.
@@ -657,6 +659,11 @@ test:screenshots:
         echo "$CORE_REF" > "$VERSION_STAMP"
         echo "✅ Native library built from ${CORE_REF}: $(ls -lh "$NATIVE_LIB" | awk '{print $5}')"
       fi
+    # Walk the real screens under Robolectric (no device): onboarding via the
+    # context bar, then every destination and the action overlay. Runs
+    # before the baseline gate so the PNGs upload even without baselines.
+    - ./gradlew testDebugUnitTest --tests 'app.vauchi.*ScreenWalk*'
+    - echo "✅ Screen walk wrote $(find app/build/screenshots -name '*.png' | wc -l | tr -d ' ') PNGs"
     # Self-detecting snapshot mode (pipefail-safe: check dir exists before find)
     - |
       BASELINE_COUNT=0
@@ -678,8 +685,11 @@ test:screenshots:
   artifacts:
     when: always
     paths:
+      - app/build/screenshots/
       - app/build/reports/screenshotTest/
       - app/src/screenshotTestDebug/reference/
+    reports:
+      junit: app/build/test-results/testDebugUnitTest/TEST-*ScreenWalk*.xml
     expire_in: 7 days
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
