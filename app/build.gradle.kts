@@ -88,14 +88,26 @@ android {
 
     experimentalProperties["android.experimental.enableScreenshotTest"] = true
 
-    // Screenshot tests render via layoutlib (host JVM), which needs the native library
-    // for the host platform. The library is built by CI (build:native-host job) or
-    // locally via `just build-host-lib`. See: 2026-03-18-android-screenshot-native-dep
+    // Host-JVM tests that touch UniFFI need the native library for the host
+    // platform: the layoutlib preview screenshot tests and the Robolectric
+    // screen walk (`app.vauchi.screenshots.ScreenWalkScreenshotTest`, run by
+    // `testDebugUnitTest`). Every Test task gets the path so the walk runs
+    // under plain `./gradlew test` too; tests that never load Core ignore it.
+    // The library is built by CI (test:screenshots job) or locally with
+    // `cargo build -p vauchi-platform --release` from a core checkout at the
+    // pinned AAR tag, copied into app/native-host-libs/.
+    // See: 2026-03-18-android-screenshot-native-dep
     val hostNativeLibDir = file("native-host-libs")
     tasks.withType<Test>().configureEach {
-        if (name.contains("Screenshot", ignoreCase = true)) {
-            systemProperty("jna.library.path", hostNativeLibDir.absolutePath)
-        }
+        systemProperty("jna.library.path", hostNativeLibDir.absolutePath)
+        systemProperty("robolectric.logging", "stdout")
+        systemProperty("vauchi.screenshotDir", layout.buildDirectory.dir("screenshots").get().asFile.absolutePath)
+    }
+
+    testOptions {
+        // The screen walk launches MainActivity from the manifest and needs
+        // its theme, splash attributes, and locale assets under Robolectric.
+        unitTests.isIncludeAndroidResources = true
     }
 
     lint {
@@ -250,6 +262,10 @@ dependencies {
     testImplementation("androidx.arch.core:core-testing:2.2.0")
     testImplementation("androidx.test:core:1.6.1")
     testImplementation("androidx.work:work-testing:2.9.1")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    // The published AAR bundles JNA's Android dispatch library only; host-JVM
+    // tests that load Core need the plain jar's darwin/linux libjnidispatch.
+    testImplementation("net.java.dev.jna:jna:5.14.0")
     androidTestImplementation(kotlin("test"))
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
