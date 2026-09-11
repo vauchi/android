@@ -106,16 +106,7 @@ class ScreenWalkScreenshotTest {
                 capture(step, "onboarding-${surfaceSlug()}-filled")
             }
             val primary = composeRule.onAllNodes(hasTestTag(PRIMARY_TAG) and isEnabled()).firstOrNull() ?: break
-            val before = composeRule.onRoot().printToString()
-            primary.performClick()
-            settle()
-            // Core answers the click asynchronously; a second click on an
-            // unchanged surface would skip the step it was about to show.
-            runCatching {
-                composeRule.waitUntil(timeoutMillis = STEP_SETTLE_TIMEOUT_MS) {
-                    composeRule.onRoot().printToString() != before
-                }
-            }
+            clickAndSettle(primary)
         }
 
         assertTrue("onboarding walk wrote no screenshots", written.isNotEmpty())
@@ -128,8 +119,7 @@ class ScreenWalkScreenshotTest {
         var index = 1
         capture(index++, "after-seed")
         composeRule.onAllNodes(hasTestTag(SECONDARY_TAG) and isEnabled()).firstOrNull()?.let {
-            it.performClick()
-            settle()
+            clickAndSettle(it)
             capture(index++, "secondary-actions")
             dismissOverlay()
         }
@@ -138,8 +128,7 @@ class ScreenWalkScreenshotTest {
         for (destination in 0 until destinationCount()) {
             val node = openDestination(destination) ?: break
             val slug = node.labelOrEmpty().ifBlank { "destination-$destination" }.slugify()
-            node.performClick()
-            settle()
+            clickAndSettle(node)
             digests += sha256(capture(index++, slug))
         }
 
@@ -166,14 +155,12 @@ class ScreenWalkScreenshotTest {
     private fun openNavigationOverlay(): SemanticsNodeInteraction? {
         if (overlayActions().isNotEmpty()) return composeRule.onRoot()
         val launcher = composeRule.onAllNodes(hasTestTag(NAVIGATION_TAG) and isEnabled()).firstOrNull() ?: return null
-        launcher.performClick()
-        settle()
+        clickAndSettle(launcher)
         return launcher
     }
 
     private fun dismissOverlay() {
-        composeRule.onAllNodes(hasTestTag(SCRIM_TAG)).firstOrNull()?.performClick()
-        settle()
+        composeRule.onAllNodes(hasTestTag(SCRIM_TAG)).firstOrNull()?.let(::clickAndSettle)
     }
 
     private fun overlayActions() =
@@ -232,11 +219,21 @@ class ScreenWalkScreenshotTest {
                 },
             ).fetchSemanticsNodes()
 
-    private fun settle() {
+    /**
+     * Core answers a click off the main thread, so the settled surface is
+     * the first tree that differs from the one the click landed on. A click
+     * Core ignores (a disabled step, an already-open overlay) times out
+     * quietly and the walk carries on from the unchanged surface.
+     */
+    private fun clickAndSettle(node: SemanticsNodeInteraction) {
+        val before = composeRule.onRoot().printToString()
+        node.performClick()
         composeRule.waitForIdle()
-        // Core commits presentation off the main thread; give it one beat and
-        // idle again so the captured frame is the settled surface.
-        Thread.sleep(SETTLE_MS)
+        runCatching {
+            composeRule.waitUntil(timeoutMillis = STEP_SETTLE_TIMEOUT_MS) {
+                composeRule.onRoot().printToString() != before
+            }
+        }
         composeRule.waitForIdle()
     }
 
@@ -334,7 +331,6 @@ class ScreenWalkScreenshotTest {
         const val MAX_ONBOARDING_STEPS = 8
         const val MAX_SLUG_LENGTH = 40
         const val LAUNCH_TIMEOUT_MS = 60_000L
-        const val SETTLE_MS = 300L
         const val STEP_SETTLE_TIMEOUT_MS = 3_000L
         const val QUIESCENCE_POLL_MS = 1_000L
 
