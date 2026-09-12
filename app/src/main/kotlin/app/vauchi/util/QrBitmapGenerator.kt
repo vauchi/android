@@ -64,4 +64,10 @@ fun generateQrBitmap(
         }
     } catch (_: Exception) {
         null
+    } catch (_: LinkageError) {
+        // A JVM host without the Rust library (Robolectric on a CI runner
+        // that only has the Android .so files) has no QR encoder; the
+        // caller draws its empty-QR surface, which is what a shell should
+        // show for an image it cannot produce.
+        null
     }
