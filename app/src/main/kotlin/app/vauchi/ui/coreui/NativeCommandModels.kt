@@ -147,6 +147,9 @@ sealed class CommandDTO {
         val animation: String,
     ) : CommandDTO()
 
+    /** Core's lock screen asks the shell to run the OS biometric prompt. */
+    data object RequestBiometricUnlock : CommandDTO()
+
     data class Unknown(
         val variantName: String,
     ) : CommandDTO()
@@ -189,6 +192,7 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
             "ImagePickFromLibrary" -> CommandDTO.ImagePickFromLibrary
             "ImageCaptureFromCamera" -> CommandDTO.ImageCaptureFromCamera
             "ImagePickFromFile" -> CommandDTO.ImagePickFromFile
+            "RequestBiometricUnlock" -> CommandDTO.RequestBiometricUnlock
             else -> CommandDTO.Unknown(element.content)
         }
 

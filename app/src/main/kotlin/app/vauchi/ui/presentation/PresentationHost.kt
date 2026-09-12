@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.FileProvider
 import app.vauchi.ui.coreui.CoreAppViewModel
+import app.vauchi.ui.coreui.BiometricUnlockHandler
 import app.vauchi.ui.coreui.FilePickHandler
 import app.vauchi.ui.coreui.LocalUseFrontCamera
 import java.io.File
@@ -94,6 +95,7 @@ fun PresentationHost(
         }.getOrDefault(false)
 
     FilePickHandler(viewModel)
+    BiometricUnlockHandler(viewModel)
 
     LaunchedEffect(toastMessage) {
         toastMessage?.let {

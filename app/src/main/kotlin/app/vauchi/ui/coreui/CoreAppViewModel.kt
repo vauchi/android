@@ -227,6 +227,33 @@ class CoreAppViewModel(
     }
 
     /**
+     * Biometric prompt requests emitted by core's
+     * `Command::RequestBiometricUnlock` (the lock screen's biometric
+     * action). `true` asks the Compose layer to run the OS prompt;
+     * `null` means "no pending request". The outcome returns to core as
+     * a hardware event: [handleBiometricUnlockSucceeded],
+     * [handleBiometricUnlockFailed] or [handleBiometricUnlockUnavailable].
+     */
+    private val _biometricUnlockRequest = MutableStateFlow<Boolean?>(null)
+    val biometricUnlockRequest: StateFlow<Boolean?> = _biometricUnlockRequest.asStateFlow()
+
+    fun consumeBiometricUnlockRequest() {
+        _biometricUnlockRequest.value = null
+    }
+
+    fun handleBiometricUnlockSucceeded() {
+        sendHardwareEvent(MobileEvent.BiometricUnlockSucceeded)
+    }
+
+    fun handleBiometricUnlockFailed(reason: String) {
+        sendHardwareEvent(MobileEvent.HardwareError(BIOMETRIC_TRANSPORT, reason))
+    }
+
+    fun handleBiometricUnlockUnavailable() {
+        sendHardwareEvent(MobileEvent.HardwareUnavailable(BIOMETRIC_TRANSPORT))
+    }
+
+    /**
      * Orientation lock requests emitted by core's
      * `Command::SetOrientationLock` (Phase 2c screen-presentation
      * lifecycle). [OrientationLockRequest.Lock] clamps the Activity's
@@ -903,6 +930,10 @@ class CoreAppViewModel(
                         )
                 }
 
+                is CommandDTO.RequestBiometricUnlock -> {
+                    _biometricUnlockRequest.value = true
+                }
+
                 is CommandDTO.SetScreenBrightness -> {
                     // Phase 2b screen-presentation lifecycle command.
                     // Mirrors `MultiStageExchangeEngine::screen_entered/exited`
@@ -1071,6 +1102,7 @@ class CoreAppViewModel(
 
     companion object {
         private const val TAG = "CoreAppVM"
+        private const val BIOMETRIC_TRANSPORT = "biometric"
 
         /**
          * Fallback foreground heartbeat cadence if core emits no
