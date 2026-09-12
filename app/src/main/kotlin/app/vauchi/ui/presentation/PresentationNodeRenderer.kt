@@ -38,6 +38,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -544,11 +547,68 @@ internal fun PresentationNodeRenderer(
     }
 }
 
+/**
+ * Two or three options are a mode switch (Perspective, Members /
+ * Visibility) and read as segments the design canvas puts one tap away;
+ * longer lists (Theme has fifteen) stay behind a dropdown, where a row
+ * of segments would not fit. Both shapes emit the same choice event.
+ */
+private const val MAX_SEGMENTED_OPTIONS = 3
+
 @Composable
 private fun ChoiceNode(
     surfaceId: String,
     node: PresentationNode.Choice,
     onEvent: (PresentationEvent) -> Unit,
+    modifier: Modifier,
+) {
+    val select: (ChoiceOption) -> Unit = { option ->
+        onEvent(PresentationEvent.choiceValue(surfaceId, node.bindingId, option.id))
+    }
+    if (node.options.size in 2..MAX_SEGMENTED_OPTIONS) {
+        SegmentedChoice(node, select, modifier)
+    } else {
+        DropdownChoice(node, select, modifier)
+    }
+}
+
+@Composable
+private fun SegmentedChoice(
+    node: PresentationNode.Choice,
+    select: (ChoiceOption) -> Unit,
+    modifier: Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(node.label, style = MaterialTheme.typography.labelMedium)
+        SingleChoiceSegmentedButtonRow(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription = node.accessibility.label
+                    },
+        ) {
+            node.options.forEachIndexed { index, option ->
+                SegmentedButton(
+                    selected = option.id == node.selected,
+                    onClick = { select(option) },
+                    enabled = node.enabled,
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = node.options.size),
+                ) {
+                    Text(option.label)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DropdownChoice(
+    node: PresentationNode.Choice,
+    select: (ChoiceOption) -> Unit,
     modifier: Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -581,13 +641,7 @@ private fun ChoiceNode(
                     },
                     onClick = {
                         expanded = false
-                        onEvent(
-                            PresentationEvent.choiceValue(
-                                surfaceId,
-                                node.bindingId,
-                                option.id,
-                            ),
-                        )
+                        select(option)
                     },
                 )
             }
