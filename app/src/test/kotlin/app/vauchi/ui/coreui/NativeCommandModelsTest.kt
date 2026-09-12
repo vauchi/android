@@ -30,4 +30,11 @@ class NativeCommandModelsTest {
 
         assertEquals(CommandDTO.Unknown("FutureEffect"), command)
     }
+
+    @Test
+    fun request_biometric_unlock_decodes_from_unit_variant() {
+        val command = json.decodeFromString<CommandDTO>(""""RequestBiometricUnlock"""")
+
+        assertEquals(CommandDTO.RequestBiometricUnlock, command)
+    }
 }
