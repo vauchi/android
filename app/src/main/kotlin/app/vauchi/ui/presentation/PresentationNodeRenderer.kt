@@ -393,6 +393,13 @@ internal fun PresentationNodeRenderer(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    node.iconToken?.let(::statusIcon)?.let { glyph ->
+                        Icon(
+                            imageVector = glyph,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(node.title, style = MaterialTheme.typography.titleMedium)
                         node.detail?.let {
