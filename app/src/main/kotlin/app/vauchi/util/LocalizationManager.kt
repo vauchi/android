@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import androidx.core.content.pm.PackageInfoCompat
+import app.vauchi.BuildConfig
 import uniffi.vauchi_platform.MobileLocale
 import uniffi.vauchi_platform.MobileLocaleInfo
 import uniffi.vauchi_platform.PlatformAppEngine
@@ -96,10 +97,10 @@ class LocalizationManager(
     private fun extractAndInitLocales(context: Context) {
         val localesDir = File(context.filesDir, "locales")
         val versionFile = File(localesDir, ".version")
-        val currentVersion = getAppVersionCode(context)
+        val currentVersion = getLocaleCacheKey(context)
 
-        // Skip extraction if already done for this app version
-        if (versionFile.exists() && versionFile.readText().trim() == currentVersion) {
+        // Reuse the extracted copy only when it came from this exact build
+        if (versionFile.exists() && !shouldExtractLocales(versionFile.readText(), currentVersion)) {
             try {
                 initLocales(localesDir.absolutePath)
             } catch (e: LinkageError) {
@@ -154,10 +155,14 @@ class LocalizationManager(
         return root.filter { it.matches(localePattern) }
     }
 
-    private fun getAppVersionCode(context: Context): String =
+    private fun getLocaleCacheKey(context: Context): String =
         try {
             val info = context.packageManager.getPackageInfo(context.packageName, 0)
-            "${info.versionName}-${PackageInfoCompat.getLongVersionCode(info)}"
+            localeCacheKey(
+                info.versionName.orEmpty(),
+                PackageInfoCompat.getLongVersionCode(info),
+                BuildConfig.LOCALES_DIGEST,
+            )
         } catch (_: Exception) {
             "unknown"
         }
@@ -310,3 +315,22 @@ class LocalizationManager(
             }
     }
 }
+
+/**
+ * Cache key recorded beside the extracted catalogue. It carries a digest
+ * of the packaged catalogue as well as the version, because the strings
+ * ship in the APK and change without the version moving: core renders
+ * `Missing: <key>` for anything the stale copy lacks, since a
+ * store-loaded locale wins hit-or-miss over the compiled-in fallback.
+ */
+internal fun localeCacheKey(
+    versionName: String,
+    versionCode: Long,
+    catalogueDigest: String,
+): String = "$versionName-$versionCode-$catalogueDigest"
+
+/** Whether the shipped catalogue must be written over the extracted one. */
+internal fun shouldExtractLocales(
+    recordedKey: String?,
+    currentKey: String,
+): Boolean = recordedKey?.trim().orEmpty() != currentKey

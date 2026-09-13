@@ -1,3 +1,4 @@
+import java.security.MessageDigest
 import org.gradle.api.tasks.PathSensitivity
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -35,6 +36,23 @@ android {
             timeZone = TimeZone.getTimeZone("UTC")
         }.format(Date())
         buildConfigField("String", "BUILD_ID", "\"$buildTimestamp\"")
+
+        // Digest of the locale catalogue packaged from ../locales. The
+        // extracted copy under filesDir is reused only while this matches,
+        // so a catalogue edit always reaches the device even when the
+        // version is unchanged. Reading the files here makes them
+        // configuration-cache inputs, so the digest cannot go stale.
+        val localesDigest = rootProject.file("../locales")
+            .listFiles { f -> f.isFile && f.name.matches(Regex("^[a-z]{2}(-[A-Z]{2})?\\.json$")) }
+            ?.sortedBy { it.name }
+            ?.fold(MessageDigest.getInstance("SHA-256")) { md, f ->
+                md.apply { update(f.name.toByteArray()); update(f.readBytes()) }
+            }
+            ?.digest()
+            ?.joinToString("") { "%02x".format(it) }
+            ?.take(16)
+            ?: "none"
+        buildConfigField("String", "LOCALES_DIGEST", "\"$localesDigest\"")
 
         // Load native libraries for these ABIs
         // arm64-v8a: Modern 64-bit ARM devices
