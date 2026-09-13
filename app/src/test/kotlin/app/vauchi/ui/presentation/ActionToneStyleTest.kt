@@ -33,6 +33,34 @@ class ActionToneStyleTest {
         )
 
     @Test
+    fun `a standard action in the action menu is outlined, not a second primary`() {
+        // The canvas draws Group View / Preview as as outlined affordances;
+        // a menu of filled primaries gives the sheet four competing calls to
+        // action and no hierarchy.
+        val style = toneColors(ActionTone.Standard, colorScheme, statusColors, ActionPlacement.Menu)
+
+        assertEquals(ActionToneEmphasis.Outlined, style.emphasis)
+        assertEquals(colorScheme.primary, style.accent)
+    }
+
+    @Test
+    fun `a destructive action keeps its weight inside the action menu`() {
+        val style =
+            toneColors(ActionTone.Destructive, colorScheme, statusColors, ActionPlacement.Menu)
+
+        assertEquals(ActionToneEmphasis.Filled, style.emphasis)
+        assertEquals(colorScheme.error, style.accent)
+    }
+
+    @Test
+    fun `a serious action stays outlined and warning-coloured in the menu`() {
+        val style = toneColors(ActionTone.Serious, colorScheme, statusColors, ActionPlacement.Menu)
+
+        assertEquals(ActionToneEmphasis.Outlined, style.emphasis)
+        assertEquals(statusColors.warning, style.accent)
+    }
+
+    @Test
     fun `standard tone is filled in the theme primary colour`() {
         val style = toneColors(ActionTone.Standard, colorScheme, statusColors)
 
