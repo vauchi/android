@@ -286,7 +286,13 @@ private fun OverlayActionButton(
     index: Int,
     onAction: (PresentationEvent) -> Unit,
 ) {
-    val style = toneColors(action.tone, MaterialTheme.colorScheme, LocalStatusColors.current)
+    val style =
+        toneColors(
+            action.tone,
+            MaterialTheme.colorScheme,
+            LocalStatusColors.current,
+            ActionPlacement.Menu,
+        )
     val modifier =
         Modifier
             .fillMaxWidth()
