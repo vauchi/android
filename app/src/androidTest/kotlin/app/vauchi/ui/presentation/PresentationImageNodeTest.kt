@@ -7,6 +7,7 @@ package app.vauchi.ui.presentation
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
@@ -45,6 +46,7 @@ class PresentationImageNodeTest {
         fallbackText: String?,
         circular: Boolean,
         tokens: PresentationTokens = DefaultPresentationTokens,
+        size: Int? = null,
     ) {
         composeTestRule.setContent {
             CompositionLocalProvider(LocalPresentationTokens provides tokens) {
@@ -57,6 +59,7 @@ class PresentationImageNodeTest {
                             fallbackText = fallbackText,
                             circular = circular,
                             brightness = 1.0,
+                            size = size,
                             activation = null,
                             accessibility = AccessibilitySpec(label, null),
                         ),
@@ -140,5 +143,52 @@ class PresentationImageNodeTest {
         val widthDp = with(composeTestRule.density) { widthPx.toDp() }
 
         assertEquals(64.dp, widthDp)
+    }
+
+    /**
+     * Core's `size` (e.g. the onboarding mark's 88) draws a square that
+     * many dp across, not the touch-target floor `circular` would
+     * otherwise pick.
+     */
+    @Test
+    fun anExplicitSizeDrawsASquareOfThatSideRatherThanTheTouchTargetFloor() {
+        render(fallbackText = "V", circular = false, size = 88)
+
+        val bounds =
+            composeTestRule
+                .onNodeWithContentDescription(label)
+                .fetchSemanticsNode()
+                .size
+        val widthDp = with(composeTestRule.density) { bounds.width.toDp() }
+        val heightDp = with(composeTestRule.density) { bounds.height.toDp() }
+
+        assertEquals(88.dp, widthDp)
+        assertEquals(88.dp, heightDp)
+    }
+
+    /**
+     * "Never wider than the width available": a `size` larger than the
+     * screen must still fit inside it rather than overflow the layout.
+     */
+    @Test
+    fun anExplicitSizeNeverExceedsTheAvailableWidth() {
+        render(fallbackText = "V", circular = false, size = 4000)
+
+        val rootWidthPx =
+            composeTestRule
+                .onRoot()
+                .fetchSemanticsNode()
+                .size.width
+        val bounds =
+            composeTestRule
+                .onNodeWithContentDescription(label)
+                .fetchSemanticsNode()
+                .size
+
+        assertTrue(
+            bounds.width <= rootWidthPx,
+            "the image is ${bounds.width}px across, wider than the ${rootWidthPx}px available",
+        )
+        assertEquals(bounds.width, bounds.height, "a capped size must stay square")
     }
 }
