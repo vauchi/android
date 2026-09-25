@@ -161,7 +161,9 @@ object PresentationProtocol {
     private fun overlayKind(value: String): OverlayKind =
         when (value) {
             "navigation" -> OverlayKind.Navigation
+
             "action_menu" -> OverlayKind.ActionMenu
+
             // A newer Core's overlay kind still lists actions; an action
             // menu is the presentation that shows all of them.
             else -> OverlayKind.ActionMenu
@@ -350,6 +352,7 @@ object PresentationProtocol {
             fallbackText = value.nullableString("fallback_text"),
             circular = value.string("shape") == "circle",
             brightness = value.double("brightness"),
+            size = value.nullableInt("size"),
             activation = value.nullableObject("activation")?.let(::action),
             accessibility = accessibility(value),
         )

@@ -14,12 +14,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
@@ -324,12 +327,32 @@ internal fun PresentationNodeRenderer(
                             // the initials used to sit in. Diameter is the
                             // surface's minimumTargetSize token — the same
                             // floor macOS frames its fallback avatar at —
-                            // rather than a shell-picked constant.
+                            // rather than a shell-picked constant, unless
+                            // Core sent an explicit `size`.
                             .then(
-                                if (node.circular || bitmap == null) {
-                                    Modifier.size(minimumTouchTarget(tokens))
-                                } else {
-                                    Modifier.fillMaxWidth()
+                                when (
+                                    val dimension =
+                                        imageDimension(node.circular, bitmap != null, node.size)
+                                ) {
+                                    ImageDimension.TouchTarget -> {
+                                        Modifier.size(minimumTouchTarget(tokens))
+                                    }
+
+                                    ImageDimension.NaturalWidth -> {
+                                        Modifier.fillMaxWidth()
+                                    }
+
+                                    is ImageDimension.Fixed -> {
+                                        // widthIn's max already intersects the
+                                        // incoming constraint from the row, so
+                                        // this never grows past the available
+                                        // width even when `side` would.
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .wrapContentWidth(Alignment.CenterHorizontally)
+                                            .widthIn(max = dimension.side)
+                                            .aspectRatio(1f)
+                                    }
                                 },
                             ).then(
                                 if (activation != null) {

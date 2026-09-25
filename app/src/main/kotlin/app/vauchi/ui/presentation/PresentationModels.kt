@@ -166,6 +166,10 @@ sealed interface PresentationNode {
         val fallbackText: String?,
         val circular: Boolean,
         val brightness: Double,
+        // Absent when Core leaves sizing to the shell (all avatars today).
+        // Present only where Core wants explicit sizing, e.g. the
+        // onboarding mark.
+        val size: Int?,
         val activation: ActionSpec?,
         val accessibility: AccessibilitySpec,
     ) : PresentationNode
