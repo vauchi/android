@@ -19,20 +19,21 @@ import app.vauchi.nfc.dispatchNfcCommand
 import app.vauchi.ui.presentation.OverlayKind
 import app.vauchi.ui.presentation.PresentationCommand
 import app.vauchi.ui.presentation.PresentationEvent
+import app.vauchi.ui.presentation.PresentationNode
 import app.vauchi.ui.presentation.PresentationProtocol
 import app.vauchi.ui.presentation.PresentationReducer
 import app.vauchi.ui.presentation.PresentationState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -86,6 +87,7 @@ class CoreAppViewModel(
             }
         }
     }
+
     private val json = Json { ignoreUnknownKeys = true }
     private val presentationMutex = Mutex()
 
@@ -626,10 +628,12 @@ class CoreAppViewModel(
 
     private fun dispatchPresentationEvents(vararg events: PresentationEvent) {
         viewModelScope.launch {
+            var dispatching: PresentationEvent? = null
             try {
                 _actionInFlight.value = true
                 presentationMutex.withLock {
                     for (event in events) {
+                        dispatching = event
                         val commandJson =
                             withContext(Dispatchers.IO) {
                                 appEngine.dispatchJson(eventJson = event.toJson())
@@ -638,13 +642,52 @@ class CoreAppViewModel(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to dispatch presentation event", e)
+                Log.e(
+                    TAG,
+                    "Failed to dispatch presentation event " +
+                        "${dispatching?.let(::eventIdentity)} " +
+                        "active=${describeActiveSurface()}",
+                    e,
+                )
                 _error.value = "Presentation failed: ${e.message}"
             } finally {
                 _actionInFlight.value = false
             }
         }
     }
+
+    // Opaque ids only: a ValueChanged value can carry QR payloads, which are
+    // never logged (logging-rules.md).
+    private fun eventIdentity(event: PresentationEvent): String =
+        when (event) {
+            is PresentationEvent.ValueChanged -> {
+                "ValueChanged surface=${event.surfaceId} binding=${event.bindingId}"
+            }
+
+            is PresentationEvent.ActionActivated -> {
+                "ActionActivated surface=${event.surfaceId} interaction=${event.interactionId}"
+            }
+
+            else -> {
+                event::class.simpleName ?: "event"
+            }
+        }
+
+    private fun describeActiveSurface(): String {
+        val state = _presentationState.value
+        val id = state.activeSurfaceId ?: return "none"
+        val surface = state.surfaces[id] ?: return "$id(missing)"
+        return "$id rev=${surface.revision} captureQr=${captureQrIds(surface.nodes)}"
+    }
+
+    private fun captureQrIds(nodes: List<PresentationNode>): List<String> =
+        nodes.flatMap { node ->
+            when (node) {
+                is PresentationNode.Qr -> if (node.capture) listOf(node.id) else emptyList()
+                is PresentationNode.Group -> captureQrIds(node.children)
+                else -> emptyList()
+            }
+        }
 
     private fun applyPresentationEnvelope(commandJson: String) {
         val envelope = PresentationProtocol.decodeEnvelope(commandJson)
