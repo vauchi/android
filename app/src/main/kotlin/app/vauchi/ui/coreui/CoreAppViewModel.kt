@@ -1115,7 +1115,7 @@ class CoreAppViewModel(
                     // instead of waiting forever
                     // (2026-06-11-silent-failure-mode-umbrella).
                     Log.w(TAG, "Undecoded exchange command: ${cmd.variantName}")
-                    sendHardwareEvent(MobileEvent.HardwareUnavailable(cmd.variantName))
+                    undecodedCommandReply(cmd.variantName)?.let(::sendHardwareEvent)
                 }
 
                 else -> {
