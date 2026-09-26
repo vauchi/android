@@ -21,6 +21,17 @@ import kotlinx.serialization.json.long
 object PresentationProtocol {
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** Commands that change the surface state; keep in step with [decodeCommand]. */
+    val SURFACE_COMMAND_VARIANTS =
+        setOf(
+            "ReplaceSurface",
+            "SetContextBar",
+            "SetNavigation",
+            "PresentOverlay",
+            "DismissOverlay",
+            "SetPresentationProfile",
+        )
+
     fun decodeEnvelope(value: String): PresentationEnvelope {
         val root = json.parseToJsonElement(value).jsonObject
         return PresentationEnvelope(
