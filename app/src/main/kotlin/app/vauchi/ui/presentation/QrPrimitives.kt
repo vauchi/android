@@ -33,8 +33,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -92,11 +94,15 @@ internal fun QrDisplay(
 
 /**
  * The callback the camera analyzer holds for its whole bind. The analyzer is
- * built once per CameraX bind, so whatever it captures is what every later
- * decode is reported through.
+ * built once per CameraX bind, but Core re-issues the scan binding id on every
+ * surface revision and rejects stale ones — so the forwarder must reach the
+ * `onScanned` of the latest render, not the one captured at bind time.
  */
 @Composable
-internal fun rememberScanForwarder(onScanned: (String) -> Unit): (String) -> Unit = remember { onScanned }
+internal fun rememberScanForwarder(onScanned: (String) -> Unit): (String) -> Unit {
+    val latest by rememberUpdatedState(onScanned)
+    return remember { { code: String -> latest(code) } }
+}
 
 @Composable
 internal fun QrScanner(
