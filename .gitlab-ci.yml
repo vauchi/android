@@ -47,6 +47,9 @@ include:
       - '/ci-templates/github-mirror.yml'
       - '/ci-templates/vrt-upload.yml'
       - '/ci-templates/perf.yml'
+      - '/ci-templates/verified-fetch.yml'
+      - '/ci-templates/tool-install.yml'
+      - '/ci-templates/cross-cutting-lint.yml'
 
 # Stub anchor required by perf.yml templates (defined in rust-base.yml for Rust repos)
 .self-hosted:
@@ -388,6 +391,13 @@ lint:cross-cutting-blocking:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# Exact-zero release gate (ADR-066): a release tag may carry no boundary
+# violations, live or stored — MR-time lint:cross-cutting-blocking above
+# still allows existing debt to shrink gradually. deploy:internal needs
+# this job so a failing gate blocks the Play Store upload.
+release:ratchet-zero:
+  extends: .release-ratchet-zero
 
 lint:images:
   extends: .image-lint
@@ -1104,6 +1114,7 @@ deploy:internal:
   needs:
     - job: build:release
       artifacts: true
+    - job: release:ratchet-zero
   script:
     # Decode keystore — not used for upload, but Gradle evaluates signingConfigs
     # during configuration phase and will fail if storeFile path doesn't exist
