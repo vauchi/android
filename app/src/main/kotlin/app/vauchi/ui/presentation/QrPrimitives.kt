@@ -90,6 +90,14 @@ internal fun QrDisplay(
     }
 }
 
+/**
+ * The callback the camera analyzer holds for its whole bind. The analyzer is
+ * built once per CameraX bind, so whatever it captures is what every later
+ * decode is reported through.
+ */
+@Composable
+internal fun rememberScanForwarder(onScanned: (String) -> Unit): (String) -> Unit = remember { onScanned }
+
 @Composable
 internal fun QrScanner(
     accessibilityLabel: String?,
@@ -152,6 +160,7 @@ internal fun QrScanner(
         color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         androidx.compose.runtime.key(useFrontCamera) {
+            val forwardScan = rememberScanForwarder(onScanned)
             // Bind-failure overlay state: set from the bindToLifecycle
             // catch block when CameraX cannot acquire the camera (most
             // commonly the recreate-on-flip race with the previous
@@ -277,7 +286,7 @@ internal fun QrScanner(
                                                         )
                                                         // Forward the opaque payload to the
                                                         // generic node binding.
-                                                        onScanned(code)
+                                                        forwardScan(code)
                                                     },
                                                 ),
                                             )
