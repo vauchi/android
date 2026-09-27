@@ -564,7 +564,7 @@ class CoreAppViewModel(
                     appEngine.dispatchJson(eventJson = event.toEventJson())
                 }
             presentationMutex.withLock {
-                applyPresentationEnvelope(resultJson)
+                applyPresentationEnvelope(resultJson, source = "hardware:${event::class.simpleName}")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to send hardware event", e)
@@ -591,7 +591,7 @@ class CoreAppViewModel(
                         withContext(Dispatchers.IO) {
                             appEngine.initialCommandsJson()
                         }
-                    applyPresentationEnvelope(commandJson)
+                    applyPresentationEnvelope(commandJson, source = "reload")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load presentation", e)
@@ -634,6 +634,9 @@ class CoreAppViewModel(
                 presentationMutex.withLock {
                     for (event in events) {
                         dispatching = event
+                        if (_presentationState.value.activeOverlay != null) {
+                            Log.i(TAG, "[Overlay] open while dispatching ${eventIdentity(event)}")
+                        }
                         val commandJson =
                             withContext(Dispatchers.IO) {
                                 appEngine.dispatchJson(eventJson = event.toJson())
@@ -668,10 +671,32 @@ class CoreAppViewModel(
                 "ActionActivated surface=${event.surfaceId} interaction=${event.interactionId}"
             }
 
+            // Variant name only: DeepLinkOpened's value can be an exchange link.
+            is PresentationEvent.Raw -> {
+                "Raw " + Regex("^\"?\\{?\"?([A-Za-z]+)").find(event.toJson())?.groupValues?.get(1)
+            }
+
             else -> {
                 event::class.simpleName ?: "event"
             }
         }
+
+    // Diagnostics for vauchi/private#9 GL-3: menus are overlays that only show
+    // while their surface keeps the revision they were raised at; log every
+    // change of the visible overlay with the surface revision and the path
+    // (event dispatch or reload) that caused it.
+    private fun logOverlayChange(
+        before: PresentationState,
+        after: PresentationState,
+        source: String,
+    ) {
+        val shownBefore = before.activeOverlay?.overlay?.kind
+        val shownAfter = after.activeOverlay?.overlay?.kind
+        if (shownBefore == shownAfter) return
+        val revBefore = before.activeSurfaceId?.let(before.surfaces::get)?.revision
+        val revAfter = after.activeSurfaceId?.let(after.surfaces::get)?.revision
+        Log.i(TAG, "[Overlay] $shownBefore -> $shownAfter surfaceRev $revBefore -> $revAfter via $source")
+    }
 
     private fun describeActiveSurface(): String {
         val state = _presentationState.value
@@ -689,14 +714,19 @@ class CoreAppViewModel(
             }
         }
 
-    private fun applyPresentationEnvelope(commandJson: String) {
+    private fun applyPresentationEnvelope(
+        commandJson: String,
+        source: String = "dispatch",
+    ) {
         val envelope = PresentationProtocol.decodeEnvelope(commandJson)
+        val before = _presentationState.value
         val result =
             PresentationReducer.apply(
-                _presentationState.value,
+                before,
                 envelope.commands,
             )
         _presentationState.value = result.state
+        logOverlayChange(before, result.state, source)
         handlePresentationEffects(result.effects)
         onPresentationCommitted()
     }
