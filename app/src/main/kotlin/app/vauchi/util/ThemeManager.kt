@@ -197,6 +197,20 @@ class ThemeManager(
 /**
  * Convert hex color string to Compose Color.
  */
+
+/**
+ * Parses a colour from themes.json, which writes alpha in CSS order
+ * (RRGGBBAA) — Android's parser expects AARRGGBB.
+ */
+fun themeHexToColor(hex: String): Color {
+    val digits = hex.removePrefix("#")
+    return when (digits.length) {
+        6 -> hexToColor(digits)
+        8 -> hexToColor(digits.substring(6) + digits.substring(0, 6))
+        else -> Color.Transparent
+    }
+}
+
 fun hexToColor(hex: String): Color {
     val colorString = hex.removePrefix("#")
     return try {

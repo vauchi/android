@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import app.vauchi.util.ThemeManager
 import app.vauchi.util.hexToColor
+import app.vauchi.util.themeHexToColor
 import uniffi.vauchi_platform.MobileTheme
 
 /**
@@ -52,6 +53,7 @@ private fun buildColorScheme(
         onSurfaceVariant = hexToColor(c.textSecondary),
         error = hexToColor(c.error),
         outline = hexToColor(c.border),
+        scrim = c.scrim?.let(::themeHexToColor) ?: base.scrim,
     )
 }
 

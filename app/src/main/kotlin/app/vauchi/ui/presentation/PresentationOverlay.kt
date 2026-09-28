@@ -42,7 +42,6 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -200,7 +199,7 @@ fun PresentationOverlay(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.34f))
+                    .background(MaterialTheme.colorScheme.scrim)
                     .testTag("overlay.scrim")
                     .clickable(onClick = onDismiss),
         )
