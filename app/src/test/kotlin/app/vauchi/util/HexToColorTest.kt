@@ -12,14 +12,13 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class HexToColorTest {
-
     private fun assertColorComponents(
         expectedRed: Float,
         expectedGreen: Float,
         expectedBlue: Float,
         expectedAlpha: Float,
         actual: Color,
-        delta: Float = 0.01f
+        delta: Float = 0.01f,
     ) {
         assertEquals("red", expectedRed, actual.red, delta)
         assertEquals("green", expectedGreen, actual.green, delta)
@@ -79,6 +78,23 @@ class HexToColorTest {
     fun `hexToColor handles semi-transparent color`() {
         val color = hexToColor("#80FF0000")
         assertColorComponents(1f, 0f, 0f, 0.5f, color, delta = 0.02f)
+    }
+
+    @Test
+    fun `themeHexToColor reads 8-digit theme colours as RRGGBBAA`() {
+        val scrim = themeHexToColor("#00000080")
+        assertColorComponents(0f, 0f, 0f, 0.5f, scrim, delta = 0.02f)
+    }
+
+    @Test
+    fun `themeHexToColor reads 6-digit theme colours as opaque`() {
+        val red = themeHexToColor("#b3261e")
+        assertColorComponents(0xb3 / 255f, 0x26 / 255f, 0x1e / 255f, 1f, red)
+    }
+
+    @Test
+    fun `themeHexToColor returns Transparent for invalid hex`() {
+        assertEquals(Color.Transparent, themeHexToColor("#12345"))
     }
 
     @Test
