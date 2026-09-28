@@ -20,6 +20,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -72,6 +73,16 @@ internal fun PresentationSurface(
             },
     ) {
         CompositionLocalProvider(LocalPresentationTokens provides surface.tokens) {
+            if (surface.layout == SURFACE_LAYOUT_FIXED) {
+                FixedSurfaceContent(
+                    surface = surface,
+                    onEvent = onEvent,
+                    onCameraPermissionDenied = onCameraPermissionDenied,
+                    focusedBindingId = focusedBindingId,
+                    onFocusedBinding = onFocusedBinding,
+                )
+                return@CompositionLocalProvider
+            }
             LazyColumn(
                 modifier =
                     Modifier
@@ -106,6 +117,70 @@ internal fun PresentationSurface(
                     items = surface.nodes.withIndex().toList(),
                     key = { (index, node) -> node.stableKey(index) },
                 ) { (_, node) ->
+                    PresentationNodeRenderer(
+                        surfaceId = surface.surfaceId,
+                        node = node,
+                        onEvent = onEvent,
+                        onCameraPermissionDenied = onCameraPermissionDenied,
+                        focusedBindingId = focusedBindingId,
+                        onFocusedBinding = onFocusedBinding,
+                    )
+                }
+            }
+        }
+    }
+}
+
+internal const val SURFACE_LAYOUT_FIXED = "fixed"
+
+/**
+ * True for a capture QR rendered inside a `Fixed` surface, where it takes
+ * the height left over instead of a fixed box.
+ */
+internal val LocalFillsRemainingHeight = compositionLocalOf { false }
+
+/**
+ * Core marks a surface `Fixed` when its content must stay on one screen
+ * (the exchange QR and the camera that reads the peer's). A scrolling list
+ * would push the camera preview below the fold, so the preview takes the
+ * height the other nodes leave instead.
+ */
+@Composable
+private fun FixedSurfaceContent(
+    surface: SurfaceSpec,
+    onEvent: (PresentationEvent) -> Unit,
+    onCameraPermissionDenied: () -> Unit,
+    focusedBindingId: String?,
+    onFocusedBinding: (String, Boolean) -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(
+                    horizontal = surface.tokens.spacingLarge.dp,
+                    vertical = surface.tokens.spacingMedium.dp,
+                ),
+        verticalArrangement = Arrangement.spacedBy(surface.tokens.spacingMedium.dp),
+    ) {
+        Text(
+            surface.title,
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        surface.subtitle?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        surface.nodes.forEach { node ->
+            val fillsRemaining = node is PresentationNode.Qr && node.capture
+            androidx.compose.foundation.layout.Box(
+                modifier = if (fillsRemaining) Modifier.weight(1f).fillMaxWidth() else Modifier,
+            ) {
+                CompositionLocalProvider(LocalFillsRemainingHeight provides fillsRemaining) {
                     PresentationNodeRenderer(
                         surfaceId = surface.surfaceId,
                         node = node,

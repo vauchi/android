@@ -158,7 +158,9 @@ internal fun QrScanner(
     Surface(
         modifier =
             modifier
-                .aspectRatio(1f)
+                // Portrait shape of the 640×480 analysis stream, so the
+                // FIT_CENTER preview shows the whole frame the decoder reads.
+                .aspectRatio(3f / 4f, matchHeightConstraintsFirst = true)
                 .clip(RoundedCornerShape(12.dp))
                 .semantics {
                     accessibilityLabel?.let { contentDescription = it }
@@ -198,7 +200,11 @@ internal fun QrScanner(
                     factory = { ctx ->
                         val previewView =
                             PreviewView(ctx).apply {
-                                scaleType = PreviewView.ScaleType.FILL_CENTER
+                                // Fit, not fill: the viewfinder is how a person
+                                // lines the phones up, and a cropped preview shows
+                                // less than the analyser reads, so a peer QR partly
+                                // out of frame still looked whole (vauchi/private#9).
+                                scaleType = PreviewView.ScaleType.FIT_CENTER
                                 // PERFORMANCE = SurfaceView when supported (default).
                                 // The earlier COMPATIBLE pin used TextureView; on the
                                 // Samsung S7 (Exynos 8890, Android 8) TextureView in a

@@ -337,6 +337,7 @@ object PresentationProtocol {
             rows = value.array("rows").map { row(it.jsonObject) },
             searchable = value.boolean("searchable"),
             accessibility = accessibility(value),
+            style = value.nullableString("style"),
         )
 
     private fun row(value: JsonObject): PresentationRow =

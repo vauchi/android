@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -277,27 +278,52 @@ internal fun PresentationNodeRenderer(
         }
 
         is PresentationNode.ListNode -> {
-            Column(
-                modifier =
-                    modifier
-                        .fillMaxWidth()
-                        .semantics {
+            if (node.drawsButtons) {
+                Column(
+                    modifier =
+                        modifier.semantics {
                             contentDescription = node.accessibility.label
                         },
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                node.label?.let {
-                    Text(it, style = MaterialTheme.typography.titleMedium)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    node.rows.forEach { row ->
+                        row.activation?.let { action ->
+                            OutlinedButton(
+                                onClick = { onEvent(actionEvent(surfaceId, action)) },
+                                enabled = action.enabled,
+                                modifier =
+                                    Modifier.semantics {
+                                        contentDescription = action.accessibilityLabel
+                                    },
+                            ) {
+                                Text(action.label, maxLines = 2)
+                            }
+                        }
+                    }
                 }
-                node.rows.forEach { row ->
-                    PresentationListRow(
-                        surfaceId,
-                        row,
-                        onEvent,
-                        onCameraPermissionDenied,
-                        focusedBindingId,
-                        onFocusedBinding,
-                    )
+            } else {
+                Column(
+                    modifier =
+                        modifier
+                            .fillMaxWidth()
+                            .semantics {
+                                contentDescription = node.accessibility.label
+                            },
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    node.label?.let {
+                        Text(it, style = MaterialTheme.typography.titleMedium)
+                    }
+                    node.rows.forEach { row ->
+                        PresentationListRow(
+                            surfaceId,
+                            row,
+                            onEvent,
+                            onCameraPermissionDenied,
+                            focusedBindingId,
+                            onFocusedBinding,
+                        )
+                    }
                 }
             }
         }
@@ -440,10 +466,12 @@ internal fun PresentationNodeRenderer(
         }
 
         is PresentationNode.Qr -> {
+            val fillsRemaining = LocalFillsRemainingHeight.current
             Column(
                 modifier =
                     modifier
                         .fillMaxWidth()
+                        .then(if (fillsRemaining) Modifier.fillMaxHeight() else Modifier)
                         .semantics {
                             contentDescription = node.accessibility.label
                         },
@@ -466,7 +494,12 @@ internal fun PresentationNodeRenderer(
                             )
                         },
                         onPermissionDenied = onCameraPermissionDenied,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier =
+                            if (fillsRemaining) {
+                                Modifier.weight(1f)
+                            } else {
+                                Modifier.widthIn(max = 120.dp)
+                            },
                     )
                 } else {
                     node.payloads.firstOrNull()?.let {

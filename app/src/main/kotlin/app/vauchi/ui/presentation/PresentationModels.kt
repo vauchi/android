@@ -19,6 +19,8 @@ enum class ActionTone {
     Destructive,
 }
 
+internal const val LIST_STYLE_BUTTONS = "buttons"
+
 data class ActionSpec(
     val interactionId: String,
     val label: String,
@@ -158,7 +160,15 @@ sealed interface PresentationNode {
         val rows: List<PresentationRow>,
         val searchable: Boolean,
         val accessibility: AccessibilitySpec,
-    ) : PresentationNode
+        /**
+         * Absent for an ordinary list; "buttons" asks for native buttons.
+         * Kept as a string so a style this build does not know still draws
+         * as rows instead of failing the whole surface.
+         */
+        val style: String? = null,
+    ) : PresentationNode {
+        val drawsButtons: Boolean get() = style == LIST_STYLE_BUTTONS
+    }
 
     data class Image(
         val id: String?,
