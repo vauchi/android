@@ -176,7 +176,7 @@ private fun FixedSurfaceContent(
             )
         }
         surface.nodes.forEach { node ->
-            val fillsRemaining = node is PresentationNode.Qr && node.capture
+            val fillsRemaining = node.holdsCamera
             androidx.compose.foundation.layout.Box(
                 modifier = if (fillsRemaining) Modifier.weight(1f).fillMaxWidth() else Modifier,
             ) {

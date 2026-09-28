@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -70,6 +71,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.vauchi.ui.theme.MonospaceFontFamily
 import kotlin.math.roundToInt
@@ -231,10 +233,12 @@ internal fun PresentationNodeRenderer(
         }
 
         is PresentationNode.Group -> {
+            val fillsRemaining = LocalFillsRemainingHeight.current
             Column(
                 modifier =
                     modifier
                         .fillMaxWidth()
+                        .then(if (fillsRemaining && node.horizontal) Modifier.fillMaxHeight() else Modifier)
                         .semantics {
                             contentDescription = node.accessibility.label
                         },
@@ -243,7 +247,28 @@ internal fun PresentationNodeRenderer(
                 node.label?.let {
                     Text(it, style = MaterialTheme.typography.titleMedium)
                 }
-                if (node.horizontal) {
+                if (node.horizontal && fillsRemaining) {
+                    // On a fixed screen nothing scrolls: the camera sizes
+                    // itself from the height it is given and the siblings
+                    // share the width it leaves.
+                    Row(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        node.children.forEach {
+                            PresentationNodeRenderer(
+                                surfaceId,
+                                it,
+                                onEvent,
+                                onCameraPermissionDenied,
+                                focusedBindingId,
+                                onFocusedBinding,
+                                modifier = if (it.holdsCamera) Modifier.fillMaxHeight() else Modifier.weight(1f),
+                            )
+                        }
+                    }
+                } else if (node.horizontal) {
                     Row(
                         modifier =
                             Modifier
@@ -292,11 +317,13 @@ internal fun PresentationNodeRenderer(
                                 onClick = { onEvent(actionEvent(surfaceId, action)) },
                                 enabled = action.enabled,
                                 modifier =
-                                    Modifier.semantics {
-                                        contentDescription = action.accessibilityLabel
-                                    },
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .semantics {
+                                            contentDescription = action.accessibilityLabel
+                                        },
                             ) {
-                                Text(action.label, maxLines = 2)
+                                Text(action.label, maxLines = 2, textAlign = TextAlign.Center)
                             }
                         }
                     }
@@ -467,46 +494,75 @@ internal fun PresentationNodeRenderer(
 
         is PresentationNode.Qr -> {
             val fillsRemaining = LocalFillsRemainingHeight.current
+            // A camera filling a fixed screen takes its width from its
+            // height; claiming the full width would starve its siblings.
+            val sizedByHeight = fillsRemaining && node.capture
             Column(
                 modifier =
                     modifier
-                        .fillMaxWidth()
+                        .then(if (sizedByHeight) Modifier else Modifier.fillMaxWidth())
                         .then(if (fillsRemaining) Modifier.fillMaxHeight() else Modifier)
                         .semantics {
                             contentDescription = node.accessibility.label
                         },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                node.label?.let {
-                    Text(it, style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(8.dp))
+                // A camera's label rides on its preview so the preview
+                // keeps the height a heading line would take.
+                if (!node.capture) {
+                    node.label?.let {
+                        Text(it, style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(8.dp))
+                    }
                 }
                 if (node.capture) {
-                    QrScanner(
-                        accessibilityLabel = node.accessibility.label,
-                        onScanned = {
-                            onEvent(
-                                PresentationEvent.textValue(
-                                    surfaceId,
-                                    node.id,
-                                    it,
-                                ),
-                            )
-                        },
-                        onPermissionDenied = onCameraPermissionDenied,
+                    Box(
                         modifier =
                             if (fillsRemaining) {
                                 Modifier.weight(1f)
                             } else {
                                 Modifier.widthIn(max = 120.dp)
                             },
-                    )
+                        contentAlignment = Alignment.BottomCenter,
+                    ) {
+                        QrScanner(
+                            accessibilityLabel = node.accessibility.label,
+                            onScanned = {
+                                onEvent(
+                                    PresentationEvent.textValue(
+                                        surfaceId,
+                                        node.id,
+                                        it,
+                                    ),
+                                )
+                            },
+                            onPermissionDenied = onCameraPermissionDenied,
+                        )
+                        node.label?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.inverseOnSurface,
+                                maxLines = 1,
+                                modifier =
+                                    Modifier
+                                        .background(
+                                            MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.6f),
+                                            RoundedCornerShape(6.dp),
+                                        ).padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
+                    }
                 } else {
                     node.payloads.firstOrNull()?.let {
                         QrDisplay(
                             data = it,
                             accessibilityLabel = node.accessibility.label,
-                            modifier = Modifier.fillMaxWidth(),
+                            // 320dp is 2 in, the physical size the iPhone
+                            // SE's 320pt code was read at from 17 cm
+                            // (issue #9); wider only takes height from the
+                            // camera beside it.
+                            modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth(),
                         )
                     }
                 }

@@ -230,6 +230,15 @@ sealed interface PresentationNode {
     data object Divider : PresentationNode
 }
 
+/** A live camera preview is this node or somewhere inside it. */
+val PresentationNode.holdsCamera: Boolean
+    get() =
+        when (this) {
+            is PresentationNode.Qr -> capture
+            is PresentationNode.Group -> children.any { it.holdsCamera }
+            else -> false
+        }
+
 data class SurfaceSpec(
     val surfaceId: String,
     val revision: ULong,
