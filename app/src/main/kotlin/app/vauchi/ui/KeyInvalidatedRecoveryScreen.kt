@@ -38,10 +38,10 @@ import app.vauchi.util.LocalizationManager
  * key and wiped the local encrypted state. The user has three real
  * paths after this point:
  *
- *  1. **Restore from a backup file** — uses the existing
- *     `RestoreIdentityDialog` flow (also reachable from Welcome's
- *     "I already have an identity" button). Fully recovers identity
- *     and contacts when the user has an exported backup.
+ *  1. **Restore from a backup file** — continues into Core's onboarding,
+ *     whose "Restore from backup" entry picks the file and runs the full
+ *     restore (identity, contacts, own card, labels) with its progress
+ *     screen.
  *  2. **Set up a new identity** — routes to the onboarding flow.
  *     The user gets a fresh `public_id`; previously-exchanged contacts
  *     will not recognise this device until a new exchange happens.

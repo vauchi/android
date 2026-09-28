@@ -83,7 +83,7 @@ sealed class UiState {
      * @property hadData true when the user previously had a working
      *   identity whose data was lost; false on a true fresh-install path
      *   that hit an inherited invalidated alias (route silently to
-     *   onboarding via [MainViewModel.onRecoveryStartFresh]).
+     *   onboarding via [MainViewModel.onRecoveryContinueToOnboarding]).
      */
     data class KeyInvalidatedRecovery(
         val hadData: Boolean,
@@ -364,12 +364,12 @@ class MainViewModel(
     }
 
     /**
-     * User chose "Set up new identity" on the key-invalidated recovery
-     * screen. Storage state has already been wiped at the moment the
-     * recovery state was entered; re-run identity check so the next
-     * storage init (now clean) routes to onboarding.
+     * The user left the key-invalidated recovery screen, to restore a
+     * backup or to start fresh. Storage was already wiped when the
+     * recovery state was entered, so re-running the identity check routes
+     * to Core's onboarding, which offers both paths.
      */
-    fun onRecoveryStartFresh() {
+    fun onRecoveryContinueToOnboarding() {
         _uiState.value = UiState.Loading
         checkIdentity()
     }
@@ -557,34 +557,6 @@ class MainViewModel(
         repository.setRelayUrl(url)
         showMessage("Relay URL updated (restart app to apply)")
     }
-
-    suspend fun importBackup(
-        backupData: String,
-        password: String,
-    ): Boolean =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.importBackup(backupData, password)
-            }
-            loadUserData()
-            true
-        } catch (e: Exception) {
-            false
-        }
-
-    suspend fun importFullBackup(
-        backupData: String,
-        password: String,
-    ): Boolean =
-        try {
-            withContext(Dispatchers.IO) {
-                repository.importFullBackup(backupData, password)
-            }
-            loadUserData()
-            true
-        } catch (e: Exception) {
-            false
-        }
 
     /**
      * Initialize demo contact if user has no real contacts.

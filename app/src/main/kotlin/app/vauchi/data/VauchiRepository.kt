@@ -309,22 +309,6 @@ class VauchiRepository internal constructor(
 
     fun contactCount(): UInt = appEngine.contactCount()
 
-    fun importBackup(
-        backupData: String,
-        password: String,
-    ) {
-        ensureInitialized()
-        appEngine.importBackup(backupData, password)
-    }
-
-    fun importFullBackup(
-        backupData: String,
-        password: String,
-    ) {
-        ensureInitialized()
-        appEngine.importBackup(backupData, password)
-    }
-
     // Based on: features/content_updates.feature
 
     /**

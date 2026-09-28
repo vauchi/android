@@ -46,13 +46,6 @@ fun PlatformAppEngine.contactCount(): UInt {
     return (result as? DomainCommandResult.Count)?.value ?: unexpectedResult("ContactCount")
 }
 
-fun PlatformAppEngine.importBackup(
-    backupData: String,
-    password: String,
-) {
-    dispatchDomainCommand(DomainCommand.ImportBackup(backupData, password))
-}
-
 fun PlatformAppEngine.initDemoContactIfNeeded(): MobileDemoContact? {
     val result = dispatchDomainCommand(DomainCommand.InitDemoContactIfNeeded)
     val opt =

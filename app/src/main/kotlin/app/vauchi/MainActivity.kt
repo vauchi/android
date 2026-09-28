@@ -293,8 +293,6 @@ fun MainScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
-    var showRestoreDialog by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
@@ -333,9 +331,6 @@ fun MainScreen(
                 PreAuthContent(
                     state = if (authLapsed) UiState.Loading else uiState,
                     viewModel = viewModel,
-                    showRestoreDialog = showRestoreDialog,
-                    onShowRestoreDialog = { showRestoreDialog = it },
-                    coroutineScope = coroutineScope,
                 )
             }
         }
@@ -988,9 +983,6 @@ fun MainScreen(
                     PreAuthContent(
                         state = state,
                         viewModel = viewModel,
-                        showRestoreDialog = showRestoreDialog,
-                        onShowRestoreDialog = { showRestoreDialog = it },
-                        coroutineScope = coroutineScope,
                     )
                 }
             }
@@ -1015,9 +1007,6 @@ fun MainScreen(
 private fun PreAuthContent(
     state: UiState,
     viewModel: MainViewModel,
-    showRestoreDialog: Boolean,
-    onShowRestoreDialog: (Boolean) -> Unit,
-    coroutineScope: CoroutineScope,
 ) {
     when (state) {
         is UiState.Loading -> {
@@ -1054,24 +1043,14 @@ private fun PreAuthContent(
         }
 
         is UiState.KeyInvalidatedRecovery -> {
+            // Both choices continue into Core's onboarding, which offers
+            // "Restore from backup" (file pick, full restore) next to "Create
+            // identity". The shell used to paste a backup into its own
+            // dialog and import it identity-only (private#283).
             KeyInvalidatedRecoveryScreen(
-                onRestoreFromBackup = { onShowRestoreDialog(true) },
-                onStartFresh = { viewModel.onRecoveryStartFresh() },
+                onRestoreFromBackup = { viewModel.onRecoveryContinueToOnboarding() },
+                onStartFresh = { viewModel.onRecoveryContinueToOnboarding() },
             )
-
-            if (showRestoreDialog) {
-                RestoreIdentityDialog(
-                    onDismiss = { onShowRestoreDialog(false) },
-                    onRestore = { backupData, password ->
-                        coroutineScope.launch {
-                            val success = viewModel.importFullBackup(backupData, password)
-                            if (success) {
-                                onShowRestoreDialog(false)
-                            }
-                        }
-                    },
-                )
-            }
         }
 
         // Engine-backed states are rendered by the caller; reaching here
@@ -1270,78 +1249,3 @@ fun OfflineBanner() {
     }
 }
 
-// Restore Identity Dialog
-@Composable
-fun RestoreIdentityDialog(
-    onDismiss: () -> Unit,
-    onRestore: (backupData: String, password: String) -> Unit,
-) {
-    val context = LocalContext.current
-    val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
-    var backupData by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var isRestoring by remember { mutableStateOf(false) }
-
-    val canRestore = backupData.isNotBlank() && password.isNotEmpty()
-
-    AlertDialog(
-        onDismissRequest = { if (!isRestoring) onDismiss() },
-        title = { Text(localizationManager.t("backup.restore_identity")) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(
-                    localizationManager.t("backup.restore_body"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                OutlinedTextField(
-                    value = backupData,
-                    onValueChange = { backupData = it },
-                    label = { Text(localizationManager.t("backup.data_label")) },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(120.dp),
-                    enabled = !isRestoring,
-                )
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text(localizationManager.t("backup.password")) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    enabled = !isRestoring,
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    isRestoring = true
-                    onRestore(backupData.trim(), password)
-                },
-                enabled = canRestore && !isRestoring,
-            ) {
-                if (isRestoring) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text(localizationManager.t("action.restore"))
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                enabled = !isRestoring,
-            ) {
-                Text(localizationManager.t("action.cancel"))
-            }
-        },
-    )
-}
