@@ -201,6 +201,7 @@ sealed interface PresentationNode {
         val capture: Boolean,
         val label: String?,
         val accessibility: AccessibilitySpec,
+        val placement: QrPlacement? = null,
     ) : PresentationNode
 
     data class Confirmation(

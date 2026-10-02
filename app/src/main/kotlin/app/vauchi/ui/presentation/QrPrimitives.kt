@@ -15,6 +15,10 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -63,6 +67,7 @@ internal fun QrDisplay(
     data: String,
     accessibilityLabel: String?,
     modifier: Modifier = Modifier,
+    placement: QrPlacement? = null,
 ) {
     // Recompute the bitmap whenever core hands us new payload bytes
     // (multipart QR rotates every ~300 ms during exchange).
@@ -71,15 +76,23 @@ internal fun QrDisplay(
     Surface(
         modifier = modifier.aspectRatio(1f),
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        // A placed code leaves part of the square empty. That part is white,
+        // so the peer's camera sees one bright square whatever the theme.
+        color = if (placement == null) MaterialTheme.colorScheme.surfaceVariant else Color.White,
     ) {
         if (bitmap != null) {
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = accessibilityLabel,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit,
-            )
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val frame = qrFrame(placement, maxWidth.value)
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = accessibilityLabel,
+                    modifier =
+                        Modifier
+                            .offset(x = frame.left.dp, y = frame.top.dp)
+                            .size(frame.side.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            }
         } else {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 Icon(

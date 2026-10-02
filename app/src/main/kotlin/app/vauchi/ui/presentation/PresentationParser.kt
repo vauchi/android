@@ -13,6 +13,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -388,7 +389,17 @@ object PresentationProtocol {
             capture = value.string("purpose") == "capture",
             label = value.nullableString("label"),
             accessibility = accessibility(value),
+            placement = (value["placement"] as? JsonObject)?.let(::qrPlacement),
         )
+
+    // A placement missing a number is no placement: the code is drawn
+    // full size rather than the surface being dropped.
+    private fun qrPlacement(value: JsonObject): QrPlacement? {
+        val size = value["size"]?.jsonPrimitive?.intOrNull ?: return null
+        val x = value["x"]?.jsonPrimitive?.intOrNull ?: return null
+        val y = value["y"]?.jsonPrimitive?.intOrNull ?: return null
+        return QrPlacement(size, x, y)
+    }
 
     // An unknown style means Core and shell disagree about the protocol.
     // Render the text as body rather than dropping the surface — losing a
