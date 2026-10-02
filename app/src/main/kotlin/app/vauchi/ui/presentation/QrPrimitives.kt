@@ -59,6 +59,7 @@ import app.vauchi.ui.components.rememberPermissionState
 import app.vauchi.ui.coreui.LocalUseFrontCamera
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.generateQrBitmap
+import app.vauchi.util.qrEccLevel
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 

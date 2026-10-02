@@ -71,3 +71,11 @@ fun generateQrBitmap(
         // show for an image it cannot produce.
         null
     }
+
+/**
+ * The level to draw a display code at. Only "low" changes anything: it is
+ * what Core asks for during an exchange, where fewer, larger modules read
+ * from closer. Anything else, absent included, is the shell's default.
+ */
+fun qrEccLevel(errorCorrection: String?): MobileQrEccLevel =
+    if (errorCorrection == "low") MobileQrEccLevel.LOW else MobileQrEccLevel.MEDIUM

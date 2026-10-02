@@ -4,6 +4,7 @@
 
 package app.vauchi.ui.presentation
 
+import app.vauchi.util.qrEccLevel
 import uniffi.vauchi_platform.MobileQrEccLevel
 import kotlin.test.Test
 import kotlin.test.assertEquals

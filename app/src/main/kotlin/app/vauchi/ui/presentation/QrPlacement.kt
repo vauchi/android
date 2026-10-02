@@ -4,8 +4,6 @@
 
 package app.vauchi.ui.presentation
 
-import uniffi.vauchi_platform.MobileQrEccLevel
-
 /**
  * Where Core asks a display code to be drawn inside its square: the code's
  * side and the offset of its top-left corner, in permille of the square's
@@ -46,11 +44,3 @@ internal fun qrFrame(
         top = scaled(placement.y.coerceIn(0, room)),
     )
 }
-
-/**
- * The level to draw a display code at. Only "low" changes anything: it is
- * what Core asks for during an exchange, where fewer, larger modules read
- * from closer. Anything else, absent included, is the shell's default.
- */
-internal fun qrEccLevel(errorCorrection: String?): MobileQrEccLevel =
-    if (errorCorrection == "low") MobileQrEccLevel.LOW else MobileQrEccLevel.MEDIUM
