@@ -4,6 +4,7 @@
 
 package app.vauchi.ui.presentation
 
+import uniffi.vauchi_platform.MobileQrEccLevel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -16,7 +17,10 @@ import kotlin.test.assertEquals
  * Traces to: features/generic_presentation_protocol.feature
  */
 class QrPlacementTest {
-    private fun decodeQr(placement: String?): PresentationNode.Qr {
+    private fun decodeQr(
+        placement: String?,
+        errorCorrection: String? = null,
+    ): PresentationNode.Qr {
         val json =
             """
             {"commands":[{"ReplaceSurface":{"surface":{
@@ -34,6 +38,7 @@ class QrPlacementTest {
                 "purpose":"display",
                 "label":null,
                 ${placement?.let { "\"placement\":$it," }.orEmpty()}
+                ${errorCorrection?.let { "\"error_correction\":\"$it\"," }.orEmpty()}
                 "accessibility":{"label":"Your code","hint":null,"role":null}
               }}]
             }}}]}
@@ -101,5 +106,21 @@ class QrPlacementTest {
             QrFrame(side = 300f, left = 0f, top = 0f),
             qrFrame(QrPlacement(size = -5, x = 0, y = 0), 300f),
         )
+    }
+
+    @Test
+    fun `a low error-correction level is decoded and drawn as such`() {
+        assertEquals(
+            MobileQrEccLevel.LOW,
+            qrEccLevel(decodeQr(null, errorCorrection = "low").errorCorrection),
+        )
+    }
+
+    @Test
+    fun `an absent or unrecognised level draws at medium`() {
+        assertEquals(null, decodeQr(null).errorCorrection)
+        assertEquals(MobileQrEccLevel.MEDIUM, qrEccLevel(null))
+        assertEquals(MobileQrEccLevel.MEDIUM, qrEccLevel("medium"))
+        assertEquals(MobileQrEccLevel.MEDIUM, qrEccLevel("ultra"))
     }
 }
