@@ -36,4 +36,12 @@ internal class ForegroundHeartbeat(
         job?.cancel()
         job = null
     }
+
+    /**
+     * Core asked for a wakeup [intervalMs] from now, outside this loop's own
+     * tick. Not honoured yet.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun reschedule(intervalMs: Long) {
+    }
 }

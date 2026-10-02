@@ -80,4 +80,78 @@ class ForegroundHeartbeatTest {
             assertEquals(listOf(0L, 5_000L), ticks)
             scope.cancel()
         }
+
+    /**
+     * An exchange opened during the idle sleep must not wait it out: its QR
+     * stays frozen on the first frame until the loop ticks. Device-measured
+     * as a first tick 27.5-29.8 s after "Exchange started" in 8 of 15 Hover
+     * runs (2026-10-02, Pixel 3a,
+     * `2026-10-02-exchange-first-tick-waits-for-idle-heartbeat`).
+     */
+    @Test
+    fun `a reschedule during a long sleep brings the next tick forward`() =
+        runTest {
+            val ticks = mutableListOf<Long>()
+            val (heartbeat, scope) = heartbeat(ticks, listOf(30_000L, 300L, 300L).iterator())
+
+            heartbeat.start()
+            advanceTimeBy(5_000)
+            heartbeat.reschedule(300)
+            advanceTimeBy(601)
+
+            assertEquals(listOf(0L, 5_300L, 5_600L), ticks)
+            scope.cancel()
+        }
+
+    @Test
+    fun `a reschedule later than the pending tick does not delay it`() =
+        runTest {
+            val ticks = mutableListOf<Long>()
+            val (heartbeat, scope) = heartbeat(ticks, generateSequence { 300L }.iterator())
+
+            heartbeat.start()
+            advanceTimeBy(100)
+            heartbeat.reschedule(30_000)
+            advanceTimeBy(501)
+
+            assertEquals(listOf(0L, 300L, 600L), ticks)
+            scope.cancel()
+        }
+
+    @Test
+    fun `a reschedule from inside the tick does not add a tick`() =
+        runTest {
+            val ticks = mutableListOf<Long>()
+            val scope = CoroutineScope(StandardTestDispatcher(testScheduler))
+            lateinit var heartbeat: ForegroundHeartbeat
+            heartbeat =
+                ForegroundHeartbeat(scope) {
+                    ticks.add(currentTime)
+                    heartbeat.reschedule(300)
+                    300L
+                }
+
+            heartbeat.start()
+            advanceTimeBy(901)
+
+            assertEquals(listOf(0L, 300L, 600L, 900L), ticks)
+            scope.cancel()
+        }
+
+    @Test
+    fun `a reschedule while stopped does not shorten the first sleep after start`() =
+        runTest {
+            val ticks = mutableListOf<Long>()
+            val (heartbeat, scope) = heartbeat(ticks, generateSequence { 30_000L }.iterator())
+
+            heartbeat.reschedule(300)
+            advanceTimeBy(1_000)
+            assertEquals(emptyList<Long>(), ticks)
+
+            heartbeat.start()
+            advanceTimeBy(30_001)
+
+            assertEquals(listOf(1_000L, 31_000L), ticks)
+            scope.cancel()
+        }
 }
