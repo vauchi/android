@@ -104,7 +104,7 @@ class CoreAppViewModel(
      * "Exchanging…" forever with no timeout/cancel (device pass 2026-07-22;
      * `problems/2026-06-11-exchange-waits-forever-without-capabilities`).
      */
-    private val foregroundHeartbeat = ForegroundHeartbeat(viewModelScope) { foregroundWakeupTick() }
+    private val foregroundHeartbeat = ForegroundHeartbeat(viewModelScope, tick = ::foregroundWakeupTick)
 
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
@@ -969,10 +969,14 @@ class CoreAppViewModel(
         for (cmd in commands) {
             when (cmd) {
                 is CommandDTO.ScheduleWakeup -> {
-                    // Foreground re-arm is consumed by the startForegroundHeartbeat
-                    // loop, which reads this interval from the wakeup outcome and
-                    // schedules the next tick. Background wakeups ride WorkManager
-                    // (SyncWorker). Nothing to do here.
+                    // The heartbeat loop reads its own tick's interval from
+                    // the wakeup outcome. One that arrives any other way means
+                    // core's cadence changed while the loop sleeps, so the
+                    // sleep is shortened to it. Background wakeups ride
+                    // WorkManager (SyncWorker).
+                    foregroundHeartbeat.reschedule(
+                        cmd.earliestMillis?.toLong() ?: (cmd.earliestSecs.toLong() * 1000L),
+                    )
                 }
 
                 is CommandDTO.ImagePickFromLibrary -> {

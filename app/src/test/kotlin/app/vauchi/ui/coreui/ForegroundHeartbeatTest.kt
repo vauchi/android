@@ -29,7 +29,7 @@ class ForegroundHeartbeatTest {
     ): Pair<ForegroundHeartbeat, CoroutineScope> {
         val scope = CoroutineScope(StandardTestDispatcher(testScheduler))
         val heartbeat =
-            ForegroundHeartbeat(scope) {
+            ForegroundHeartbeat(scope, testScheduler.timeSource) {
                 ticks.add(currentTime)
                 intervals.next()
             }
@@ -125,7 +125,7 @@ class ForegroundHeartbeatTest {
             val scope = CoroutineScope(StandardTestDispatcher(testScheduler))
             lateinit var heartbeat: ForegroundHeartbeat
             heartbeat =
-                ForegroundHeartbeat(scope) {
+                ForegroundHeartbeat(scope, testScheduler.timeSource) {
                     ticks.add(currentTime)
                     heartbeat.reschedule(300)
                     300L
