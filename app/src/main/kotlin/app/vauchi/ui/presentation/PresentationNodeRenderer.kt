@@ -862,10 +862,7 @@ private fun PresentationListRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             RowAvatar(row)
-            // Decorative beside the title, and blank when unknown, the same
-            // rule as a status row; the exchange-mode picker's pictograms
-            // arrive here.
-            row.iconToken?.let(::statusIconSource)?.let { glyph ->
+            row.iconToken?.let(::rowIconSource)?.let { glyph ->
                 Icon(painter = glyph.painter(), contentDescription = null)
             }
             Column(modifier = Modifier.weight(1f)) {

@@ -72,3 +72,11 @@ fun navigationIconSource(token: String): IconSource =
 /** [statusIcon] widened to bundled pictograms; still `null` when unknown. */
 fun statusIconSource(token: String): IconSource? =
     pictogramDrawable(token)?.let(IconSource::Drawable) ?: statusIcon(token)?.let(IconSource::Vector)
+
+/**
+ * A list row draws only Vauchi's own pictograms: rows never drew Material
+ * tokens, and widening them would change every screen that sends one.
+ */
+fun rowIconSource(token: String): IconSource? = pictogramDrawable(token)?.let(IconSource::Drawable)
+
+internal fun bundledPictogramNames(): Set<String> = bundledPictograms.keys
