@@ -559,6 +559,7 @@ internal fun PresentationNodeRenderer(
                             data = it,
                             accessibilityLabel = node.accessibility.label,
                             placement = node.placement,
+                            errorCorrection = node.errorCorrection,
                             // 320dp is 2 in, the physical size the iPhone
                             // SE's 320pt code was read at from 17 cm
                             // (issue #9); wider only takes height from the

@@ -68,10 +68,14 @@ internal fun QrDisplay(
     accessibilityLabel: String?,
     modifier: Modifier = Modifier,
     placement: QrPlacement? = null,
+    errorCorrection: String? = null,
 ) {
     // Recompute the bitmap whenever core hands us new payload bytes
     // (multipart QR rotates every ~300 ms during exchange).
-    val bitmap = remember(data) { generateQrBitmap(data) }
+    val bitmap =
+        remember(data, errorCorrection) {
+            generateQrBitmap(data, errorCorrection = qrEccLevel(errorCorrection))
+        }
 
     Surface(
         modifier = modifier.aspectRatio(1f),

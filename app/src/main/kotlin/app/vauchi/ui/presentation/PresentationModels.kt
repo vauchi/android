@@ -202,6 +202,8 @@ sealed interface PresentationNode {
         val label: String?,
         val accessibility: AccessibilitySpec,
         val placement: QrPlacement? = null,
+        /** Core's error-correction level for a display code; null leaves it to the shell. */
+        val errorCorrection: String? = null,
     ) : PresentationNode
 
     data class Confirmation(

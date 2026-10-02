@@ -390,6 +390,7 @@ object PresentationProtocol {
             label = value.nullableString("label"),
             accessibility = accessibility(value),
             placement = (value["placement"] as? JsonObject)?.let(::qrPlacement),
+            errorCorrection = value.nullableString("error_correction"),
         )
 
     // A placement missing a number is no placement: the code is drawn
