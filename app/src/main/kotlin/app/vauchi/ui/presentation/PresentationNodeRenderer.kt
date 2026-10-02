@@ -472,9 +472,9 @@ internal fun PresentationNodeRenderer(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    node.iconToken?.let(::statusIcon)?.let { glyph ->
+                    node.iconToken?.let(::statusIconSource)?.let { glyph ->
                         Icon(
-                            imageVector = glyph,
+                            painter = glyph.painter(),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                         )
@@ -862,6 +862,12 @@ private fun PresentationListRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             RowAvatar(row)
+            // Decorative beside the title, and blank when unknown, the same
+            // rule as a status row; the exchange-mode picker's pictograms
+            // arrive here.
+            row.iconToken?.let(::statusIconSource)?.let { glyph ->
+                Icon(painter = glyph.painter(), contentDescription = null)
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(row.title, style = MaterialTheme.typography.titleMedium)
                 row.subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }

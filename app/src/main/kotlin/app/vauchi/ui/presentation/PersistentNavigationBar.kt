@@ -103,7 +103,7 @@ private fun RowScope.StandardNavigationItem(
         icon = {
             BadgedBox(badge = { NavigationBadge(item.badgeCount) }) {
                 item.iconToken?.let {
-                    Icon(navigationIcon(it), contentDescription = null)
+                    Icon(navigationIconSource(it).painter(), contentDescription = null)
                 }
             }
         },
@@ -147,7 +147,7 @@ private fun RowScope.ExchangeNavigationItem(
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 BadgedBox(badge = { NavigationBadge(item.badgeCount) }) {
                     item.iconToken?.let {
-                        Icon(navigationIcon(it), contentDescription = null, tint = contentColorFor(accent))
+                        Icon(navigationIconSource(it).painter(), contentDescription = null, tint = contentColorFor(accent))
                     }
                 }
             }

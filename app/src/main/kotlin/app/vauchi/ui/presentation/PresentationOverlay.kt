@@ -317,7 +317,7 @@ private fun OverlayActionButton(
             // of showing them.
             action.iconToken?.let { token ->
                 Icon(
-                    imageVector = navigationIcon(token),
+                    painter = navigationIconSource(token).painter(),
                     // The button already carries `accessibilityLabel` and
                     // the label reads beside it; describing the icon too
                     // makes TalkBack announce the destination twice.
