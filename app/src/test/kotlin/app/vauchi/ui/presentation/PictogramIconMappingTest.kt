@@ -11,7 +11,9 @@ import androidx.compose.material.icons.filled.QrCode2
 import app.vauchi.R
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import java.io.File
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * Core names Vauchi's own artwork with `pictogram.<group>.<name>` tokens
@@ -83,5 +85,29 @@ class PictogramIconMappingTest {
     fun `only the pictogram prefix reaches the bundled artwork`() {
         assertNull(pictogramDrawable("exchange.hover"))
         assertNull(pictogramDrawable("pictogram_exchange_hover"))
+    }
+
+    @Test
+    fun `a list row draws a pictogram but no material glyph`() {
+        assertEquals(
+            IconSource.Drawable(R.drawable.pictogram_exchange_hover),
+            rowIconSource("pictogram.exchange.hover"),
+        )
+        assertNull(rowIconSource("more"))
+        assertNull(rowIconSource("lock"))
+    }
+
+    @Test
+    fun `every bundled pictogram file has a table entry`() {
+        val bundledFiles =
+            File("src/main/res/drawable")
+                .listFiles { file -> file.name.startsWith("pictogram_") && file.extension == "xml" }
+                .orEmpty()
+                .map { it.nameWithoutExtension }
+                .toSet()
+        assertTrue(bundledFiles.isNotEmpty(), "no pictogram drawables found from ${File(".").absolutePath}")
+
+        val missing = bundledFiles - bundledPictogramNames()
+        assertTrue(missing.isEmpty(), "pictograms bundled without a table entry in IconSource.kt: $missing")
     }
 }
