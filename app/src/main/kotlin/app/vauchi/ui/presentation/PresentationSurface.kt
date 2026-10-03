@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 
 @Composable
 internal fun PresentationSurface(
@@ -181,7 +182,10 @@ private fun FixedSurfaceContent(
             androidx.compose.foundation.layout.Box(
                 modifier =
                     if (share != null) {
-                        Modifier.weight(share.weight, fill = share.fill).fillMaxWidth()
+                        Modifier
+                            .weight(share.weight, fill = share.fill)
+                            .fillMaxWidth()
+                            .zIndex(if (share.fill) 0f else 1f)
                     } else {
                         Modifier
                     },

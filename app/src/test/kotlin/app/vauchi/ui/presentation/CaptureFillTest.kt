@@ -60,7 +60,7 @@ class CaptureFillTest {
             FixedSurfaceShare(weight = 1f, fill = true),
             group(true, qr(capture = true), group(false, text)).fixedSurfaceShare,
         )
-        assertEquals(FixedSurfaceShare(weight = 2f, fill = false), qr(capture = false).fixedSurfaceShare)
+        assertEquals(FixedSurfaceShare(weight = 4f, fill = false), qr(capture = false).fixedSurfaceShare)
     }
 
     @Test

@@ -73,6 +73,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import app.vauchi.ui.theme.MonospaceFontFamily
 import kotlin.math.roundToInt
 
@@ -563,8 +564,14 @@ internal fun PresentationNodeRenderer(
                             // 320dp is 2 in, the physical size the iPhone
                             // SE's 320pt code was read at from 17 cm
                             // (issue #9); wider only takes height from the
-                            // camera beside it.
-                            modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth(),
+                            // camera beside it. On a screen too short for
+                            // the whole layout (Samsung S7, 640 dp) the
+                            // square overflows its share; it is drawn above
+                            // the node below it then, because the peer must
+                            // read the code and the status text is only for
+                            // this user. A compact layout for short
+                            // viewports is the real fix (#450).
+                            modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth().zIndex(1f),
                         )
                     }
                 }
