@@ -177,8 +177,14 @@ private fun FixedSurfaceContent(
         }
         surface.nodes.forEach { node ->
             val fillsRemaining = node.holdsCamera
+            val share = node.fixedSurfaceShare
             androidx.compose.foundation.layout.Box(
-                modifier = if (fillsRemaining) Modifier.weight(1f).fillMaxWidth() else Modifier,
+                modifier =
+                    if (share != null) {
+                        Modifier.weight(share.weight, fill = share.fill).fillMaxWidth()
+                    } else {
+                        Modifier
+                    },
             ) {
                 CompositionLocalProvider(LocalFillsRemainingHeight provides fillsRemaining) {
                     PresentationNodeRenderer(

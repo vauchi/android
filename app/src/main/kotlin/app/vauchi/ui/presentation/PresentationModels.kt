@@ -242,6 +242,26 @@ val PresentationNode.holdsCamera: Boolean
             else -> false
         }
 
+/**
+ * How a node shares a fixed surface's height. The camera takes what the
+ * others leave; a displayed code takes twice the camera's share but no
+ * more than its own square, so on a short screen (Samsung S7, 640 dp) it
+ * shrinks instead of pushing the camera preview over itself. Other nodes
+ * keep their natural height.
+ */
+data class FixedSurfaceShare(
+    val weight: Float,
+    val fill: Boolean,
+)
+
+val PresentationNode.fixedSurfaceShare: FixedSurfaceShare?
+    get() =
+        when {
+            holdsCamera -> FixedSurfaceShare(weight = 1f, fill = true)
+            this is PresentationNode.Qr -> FixedSurfaceShare(weight = 2f, fill = false)
+            else -> null
+        }
+
 data class SurfaceSpec(
     val surfaceId: String,
     val revision: ULong,
