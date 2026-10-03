@@ -106,6 +106,7 @@ fun PresentationScreen(
                             bar = state.activeBar,
                             windowClass = profile.windowClass,
                             onEvent = { actions.onEvent(activeSurfaceId, it) },
+                            navigationShown = NavigationBarModel(state.activeNavigation?.items.orEmpty()).isVisible,
                         )
                     }
                     PersistentNavigationBar(

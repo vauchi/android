@@ -202,7 +202,8 @@ class ScreenWalkScreenshotTest {
     private fun waitForSeededHome() {
         try {
             composeRule.waitUntil(timeoutMillis = LAUNCH_TIMEOUT_MS) {
-                composeRule.onAllNodes(hasTestTag(NAVIGATION_TAG)).fetchSemanticsNodes().isNotEmpty()
+                persistentBarItems().isNotEmpty() ||
+                    composeRule.onAllNodes(hasTestTag(NAVIGATION_TAG)).fetchSemanticsNodes().isNotEmpty()
             }
             var previous = ""
             composeRule.waitUntil(timeoutMillis = LAUNCH_TIMEOUT_MS) {
