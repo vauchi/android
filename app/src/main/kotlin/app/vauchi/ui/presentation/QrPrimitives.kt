@@ -83,7 +83,7 @@ internal fun QrDisplay(
         shape = RoundedCornerShape(12.dp),
         // A placed code leaves part of the square empty. That part is white,
         // so the peer's camera sees one bright square whatever the theme.
-        color = if (placement == null) MaterialTheme.colorScheme.surfaceVariant else Color.White,
+        color = if (placement == null) MaterialTheme.colorScheme.surfaceVariant else Color.White, // design-token-ok: a QR code needs a white quiet zone for the peer's camera
     ) {
         if (bitmap != null) {
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
