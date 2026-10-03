@@ -87,14 +87,20 @@ internal fun QrDisplay(
     ) {
         if (bitmap != null) {
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                val frame = qrFrame(placement, maxWidth.value)
+                // A short screen squeezes the square's height (Samsung S7,
+                // 640 dp tall): the code is placed in the largest square that
+                // fits, centred, never sized by the width alone.
+                val side = minOf(maxWidth, maxHeight)
+                val frame = qrFrame(placement, side.value)
                 Image(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = accessibilityLabel,
                     modifier =
                         Modifier
-                            .offset(x = frame.left.dp, y = frame.top.dp)
-                            .size(frame.side.dp),
+                            .offset(
+                                x = (maxWidth - side) / 2 + frame.left.dp,
+                                y = (maxHeight - side) / 2 + frame.top.dp,
+                            ).size(frame.side.dp),
                     contentScale = ContentScale.Fit,
                 )
             }
