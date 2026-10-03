@@ -260,6 +260,13 @@ private fun OverlayPanel(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                overlay.overlay.body?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.testTag("overlay.body"),
+                    )
+                }
                 overlay.overlay.items.forEachIndexed { index, action ->
                     OverlayActionButton(
                         surfaceId = overlay.surfaceId,

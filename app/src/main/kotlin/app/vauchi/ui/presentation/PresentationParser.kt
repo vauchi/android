@@ -130,6 +130,7 @@ object PresentationProtocol {
             navigation = value.nullableObject("navigation")?.let(::action),
             primary = value.nullableObject("primary")?.let(::action),
             secondary = value.nullableObject("secondary")?.let(::action),
+            info = value.nullableObject("info")?.let(::action),
         )
 
     private fun action(value: JsonObject): ActionSpec =
@@ -168,6 +169,7 @@ object PresentationProtocol {
             kind = overlayKind(value.string("kind")),
             title = value.nullableString("title"),
             items = value.array("items").map { action(it.jsonObject) },
+            body = value.nullableString("body"),
         )
 
     private fun overlayKind(value: String): OverlayKind =
@@ -175,6 +177,8 @@ object PresentationProtocol {
             "navigation" -> OverlayKind.Navigation
 
             "action_menu" -> OverlayKind.ActionMenu
+
+            "information" -> OverlayKind.Information
 
             // A newer Core's overlay kind still lists actions; an action
             // menu is the presentation that shows all of them.

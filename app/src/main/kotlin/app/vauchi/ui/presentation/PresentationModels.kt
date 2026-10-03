@@ -36,6 +36,8 @@ data class ContextBar(
     val navigation: ActionSpec?,
     val primary: ActionSpec?,
     val secondary: ActionSpec?,
+    /** Explains the surface (vauchi/private#479); absent from a Core without text for it. */
+    val info: ActionSpec? = null,
 )
 
 data class NavigationItem(
@@ -54,12 +56,16 @@ data class NavigationSpec(
 enum class OverlayKind {
     Navigation,
     ActionMenu,
+
+    /** Text about the surface; `items` is empty. */
+    Information,
 }
 
 data class OverlaySpec(
     val kind: OverlayKind,
     val title: String?,
     val items: List<ActionSpec>,
+    val body: String? = null,
 )
 
 enum class WindowClass {

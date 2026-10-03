@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -48,6 +49,7 @@ enum class ContextBarSlot(
     Navigation(showsLabel = true),
     Primary(showsLabel = false),
     Secondary(showsLabel = true),
+    Info(showsLabel = true),
 }
 
 /**
@@ -69,6 +71,7 @@ internal data class ContextBarModel(
                 if (bar.navigation != null && !navigationShown) add(ContextBarSlot.Navigation)
                 if (bar.primary != null) add(ContextBarSlot.Primary)
                 if (bar.secondary != null) add(ContextBarSlot.Secondary)
+                if (bar.info != null) add(ContextBarSlot.Info)
             }
         }
 
@@ -163,6 +166,15 @@ fun ContextCommandBar(
                         slot = ContextBarSlot.Secondary,
                         icon = Icons.Default.MoreHoriz,
                         tag = "contextbar.secondary",
+                        onClick = { onEvent(PresentationEvent.ActionActivated(surfaceId, it.interactionId)) },
+                    )
+                }
+                bar.info?.let {
+                    RoleButton(
+                        action = it,
+                        slot = ContextBarSlot.Info,
+                        icon = Icons.Outlined.Info,
+                        tag = "contextbar.info",
                         onClick = { onEvent(PresentationEvent.ActionActivated(surfaceId, it.interactionId)) },
                     )
                 }
