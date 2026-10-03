@@ -52,4 +52,20 @@ class CaptureFillTest {
         assertEquals(false, group(true, qr(capture = false), text).holdsCamera)
         assertEquals(false, text.holdsCamera)
     }
+
+    @Test
+    fun `the camera takes the height left over and a displayed code gives way on a short screen`() {
+        assertEquals(FixedSurfaceShare(weight = 1f, fill = true), qr(capture = true).fixedSurfaceShare)
+        assertEquals(
+            FixedSurfaceShare(weight = 1f, fill = true),
+            group(true, qr(capture = true), group(false, text)).fixedSurfaceShare,
+        )
+        assertEquals(FixedSurfaceShare(weight = 2f, fill = false), qr(capture = false).fixedSurfaceShare)
+    }
+
+    @Test
+    fun `other nodes keep their natural height on a fixed surface`() {
+        assertEquals(null, text.fixedSurfaceShare)
+        assertEquals(null, group(true, qr(capture = false), text).fixedSurfaceShare)
+    }
 }
