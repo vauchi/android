@@ -40,6 +40,29 @@ class InformationOverlayDecodingTest {
     }
 
     @Test
+    fun `an overlay decodes Core's label for its Close`() {
+        val overlay =
+            PresentationProtocol.decodeOverlay(
+                """
+                {"kind":"information","title":"Contacts","items":[],
+                 "body":"Text.","close_label":"Close"}
+                """.trimIndent(),
+            )
+
+        assertEquals("Close", overlay.closeLabel)
+    }
+
+    @Test
+    fun `an overlay from an older Core has no Close label`() {
+        val overlay =
+            PresentationProtocol.decodeOverlay(
+                """{"kind":"action_menu","title":"Actions","items":[]}""",
+            )
+
+        assertNull(overlay.closeLabel)
+    }
+
+    @Test
     fun `an overlay without a body still decodes`() {
         val overlay =
             PresentationProtocol.decodeOverlay(
