@@ -32,6 +32,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -878,6 +879,16 @@ private fun PresentationListRow(
                 Text(row.title, style = MaterialTheme.typography.titleMedium)
                 row.subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                 row.detail?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            }
+            // Explains this one item (vauchi/private#479); Core names it
+            // "About <item>" so TalkBack says what the icon is for.
+            row.info?.let { info ->
+                IconButton(
+                    onClick = { onEvent(actionEvent(surfaceId, info)) },
+                    enabled = info.enabled,
+                ) {
+                    Icon(Icons.Outlined.Info, contentDescription = info.accessibilityLabel)
+                }
             }
             // Beside the text column, not inside it: the row title names the
             // setting, so Core sends the control unlabelled and a control

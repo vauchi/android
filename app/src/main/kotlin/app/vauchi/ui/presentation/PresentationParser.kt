@@ -42,6 +42,8 @@ object PresentationProtocol {
 
     fun decodeOverlay(value: String): OverlaySpec = overlay(json.parseToJsonElement(value).jsonObject)
 
+    fun decodeRow(value: String): PresentationRow = row(json.parseToJsonElement(value).jsonObject)
+
     private fun decodeCommand(element: JsonElement): PresentationCommand {
         if (element is JsonPrimitive && element.isString) {
             return PresentationCommand.Effect(element.content, element)
@@ -361,6 +363,7 @@ object PresentationProtocol {
                 value.array("secondary_actions").map { action(it.jsonObject) },
             controls = value.array("controls").mapNotNull(::node),
             accessibility = accessibility(value),
+            info = value.nullableObject("info")?.let(::action),
         )
 
     private fun image(value: JsonObject): PresentationNode.Image =

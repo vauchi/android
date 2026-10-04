@@ -114,6 +114,7 @@ data class PresentationRow(
     val secondaryActions: List<ActionSpec>,
     val controls: List<PresentationNode>,
     val accessibility: AccessibilitySpec,
+    val info: ActionSpec? = null,
 )
 
 sealed interface PresentationNode {
