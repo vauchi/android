@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -213,6 +214,7 @@ fun PresentationOverlay(
                 navigation = navigation,
                 compact = windowClass == WindowClass.Compact,
                 onAction = onAction,
+                onDismiss = onDismiss,
             )
         }
     }
@@ -224,6 +226,7 @@ private fun OverlayPanel(
     navigation: Boolean,
     compact: Boolean,
     onAction: (PresentationEvent) -> Unit,
+    onDismiss: () -> Unit,
 ) {
     Surface(
         modifier =
@@ -274,6 +277,20 @@ private fun OverlayPanel(
                         index = index,
                         onAction = onAction,
                     )
+                }
+            }
+            // The scrim closes the panel too, but it has no label for a screen
+            // reader and Back asks Core to go back a screen, not to close
+            // (vauchi/private#479, rig 2026-10-04). Core names the way out.
+            overlay.overlay.closeLabel?.let { label ->
+                TextButton(
+                    onClick = onDismiss,
+                    modifier =
+                        Modifier
+                            .align(Alignment.End)
+                            .testTag("overlay.close"),
+                ) {
+                    Text(label)
                 }
             }
         }

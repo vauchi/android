@@ -66,6 +66,7 @@ data class OverlaySpec(
     val title: String?,
     val items: List<ActionSpec>,
     val body: String? = null,
+    val closeLabel: String? = null,
 )
 
 enum class WindowClass {

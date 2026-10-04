@@ -170,6 +170,7 @@ object PresentationProtocol {
             title = value.nullableString("title"),
             items = value.array("items").map { action(it.jsonObject) },
             body = value.nullableString("body"),
+            closeLabel = value.nullableString("close_label"),
         )
 
     private fun overlayKind(value: String): OverlayKind =
