@@ -57,10 +57,7 @@ class QrCodeAnalyzer(
                     height = height.toUInt(),
                 )
 
-            result.decoded?.let { value ->
-                android.util.Log.d("QrAnalyzer", "rxing decoded: ${value.take(30)}...")
-                onQrCodeDetected(value)
-            }
+            result.decoded?.let(onQrCodeDetected)
         } catch (e: Exception) {
             android.util.Log.e("QrAnalyzer", "scan error: ${e.message}")
         } finally {
