@@ -6,40 +6,44 @@ package app.vauchi.ui.presentation
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * Core's context bar now draws inside the surface: back and the navigation
- * launcher lead the title row, info and actions trail it, and primary is a
- * full-width button under the surface content (vauchi/private#534,
- * retiring the bottom row from #479). Which of Core's slots the title row
- * and the footer draw is pure enough to pin without composing.
+ * launcher can both lead the title row (back first), info and actions
+ * trail it (info first), and primary is a full-width button under the
+ * surface content (vauchi/private#534, retiring the bottom row from
+ * #479). Which of Core's slots the title row and the footer draw is pure
+ * enough to pin without composing.
  */
 class ContextBarModelTest {
     @Test
-    fun `back leads the title row when Core sends one`() {
+    fun `back and the navigation launcher both lead, back first`() {
         assertEquals(
-            ContextBarSlot.Back,
-            ContextBarModel(bar(back = true, navigation = true)).leadingSlot,
+            listOf(ContextBarSlot.Back, ContextBarSlot.Navigation),
+            ContextBarModel(bar(back = true, navigation = true)).leadingSlots,
         )
     }
 
     @Test
-    fun `the navigation launcher leads when there is no back and the tab bar is not shown`() {
-        assertEquals(ContextBarSlot.Navigation, ContextBarModel(bar(navigation = true)).leadingSlot)
+    fun `the navigation launcher leads alone when there is no back`() {
+        assertEquals(listOf(ContextBarSlot.Navigation), ContextBarModel(bar(navigation = true)).leadingSlots)
     }
 
     @Test
     fun `the navigation launcher is left out while the navigation is on screen`() {
-        assertNull(ContextBarModel(bar(navigation = true), navigationShown = true).leadingSlot)
+        assertEquals(
+            listOf(ContextBarSlot.Back),
+            ContextBarModel(bar(back = true, navigation = true), navigationShown = true).leadingSlots,
+        )
+        assertTrue(ContextBarModel(bar(navigation = true), navigationShown = true).leadingSlots.isEmpty())
     }
 
     @Test
     fun `no back and no navigation leaves the leading end empty`() {
-        assertNull(ContextBarModel(bar()).leadingSlot)
-        assertNull(ContextBarModel(null).leadingSlot)
+        assertTrue(ContextBarModel(bar()).leadingSlots.isEmpty())
+        assertTrue(ContextBarModel(null).leadingSlots.isEmpty())
     }
 
     @Test
