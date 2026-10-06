@@ -6,14 +6,12 @@ package app.vauchi.ui.presentation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -34,10 +32,12 @@ class PresentationScreenActions(
 
 /**
  * The screen the app shows for a fully prepared [PresentationState]: the
- * active surface (or the split pair), its context bar and persistent
- * navigation bar, and any open overlay. Pure rendering of Core's
- * commands — no engine, view model, or activity behind it — so the same
- * composable serves the running app and a fixture replay.
+ * active surface (or the split pair) — each drawing its own context
+ * bar's slots in its title row and content, per vauchi/private#534 —
+ * plus the persistent navigation bar and any open overlay. Pure
+ * rendering of Core's commands — no engine, view model, or activity
+ * behind it — so the same composable serves the running app and a
+ * fixture replay.
  */
 @Composable
 fun PresentationScreen(
@@ -52,11 +52,12 @@ fun PresentationScreen(
     snackbarHost: @Composable () -> Unit = {},
     dialogs: @Composable () -> Unit = {},
 ) {
-    // ContextCommandBar and PresentationOverlay sit beside, not below,
-    // PresentationSurface — which provides the token for its own
+    // PersistentNavigationBar and PresentationOverlay sit beside, not
+    // below, PresentationSurface — which provides the token for its own
     // subtree — so they need the active surface's tokens provided
     // again here to size their own touch targets.
     val tokens = state.surfaces[activeSurfaceId]?.tokens ?: DefaultPresentationTokens
+    val navigationShown = NavigationBarModel(state.activeNavigation?.items.orEmpty()).isVisible
     CompositionLocalProvider(LocalPresentationTokens provides tokens) {
         Scaffold(
             modifier =
@@ -81,40 +82,11 @@ fun PresentationScreen(
                     },
             snackbarHost = snackbarHost,
             bottomBar = {
-                Column {
-                    Box(
-                        modifier =
-                            Modifier
-                                .padding(
-                                    horizontal =
-                                        if (profile.windowClass == WindowClass.Compact) {
-                                            0.dp
-                                        } else {
-                                            24.dp
-                                        },
-                                    vertical =
-                                        if (profile.windowClass == WindowClass.Compact) {
-                                            0.dp
-                                        } else {
-                                            12.dp
-                                        },
-                                ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        ContextCommandBar(
-                            surfaceId = activeSurfaceId,
-                            bar = state.activeBar,
-                            windowClass = profile.windowClass,
-                            onEvent = { actions.onEvent(activeSurfaceId, it) },
-                            navigationShown = NavigationBarModel(state.activeNavigation?.items.orEmpty()).isVisible,
-                        )
-                    }
-                    PersistentNavigationBar(
-                        surfaceId = activeSurfaceId,
-                        navigation = state.activeNavigation,
-                        onEvent = { actions.onEvent(activeSurfaceId, it) },
-                    )
-                }
+                PersistentNavigationBar(
+                    surfaceId = activeSurfaceId,
+                    navigation = state.activeNavigation,
+                    onEvent = { actions.onEvent(activeSurfaceId, it) },
+                )
             },
         ) { innerPadding ->
             Box(
@@ -132,6 +104,8 @@ fun PresentationScreen(
                             SurfaceHost(
                                 surface = surface,
                                 active = surface.surfaceId == activeSurfaceId,
+                                bar = state.bars[surface.surfaceId]?.bar,
+                                navigationShown = navigationShown,
                                 actions = actions,
                                 focusedBindingId = focusedBindingId,
                                 onFocusedBinding = onFocusedBinding,
@@ -144,6 +118,8 @@ fun PresentationScreen(
                                 SurfaceHost(
                                     surface = surface,
                                     active = surface.surfaceId == activeSurfaceId,
+                                    bar = state.bars[surface.surfaceId]?.bar,
+                                    navigationShown = navigationShown,
                                     actions = actions,
                                     focusedBindingId = focusedBindingId,
                                     onFocusedBinding = onFocusedBinding,
@@ -156,6 +132,8 @@ fun PresentationScreen(
                         SurfaceHost(
                             surface = surface,
                             active = true,
+                            bar = state.bars[surface.surfaceId]?.bar,
+                            navigationShown = navigationShown,
                             actions = actions,
                             focusedBindingId = focusedBindingId,
                             onFocusedBinding = onFocusedBinding,
@@ -197,6 +175,8 @@ private fun shortcutGesture(
 private fun SurfaceHost(
     surface: SurfaceSpec,
     active: Boolean,
+    bar: ContextBar?,
+    navigationShown: Boolean,
     actions: PresentationScreenActions,
     focusedBindingId: String?,
     onFocusedBinding: (String, Boolean) -> Unit,
@@ -205,6 +185,8 @@ private fun SurfaceHost(
     PresentationSurface(
         surface = surface,
         active = active,
+        bar = bar,
+        navigationShown = navigationShown,
         onActivate = { actions.onSurfaceActivated(surface.surfaceId) },
         onEvent = { actions.onEvent(surface.surfaceId, it) },
         onCameraPermissionDenied = actions.onCameraPermissionDenied,

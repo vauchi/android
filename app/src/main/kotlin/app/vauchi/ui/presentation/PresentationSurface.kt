@@ -10,21 +10,29 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -35,6 +43,8 @@ import androidx.compose.ui.zIndex
 internal fun PresentationSurface(
     surface: SurfaceSpec,
     active: Boolean,
+    bar: ContextBar?,
+    navigationShown: Boolean,
     onActivate: () -> Unit,
     onEvent: (PresentationEvent) -> Unit,
     onCameraPermissionDenied: () -> Unit,
@@ -43,6 +53,7 @@ internal fun PresentationSurface(
     modifier: Modifier = Modifier,
 ) {
     val focusManager = LocalFocusManager.current
+    val barModel = ContextBarModel(bar, navigationShown)
     Surface(
         modifier =
             modifier
@@ -74,61 +85,177 @@ internal fun PresentationSurface(
             },
     ) {
         CompositionLocalProvider(LocalPresentationTokens provides surface.tokens) {
-            if (surface.layout == SURFACE_LAYOUT_FIXED) {
-                FixedSurfaceContent(
-                    surface = surface,
+            Column(modifier = Modifier.fillMaxSize()) {
+                SurfaceTitleRow(
+                    surfaceId = surface.surfaceId,
+                    title = surface.title,
+                    subtitle = surface.subtitle,
+                    bar = bar,
+                    model = barModel,
                     onEvent = onEvent,
-                    onCameraPermissionDenied = onCameraPermissionDenied,
-                    focusedBindingId = focusedBindingId,
-                    onFocusedBinding = onFocusedBinding,
                 )
-                return@CompositionLocalProvider
-            }
-            LazyColumn(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(
-                            horizontal = surface.tokens.spacingLarge.dp,
-                            vertical = surface.tokens.spacingMedium.dp,
-                        ),
-                verticalArrangement =
-                    Arrangement.spacedBy(surface.tokens.spacingMedium.dp),
-            ) {
-                item(key = "${surface.surfaceId}:header") {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(
-                            surface.title,
-                            style = MaterialTheme.typography.headlineMedium,
-                            modifier = Modifier.semantics { heading() },
-                        )
-                        surface.subtitle?.let {
-                            Text(
-                                it,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-                items(
-                    items = surface.nodes.withIndex().toList(),
-                    key = { (index, node) -> node.stableKey(index) },
-                ) { (_, node) ->
-                    PresentationNodeRenderer(
-                        surfaceId = surface.surfaceId,
-                        node = node,
+                if (surface.layout == SURFACE_LAYOUT_FIXED) {
+                    FixedSurfaceContent(
+                        surface = surface,
                         onEvent = onEvent,
                         onCameraPermissionDenied = onCameraPermissionDenied,
                         focusedBindingId = focusedBindingId,
                         onFocusedBinding = onFocusedBinding,
+                        modifier = Modifier.weight(1f),
                     )
+                } else {
+                    LazyColumn(
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = surface.tokens.spacingLarge.dp,
+                                    vertical = surface.tokens.spacingMedium.dp,
+                                ),
+                        verticalArrangement =
+                            Arrangement.spacedBy(surface.tokens.spacingMedium.dp),
+                    ) {
+                        items(
+                            items = surface.nodes.withIndex().toList(),
+                            key = { (index, node) -> node.stableKey(index) },
+                        ) { (_, node) ->
+                            PresentationNodeRenderer(
+                                surfaceId = surface.surfaceId,
+                                node = node,
+                                onEvent = onEvent,
+                                onCameraPermissionDenied = onCameraPermissionDenied,
+                                focusedBindingId = focusedBindingId,
+                                onFocusedBinding = onFocusedBinding,
+                            )
+                        }
+                    }
+                }
+                // Only when Core sends one: a fixed-layout surface keeps it
+                // in view below the weighted content above, a scrolling
+                // one pins it under the LazyColumn rather than letting it
+                // scroll away with the list (vauchi/private#534).
+                if (barModel.hasPrimary) {
+                    bar?.primary?.let {
+                        PrimaryActionButton(
+                            surfaceId = surface.surfaceId,
+                            action = it,
+                            onEvent = onEvent,
+                            modifier =
+                                Modifier.padding(
+                                    horizontal = surface.tokens.spacingLarge.dp,
+                                    vertical = surface.tokens.spacingMedium.dp,
+                                ),
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+/**
+ * The surface's title, with Core's back/navigation launcher leading it and
+ * info/actions trailing it — the same context-bar slots the retired row
+ * above the tab bar used to draw (vauchi/private#479, #534). An absent
+ * slot takes no space; a long title wraps rather than pushing the icons.
+ */
+@Composable
+private fun SurfaceTitleRow(
+    surfaceId: String,
+    title: String,
+    subtitle: String?,
+    bar: ContextBar?,
+    model: ContextBarModel,
+    onEvent: (PresentationEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tokens = LocalPresentationTokens.current
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = tokens.spacingLarge.dp,
+                    vertical = tokens.spacingSmall.dp,
+                ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(tokens.spacingSmall.dp),
+    ) {
+        model.leadingSlots.forEach { slot ->
+            val action = if (slot == ContextBarSlot.Back) bar?.back else bar?.navigation
+            action?.let {
+                ContextBarIconButton(
+                    action = it,
+                    slot = slot,
+                    onClick = {
+                        onEvent(
+                            if (slot == ContextBarSlot.Back) {
+                                PresentationEvent.BackRequested(surfaceId)
+                            } else {
+                                PresentationEvent.ActionActivated(surfaceId, it.interactionId)
+                            },
+                        )
+                    },
+                )
+            }
+        }
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.semantics { heading() },
+            )
+            subtitle?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        model.trailingSlots.forEach { slot ->
+            val action = if (slot == ContextBarSlot.Info) bar?.info else bar?.secondary
+            action?.let {
+                ContextBarIconButton(
+                    action = it,
+                    slot = slot,
+                    onClick = { onEvent(PresentationEvent.ActionActivated(surfaceId, it.interactionId)) },
+                )
+            }
+        }
+    }
+}
+
+/** Core's primary slot as a full-width button under the surface content. */
+@Composable
+private fun PrimaryActionButton(
+    surfaceId: String,
+    action: ActionSpec,
+    onEvent: (PresentationEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Button(
+        onClick = { onEvent(PresentationEvent.ActionActivated(surfaceId, action.interactionId)) },
+        enabled = action.enabled,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .testTag("contextbar.primary")
+                .semantics { contentDescription = action.accessibilityLabel },
+    ) {
+        if (action.shortcut == "undo") {
+            Icon(
+                Icons.AutoMirrored.Filled.Undo,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 8.dp),
+            )
+        }
+        Text(action.label)
     }
 }
 
@@ -153,29 +280,18 @@ private fun FixedSurfaceContent(
     onCameraPermissionDenied: () -> Unit,
     focusedBindingId: String?,
     onFocusedBinding: (String, Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier =
-            Modifier
-                .fillMaxSize()
+            modifier
+                .fillMaxWidth()
                 .padding(
                     horizontal = surface.tokens.spacingLarge.dp,
                     vertical = surface.tokens.spacingMedium.dp,
                 ),
         verticalArrangement = Arrangement.spacedBy(surface.tokens.spacingMedium.dp),
     ) {
-        Text(
-            surface.title,
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.semantics { heading() },
-        )
-        surface.subtitle?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
         surface.nodes.forEach { node ->
             val fillsRemaining = node.holdsCamera
             val share = node.fixedSurfaceShare
