@@ -399,6 +399,7 @@ object PresentationProtocol {
             accessibility = accessibility(value),
             placement = (value["placement"] as? JsonObject)?.let(::qrPlacement),
             errorCorrection = value.nullableString("error_correction"),
+            size = value.nullableString("size"),
         )
 
     // A placement missing a number is no placement: the code is drawn

@@ -63,6 +63,15 @@ import app.vauchi.util.qrEccLevel
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * The widest a display code's square is drawn, in dp, for Core's size name.
+ * "compact" is for a short window, where 320 dp left the camera under the
+ * code no room (vauchi/private#513); anything else, absent included, is
+ * standard: 2 in, the physical size the iPhone SE's 320 pt code was read
+ * at from 17 cm (#9).
+ */
+internal fun qrSquareMaxDp(size: String?): Int = if (size == "compact") 240 else 320
+
 @Composable
 internal fun QrDisplay(
     data: String,

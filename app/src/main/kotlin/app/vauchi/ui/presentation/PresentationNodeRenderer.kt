@@ -562,17 +562,16 @@ internal fun PresentationNodeRenderer(
                             accessibilityLabel = node.accessibility.label,
                             placement = node.placement,
                             errorCorrection = node.errorCorrection,
-                            // 320dp is 2 in, the physical size the iPhone
-                            // SE's 320pt code was read at from 17 cm
-                            // (issue #9); wider only takes height from the
-                            // camera beside it. On a screen too short for
-                            // the whole layout (Samsung S7, 640 dp) the
-                            // square overflows its share; it is drawn above
-                            // the node below it then, because the peer must
-                            // read the code and the status text is only for
-                            // this user. A compact layout for short
-                            // viewports is the real fix (#450).
-                            modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth().zIndex(1f),
+                            // Wider only takes height from the camera beside
+                            // it. If the square still overflows its share, it
+                            // is drawn above the node below it, because the
+                            // peer must read the code and the status text is
+                            // only for this user.
+                            modifier =
+                                Modifier
+                                    .widthIn(max = qrSquareMaxDp(node.size).dp)
+                                    .fillMaxWidth()
+                                    .zIndex(1f),
                         )
                     }
                 }
