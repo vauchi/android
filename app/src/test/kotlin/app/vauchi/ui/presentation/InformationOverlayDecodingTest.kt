@@ -107,7 +107,7 @@ class InformationOverlayDecodingTest {
     }
 
     @Test
-    fun `the info slot is drawn last and carries a label`() {
+    fun `the info slot trails before actions`() {
         val action =
             ActionSpec(
                 interactionId = "presentation.info",
@@ -123,7 +123,7 @@ class InformationOverlayDecodingTest {
                 ContextBar(back = null, navigation = null, primary = action, secondary = action, info = action),
             )
 
-        assertEquals(listOf(ContextBarSlot.Primary, ContextBarSlot.Secondary, ContextBarSlot.Info), model.slots)
-        assertTrue(ContextBarSlot.Info.showsLabel)
+        assertEquals(listOf(ContextBarSlot.Info, ContextBarSlot.Secondary), model.trailingSlots)
+        assertTrue(model.hasPrimary)
     }
 }
