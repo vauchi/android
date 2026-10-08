@@ -52,6 +52,7 @@ import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileBleLinkDirection
 import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.PlatformAppEngine
+import uniffi.vauchi_platform.hardwareEventJson
 
 /**
  * ViewModel that bridges [PlatformAppEngine] to the generic Compose presentation host.
@@ -558,7 +559,7 @@ class CoreAppViewModel(
         try {
             val resultJson =
                 withContext(Dispatchers.IO) {
-                    appEngine.dispatchJson(eventJson = event.toEventJson())
+                    appEngine.dispatchJson(eventJson = hardwareEventJson(event))
                 }
             presentationMutex.withLock {
                 applyPresentationEnvelope(resultJson, source = "hardware:${event::class.simpleName}")
