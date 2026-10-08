@@ -31,6 +31,22 @@ class NativeCommandModelsTest {
         assertEquals(CommandDTO.Unknown("FutureEffect"), command)
     }
 
+    /**
+     * Core computes the wait (earliest, never past the deadline) and sends it
+     * as `delay_millis`; Android used to derive it and ignored the deadline
+     * (vauchi/private#548).
+     */
+    @Test
+    fun schedule_wakeup_waits_cores_delay_never_past_the_deadline() {
+        val command =
+            json.decodeFromString<CommandDTO>(
+                """{"ScheduleWakeup":{"earliest_secs":5,"deadline_secs":2,""" +
+                    """"min_interval_secs":1,"earliest_millis":null,"delay_millis":2000}}""",
+            )
+
+        assertEquals(2000L, (command as CommandDTO.ScheduleWakeup).waitMillis)
+    }
+
     @Test
     fun request_biometric_unlock_decodes_from_unit_variant() {
         val command = json.decodeFromString<CommandDTO>(""""RequestBiometricUnlock"""")
