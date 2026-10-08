@@ -74,14 +74,18 @@ sealed class CommandDTO {
     data class ScheduleWakeup(
         @SerialName("earliest_secs") val earliestSecs: UInt,
         @SerialName("deadline_secs") val deadlineSecs: UInt,
-        // / Sub-second override for [earliestSecs] when core is driving work
-        // / finer-grained than a second, such as a live QR exchange whose frame
-        // / is meant to be shown for ~300 ms.
+        /**
+         * Sub-second override for [earliestSecs] when core is driving work
+         * finer-grained than a second, such as a live QR exchange whose frame
+         * is meant to be shown for ~300 ms.
+         */
         @SerialName("earliest_millis") val earliestMillis: UInt? = null,
+        /** Core's wait before the next `onWakeup()`, never past the deadline. */
+        @SerialName("delay_millis") val delayMillis: UInt,
     ) : CommandDTO() {
-        /** How long to wait before the next `onWakeup()`. */
+        /** How long to wait before the next `onWakeup()`: Core decides it (#548). */
         val waitMillis: Long
-            get() = earliestMillis?.toLong() ?: (earliestSecs.toLong() * 1000L)
+            get() = delayMillis.toLong()
     }
 
     data class NfcActivate(
@@ -216,6 +220,7 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                     // (2026-08-18-hover-transfer-stalls-on-the-last-chunk).
                     earliestMillis =
                         (obj["earliest_millis"] as? JsonPrimitive)?.intOrNull?.toUInt(),
+                    delayMillis = obj.value("delay_millis").int.toUInt(),
                 )
             }
 

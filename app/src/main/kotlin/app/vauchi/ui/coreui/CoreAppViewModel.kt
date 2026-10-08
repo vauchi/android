@@ -885,8 +885,8 @@ class CoreAppViewModel(
         // display from this loop: whole seconds pinned it at one
         // frame per second against a ~300 ms design, while the
         // peer's camera decodes ~30 frames per second
-        // (device-measured 2026-08-19). `earliestMillis` is absent
-        // for the idle heartbeat, which stays on whole seconds.
+        // (device-measured 2026-08-19). Core sends that wait as
+        // `delay_millis` (#548).
         val tickStart = System.currentTimeMillis()
         val nextMillis =
             try {
