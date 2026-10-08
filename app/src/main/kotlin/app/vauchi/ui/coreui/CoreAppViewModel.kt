@@ -895,8 +895,7 @@ class CoreAppViewModel(
                         .commands
                         .filterIsInstance<CommandDTO.ScheduleWakeup>()
                         .firstOrNull()
-                scheduled?.earliestMillis?.toLong()
-                    ?: scheduled?.earliestSecs?.toLong()?.times(1000L)
+                scheduled?.waitMillis
                     ?: (DEFAULT_FOREGROUND_WAKEUP_SECS * 1000L)
             } catch (e: Exception) {
                 Log.e(TAG, "Foreground wakeup tick failed", e)
@@ -975,9 +974,7 @@ class CoreAppViewModel(
                     // core's cadence changed while the loop sleeps, so the
                     // sleep is shortened to it. Background wakeups ride
                     // WorkManager (SyncWorker).
-                    foregroundHeartbeat.reschedule(
-                        cmd.earliestMillis?.toLong() ?: (cmd.earliestSecs.toLong() * 1000L),
-                    )
+                    foregroundHeartbeat.reschedule(cmd.waitMillis)
                 }
 
                 is CommandDTO.ImagePickFromLibrary -> {

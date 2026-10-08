@@ -4,6 +4,7 @@
 
 package app.vauchi.ui.coreui
 
+import app.vauchi.util.NotificationPresentation
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -23,7 +24,6 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
-import app.vauchi.util.NotificationPresentation
 import uniffi.vauchi_platform.MobileNotificationPriority
 
 /**
@@ -74,11 +74,15 @@ sealed class CommandDTO {
     data class ScheduleWakeup(
         @SerialName("earliest_secs") val earliestSecs: UInt,
         @SerialName("deadline_secs") val deadlineSecs: UInt,
-        /// Sub-second override for [earliestSecs] when core is driving work
-        /// finer-grained than a second, such as a live QR exchange whose frame
-        /// is meant to be shown for ~300 ms.
+        // / Sub-second override for [earliestSecs] when core is driving work
+        // / finer-grained than a second, such as a live QR exchange whose frame
+        // / is meant to be shown for ~300 ms.
         @SerialName("earliest_millis") val earliestMillis: UInt? = null,
-    ) : CommandDTO()
+    ) : CommandDTO() {
+        /** How long to wait before the next `onWakeup()`. */
+        val waitMillis: Long
+            get() = earliestMillis?.toLong() ?: (earliestSecs.toLong() * 1000L)
+    }
 
     data class NfcActivate(
         val payload: List<Int>,
