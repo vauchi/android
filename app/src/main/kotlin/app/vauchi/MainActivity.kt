@@ -348,6 +348,7 @@ fun MainScreen(
             CoreAppViewModel(
                 appEngine = engine,
                 onPresentationCommitted = viewModel::reconcilePresentationState,
+                onAuthenticationRequirement = viewModel::onAuthenticationRequirement,
                 localAddresses = networkMonitor.localAddress,
             )
         }

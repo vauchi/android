@@ -412,7 +412,7 @@ class MainViewModel(
                 }
 
             when (outcome) {
-                "app_password" -> {
+                APP_PASSWORD_REQUIREMENT -> {
                     _uiState.value = UiState.AppPasswordRequired
                 }
 
@@ -441,6 +441,17 @@ class MainViewModel(
                         ?.content
                 }
         }.getOrNull()
+
+    /**
+     * Core's answer to an unlock prompt shown on its own lock screen. Only
+     * an app password changes the start; any other answer leaves it to the
+     * next presentation transition.
+     */
+    fun onAuthenticationRequirement(requirement: String) {
+        if (requirement == APP_PASSWORD_REQUIREMENT) {
+            _uiState.value = UiState.AppPasswordRequired
+        }
+    }
 
     /** Return to biometric screen (cancel app password entry). */
     fun cancelAppPassword() {
@@ -597,3 +608,6 @@ private data class Tuple4<A, B, C, D>(
     val c: C,
     val d: D,
 )
+
+/** Core's `SetAuthenticationRequirement` value that asks for the app password. */
+private const val APP_PASSWORD_REQUIREMENT = "app_password"

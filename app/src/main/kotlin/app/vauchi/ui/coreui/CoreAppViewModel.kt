@@ -67,6 +67,12 @@ class CoreAppViewModel(
     private val nfcResponder: NfcResponderPort = VauchiHceResponder(),
     private val onPresentationCommitted: () -> Unit = {},
     /**
+     * Core's `SetAuthenticationRequirement`, which answers the unlock prompt:
+     * `app_password` means the app asks for the app password before
+     * anything else (ADR-032).
+     */
+    private val onAuthenticationRequirement: (String) -> Unit = {},
+    /**
      * Where this device is reachable on its current network, or `null` when
      * it is on none (ADR-070). Injected as a flow rather than a
      * `NetworkMonitor` so this stays free of a `Context` and testable.
@@ -740,6 +746,13 @@ class CoreAppViewModel(
                     _alertMessage.value =
                         alert.getValue("title").jsonPrimitive.content to
                         alert.getValue("message").jsonPrimitive.content
+                }
+
+                "SetAuthenticationRequirement" -> {
+                    effect.payload.jsonObject["requirement"]
+                        ?.jsonPrimitive
+                        ?.content
+                        ?.let(onAuthenticationRequirement)
                 }
 
                 "ShowToast" -> {
