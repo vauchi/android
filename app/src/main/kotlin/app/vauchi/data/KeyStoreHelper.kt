@@ -106,7 +106,7 @@ class KeyStoreHelper : StorageKeyProvider {
                 ).setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                 .setKeySize(KEY_SIZE_BITS)
-                .setUserAuthenticationRequired(!app.vauchi.BuildConfig.DEBUG) // Disabled for device testing
+                .setUserAuthenticationRequired(UserAuthPolicy.required)
                 .apply {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         setUserAuthenticationParameters(

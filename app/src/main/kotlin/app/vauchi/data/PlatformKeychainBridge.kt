@@ -5,6 +5,7 @@
 package app.vauchi.data
 
 import android.content.Context
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
@@ -68,18 +69,25 @@ class PreferencesLegacyStorageKey(
 class PlatformKeychainBridge(
     private val context: Context,
     private val legacy: LegacyStorageKey = PreferencesLegacyStorageKey(context),
-    private val masterKey: () -> SecretKey = { getOrCreateMasterKey() },
+    requireUserAuth: Boolean = UserAuthPolicy.required,
+    private val masterKey: () -> SecretKey = { getOrCreateMasterKey(requireUserAuth) },
 ) : MobilePlatformKeychain {
     companion object {
-        private const val KEYSTORE_ALIAS = "vauchi_keychain_key"
+        private const val KEYSTORE_ALIAS = "vauchi_keychain_key_v2"
+
+        /** Unbound key from before #287 A1; it never wrapped a file in use. */
+        private const val UNBOUND_KEYSTORE_ALIAS = "vauchi_keychain_key"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val GCM_IV_LENGTH = 12
         private const val GCM_TAG_LENGTH = 128
         private const val KEYCHAIN_DIR = "keychain"
         private const val BOOTSTRAP_KEY_NAME = "storage_bootstrap"
 
-        private fun getOrCreateMasterKey(): SecretKey {
+        private fun getOrCreateMasterKey(requireUserAuth: Boolean): SecretKey {
             val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+            if (keyStore.containsAlias(UNBOUND_KEYSTORE_ALIAS)) {
+                keyStore.deleteEntry(UNBOUND_KEYSTORE_ALIAS)
+            }
             val existingEntry = keyStore.getEntry(KEYSTORE_ALIAS, null) as? KeyStore.SecretKeyEntry
             if (existingEntry != null) return existingEntry.secretKey
 
@@ -90,7 +98,18 @@ class PlatformKeychainBridge(
                     .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                     .setKeySize(256)
-                    .build()
+                    .setUserAuthenticationRequired(requireUserAuth)
+                    .apply {
+                        if (requireUserAuth && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            setUserAuthenticationParameters(
+                                UserAuthPolicy.VALIDITY_SECONDS,
+                                KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG,
+                            )
+                        } else if (requireUserAuth) {
+                            @Suppress("DEPRECATION")
+                            setUserAuthenticationValidityDurationSeconds(UserAuthPolicy.VALIDITY_SECONDS)
+                        }
+                    }.build()
             keyGenerator.init(spec)
             return keyGenerator.generateKey()
         }

@@ -36,6 +36,15 @@ android {
             timeZone = TimeZone.getTimeZone("UTC")
         }.format(Date())
         buildConfigField("String", "BUILD_ID", "\"$buildTimestamp\"")
+        // -PrequireUserAuth keeps Keystore keys bound to user authentication
+        // in a debug build, so the device rig can drive Core's locked start
+        // without release signing (vauchi/private#580).
+        buildConfigField(
+            "boolean",
+            "REQUIRE_USER_AUTH",
+            (project.findProperty("requireUserAuth")?.toString()?.let { it.isEmpty() || it.toBoolean() } == true)
+                .toString(),
+        )
 
         // Digest of the locale catalogue packaged from ../locales. The
         // extracted copy under filesDir is reused only while this matches,
