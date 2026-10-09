@@ -71,7 +71,7 @@ class ScreenWalkScreenshotTest {
     fun setUp() {
         // `test:unit` runs without the host Core library; only the
         // screenshot job builds it, so the walk is skipped, not failed, here.
-        assumeTrue("host vauchi-platform library missing under $hostLibraryDir", hostLibraryPresent())
+        assumeTrue("host vauchi-platform library missing under ${HostCoreLibrary.dir}", HostCoreLibrary.present())
         FakeAndroidKeyStore.install()
         resetProcessSingletons()
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -343,9 +343,5 @@ class ScreenWalkScreenshotTest {
             System.getProperty("vauchi.screenshotDir")?.let(::File)
                 ?: File("build/screenshots")
 
-        val hostLibraryDir: File = File(System.getProperty("jna.library.path") ?: "native-host-libs")
-
-        fun hostLibraryPresent(): Boolean =
-            hostLibraryDir.listFiles().orEmpty().any { it.name.startsWith("libvauchi_platform.") }
     }
 }
