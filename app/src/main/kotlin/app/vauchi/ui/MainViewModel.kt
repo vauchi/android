@@ -58,6 +58,14 @@ sealed class UiState {
 
     object Onboarding : UiState()
 
+    /**
+     * Core is open and presents the start itself, but cannot yet say whether
+     * there is an identity: it started locked and shows its own unlock or
+     * recovery screen (ADR-043 Amendment 7). Rendered from Core's commands;
+     * the next presentation transition settles it into [Onboarding] or [Ready].
+     */
+    object Starting : UiState()
+
     /** Device needs biometric/PIN authentication to access KeyStore keys. */
     object AuthRequired : UiState()
 
@@ -149,23 +157,46 @@ class MainViewModel(
      * is the boundary between startup onboarding and the normal app.
      */
     fun reconcilePresentationState() {
-        if (_uiState.value !is UiState.Onboarding || presentationReconciliationInFlight) {
+        val startState = _uiState.value
+        if ((startState !is UiState.Onboarding && startState !is UiState.Starting) || presentationReconciliationInFlight) {
             return
         }
         presentationReconciliationInFlight = true
         viewModelScope.launch {
             try {
-                val identityExists =
-                    withContext(Dispatchers.IO) {
-                        repository.hasIdentity()
+                val identityExists = withContext(Dispatchers.IO) { identityOnceOpen() }
+                when {
+                    _uiState.value !== startState -> {
+                        Unit
                     }
-                if (identityExists && _uiState.value is UiState.Onboarding) {
-                    onCoreOnboardingComplete()
+
+                    startState is UiState.Starting && identityExists == true -> {
+                        loadUserData()
+                    }
+
+                    startState is UiState.Starting && identityExists == false -> {
+                        _uiState.value = UiState.Onboarding
+                    }
+
+                    startState is UiState.Onboarding && identityExists == true -> {
+                        onCoreOnboardingComplete()
+                    }
                 }
             } finally {
                 presentationReconciliationInFlight = false
             }
         }
+    }
+
+    /**
+     * Whether there is an identity, or `null` while Core cannot say yet. Core
+     * starts locked rather than failing to open (ADR-043 Amendment 7), and it
+     * classifies why (ADR-045), so any failure to answer leaves the start to
+     * Core's own screen. Failing to open the engine at all still throws.
+     */
+    private fun identityOnceOpen(): Boolean? {
+        val engine = repository.appEngine
+        return runCatching { engine.hasIdentity() }.getOrNull()
     }
 
     fun showMessage(message: String) {
@@ -198,26 +229,10 @@ class MainViewModel(
             // touching the shared engine with a content cycle that may reload
             // cached locale/theme overlays can race against the initial render
             // and transiently produce "Missing: ..." placeholders.
-            val hasIdentity =
-                try {
-                    repository.hasIdentity()
-                } catch (e: AuthenticationRequiredException) {
-                    // Storage initialises lazily behind this call, and on
-                    // release builds its key requires user authentication
-                    // (`setUserAuthenticationRequired(!DEBUG)`), so it throws
-                    // until the user has authenticated. The `runCatching`
-                    // below covered the cycle but not this precondition, so a
-                    // best-effort background leg took the whole process down
-                    // on launch — release-only, which is why no device test
-                    // ever saw it.
-                    //
-                    // Skipped rather than surfaced: `checkIdentity` and
-                    // `loadUserData` already map this to `UiState.AuthRequired`
-                    // and drive the prompt. Setting state from here would race
-                    // the foreground, and this leg is contracted not to touch
-                    // the UI.
-                    return@launch
-                }
+            // Any failure skips it: Core starts locked until the user unlocks
+            // and then cannot answer, and this best-effort leg must neither
+            // crash the launch nor touch the UI, which Core's own screen owns.
+            val hasIdentity = runCatching { repository.hasIdentity() }.getOrDefault(false)
             if (!hasIdentity) {
                 return@launch
             }
@@ -274,14 +289,10 @@ class MainViewModel(
                     return@launch
                 }
 
-                val hasIdentity =
-                    withContext(Dispatchers.IO) {
-                        repository.hasIdentity()
-                    }
-                if (hasIdentity) {
-                    loadUserData()
-                } else {
-                    _uiState.value = UiState.Onboarding
+                when (withContext(Dispatchers.IO) { identityOnceOpen() }) {
+                    true -> loadUserData()
+                    false -> _uiState.value = UiState.Onboarding
+                    null -> _uiState.value = UiState.Starting
                 }
             } catch (e: DeviceNotSecureException) {
                 _uiState.value = UiState.Error(StartupErrorKind.DeviceNotSecure)

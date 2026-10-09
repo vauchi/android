@@ -312,7 +312,7 @@ fun MainScreen(
     // thread and killed the process — the shell could never reach the
     // `AuthRequired` branch it already had
     // (`2026-08-12-android-release-build-crashes-on-launch`).
-    val needsEngine = uiState is UiState.Onboarding || uiState is UiState.Ready
+    val needsEngine = uiState is UiState.Onboarding || uiState is UiState.Ready || uiState is UiState.Starting
     // Remembered per gate transition, not read on every recomposition: the
     // accessor runs `ensureInitialized()`, and calling that from the
     // composition body on each pass put storage setup on the main thread
@@ -322,7 +322,7 @@ fun MainScreen(
         // Null in an engine-backed state means authentication lapsed between
         // the state resolving and this composition. `refresh` re-runs the
         // identity check, which maps that to `AuthRequired` and prompts.
-        val authLapsed = uiState is UiState.Onboarding || uiState is UiState.Ready
+        val authLapsed = needsEngine
         LaunchedEffect(authLapsed) {
             if (authLapsed) viewModel.refresh()
         }
@@ -968,6 +968,7 @@ fun MainScreen(
             when (val state = uiState) {
                 is UiState.Onboarding,
                 is UiState.Ready,
+                is UiState.Starting,
                 -> {
                     PresentationHost(
                         viewModel = coreAppViewModel,
@@ -1057,6 +1058,7 @@ private fun PreAuthContent(
         // would mean the gate and the `when` disagree.
         is UiState.Onboarding,
         is UiState.Ready,
+        is UiState.Starting,
         -> {
             Unit
         }

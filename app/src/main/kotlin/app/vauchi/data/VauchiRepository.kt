@@ -7,7 +7,6 @@ package app.vauchi.data
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Base64
 import android.util.Log
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NotificationPresentation
@@ -21,7 +20,6 @@ import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.PlatformAppEngine
-import java.io.File
 
 /**
  * Exchange data for QR display (replaces deleted MobileExchangeData).
@@ -62,8 +60,6 @@ class VauchiRepository internal constructor(
     private val preferences: VauchiPreferences
 
     companion object {
-        private const val KEY_ENCRYPTED_STORAGE_KEY = "encrypted_storage_key"
-
         @Volatile
         private var instance: VauchiRepository? = null
 
@@ -123,12 +119,12 @@ class VauchiRepository internal constructor(
 
             val dataDir = context.filesDir.absolutePath
             val relayUrl = preferences.getRelayUrl()
-            val storageKeyBytes = getOrCreateStorageKey(dataDir)
-            _appEngine = PlatformAppEngine(dataDir, relayUrl, storageKeyBytes)
-            // Wire the keychain so core-driven shred DomainCommands (SoftShred /
-            // CancelShred / HardShred / PanicShred) reach the platform keychain.
-            // `widget_panic_shred` is a free function and needs no instance.
-            _appEngine.setPlatformKeychain(PlatformKeychainBridge(context))
+            // Core holds every key that opens the database in the keychain,
+            // so a shred destroys them all; the key this app kept before
+            // reaches Core through the bridge (vauchi/private#580). A locked
+            // or invalidated key starts Core's own unlock or recovery screen.
+            val keychain = PlatformKeychainBridge(context, PreferencesLegacyStorageKey(context, keyStoreHelper))
+            _appEngine = PlatformAppEngine.openWithKeychain(dataDir, relayUrl, null, keychain)
             initialized = true
 
             ThemeManager.getInstance(context).attachAppEngine(_appEngine)
@@ -153,78 +149,6 @@ class VauchiRepository internal constructor(
             ensureInitialized()
             return _appEngine
         }
-
-    /**
-     * Get or create storage key from Android KeyStore.
-     *
-     * @throws KeyInvalidatedRecoveryRequired when the master key is gone
-     *   (KPIE / AEAD-bad-tag) and the local encrypted state has been
-     *   wiped. The caller routes the user to a recovery screen.
-     */
-    private fun getOrCreateStorageKey(dataDir: String): ByteArray {
-        val hadData = prefs.getString(KEY_ENCRYPTED_STORAGE_KEY, null) != null
-
-        try {
-            // Try to load encrypted key from preferences
-            val encryptedKeyBase64 = prefs.getString(KEY_ENCRYPTED_STORAGE_KEY, null)
-            if (encryptedKeyBase64 != null) {
-                try {
-                    val encryptedKey = Base64.decode(encryptedKeyBase64, Base64.DEFAULT)
-                    return keyStoreHelper.decryptStorageKey(encryptedKey)
-                } catch (e: AuthenticationRequiredException) {
-                    // Device must be unlocked — propagate to caller
-                    throw e
-                } catch (e: KeyInvalidatedException) {
-                    // Master key gone or stored ciphertext no longer
-                    // authenticates — handled by the outer catch below
-                    // so the wipe runs once at the function boundary.
-                    throw e
-                } catch (e: Exception) {
-                    // Other decryption failures: clear the invalid blob
-                    // and fall through to regenerate.
-                    prefs.edit().remove(KEY_ENCRYPTED_STORAGE_KEY).apply()
-                }
-            }
-
-            // Generate new key, encrypt with KeyStore, and save
-            val encryptedKey = keyStoreHelper.generateEncryptedStorageKey()
-            val encryptedBase64 = Base64.encodeToString(encryptedKey, Base64.DEFAULT)
-            prefs.edit().putString(KEY_ENCRYPTED_STORAGE_KEY, encryptedBase64).apply()
-
-            // Decrypt to get the actual storage key bytes
-            return keyStoreHelper.decryptStorageKey(encryptedKey)
-        } catch (e: KeyInvalidatedException) {
-            Log.e(
-                "VauchiRepository",
-                "Storage master key invalidated (${e.cause?.javaClass?.simpleName}); " +
-                    "wiping encrypted state. hadData=$hadData",
-            )
-            wipeEncryptedStorageState(dataDir)
-            throw KeyInvalidatedRecoveryRequired(hadData = hadData, cause = e)
-        }
-    }
-
-    /**
-     * Removes every artifact that depends on the (now-gone) master key:
-     * the SQLCipher database files, the encrypted-storage-key blob in
-     * SharedPreferences, and the KeyStore alias itself. Idempotent —
-     * safe to call when files don't exist. Used for recovery when the
-     * master key is invalidated.
-     */
-    private fun wipeEncryptedStorageState(dataDir: String) {
-        for (suffix in arrayOf("", "-shm", "-wal", "-journal")) {
-            val f = File(dataDir, "vauchi.db$suffix")
-            if (f.exists() && !f.delete()) {
-                Log.w("VauchiRepository", "Failed to delete ${f.path}")
-            }
-        }
-        prefs.edit().remove(KEY_ENCRYPTED_STORAGE_KEY).apply()
-        try {
-            keyStoreHelper.deleteMasterKey()
-        } catch (e: Exception) {
-            Log.w("VauchiRepository", "deleteMasterKey() failed during wipe: ${e.javaClass.simpleName}")
-        }
-    }
 
     fun getRelayUrl(): String = preferences.getRelayUrl()
 
