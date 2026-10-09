@@ -9,10 +9,14 @@ import android.content.Context
 import androidx.work.ListenableWorker
 import androidx.work.testing.TestListenableWorkerBuilder
 import app.vauchi.data.AuthenticationRequiredException
-import app.vauchi.data.StorageKeyProvider
+import app.vauchi.data.OldStorageKeyProvider
 import app.vauchi.data.VauchiRepository
+import app.vauchi.data.installFromBefore
+import app.vauchi.screenshots.FakeAndroidKeyStore
+import app.vauchi.screenshots.HostCoreLibrary
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -22,19 +26,14 @@ import org.robolectric.Shadows.shadowOf
 
 /**
  * Periodic sync runs on WorkManager's schedule, which routinely wakes a
- * *cold* process while the device is locked. Storage initialises lazily
- * behind the first repository call, and on release builds
- * (`setUserAuthenticationRequired(!DEBUG)`) that key needs user
- * authentication a background worker can never obtain.
+ * *cold* process while the device is locked. On release builds the storage
+ * key needs user authentication a background worker can never obtain, so
+ * Core starts locked (vauchi/private#580) and cannot say whether there is an
+ * identity yet.
  *
  * A locked device is an expected condition, not a fault: the work simply
  * has not been done yet. It must be reported as `retry` so WorkManager
- * comes back, rather than escaping `doWork` — which WorkManager records as
- * an outright failure, skipping the retry the worker already implements.
- *
- * Same defect class as the launch content-update cycle fixed in
- * `vauchi/android!625`: a guard placed below the call that touches storage
- * rather than around it.
+ * comes back, rather than as "nothing to do" or an outright failure.
  */
 @RunWith(RobolectricTestRunner::class)
 class SyncWorkerStorageLockedTest {
@@ -42,6 +41,8 @@ class SyncWorkerStorageLockedTest {
 
     @Before
     fun setUp() {
+        assumeTrue("host vauchi-platform library missing", HostCoreLibrary.present())
+        FakeAndroidKeyStore.install()
         context = RuntimeEnvironment.getApplication()
         // VauchiRepository's init rejects a device with no lock screen;
         // Robolectric reports none by default.
@@ -51,29 +52,14 @@ class SyncWorkerStorageLockedTest {
 
     @Test
     fun aLockedStorageKeyDefersTheSyncInsteadOfEscaping() {
+        val provider = OldStorageKeyProvider()
+        installFromBefore(context, provider)
+        provider.failure = AuthenticationRequiredException("Device must be unlocked to access encryption keys")
         val worker = TestListenableWorkerBuilder<SyncWorker>(context).build()
-        worker.repositoryFactory = { VauchiRepository(it, LockedStorageKeyProvider()) }
+        worker.repositoryFactory = { VauchiRepository(it, provider) }
 
         val result = runBlocking { worker.doWork() }
 
         assertEquals(ListenableWorker.Result.retry(), result)
-    }
-
-    /**
-     * Stands in for a release-build KeyStore on a locked device: the key
-     * exists, but every operation that would use it demands authentication.
-     */
-    private class LockedStorageKeyProvider : StorageKeyProvider {
-        override fun generateEncryptedStorageKey(): ByteArray = throw locked()
-
-        override fun encryptStorageKey(storageKey: ByteArray): ByteArray = throw locked()
-
-        override fun decryptStorageKey(encryptedData: ByteArray): ByteArray = throw locked()
-
-        override fun hasMasterKey(): Boolean = true
-
-        override fun deleteMasterKey() = Unit
-
-        private fun locked() = AuthenticationRequiredException("Device must be unlocked to access encryption keys")
     }
 }
