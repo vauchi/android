@@ -31,12 +31,19 @@ import javax.crypto.spec.SecretKeySpec
 object FakeAndroidKeyStore {
     private const val PROVIDER_NAME = "AndroidKeyStore"
     private val keys = ConcurrentHashMap<String, SecretKey>()
+    private val specs = ConcurrentHashMap<String, KeyGenParameterSpec>()
+
+    /** The spec the key under [alias] was generated with, if any. */
+    fun specFor(alias: String): KeyGenParameterSpec? = specs[alias]
+
+    fun hasAlias(alias: String): Boolean = keys.containsKey(alias)
 
     fun install() {
         if (Security.getProvider(PROVIDER_NAME) == null) {
             Security.insertProviderAt(FakeProvider(), 1)
         }
         keys.clear()
+        specs.clear()
     }
 
     class FakeProvider : Provider(PROVIDER_NAME, 1.0, "Robolectric in-memory AndroidKeyStore") {
@@ -131,6 +138,7 @@ object FakeAndroidKeyStore {
         ) {
             val spec = params as KeyGenParameterSpec
             alias = spec.keystoreAlias
+            specs[spec.keystoreAlias] = spec
             keySizeBits = spec.keySize.takeIf { it > 0 } ?: 256
         }
 
