@@ -9,9 +9,7 @@ import android.util.Log
 import androidx.biometric.BiometricManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import app.vauchi.data.AuthenticationRequiredException
 import app.vauchi.data.DeviceNotSecureException
-import app.vauchi.data.KeyInvalidatedRecoveryRequired
 import app.vauchi.data.VauchiRepository
 import app.vauchi.util.NotificationPresentation
 import app.vauchi.util.LocalizationManager
@@ -66,7 +64,7 @@ sealed class UiState {
      */
     object Starting : UiState()
 
-    /** Device needs biometric/PIN authentication to access KeyStore keys. */
+    /** Asks for the biometric unlock again after the app password was cancelled. */
     object AuthRequired : UiState()
 
     /** Biometric OK but duress is enabled — show app password screen. */
@@ -83,19 +81,6 @@ sealed class UiState {
         val kind: StartupErrorKind,
         val detail: String? = null,
     ) : UiState()
-
-    /**
-     * The KeyStore master key was invalidated and the local encrypted state
-     * has been wiped. The user must pick a recovery path.
-     *
-     * @property hadData true when the user previously had a working
-     *   identity whose data was lost; false on a true fresh-install path
-     *   that hit an inherited invalidated alias (route silently to
-     *   onboarding via [MainViewModel.onRecoveryContinueToOnboarding]).
-     */
-    data class KeyInvalidatedRecovery(
-        val hadData: Boolean,
-    ) : UiState()
 }
 
 class MainViewModel(
@@ -107,24 +92,6 @@ class MainViewModel(
 
     val appEngine: PlatformAppEngine
         get() = repository.appEngine
-
-    /**
-     * The engine, or `null` when storage cannot be opened because the user
-     * has not authenticated.
-     *
-     * Acquiring the engine initialises storage, and on release builds that
-     * key requires user authentication, so the plain [appEngine] getter
-     * throws before the user has unlocked. A composable cannot recover from
-     * a throw, so composition asks for the engine this way and renders the
-     * pre-auth tree when it is absent; [refresh] then routes the state to
-     * `AuthRequired`, which drives the prompt.
-     */
-    fun appEngineOrNull(): PlatformAppEngine? =
-        try {
-            repository.appEngine
-        } catch (e: AuthenticationRequiredException) {
-            null
-        }
 
     private val localizationManager = LocalizationManager.getInstance(application)
     private val networkMonitor = NetworkMonitor(application)
@@ -296,17 +263,6 @@ class MainViewModel(
                 }
             } catch (e: DeviceNotSecureException) {
                 _uiState.value = UiState.Error(StartupErrorKind.DeviceNotSecure)
-            } catch (e: AuthenticationRequiredException) {
-                android.util.Log.e("Vauchi", "checkIdentity: auth required", e)
-                _uiState.value = UiState.AuthRequired
-            } catch (e: KeyInvalidatedRecoveryRequired) {
-                android.util.Log.e("Vauchi", "checkIdentity: key invalidated, hadData=${e.hadData}", e)
-                if (e.hadData) {
-                    _uiState.value = UiState.KeyInvalidatedRecovery(hadData = true)
-                } else {
-                    // True fresh install — wipe already done, route silently
-                    _uiState.value = UiState.Onboarding
-                }
             } catch (e: Exception) {
                 android.util.Log.e("Vauchi", "checkIdentity: ${e.javaClass.simpleName}: ${e.message}", e)
                 _uiState.value = UiState.Error(StartupErrorKind.Other, e.message)
@@ -355,13 +311,6 @@ class MainViewModel(
             _uiState.value = UiState.Ready(displayName, publicId, card, contactCount)
         } catch (e: DeviceNotSecureException) {
             _uiState.value = UiState.Error(StartupErrorKind.DeviceNotSecure)
-        } catch (e: AuthenticationRequiredException) {
-            android.util.Log.e("Vauchi", "loadUserData: auth required", e)
-            _uiState.value = UiState.AuthRequired
-        } catch (e: KeyInvalidatedRecoveryRequired) {
-            android.util.Log.e("Vauchi", "loadUserData: key invalidated, hadData=${e.hadData}", e)
-            _uiState.value =
-                if (e.hadData) UiState.KeyInvalidatedRecovery(hadData = true) else UiState.Onboarding
         } catch (e: Exception) {
             android.util.Log.e("Vauchi", "loadUserData: ${e.javaClass.simpleName}: ${e.message}", e)
             _uiState.value = UiState.Error(StartupErrorKind.Other, e.message)
@@ -380,11 +329,6 @@ class MainViewModel(
      * recovery state was entered, so re-running the identity check routes
      * to Core's onboarding, which offers both paths.
      */
-    fun onRecoveryContinueToOnboarding() {
-        _uiState.value = UiState.Loading
-        checkIdentity()
-    }
-
     /** Re-run full initialization (identity check + load). Use after biometric auth. */
     private val biometricJson = Json { ignoreUnknownKeys = true }
 

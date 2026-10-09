@@ -8,7 +8,6 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import app.vauchi.data.AuthenticationRequiredException
 import app.vauchi.data.VauchiRepository
 import app.vauchi.ui.coreui.WakeupOutcome
 import app.vauchi.ui.coreui.toPresentation
@@ -84,12 +83,6 @@ class SyncWorker(
             }
 
             Result.success()
-        } catch (e: AuthenticationRequiredException) {
-            // A locked device cannot release the storage key, and a background
-            // worker has no way to prompt for it. The work is undone, not
-            // broken, so report it as such rather than as a sync failure.
-            Log.d(TAG, "Storage locked; deferring background sync")
-            Result.retry()
         } catch (e: Exception) {
             Log.e(TAG, "Sync failed: ${e.message}", e)
             if (runAttemptCount.toUInt() < maxRetries) {

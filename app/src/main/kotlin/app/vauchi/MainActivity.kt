@@ -73,7 +73,6 @@ import app.vauchi.proximity.AccelerometerProximityService
 import app.vauchi.proximity.AudioProximityService
 import app.vauchi.proximity.LocationCaptureService
 import app.vauchi.ui.AppPasswordScreen
-import app.vauchi.ui.KeyInvalidatedRecoveryScreen
 import app.vauchi.ui.MainViewModel
 import app.vauchi.util.NetworkMonitor
 import app.vauchi.ui.StartupErrorKind
@@ -306,32 +305,20 @@ fun MainScreen(
         }
     }
 
-    // Render the pre-auth states *before* touching the engine. Acquiring it
-    // initialises storage, whose key requires user authentication on release
-    // builds, so composing the engine-backed tree first threw on the main
-    // thread and killed the process — the shell could never reach the
-    // `AuthRequired` branch it already had
-    // (`2026-08-12-android-release-build-crashes-on-launch`).
+    // Render the states that need no engine *before* touching it: acquiring
+    // it opens storage, which the identity check does off the main thread
+    // first (`2026-08-12-android-release-build-crashes-on-launch`). A locked
+    // keychain no longer throws here; Core starts locked (vauchi/private#580).
     val needsEngine = uiState is UiState.Onboarding || uiState is UiState.Ready || uiState is UiState.Starting
     // Remembered per gate transition, not read on every recomposition: the
     // accessor runs `ensureInitialized()`, and calling that from the
     // composition body on each pass put storage setup on the main thread
     // often enough to stall the instrumented suite.
-    val engine = remember(needsEngine) { if (needsEngine) viewModel.appEngineOrNull() else null }
+    val engine = remember(needsEngine) { if (needsEngine) viewModel.appEngine else null }
     if (engine == null) {
-        // Null in an engine-backed state means authentication lapsed between
-        // the state resolving and this composition. `refresh` re-runs the
-        // identity check, which maps that to `AuthRequired` and prompts.
-        val authLapsed = needsEngine
-        LaunchedEffect(authLapsed) {
-            if (authLapsed) viewModel.refresh()
-        }
         Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                PreAuthContent(
-                    state = if (authLapsed) UiState.Loading else uiState,
-                    viewModel = viewModel,
-                )
+                PreAuthContent(state = uiState, viewModel = viewModel)
             }
         }
         return
@@ -995,13 +982,6 @@ fun MainScreen(
 /**
  * The states that render without Core's engine.
  *
- * Acquiring the engine initialises storage, whose key requires user
- * authentication on release builds, so composing it before the user has
- * authenticated threw `AuthenticationRequiredException` on the main thread
- * and killed the process — the shell could not render the `AuthRequired`
- * state it already models, because getting far enough to render *anything*
- * threw first (`2026-08-12-android-release-build-crashes-on-launch`).
- *
  * Defined once and used from both the pre-engine gate and the engine-backed
  * `when`, so the two cannot describe these states differently.
  */
@@ -1041,17 +1021,6 @@ private fun PreAuthContent(
                 kind = state.kind,
                 detail = state.detail,
                 onRetry = { viewModel.refresh() },
-            )
-        }
-
-        is UiState.KeyInvalidatedRecovery -> {
-            // Both choices continue into Core's onboarding, which offers
-            // "Restore from backup" (file pick, full restore) next to "Create
-            // identity". The shell used to paste a backup into its own
-            // dialog and import it identity-only (private#283).
-            KeyInvalidatedRecoveryScreen(
-                onRestoreFromBackup = { viewModel.onRecoveryContinueToOnboarding() },
-                onStartFresh = { viewModel.onRecoveryContinueToOnboarding() },
             )
         }
 

@@ -279,21 +279,3 @@ class KeyInvalidatedException(
     message: String,
     cause: Throwable? = null,
 ) : Exception(message, cause)
-
-/**
- * Signaled by the storage layer after a [KeyInvalidatedException] has
- * been observed AND the local encrypted state has been wiped (DB +
- * preferences + KeyStore alias). The caller should present recovery
- * options to the user.
- *
- * @property hadData true when an encrypted-storage-key blob existed
- *   prior to the wipe — meaning the user previously had a working
- *   identity whose data is now lost. false on a true fresh install
- *   that hit an invalidated alias inherited from a prior package
- *   lifetime; in that case the caller can skip the recovery prompt
- *   and route straight to onboarding.
- */
-class KeyInvalidatedRecoveryRequired(
-    val hadData: Boolean,
-    cause: Throwable? = null,
-) : Exception("Local encrypted state was unrecoverable; wipe complete", cause)
