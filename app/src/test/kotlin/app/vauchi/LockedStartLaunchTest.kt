@@ -20,7 +20,6 @@ import app.vauchi.screenshots.FakeAndroidKeyStore
 import app.vauchi.screenshots.HostCoreLibrary
 import app.vauchi.screenshots.ProcessSingletons
 import org.junit.After
-import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -28,6 +27,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowBiometricManager
 
@@ -38,7 +38,8 @@ import org.robolectric.shadows.ShadowBiometricManager
  * screen, nor let a launch-time background leg crash on it.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [HostCoreLibrary.SDK])
 class LockedStartLaunchTest {
     @get:Rule
     val composeRule = createEmptyComposeRule()
@@ -48,7 +49,7 @@ class LockedStartLaunchTest {
 
     @Before
     fun setUp() {
-        assumeTrue("host vauchi-platform library missing", HostCoreLibrary.present())
+        HostCoreLibrary.assumePresentInSharedSandbox()
         FakeAndroidKeyStore.install()
         ProcessSingletons.reset()
         context = ApplicationProvider.getApplicationContext()

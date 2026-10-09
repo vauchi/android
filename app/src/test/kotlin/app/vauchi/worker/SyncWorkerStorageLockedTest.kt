@@ -16,13 +16,14 @@ import app.vauchi.screenshots.FakeAndroidKeyStore
 import app.vauchi.screenshots.HostCoreLibrary
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * Periodic sync runs on WorkManager's schedule, which routinely wakes a
@@ -36,12 +37,14 @@ import org.robolectric.Shadows.shadowOf
  * comes back, rather than as "nothing to do" or an outright failure.
  */
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [HostCoreLibrary.SDK])
 class SyncWorkerStorageLockedTest {
     private lateinit var context: Context
 
     @Before
     fun setUp() {
-        assumeTrue("host vauchi-platform library missing", HostCoreLibrary.present())
+        HostCoreLibrary.assumePresentInSharedSandbox()
         FakeAndroidKeyStore.install()
         context = RuntimeEnvironment.getApplication()
         // VauchiRepository's init rejects a device with no lock screen;

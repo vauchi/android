@@ -30,7 +30,6 @@ import app.vauchi.MainActivity
 import app.vauchi.data.VauchiPreferences
 import org.junit.After
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -56,7 +55,7 @@ import java.security.MessageDigest
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = "w411dp-h891dp-420dpi", sdk = [34])
+@Config(qualifiers = "w411dp-h891dp-420dpi", sdk = [HostCoreLibrary.SDK])
 class ScreenWalkScreenshotTest {
     @get:Rule
     val composeRule = createEmptyComposeRule()
@@ -68,7 +67,7 @@ class ScreenWalkScreenshotTest {
     fun setUp() {
         // `test:unit` runs without the host Core library; only the
         // screenshot job builds it, so the walk is skipped, not failed, here.
-        assumeTrue("host vauchi-platform library missing under ${HostCoreLibrary.dir}", HostCoreLibrary.present())
+        HostCoreLibrary.assumePresentInSharedSandbox()
         FakeAndroidKeyStore.install()
         ProcessSingletons.reset()
         val context = ApplicationProvider.getApplicationContext<Context>()

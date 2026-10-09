@@ -24,13 +24,13 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import uniffi.vauchi_platform.DomainCommand
 
 /**
@@ -41,13 +41,14 @@ import uniffi.vauchi_platform.DomainCommand
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [HostCoreLibrary.SDK])
 class UnlockAuthenticationRequirementTest {
     private lateinit var context: Context
 
     @Before
     fun setUp() {
-        assumeTrue("host vauchi-platform library missing", HostCoreLibrary.present())
+        HostCoreLibrary.assumePresentInSharedSandbox()
         FakeAndroidKeyStore.install()
         Dispatchers.setMain(UnconfinedTestDispatcher())
         context = ApplicationProvider.getApplicationContext()
