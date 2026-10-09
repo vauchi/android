@@ -28,9 +28,6 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.vauchi.MainActivity
 import app.vauchi.data.VauchiPreferences
-import app.vauchi.data.VauchiRepository
-import app.vauchi.util.LocalizationManager
-import app.vauchi.util.ThemeManager
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -73,7 +70,7 @@ class ScreenWalkScreenshotTest {
         // screenshot job builds it, so the walk is skipped, not failed, here.
         assumeTrue("host vauchi-platform library missing under ${HostCoreLibrary.dir}", HostCoreLibrary.present())
         FakeAndroidKeyStore.install()
-        resetProcessSingletons()
+        ProcessSingletons.reset()
         val context = ApplicationProvider.getApplicationContext<Context>()
         // Shared preferences outlive the per-test data directory; a stale
         // encrypted storage-key blob paired with fresh fake keystore keys
@@ -313,17 +310,6 @@ class ScreenWalkScreenshotTest {
             .getInstance("SHA-256")
             .digest(file.readBytes())
             .joinToString("") { "%02x".format(it) }
-
-    /**
-     * The repository, theme, and localization singletons outlive a Robolectric
-     * test's application instance; clear them so the second walk gets a fresh
-     * engine on its own data directory.
-     */
-    private fun resetProcessSingletons() {
-        listOf(VauchiRepository::class.java, LocalizationManager::class.java, ThemeManager::class.java).forEach { cls ->
-            cls.getDeclaredField("instance").apply { isAccessible = true }.set(null, null)
-        }
-    }
 
     private companion object {
         const val PRIMARY_TAG = "contextbar.primary"

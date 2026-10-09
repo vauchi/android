@@ -39,9 +39,12 @@ object FakeAndroidKeyStore {
     fun hasAlias(alias: String): Boolean = keys.containsKey(alias)
 
     fun install() {
-        if (Security.getProvider(PROVIDER_NAME) == null) {
-            Security.insertProviderAt(FakeProvider(), 1)
-        }
+        // Replaced, not kept: Robolectric loads android.* classes per test
+        // configuration, so a provider registered by an earlier test class
+        // casts this class's KeyGenParameterSpec and fails
+        // (ClassCastException between two KeyGenParameterSpec classes).
+        Security.removeProvider(PROVIDER_NAME)
+        Security.insertProviderAt(FakeProvider(), 1)
         keys.clear()
         specs.clear()
     }
