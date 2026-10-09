@@ -36,6 +36,7 @@ class OldStorageKeyProvider(
 fun installFromBefore(
     context: Context,
     provider: OldStorageKeyProvider,
+    setUp: (PlatformAppEngine) -> Unit = {},
 ) {
     val encrypted = provider.generateEncryptedStorageKey()
     context
@@ -44,5 +45,5 @@ fun installFromBefore(
         .putString(PreferencesLegacyStorageKey.PREF_ENCRYPTED_STORAGE_KEY, Base64.encodeToString(encrypted, Base64.DEFAULT))
         .commit()
     val key = provider.decryptStorageKey(encrypted)
-    PlatformAppEngine(context.filesDir.absolutePath, "https://relay.test", key).close()
+    PlatformAppEngine(context.filesDir.absolutePath, "https://relay.test", key).use(setUp)
 }
