@@ -679,12 +679,14 @@ test:screenshots:
         echo "$CORE_REF" > "$VERSION_STAMP"
         echo "✅ Native library built from ${CORE_REF}: $(ls -lh "$NATIVE_LIB" | awk '{print $5}')"
       fi
-    # Walk the real screens under Robolectric (no device): onboarding via the
-    # context bar, then every destination and the action overlay. Runs
-    # before the baseline gate so the PNGs upload even without baselines.
-    # The walk skips itself when the host library is absent (test:unit), so
-    # a zero count here means the library did not load — fail, not pass.
-    - ./gradlew testDebugUnitTest --tests 'app.vauchi.*ScreenWalk*'
+    # Every JVM test that drives the real engine runs here, the only job with
+    # the host library: the screen walk (onboarding via the context bar, then
+    # every destination and the action overlay) and the keychain, locked
+    # start and unlock tests (vauchi/private#580). They skip themselves
+    # without the library (test:unit); VAUCHI_REQUIRE_HOST_CORE=1 makes a
+    # missing library fail them instead. Runs before the baseline gate so the
+    # PNGs upload even without baselines.
+    - VAUCHI_REQUIRE_HOST_CORE=1 ./gradlew testDebugUnitTest
     - |
       WALK_PNGS=$(find app/build/screenshots -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
       if [ "$WALK_PNGS" -eq 0 ]; then
@@ -717,7 +719,7 @@ test:screenshots:
       - app/build/reports/screenshotTest/
       - app/src/screenshotTestDebug/reference/
     reports:
-      junit: app/build/test-results/testDebugUnitTest/TEST-*ScreenWalk*.xml
+      junit: app/build/test-results/testDebugUnitTest/TEST-*.xml
     expire_in: 7 days
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"

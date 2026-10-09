@@ -28,8 +28,16 @@ object HostCoreLibrary {
 
     fun present(): Boolean = dir.listFiles().orEmpty().any { it.name.startsWith("libvauchi_platform.") }
 
-    /** Skips without the library; fails a test that is not in the shared sandbox. */
+    /**
+     * Skips without the library, unless the job that builds it sets
+     * `VAUCHI_REQUIRE_HOST_CORE=1`: there a missing library fails rather than
+     * passing every engine test by skipping it. Fails a test that is not in
+     * the shared sandbox.
+     */
     fun assumePresentInSharedSandbox() {
+        if (System.getenv("VAUCHI_REQUIRE_HOST_CORE") == "1") {
+            check(present()) { "VAUCHI_REQUIRE_HOST_CORE=1 but no host vauchi-platform library under $dir" }
+        }
         assumeTrue("host vauchi-platform library missing under $dir", present())
         check(Build.VERSION.SDK_INT == SDK && ConfigurationRegistry.get(GraphicsMode.Mode::class.java) == GraphicsMode.Mode.NATIVE) {
             "tests that load the host Core library need @GraphicsMode(NATIVE) and @Config(sdk = [HostCoreLibrary.SDK])"
