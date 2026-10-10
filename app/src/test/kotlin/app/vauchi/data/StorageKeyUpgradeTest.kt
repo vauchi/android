@@ -57,6 +57,12 @@ class StorageKeyUpgradeTest {
     private var keychainFailure: Exception? = null
     private val keychainKey: SecretKey = SecretKeySpec(ByteArray(32) { 5 }, "AES")
 
+    /**
+     * Engines this test opened; closed after it, so no listener a view
+     * model registered on them is still called while the JVM exits.
+     */
+    private val engines = mutableListOf<PlatformAppEngine>()
+
     @Before
     fun setUp() {
         HostCoreLibrary.assumePresentInSharedSandbox()
@@ -83,6 +89,7 @@ class StorageKeyUpgradeTest {
 
     @After
     fun tearDown() {
+        engines.forEach(PlatformAppEngine::close)
         Dispatchers.resetMain()
     }
 
@@ -92,7 +99,7 @@ class StorageKeyUpgradeTest {
                 keychainFailure?.let { throw it }
                 keychainKey
             }
-        return PlatformAppEngine.openWithKeychain(context.filesDir.absolutePath, "https://relay.test", null, bridge)
+        return PlatformAppEngine.openWithKeychain(context.filesDir.absolutePath, "https://relay.test", null, bridge).also(engines::add)
     }
 
     private fun surface(engine: PlatformAppEngine): String {

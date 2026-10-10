@@ -31,6 +31,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import uniffi.vauchi_platform.PlatformAppEngine
 
 /**
  * Core's lock screen asks for the unlock prompt with a bare
@@ -44,6 +45,12 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [HostCoreLibrary.SDK])
 class LockedStartPromptTest {
     private lateinit var context: Context
+
+    /**
+     * Engines this test opened; closed after it, so no listener a view
+     * model registered on them is still called while the JVM exits.
+     */
+    private val engines = mutableListOf<PlatformAppEngine>()
 
     @Before
     fun setUp() {
@@ -59,6 +66,7 @@ class LockedStartPromptTest {
 
     @After
     fun tearDown() {
+        engines.forEach(PlatformAppEngine::close)
         Dispatchers.resetMain()
     }
 
@@ -67,7 +75,7 @@ class LockedStartPromptTest {
         val provider = OldStorageKeyProvider()
         installFromBefore(context, provider)
         provider.failure = AuthenticationRequiredException("unlock")
-        val engine = VauchiRepository(context, provider).appEngine
+        val engine = VauchiRepository(context, provider).appEngine.also(engines::add)
 
         val viewModel = CoreAppViewModel(appEngine = engine)
 

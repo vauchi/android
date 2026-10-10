@@ -31,6 +31,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import uniffi.vauchi_platform.PlatformAppEngine
 import uniffi.vauchi_platform.DomainCommand
 
 /**
@@ -46,6 +47,12 @@ import uniffi.vauchi_platform.DomainCommand
 class UnlockAuthenticationRequirementTest {
     private lateinit var context: Context
 
+    /**
+     * Engines this test opened; closed after it, so no listener a view
+     * model registered on them is still called while the JVM exits.
+     */
+    private val engines = mutableListOf<PlatformAppEngine>()
+
     @Before
     fun setUp() {
         HostCoreLibrary.assumePresentInSharedSandbox()
@@ -60,6 +67,7 @@ class UnlockAuthenticationRequirementTest {
 
     @After
     fun tearDown() {
+        engines.forEach(PlatformAppEngine::close)
         Dispatchers.resetMain()
     }
 
@@ -72,7 +80,7 @@ class UnlockAuthenticationRequirementTest {
             engine.dispatchDomainCommand(DomainCommand.SetupDuressPassword("654321"))
         }
         provider.failure = AuthenticationRequiredException("unlock")
-        val engine = VauchiRepository(context, provider).appEngine
+        val engine = VauchiRepository(context, provider).appEngine.also(engines::add)
         val requirement = CompletableDeferred<String>()
         val viewModel =
             CoreAppViewModel(appEngine = engine, onAuthenticationRequirement = { requirement.complete(it) })
