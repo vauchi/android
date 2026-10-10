@@ -7,6 +7,7 @@ package app.vauchi.util
 import android.content.Context
 import android.content.SharedPreferences
 import org.junit.After
+import app.vauchi.screenshots.HostCoreLibrary
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -16,6 +17,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * Pin the SharedPreferences-canonical contract for [LocalizationManager]
@@ -26,7 +29,13 @@ import org.robolectric.RuntimeEnvironment
  * separate code path and is not exercised here (instrumentation
  * coverage).
  */
+// LocalizationManager calls Core's locale functions, which load the host Core
+// library when present; it must load in the one shared sandbox, or it
+// re-registers Core's callback table for another sandbox and a later keychain
+// callback aborts the test JVM (vauchi/private#580, see HostCoreLibrary).
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [HostCoreLibrary.SDK])
 class LocalizationManagerSharedPrefsTest {
     private lateinit var prefs: SharedPreferences
 

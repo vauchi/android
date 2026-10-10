@@ -15,6 +15,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import app.vauchi.screenshots.HostCoreLibrary
+import org.robolectric.annotation.GraphicsMode
+import org.robolectric.annotation.Config
 import org.robolectric.RuntimeEnvironment
 
 /**
@@ -26,7 +29,12 @@ import org.robolectric.RuntimeEnvironment
  * truth. The render-context push to core happens through a separate
  * code path and is not exercised here (instrumentation coverage).
  */
+// ThemeManager calls Core's theme functions, which load the host Core library
+// when present; it must load in the one shared sandbox (see
+// LocalizationManagerSharedPrefsTest and HostCoreLibrary, vauchi/private#580).
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [HostCoreLibrary.SDK])
 class ThemeManagerSharedPrefsTest {
     private lateinit var prefs: SharedPreferences
 
