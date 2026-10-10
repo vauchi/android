@@ -164,8 +164,23 @@ class PlatformKeychainBridge(
             if (name == BOOTSTRAP_KEY_NAME) {
                 legacy.delete()
             }
+            if (keychainDir.listFiles().isNullOrEmpty()) {
+                deleteMasterKey()
+            }
         } catch (e: Exception) {
             throw keychainFailure("deleteKey", e)
+        }
+    }
+
+    /**
+     * The Keystore key goes with the last key file (vauchi/private#599): a
+     * copy of `files/` taken before a shred holds the key files, and a
+     * surviving Keystore key would open them.
+     */
+    private fun deleteMasterKey() {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+        if (keyStore.containsAlias(KEYSTORE_ALIAS)) {
+            keyStore.deleteEntry(KEYSTORE_ALIAS)
         }
     }
 
