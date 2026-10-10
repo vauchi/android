@@ -813,10 +813,15 @@ class CoreAppViewModel(
                 }
 
                 else -> {
+                    // A command without fields arrives as the bare string the
+                    // payload already is; wrapping it as `{variant: payload}`
+                    // made it undecodable (vauchi/private#580).
                     val wrapped =
-                        JsonObject(
-                            mapOf(effect.variant to effect.payload),
-                        )
+                        if (effect.payload is JsonPrimitive) {
+                            effect.payload
+                        } else {
+                            JsonObject(mapOf(effect.variant to effect.payload))
+                        }
                     val command =
                         runCatching {
                             json.decodeFromJsonElement<CommandDTO>(wrapped)
