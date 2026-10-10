@@ -626,6 +626,9 @@ test:screenshots:
     # The Robolectric screen walk writes the real Core-driven screens here;
     # the layoutlib preview baselines stay under app/src/screenshotTestDebug.
     VRT_SCREENSHOT_DIR: app/build/screenshots
+    # diag (vauchi/private#580): names the thread behind the exit-time
+    # callback abort; remove once it has.
+    RUST_BACKTRACE: "1"
   script:
     # Build host-platform native library so layoutlib can load UniFFI types.
     # Uses the same core ref that produced the published AAR bindings.
