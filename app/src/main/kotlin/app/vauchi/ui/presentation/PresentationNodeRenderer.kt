@@ -72,6 +72,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -148,6 +150,8 @@ internal fun PresentationNodeRenderer(
                 placeholder = node.placeholder?.let { { Text(it) } },
                 isError = node.validationError != null,
                 supportingText = node.validationError?.let { { Text(it) } },
+                visualTransformation =
+                    if (isSecret(node.inputKind)) PasswordVisualTransformation() else VisualTransformation.None,
                 keyboardOptions =
                     KeyboardOptions(
                         keyboardType = keyboardType(node.inputKind),
@@ -953,5 +957,8 @@ private fun keyboardType(inputKind: String): KeyboardType =
         "phone" -> KeyboardType.Phone
         "number" -> KeyboardType.Number
         "password" -> KeyboardType.Password
+        "pin" -> KeyboardType.NumberPassword
         else -> KeyboardType.Text
     }
+
+private fun isSecret(inputKind: String): Boolean = inputKind == "password" || inputKind == "pin"
