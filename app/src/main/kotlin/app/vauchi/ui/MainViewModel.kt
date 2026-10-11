@@ -313,19 +313,6 @@ class MainViewModel(
         }
     }
 
-    /**
-     * The user left the key-invalidated recovery screen, to restore a
-     * backup or to start fresh. Storage was already wiped when the
-     * recovery state was entered, so re-running the identity check routes
-     * to Core's onboarding, which offers both paths.
-     */
-    fun setError(
-        kind: StartupErrorKind,
-        detail: String? = null,
-    ) {
-        _uiState.value = UiState.Error(kind, detail)
-    }
-
     fun sync() {
         viewModelScope.launch {
             if (!repository.hasIdentity()) {

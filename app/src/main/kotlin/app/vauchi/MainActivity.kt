@@ -1034,7 +1034,6 @@ fun ErrorScreen(
     val context = LocalContext.current
     val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
     val isLockScreenError = kind == StartupErrorKind.DeviceNotSecure
-    val isCancelledError = kind == StartupErrorKind.AuthCancelled
 
     Box(
         modifier =
@@ -1055,13 +1054,11 @@ fun ErrorScreen(
                 text =
                     if (isLockScreenError) {
                         localizationManager.t("auth.device_lock_required")
-                    } else if (isCancelledError) {
-                        localizationManager.t("auth.required_title")
                     } else {
                         localizationManager.t("error.generic")
                     },
                 style = MaterialTheme.typography.headlineMedium,
-                color = if (isCancelledError) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -1069,8 +1066,6 @@ fun ErrorScreen(
                 text =
                     if (isLockScreenError) {
                         localizationManager.t("auth.device_lock_required_body")
-                    } else if (isCancelledError) {
-                        localizationManager.t("auth.required_body")
                     } else {
                         detail ?: localizationManager.t("error.generic")
                     },
