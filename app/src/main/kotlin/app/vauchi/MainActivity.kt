@@ -22,8 +22,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -72,7 +70,6 @@ import app.vauchi.exchange.BluetoothRuntimePermissions
 import app.vauchi.proximity.AccelerometerProximityService
 import app.vauchi.proximity.AudioProximityService
 import app.vauchi.proximity.LocationCaptureService
-import app.vauchi.ui.AppPasswordScreen
 import app.vauchi.ui.MainViewModel
 import app.vauchi.util.NetworkMonitor
 import app.vauchi.ui.StartupErrorKind
@@ -85,7 +82,6 @@ import app.vauchi.debug.OnboardingWalker
 import app.vauchi.debug.StagedInputFiller
 import app.vauchi.ui.presentation.PresentationEvent
 import app.vauchi.ui.presentation.PresentationHost
-import app.vauchi.ui.startupErrorKindFor
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NotificationHelper
@@ -335,7 +331,6 @@ fun MainScreen(
             CoreAppViewModel(
                 appEngine = engine,
                 onPresentationCommitted = viewModel::reconcilePresentationState,
-                onAuthenticationRequirement = viewModel::onAuthenticationRequirement,
                 localAddresses = networkMonitor.localAddress,
             )
         }
@@ -995,27 +990,6 @@ private fun PreAuthContent(
             LoadingScreen()
         }
 
-        is UiState.AuthRequired -> {
-            AuthenticationGate(
-                onAuthenticated = { viewModel.retryInit() },
-                onError = { kind, detail ->
-                    viewModel.setError(kind, detail)
-                },
-            )
-        }
-
-        is UiState.AppPasswordRequired -> {
-            var authError by remember { mutableStateOf<String?>(null) }
-            AppPasswordScreen(
-                onAuthenticate = { pin ->
-                    authError = null
-                    viewModel.authenticateAppPassword(pin) { msg -> authError = msg }
-                },
-                onCancel = { viewModel.cancelAppPassword() },
-                errorMessage = authError,
-            )
-        }
-
         is UiState.Error -> {
             ErrorScreen(
                 kind = state.kind,
@@ -1049,58 +1023,6 @@ fun LoadingScreen() {
             Text(localizationManager.t("app.loading"))
         }
     }
-}
-
-/**
- * Automatically triggers BiometricPrompt when KeyStore auth has expired.
- * Shows a loading screen while the prompt is displayed.
- */
-@Composable
-fun AuthenticationGate(
-    onAuthenticated: () -> Unit,
-    onError: (StartupErrorKind, String?) -> Unit,
-) {
-    val activity = LocalContext.current as FragmentActivity
-    val localizationManager = remember(activity) { LocalizationManager.getInstance(activity) }
-
-    LaunchedEffect(Unit) {
-        val promptInfo =
-            BiometricPrompt.PromptInfo
-                .Builder()
-                .setTitle(localizationManager.t("auth.unlock.title"))
-                .setSubtitle(localizationManager.t("auth.biometric_prompt_subtitle"))
-                .setAllowedAuthenticators(
-                    BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                        BiometricManager.Authenticators.BIOMETRIC_WEAK or
-                        BiometricManager.Authenticators.DEVICE_CREDENTIAL,
-                ).build()
-
-        val prompt =
-            BiometricPrompt(
-                activity,
-                object : BiometricPrompt.AuthenticationCallback() {
-                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                        onAuthenticated()
-                    }
-
-                    override fun onAuthenticationError(
-                        errorCode: Int,
-                        errString: CharSequence,
-                    ) {
-                        when (val kind = startupErrorKindFor(errorCode)) {
-                            StartupErrorKind.AuthCancelled -> onError(kind, null)
-
-                            // errString is already OS-localized; pass it verbatim.
-                            else -> onError(kind, errString.toString())
-                        }
-                    }
-                },
-            )
-        prompt.authenticate(promptInfo)
-    }
-
-    // Show loading while biometric prompt is up
-    LoadingScreen()
 }
 
 @Composable

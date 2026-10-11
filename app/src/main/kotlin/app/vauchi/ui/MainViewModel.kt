@@ -22,10 +22,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileException
@@ -63,12 +59,6 @@ sealed class UiState {
      * the next presentation transition settles it into [Onboarding] or [Ready].
      */
     object Starting : UiState()
-
-    /** Asks for the biometric unlock again after the app password was cancelled. */
-    object AuthRequired : UiState()
-
-    /** Biometric OK but duress is enabled — show app password screen. */
-    object AppPasswordRequired : UiState()
 
     data class Ready(
         val displayName: String,
@@ -329,102 +319,6 @@ class MainViewModel(
      * recovery state was entered, so re-running the identity check routes
      * to Core's onboarding, which offers both paths.
      */
-    /** Re-run full initialization (identity check + load). Use after biometric auth. */
-    private val biometricJson = Json { ignoreUnknownKeys = true }
-
-    fun retryInit() {
-        viewModelScope.launch {
-            // Core owns the post-biometric duress decision and the
-            // 300 ms constant-time floor that hides whether duress is
-            // configured (audit
-            // `2026-04-28-lifecycle-session-residue-umbrella` P2-B).
-            // ADR-031: biometric success is reported as a hardware
-            // event; core consults its duress state (sleeping in Rust
-            // for ≥ BIOMETRIC_UNLOCK_MIN_DURATION) and returns the
-            // outcome. Dispatch off the main thread. This startup-auth seam
-            // predates the generic presentation store; only the scalar outcome
-            // is read, never the retired screen/action-result model.
-            val outcome =
-                try {
-                    withContext(Dispatchers.IO) {
-                        appEngine.dispatchJson("\"BiometricUnlockSucceeded\"")
-                    }?.let { resultJson ->
-                        parseAuthenticationRequirement(resultJson)
-                    }
-                } catch (_: Exception) {
-                    null
-                }
-
-            when (outcome) {
-                APP_PASSWORD_REQUIREMENT -> {
-                    _uiState.value = UiState.AppPasswordRequired
-                }
-
-                // "Unlocked", or null on a missing outcome / decode
-                // failure: proceed to the normal identity-check path,
-                // matching the prior behavior on a null biometric check.
-                else -> {
-                    checkIdentity()
-                }
-            }
-        }
-    }
-
-    private fun parseAuthenticationRequirement(resultJson: String): String? =
-        runCatching {
-            biometricJson
-                .parseToJsonElement(resultJson)
-                .jsonObject
-                .getValue("commands")
-                .jsonArray
-                .firstNotNullOfOrNull { command ->
-                    command.jsonObject["SetAuthenticationRequirement"]
-                        ?.jsonObject
-                        ?.get("requirement")
-                        ?.jsonPrimitive
-                        ?.content
-                }
-        }.getOrNull()
-
-    /**
-     * Core's answer to an unlock prompt shown on its own lock screen. Only
-     * an app password changes the start; any other answer leaves it to the
-     * next presentation transition.
-     */
-    fun onAuthenticationRequirement(requirement: String) {
-        if (requirement == APP_PASSWORD_REQUIREMENT) {
-            _uiState.value = UiState.AppPasswordRequired
-        }
-    }
-
-    /** Return to biometric screen (cancel app password entry). */
-    fun cancelAppPassword() {
-        _uiState.value = UiState.AuthRequired
-    }
-
-    /**
-     * Called from AppPasswordScreen after user enters their app PIN.
-     * Routes through core.authenticate() which sets auth_mode
-     * (Normal or Duress) based on which PIN was entered.
-     */
-    fun authenticateAppPassword(
-        pin: String,
-        onError: (String) -> Unit,
-    ) {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    repository.authenticate(pin)
-                }
-                checkIdentity()
-            } catch (e: Exception) {
-                onError(
-                    LocalizationManager.getInstance(getApplication()).t("app_password.error_incorrect"),
-                )
-            }
-        }
-    }
-
     fun setError(
         kind: StartupErrorKind,
         detail: String? = null,
@@ -554,4 +448,3 @@ private data class Tuple4<A, B, C, D>(
 )
 
 /** Core's `SetAuthenticationRequirement` value that asks for the app password. */
-private const val APP_PASSWORD_REQUIREMENT = "app_password"
