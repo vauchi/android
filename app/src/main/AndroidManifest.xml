@@ -77,6 +77,18 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="vauchi" />
             </intent-filter>
+            <!-- Exchange links and QRs (vauchi/private#277), verified against
+                 vauchi.app/.well-known/assetlinks.json. Exact paths: the rest
+                 of vauchi.app is the website. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="vauchi.app" />
+                <data android:path="/x" />
+                <data android:path="/x/" />
+            </intent-filter>
         </activity>
 
         <!--
