@@ -57,11 +57,23 @@ class QrCodeAnalyzer(
                     height = height.toUInt(),
                 )
 
-            result.decoded?.let(onQrCodeDetected)
+            handOnDecodedCodes(result, onQrCodeDetected)
         } catch (e: Exception) {
             android.util.Log.e("QrAnalyzer", "scan error: ${e.message}")
         } finally {
             imageProxy.close()
         }
     }
+}
+
+/**
+ * Every code in the frame, in the order found: facing the other phone the
+ * camera sees the peer's code and a reflection of this phone's own, which
+ * Core drops by session id (vauchi/private#450).
+ */
+internal fun handOnDecodedCodes(
+    result: uniffi.vauchi_platform.MobileScanResult,
+    onQrCodeDetected: (String) -> Unit,
+) {
+    result.decodedAll.forEach(onQrCodeDetected)
 }
