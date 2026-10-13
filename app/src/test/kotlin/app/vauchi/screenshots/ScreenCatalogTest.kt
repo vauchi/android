@@ -63,4 +63,35 @@ class ScreenCatalogTest {
             assertEquals(entry.activeSurfaceId, entry.profile.activeSurface)
         }
     }
+
+    // A sub-screen entry also replaces its parent. With no profile the app
+    // takes the alphabetically first surface, so the catalogue drew Settings
+    // for Settings > Advanced (vauchi/private#420). Core replaces the entry's
+    // own surface last; the catalogue, not the app, relies on that.
+    @Test
+    fun `a sub-screen entry shows its own surface`() {
+        val entry =
+            ScreenCatalog
+                .decode(
+                    """
+                    {"schema_version":1,"screens":[{"code_id":"settings_advanced",
+                      "title":"Advanced","locale":"en","commands":[
+                        {"ReplaceSurface":{"surface":${surface("settings")}}},
+                        {"ReplaceSurface":{"surface":${surface("settings_advanced")}}}
+                    ]}]}
+                    """.trimIndent(),
+                ).single()
+
+        assertEquals("settings_advanced", entry.activeSurfaceId)
+        assertEquals(listOf("settings_advanced"), entry.state.visibleSurfaceIds)
+    }
+
+    private fun surface(id: String): String =
+        """
+        {"surface_id":"$id","revision":1,"title":"$id","subtitle":null,
+         "accessibility_label":"$id","layout":"scroll",
+         "tokens":{"spacing_small":4,"spacing_medium":8,"spacing_large":16,
+                   "corner_radius":8,"minimum_target_size":44},
+         "nodes":[]}
+        """.trimIndent()
 }
