@@ -5,6 +5,7 @@
 package app.vauchi.screenshots
 
 import app.vauchi.ui.presentation.PaneLayout
+import app.vauchi.ui.presentation.PresentationCommand
 import app.vauchi.ui.presentation.PresentationProfile
 import app.vauchi.ui.presentation.PresentationProtocol
 import app.vauchi.ui.presentation.PresentationReducer
@@ -64,7 +65,32 @@ object ScreenCatalog {
             codeId = value.getValue("code_id").jsonPrimitive.content,
             title = value.getValue("title").jsonPrimitive.content,
             locale = value["locale"]?.jsonPrimitive?.content ?: "en",
-            state = PresentationReducer.apply(PresentationState(), commands).state,
+            state = PresentationReducer.apply(PresentationState(), commands + ownSurfaceProfile(commands)).state,
+        )
+    }
+
+    /**
+     * The catalogue carries no profile, so each shell renders it at its own
+     * size, and a sub-screen entry also replaces its parent. Core replaces
+     * the entry's own surface last; naming it here keeps the app's
+     * no-profile fallback, which live batches rely on, out of the catalogue
+     * (vauchi/private#420).
+     */
+    private fun ownSurfaceProfile(commands: List<PresentationCommand>): List<PresentationCommand> {
+        if (commands.any { it is PresentationCommand.SetProfile }) return emptyList()
+        val own =
+            commands.filterIsInstance<PresentationCommand.ReplaceSurface>().lastOrNull()?.surface?.surfaceId
+                ?: return emptyList()
+        return listOf(
+            PresentationCommand.SetProfile(
+                PresentationProfile(
+                    windowClass = WindowClass.Compact,
+                    paneLayout = PaneLayout.Single,
+                    primarySurface = own,
+                    detailSurface = null,
+                    activeSurface = own,
+                ),
+            ),
         )
     }
 }
