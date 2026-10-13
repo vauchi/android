@@ -39,6 +39,35 @@ class PresentationProtocolTest {
         assertEquals(emptyList(), result.effects)
     }
 
+    // Core sends ResetApplication after a wipe. Kept, the old profile still
+    // named the wipe screen active and the wiped screens stayed in memory;
+    // the iPhone stayed on Emergency Data Wipe (vauchi/private#293, #666).
+    @Test
+    fun `reset application drops the screens and profile shown before it`() {
+        val shown =
+            PresentationReducer
+                .apply(
+                    PresentationState(),
+                    PresentationProtocol
+                        .decodeEnvelope(
+                            envelope(replaceSurface(1), profile("compact", "single")),
+                        ).commands,
+                ).state
+
+        val result =
+            PresentationReducer.apply(
+                shown,
+                PresentationProtocol
+                    .decodeEnvelope(envelope("\"ResetApplication\""))
+                    .commands,
+            )
+
+        assertEquals(emptyMap(), result.state.surfaces)
+        assertNull(result.state.profile)
+        assertNull(result.state.activeSurfaceId)
+        assertEquals(listOf("ResetApplication"), result.effects.map { it.variant })
+    }
+
     // @scenario: generic_presentation_protocol.feature :: Every shell renders the same prepared presentation
     @Test
     fun `surface remains active while profile is pending`() {
