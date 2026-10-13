@@ -101,6 +101,15 @@ object PresentationReducer {
                 }
 
                 is PresentationCommand.Effect -> {
+                    // Core wiped its data: every screen and the profile came
+                    // from the engine that is gone (vauchi/private#666).
+                    if (command.variant == "ResetApplication") {
+                        surfaces.clear()
+                        bars.clear()
+                        navigation.clear()
+                        profile = null
+                        overlay = null
+                    }
                     effects += command
                 }
             }
