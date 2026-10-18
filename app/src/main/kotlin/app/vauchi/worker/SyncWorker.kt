@@ -58,7 +58,13 @@ class SyncWorker(
                 return Result.success()
             }
 
-            repository.appEngine.periodicSyncTick()
+            // The tick names this worker's next run (#603): a background gap,
+            // also while the app is open, where the heartbeat's wakeup beats
+            // every 30 s and is not ours to follow.
+            val nextRun =
+                runCatching {
+                    wakeupJson.decodeFromString<WakeupOutcome>(repository.appEngine.periodicSyncTick()).commands
+                }.getOrElse { emptyList() }
 
             runCatching { repository.runContentUpdateCycle() }
                 .onFailure { Log.w(TAG, "[ContentUpdate] skipped: ${it.javaClass.simpleName}") }
@@ -70,8 +76,7 @@ class SyncWorker(
                     Log.e(TAG, "on_wakeup failed: ${it.message}", it)
                     WakeupOutcome()
                 }
-            // Core names the next background gap in its ScheduleWakeup (#603).
-            rearm(outcome.commands)
+            rearm(nextRun)
             val notifications = outcome.notifications.map { it.toPresentation() }
             for (notification in notifications) {
                 app.vauchi.util.NotificationHelper
