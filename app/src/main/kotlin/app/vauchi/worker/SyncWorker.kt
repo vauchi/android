@@ -21,7 +21,6 @@ class SyncWorker(
 
     companion object {
         const val TAG = "SyncWorker"
-        const val WORK_NAME = "vauchi_periodic_sync"
     }
 
     /**
@@ -39,7 +38,7 @@ class SyncWorker(
                 repositoryFactory(applicationContext)
             } catch (e: Exception) {
                 Log.e(TAG, "Repository init failed: ${e.message}", e)
-                return Result.failure()
+                return giveUp()
             }
 
         val maxRetries = 3u
@@ -55,6 +54,7 @@ class SyncWorker(
             // this call, so on a locked device it throws instead of answering.
             if (!repository.hasIdentity()) {
                 Log.d(TAG, "No identity yet; skipping background sync")
+                rearm(emptyList())
                 return Result.success()
             }
 
@@ -63,20 +63,16 @@ class SyncWorker(
             runCatching { repository.runContentUpdateCycle() }
                 .onFailure { Log.w(TAG, "[ContentUpdate] skipped: ${it.javaClass.simpleName}") }
 
-            val notifications =
+            val outcome =
                 runCatching {
-                    val outcomeJson = repository.appEngine.onWakeup()
-                    val outcome = wakeupJson.decodeFromString<WakeupOutcome>(outcomeJson)
-                    // Background ticks may emit ScheduleWakeup hints; the periodic
-                    // WorkManager task already arms the next wakeup, so ignore them.
-                    if (outcome.commands.isNotEmpty()) {
-                        Log.d(TAG, "on_wakeup produced ${outcome.commands.size} command(s); ignoring in background")
-                    }
-                    outcome.notifications.map { it.toPresentation() }
+                    wakeupJson.decodeFromString<WakeupOutcome>(repository.appEngine.onWakeup())
                 }.getOrElse {
                     Log.e(TAG, "on_wakeup failed: ${it.message}", it)
-                    emptyList()
+                    WakeupOutcome()
                 }
+            // Core names the next background gap in its ScheduleWakeup (#603).
+            rearm(outcome.commands)
+            val notifications = outcome.notifications.map { it.toPresentation() }
             for (notification in notifications) {
                 app.vauchi.util.NotificationHelper
                     .showNotification(applicationContext, notification)
@@ -90,8 +86,30 @@ class SyncWorker(
                 Result.retry()
             } else {
                 Log.e(TAG, "Max retry attempts ($maxRetries) reached, giving up")
-                Result.failure()
+                giveUp()
             }
         }
+    }
+
+    /**
+     * End this run without failing it: WorkManager fails the work appended
+     * after a failed run, which would end the chain (#603).
+     */
+    private fun giveUp(): Result {
+        rearm(emptyList())
+        return Result.success()
+    }
+
+    /**
+     * Arm the next run so the chain never ends; a retry needs none, since
+     * WorkManager comes back to this same work by itself.
+     */
+    private fun rearm(commands: List<app.vauchi.ui.coreui.CommandDTO>) {
+        val delay =
+            BackgroundSyncScheduler.nextDelayMillis(
+                commands,
+                BackgroundSyncScheduler.lastDelayMillis(applicationContext),
+            )
+        BackgroundSyncScheduler.arm(applicationContext, delay)
     }
 }

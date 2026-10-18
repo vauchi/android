@@ -6,14 +6,8 @@ package app.vauchi
 
 import android.app.Application
 import android.util.Log
-import androidx.work.Constraints
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
-import app.vauchi.worker.SyncWorker
+import app.vauchi.worker.BackgroundSyncScheduler
 import uniffi.vauchi_platform.initMobileLogging
-import java.util.concurrent.TimeUnit
 
 class VauchiApp : Application() {
     override fun onCreate() {
@@ -30,33 +24,7 @@ class VauchiApp : Application() {
         val logStatus = initMobileLogging()
         Log.i("Vauchi", "[boot] mobile logging: $logStatus")
         instance = this
-        schedulePeriodicSync()
-    }
-
-    private fun schedulePeriodicSync() {
-        Log.d(TAG, "Scheduling periodic sync")
-
-        val constraints =
-            Constraints
-                .Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .setRequiresBatteryNotLow(true)
-                .build()
-
-        val syncRequest =
-            PeriodicWorkRequestBuilder<SyncWorker>(
-                repeatInterval = 15,
-                repeatIntervalTimeUnit = TimeUnit.MINUTES,
-            ).setConstraints(constraints)
-                .build()
-
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-            SyncWorker.WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
-            syncRequest,
-        )
-
-        Log.d(TAG, "Periodic sync scheduled (every 15 minutes)")
+        BackgroundSyncScheduler.start(this)
     }
 
     companion object {
