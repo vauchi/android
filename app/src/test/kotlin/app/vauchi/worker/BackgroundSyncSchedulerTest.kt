@@ -54,7 +54,7 @@ class BackgroundSyncSchedulerTest {
 
     @Test
     fun armingQueuesOneSyncAfterTheDelay() {
-        BackgroundSyncScheduler.arm(context, 612_000L)
+        BackgroundSyncScheduler.arm(context, 612_000L).result.get()
 
         val work = queued(BackgroundSyncScheduler.WORK_NAME)
         assertEquals(1, work.size)
@@ -71,7 +71,7 @@ class BackgroundSyncSchedulerTest {
             ).result
             .get()
 
-        BackgroundSyncScheduler.start(context)
+        BackgroundSyncScheduler.start(context).result.get()
 
         assertEquals(emptyList<WorkInfo>(), queued(BackgroundSyncScheduler.LEGACY_PERIODIC_WORK_NAME))
         assertEquals(1, queued(BackgroundSyncScheduler.WORK_NAME).size)
@@ -79,9 +79,9 @@ class BackgroundSyncSchedulerTest {
 
     @Test
     fun startingAgainKeepsTheArmedSync() {
-        BackgroundSyncScheduler.arm(context, 612_000L)
+        BackgroundSyncScheduler.arm(context, 612_000L).result.get()
 
-        BackgroundSyncScheduler.start(context)
+        BackgroundSyncScheduler.start(context).result.get()
 
         assertEquals(612_000L, queued(BackgroundSyncScheduler.WORK_NAME).single().initialDelayMillis)
     }

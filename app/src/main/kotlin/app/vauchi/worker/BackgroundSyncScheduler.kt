@@ -9,6 +9,7 @@ import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.Operation
 import androidx.work.WorkManager
 import app.vauchi.ui.coreui.CommandDTO
 import java.util.concurrent.TimeUnit
@@ -59,13 +60,13 @@ object BackgroundSyncScheduler {
     fun arm(
         context: Context,
         delayMillis: Long,
-    ) {
+    ): Operation {
         context
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
             .putLong(KEY_LAST_DELAY, delayMillis)
             .apply()
-        WorkManager.getInstance(context).enqueueUniqueWork(
+        return WorkManager.getInstance(context).enqueueUniqueWork(
             WORK_NAME,
             ExistingWorkPolicy.APPEND_OR_REPLACE,
             request(delayMillis),
@@ -73,10 +74,10 @@ object BackgroundSyncScheduler {
     }
 
     /** At app start: retire the periodic job and arm the chain unless armed. */
-    fun start(context: Context) {
+    fun start(context: Context): Operation {
         val workManager = WorkManager.getInstance(context)
         workManager.cancelUniqueWork(LEGACY_PERIODIC_WORK_NAME)
-        workManager.enqueueUniqueWork(
+        return workManager.enqueueUniqueWork(
             WORK_NAME,
             ExistingWorkPolicy.KEEP,
             request(FIRST_DELAY_MILLIS),
