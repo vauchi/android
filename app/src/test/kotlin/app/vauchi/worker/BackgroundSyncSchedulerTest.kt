@@ -9,6 +9,8 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import androidx.work.Worker
+import androidx.work.WorkerParameters
 import app.vauchi.ui.coreui.CommandDTO
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -67,7 +69,7 @@ class BackgroundSyncSchedulerTest {
             .enqueueUniquePeriodicWork(
                 BackgroundSyncScheduler.LEGACY_PERIODIC_WORK_NAME,
                 ExistingPeriodicWorkPolicy.KEEP,
-                PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES).build(),
+                PeriodicWorkRequestBuilder<IdleWorker>(15, TimeUnit.MINUTES).build(),
             ).result
             .get()
 
@@ -85,4 +87,16 @@ class BackgroundSyncSchedulerTest {
 
         assertEquals(612_000L, queued(BackgroundSyncScheduler.WORK_NAME).single().initialDelayMillis)
     }
+}
+
+/**
+ * Stands in for the legacy periodic job: the test WorkManager runs a periodic
+ * request at once, and a real [SyncWorker] there would arm work of its own
+ * that leaks into the next test.
+ */
+class IdleWorker(
+    context: Context,
+    params: WorkerParameters,
+) : Worker(context, params) {
+    override fun doWork(): Result = Result.success()
 }
