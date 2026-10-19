@@ -62,6 +62,12 @@ class SyncWorker(
             // The tick names this worker's next run (#603): a background gap,
             // also while the app is open, where the heartbeat's wakeup beats
             // every 30 s and is not ours to follow.
+            // Core draws the next run within what Android allows us (#603).
+            runCatching {
+                repository.appEngine.dispatchJson(
+                    eventJson = StandbyBudget.current(applicationContext).eventJson(),
+                )
+            }.onFailure { Log.w(TAG, "background budget not reported: ${it.javaClass.simpleName}") }
             val nextRun =
                 runCatching {
                     wakeupJson.decodeFromString<WakeupOutcome>(repository.appEngine.periodicSyncTick()).commands
