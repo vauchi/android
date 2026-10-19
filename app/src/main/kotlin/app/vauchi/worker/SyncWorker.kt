@@ -8,6 +8,7 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import androidx.work.await
 import app.vauchi.data.VauchiRepository
 import app.vauchi.ui.coreui.WakeupOutcome
 import app.vauchi.ui.coreui.toPresentation
@@ -100,7 +101,7 @@ class SyncWorker(
      * End this run without failing it: WorkManager fails the work appended
      * after a failed run, which would end the chain (#603).
      */
-    private fun giveUp(): Result {
+    private suspend fun giveUp(): Result {
         rearm(emptyList())
         return Result.success()
     }
@@ -109,12 +110,14 @@ class SyncWorker(
      * Arm the next run so the chain never ends; a retry needs none, since
      * WorkManager comes back to this same work by itself.
      */
-    private fun rearm(commands: List<app.vauchi.ui.coreui.CommandDTO>) {
+    private suspend fun rearm(commands: List<app.vauchi.ui.coreui.CommandDTO>) {
         val delay =
             BackgroundSyncScheduler.nextDelayMillis(
                 commands,
                 BackgroundSyncScheduler.lastDelayMillis(applicationContext),
             )
-        BackgroundSyncScheduler.arm(applicationContext, delay)
+        // Stored before this run reports its result, so the chain cannot be
+        // lost to a process that dies right after.
+        BackgroundSyncScheduler.arm(applicationContext, delay).await()
     }
 }
