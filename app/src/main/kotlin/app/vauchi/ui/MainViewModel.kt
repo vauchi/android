@@ -11,9 +11,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.vauchi.data.DeviceNotSecureException
 import app.vauchi.data.VauchiRepository
-import app.vauchi.util.NotificationPresentation
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NetworkMonitor
+import app.vauchi.util.NotificationPresentation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

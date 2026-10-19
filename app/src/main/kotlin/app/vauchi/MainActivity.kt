@@ -66,24 +66,24 @@ import app.vauchi.ble.BleCommand
 import app.vauchi.ble.BlePeripheral
 import app.vauchi.ble.BlePeripheralListener
 import app.vauchi.ble.BleUuids
+import app.vauchi.debug.OnboardingWalker
+import app.vauchi.debug.StagedInputFiller
 import app.vauchi.exchange.BluetoothRuntimePermissions
 import app.vauchi.proximity.AccelerometerProximityService
 import app.vauchi.proximity.AudioProximityService
 import app.vauchi.proximity.LocationCaptureService
 import app.vauchi.ui.MainViewModel
-import app.vauchi.util.NetworkMonitor
 import app.vauchi.ui.StartupErrorKind
 import app.vauchi.ui.UiState
 import app.vauchi.ui.coreui.BrightnessRequest
 import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
-import app.vauchi.debug.OnboardingWalker
-import app.vauchi.debug.StagedInputFiller
 import app.vauchi.ui.presentation.PresentationEvent
 import app.vauchi.ui.presentation.PresentationHost
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
+import app.vauchi.util.NetworkMonitor
 import app.vauchi.util.NotificationHelper
 import app.vauchi.util.NotificationPresentation
 import kotlinx.coroutines.CoroutineScope
@@ -1137,4 +1137,3 @@ fun OfflineBanner() {
         )
     }
 }
-
