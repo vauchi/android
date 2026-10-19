@@ -307,10 +307,8 @@ class MainViewModel(
         }
     }
 
-    fun refresh() {
-        viewModelScope.launch {
-            loadUserData()
-        }
+    fun retryStartup() {
+        checkIdentity()
     }
 
     fun sync() {

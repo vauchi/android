@@ -994,7 +994,7 @@ private fun PreAuthContent(
             ErrorScreen(
                 kind = state.kind,
                 detail = state.detail,
-                onRetry = { viewModel.refresh() },
+                onRetry = { viewModel.retryStartup() },
             )
         }
 
