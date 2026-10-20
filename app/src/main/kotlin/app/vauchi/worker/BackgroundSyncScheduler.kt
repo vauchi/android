@@ -12,6 +12,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.Operation
 import androidx.work.WorkManager
 import app.vauchi.ui.coreui.CommandDTO
+import app.vauchi.ui.coreui.WakeupOutcome
+import kotlinx.serialization.json.Json
 import java.util.concurrent.TimeUnit
 
 /**
@@ -61,16 +63,51 @@ object BackgroundSyncScheduler {
         context: Context,
         delayMillis: Long,
     ): Operation {
-        context
-            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .putLong(KEY_LAST_DELAY, delayMillis)
-            .apply()
+        rememberDelay(context, delayMillis)
         return WorkManager.getInstance(context).enqueueUniqueWork(
             WORK_NAME,
             ExistingWorkPolicy.APPEND_OR_REPLACE,
             request(delayMillis),
         )
+    }
+
+    /**
+     * When the app closes: report the standby bucket's allowance and replace
+     * the armed sync with the run Core draws within it. A gap drawn in a quiet
+     * `rare` spell otherwise holds for up to 24 h, opened app or not (#603 run
+     * A2). Without a wakeup in Core's answer the armed sync stays.
+     */
+    fun rearmOnClose(
+        context: Context,
+        dispatch: (eventJson: String) -> String,
+    ): Operation? {
+        val answer = dispatch(StandbyBudget.current(context).eventJson())
+        val delayMillis =
+            envelopeJson
+                .decodeFromString<WakeupOutcome>(answer)
+                .commands
+                .filterIsInstance<CommandDTO.ScheduleWakeup>()
+                .firstOrNull()
+                ?.waitMillis ?: return null
+        rememberDelay(context, delayMillis)
+        return WorkManager.getInstance(context).enqueueUniqueWork(
+            WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            request(delayMillis),
+        )
+    }
+
+    private val envelopeJson = Json { ignoreUnknownKeys = true }
+
+    private fun rememberDelay(
+        context: Context,
+        delayMillis: Long,
+    ) {
+        context
+            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putLong(KEY_LAST_DELAY, delayMillis)
+            .apply()
     }
 
     /** At app start: retire the periodic job and arm the chain unless armed. */

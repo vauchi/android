@@ -66,6 +66,7 @@ import app.vauchi.ble.BleCommand
 import app.vauchi.ble.BlePeripheral
 import app.vauchi.ble.BlePeripheralListener
 import app.vauchi.ble.BleUuids
+import app.vauchi.data.VauchiRepository
 import app.vauchi.debug.OnboardingWalker
 import app.vauchi.debug.StagedInputFiller
 import app.vauchi.exchange.BluetoothRuntimePermissions
@@ -86,6 +87,7 @@ import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NetworkMonitor
 import app.vauchi.util.NotificationHelper
 import app.vauchi.util.NotificationPresentation
+import app.vauchi.worker.BackgroundSyncScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -902,6 +904,7 @@ fun MainScreen(
         }
     }
 
+    val appContext = LocalContext.current.applicationContext
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
@@ -916,6 +919,13 @@ fun MainScreen(
                             PresentationEvent.appBackgrounded,
                         )
                         coreAppViewModel.stopForegroundHeartbeat()
+                        lifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                            runCatching {
+                                BackgroundSyncScheduler.rearmOnClose(appContext) {
+                                    VauchiRepository.getInstance(appContext).appEngine.dispatchJson(eventJson = it)
+                                }
+                            }.onFailure { Log.w("Vauchi", "[BackgroundSync] not re-armed on close: ${it.javaClass.simpleName}") }
+                        }
                     }
 
                     else -> {}
