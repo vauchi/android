@@ -87,6 +87,45 @@ class BackgroundSyncSchedulerTest {
 
         assertEquals(612_000L, queued(BackgroundSyncScheduler.WORK_NAME).single().initialDelayMillis)
     }
+
+    // A gap drawn in a quiet `rare` spell held for 24 h after the app was
+    // opened: no sync in 3 h at working_set (#603 run A2).
+    @Test
+    fun closingTheAppReplacesTheArmedSyncWithCoresAnswer() {
+        BackgroundSyncScheduler.arm(context, 86_400_000L).result.get()
+
+        BackgroundSyncScheduler.rearmOnClose(context) { wakeupEnvelope(612_000) }!!.result.get()
+
+        assertEquals(612_000L, queued(BackgroundSyncScheduler.WORK_NAME).single().initialDelayMillis)
+    }
+
+    @Test
+    fun closingTheAppReportsTheStandbyBucketsAllowance() {
+        var reported: String? = null
+
+        BackgroundSyncScheduler.rearmOnClose(context) {
+            reported = it
+            wakeupEnvelope(612_000)
+        }
+
+        assertEquals(StandbyBudget.current(context).eventJson(), reported)
+    }
+
+    @Test
+    fun withoutAWakeupClosingTheAppKeepsTheArmedSync() {
+        BackgroundSyncScheduler.arm(context, 612_000L).result.get()
+
+        val operation = BackgroundSyncScheduler.rearmOnClose(context) { """{"commands":[]}""" }
+
+        assertEquals(null, operation)
+        assertEquals(612_000L, queued(BackgroundSyncScheduler.WORK_NAME).single().initialDelayMillis)
+    }
+
+    private fun wakeupEnvelope(millis: Int): String {
+        val secs = (millis + 999) / 1000
+        return """{"commands":[{"ScheduleWakeup":{"earliest_secs":$secs,"deadline_secs":$secs,""" +
+            """"earliest_millis":$millis,"delay_millis":$millis}}]}"""
+    }
 }
 
 /**
