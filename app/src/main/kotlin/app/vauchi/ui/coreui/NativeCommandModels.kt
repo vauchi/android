@@ -158,9 +158,27 @@ sealed class CommandDTO {
     /** Core's lock screen asks the shell to run the OS biometric prompt. */
     data object RequestBiometricUnlock : CommandDTO()
 
+    data class CreateUserPresenceSecret(
+        override val prompt: String,
+    ) : CommandDTO(),
+        UserPresenceCommand
+
+    data class RevealUserPresenceSecret(
+        override val prompt: String,
+    ) : CommandDTO(),
+        UserPresenceCommand
+
     data class Unknown(
         val variantName: String,
     ) : CommandDTO()
+}
+
+/**
+ * Core asks for the OS user-presence check (biometric or device credential)
+ * with [prompt] as its reason, to seal or to unseal a keystore secret.
+ */
+sealed interface UserPresenceCommand {
+    val prompt: String
 }
 
 /** Mirrors Core's platform orientation tokens. */
@@ -358,6 +376,18 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
                             it.jsonPrimitive.content
                         },
                     purpose = purpose,
+                )
+            }
+
+            "CreateUserPresenceSecret" in element -> {
+                CommandDTO.CreateUserPresenceSecret(
+                    element.objectValue("CreateUserPresenceSecret").value("prompt").content,
+                )
+            }
+
+            "RevealUserPresenceSecret" in element -> {
+                CommandDTO.RevealUserPresenceSecret(
+                    element.objectValue("RevealUserPresenceSecret").value("prompt").content,
                 )
             }
 

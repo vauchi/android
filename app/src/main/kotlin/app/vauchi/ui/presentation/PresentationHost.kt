@@ -39,6 +39,7 @@ import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.BiometricUnlockHandler
 import app.vauchi.ui.coreui.FilePickHandler
 import app.vauchi.ui.coreui.LocalUseFrontCamera
+import app.vauchi.ui.coreui.UserPresenceSecretHandler
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -96,6 +97,7 @@ fun PresentationHost(
 
     FilePickHandler(viewModel)
     BiometricUnlockHandler(viewModel)
+    UserPresenceSecretHandler(viewModel)
 
     LaunchedEffect(toastMessage) {
         toastMessage?.let {

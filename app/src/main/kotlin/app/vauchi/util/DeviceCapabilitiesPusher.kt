@@ -51,6 +51,7 @@ internal data class DeviceHardware(
     val hasAccelerometer: Boolean,
     val hasInternet: Boolean,
     val hasUsbPort: Boolean,
+    val canSealUserPresence: Boolean,
 )
 
 /**
@@ -77,6 +78,7 @@ internal fun buildDeviceCapabilitiesJson(hardware: DeviceHardware): String {
             add("\"has_accelerometer\":${hardware.hasAccelerometer}")
             add("\"has_internet\":${hardware.hasInternet}")
             add("\"has_usb_port\":${hardware.hasUsbPort}")
+            add("\"can_seal_user_presence\":${hardware.canSealUserPresence}")
         }
     return "{" + parts.joinToString(",") + "}"
 }
@@ -107,6 +109,7 @@ internal fun detectBiometricType(pm: PackageManager): DeviceBiometricType? =
  * - `hasInternet` is `true` (capability, not current reachability).
  * - `hasUsbPort` is `false`: Cable exchange is not a supported mode, so
  *   we do not advertise it (matches iOS / macOS).
+ * - `canSealUserPresence` follows [canSealUserPresence].
  */
 internal fun detectDeviceHardware(context: Context): DeviceHardware {
     val pm = context.packageManager
@@ -128,6 +131,7 @@ internal fun detectDeviceHardware(context: Context): DeviceHardware {
         hasAccelerometer = pm.hasSystemFeature(PackageManager.FEATURE_SENSOR_ACCELEROMETER),
         hasInternet = true,
         hasUsbPort = false,
+        canSealUserPresence = canSealUserPresence(context),
     )
 }
 
