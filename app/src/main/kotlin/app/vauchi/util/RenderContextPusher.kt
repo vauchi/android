@@ -7,6 +7,7 @@ package app.vauchi.util
 import android.content.Context
 import android.util.Log
 import uniffi.vauchi_platform.PlatformAppEngine
+import java.util.Locale
 
 /**
  * Push the union of [ThemeManager] and [LocalizationManager] state to
@@ -24,6 +25,10 @@ import uniffi.vauchi_platform.PlatformAppEngine
  * effective values. This function reads from both managers and
  * pushes the union — call it from either manager after persisting a
  * change.
+ *
+ * The OS language goes along on every push as `system_locale`: on
+ * "Follow system" no `locale` is sent, and core renders the system
+ * language only if it is told what it is (vauchi/private#721).
  */
 internal fun pushRenderContext(
     context: Context,
@@ -36,7 +41,8 @@ internal fun pushRenderContext(
         if (themeManager.followSystem.value) null else themeManager.selectedThemeId.value
     val effectiveLocale =
         if (localeManager.followSystem) null else localeManager.selectedLocaleCode
-    val json = buildRenderContextJson(effectiveTheme, effectiveLocale)
+    val json =
+        buildRenderContextJson(effectiveTheme, effectiveLocale, Locale.getDefault().toLanguageTag())
     try {
         engine.setRenderContextJson(json)
     } catch (e: Exception) {
@@ -44,14 +50,16 @@ internal fun pushRenderContext(
     }
 }
 
-private fun buildRenderContextJson(
+internal fun buildRenderContextJson(
     themeId: String?,
     locale: String?,
+    systemLocale: String,
 ): String {
     val parts =
         buildList {
             if (themeId != null) add("\"theme_id\":${jsonString(themeId)}")
             if (locale != null) add("\"locale\":${jsonString(locale)}")
+            add("\"system_locale\":${jsonString(systemLocale)}")
         }
     return "{" + parts.joinToString(",") + "}"
 }
