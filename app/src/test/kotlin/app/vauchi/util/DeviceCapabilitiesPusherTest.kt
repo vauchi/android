@@ -45,6 +45,7 @@ class DeviceCapabilitiesPusherTest {
                 hasAccelerometer = true,
                 hasInternet = true,
                 hasUsbPort = false,
+                canSealUserPresence = true,
             )
 
         val json = JSONObject(buildDeviceCapabilitiesJson(hardware))
@@ -60,6 +61,7 @@ class DeviceCapabilitiesPusherTest {
         assertTrue(json.getBoolean("has_accelerometer"))
         assertTrue(json.getBoolean("has_internet"))
         assertFalse(json.getBoolean("has_usb_port"))
+        assertTrue(json.getBoolean("can_seal_user_presence"))
     }
 
     @Test
@@ -76,6 +78,7 @@ class DeviceCapabilitiesPusherTest {
                 hasAccelerometer = true,
                 hasInternet = true,
                 hasUsbPort = false,
+                canSealUserPresence = false,
             )
 
         val json = JSONObject(buildDeviceCapabilitiesJson(hardware))
@@ -98,6 +101,7 @@ class DeviceCapabilitiesPusherTest {
                 hasAccelerometer = false,
                 hasInternet = true,
                 hasUsbPort = false,
+                canSealUserPresence = false,
             )
 
         val raw = buildDeviceCapabilitiesJson(hardware)
@@ -113,6 +117,7 @@ class DeviceCapabilitiesPusherTest {
         assertEquals("EmitOnly", json.getString("audio"))
         assertFalse(json.getBoolean("has_camera"))
         assertEquals("Android", json.getString("platform"))
+        assertFalse(json.getBoolean("can_seal_user_presence"))
     }
 
     @Test

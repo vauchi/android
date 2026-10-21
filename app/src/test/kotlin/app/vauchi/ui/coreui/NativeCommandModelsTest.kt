@@ -53,4 +53,24 @@ class NativeCommandModelsTest {
 
         assertEquals(CommandDTO.RequestBiometricUnlock, command)
     }
+
+    @Test
+    fun create_user_presence_secret_carries_cores_prompt() {
+        val command =
+            json.decodeFromString<CommandDTO>(
+                """{"CreateUserPresenceSecret":{"prompt":"Confirm it is you"}}""",
+            )
+
+        assertEquals(CommandDTO.CreateUserPresenceSecret("Confirm it is you"), command)
+    }
+
+    @Test
+    fun reveal_user_presence_secret_carries_cores_prompt() {
+        val command =
+            json.decodeFromString<CommandDTO>(
+                """{"RevealUserPresenceSecret":{"prompt":"Bestätige, dass du es bist"}}""",
+            )
+
+        assertEquals(CommandDTO.RevealUserPresenceSecret("Bestätige, dass du es bist"), command)
+    }
 }
