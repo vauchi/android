@@ -81,10 +81,7 @@ class StorageKeyUpgradeTest {
             .forEach { it.deleteRecursively() }
         val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
         shadowOf(keyguard).setIsDeviceSecure(true)
-        installFromBefore(context, provider) { engine ->
-            engine.dispatchDomainCommand(DomainCommand.CreateIdentity("Before"))
-            engine.dispatchDomainCommand(DomainCommand.ImportContactsFromVcf(IMPORTED_CONTACT.toByteArray()))
-        }
+        installFromBefore(context, provider, LegacyInstall.BEFORE)
     }
 
     @After
@@ -171,9 +168,5 @@ class StorageKeyUpgradeTest {
         assertEquals("storage_lock.unavailable", surface(engine))
         assertEquals(emptyList<String>(), keychainNames())
         assertNotNull(oldKeyBlob())
-    }
-
-    private companion object {
-        const val IMPORTED_CONTACT = "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:before-580\r\nFN:Carol\r\nEND:VCARD\r\n"
     }
 }
