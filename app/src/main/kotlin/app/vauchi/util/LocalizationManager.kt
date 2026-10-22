@@ -13,7 +13,6 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import androidx.core.content.pm.PackageInfoCompat
 import app.vauchi.BuildConfig
-import uniffi.vauchi_platform.MobileLocale
 import uniffi.vauchi_platform.MobileLocaleInfo
 import uniffi.vauchi_platform.PlatformAppEngine
 import uniffi.vauchi_platform.getAvailableLocales
@@ -45,8 +44,8 @@ class LocalizationManager(
     @Volatile
     private var appEngine: PlatformAppEngine? = null
 
-    /** Currently selected locale */
-    var currentLocale: MobileLocale by mutableStateOf(MobileLocale.ENGLISH)
+    /** Language code of the locale in effect */
+    var currentLocale: String by mutableStateOf(ENGLISH)
         private set
 
     /** All available locales */
@@ -188,14 +187,14 @@ class LocalizationManager(
             try {
                 val explicit = selectedLocaleCode
                 if (!followSystem && explicit != null) {
-                    parseLocaleCode(explicit) ?: MobileLocale.ENGLISH
+                    parseLocaleCode(explicit) ?: ENGLISH
                 } else {
                     val systemLanguage = Locale.getDefault().language
-                    parseLocaleCode(systemLanguage) ?: MobileLocale.ENGLISH
+                    parseLocaleCode(systemLanguage) ?: ENGLISH
                 }
             } catch (e: LinkageError) {
                 Log.e(TAG, "Failed to apply selected locale: native library not loaded", e)
-                MobileLocale.ENGLISH
+                ENGLISH
             }
     }
 
@@ -226,20 +225,6 @@ class LocalizationManager(
         persist(languageCode = code, followSystemLanguage = false)
         applySelectedLocale()
         pushRenderContext(appContext, appEngine)
-    }
-
-    /**
-     * Select a locale directly.
-     */
-    fun selectLocale(locale: MobileLocale) {
-        val info =
-            try {
-                getLocaleInfo(locale)
-            } catch (e: LinkageError) {
-                Log.e(TAG, "Failed to get locale info: native library not loaded", e)
-                MobileLocaleInfo(code = "en", name = "English", englishName = "English", isRtl = false)
-            }
-        selectLocale(info.code)
     }
 
     /**
@@ -293,7 +278,7 @@ class LocalizationManager(
                 getLocaleInfo(currentLocale)
             } catch (e: LinkageError) {
                 Log.e(TAG, "Failed to get current locale info: native library not loaded", e)
-                MobileLocaleInfo(code = "en", name = "English", englishName = "English", isRtl = false)
+                MobileLocaleInfo(code = ENGLISH, name = "English", englishName = "English", isRtl = false)
             }
 
     /** Check if current locale is RTL */
@@ -302,6 +287,7 @@ class LocalizationManager(
 
     companion object {
         private const val TAG = "LocalizationManager"
+        private const val ENGLISH = "en"
         private const val PREFS_NAME = "vauchi_locale_settings"
         private const val KEY_SELECTED_LOCALE = "selected_locale_code"
         private const val KEY_FOLLOW_SYSTEM = "follow_system"
