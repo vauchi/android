@@ -7,8 +7,6 @@ package app.vauchi.ui.coreui
 import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import app.vauchi.util.AndroidUserPresenceKeystore
@@ -16,6 +14,7 @@ import app.vauchi.util.BiometricUserPresencePrompt
 import app.vauchi.util.SharedPreferencesWrappedSecretStore
 import app.vauchi.util.canSealUserPresence
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
 
 /**
  * Fulfils core's `CreateUserPresenceSecret` / `RevealUserPresenceSecret`
@@ -59,17 +58,18 @@ internal fun UserPresenceRequests(
     reply: (String) -> Unit,
     answer: suspend (UserPresenceCommand) -> String,
 ) {
-    val request by requests.collectAsState()
-
-    LaunchedEffect(request) {
-        val command = request ?: return@LaunchedEffect
-        consume()
-        var answered = false
-        try {
-            reply(answer(command))
-            answered = true
-        } finally {
-            if (!answered) reply(UserPresenceSecretVault.CANCELLED_EVENT_JSON)
+    // Keyed on the flow, not its value: consuming the request must not
+    // restart the effect and cancel the prompt it is waiting on (#748).
+    LaunchedEffect(requests) {
+        requests.filterNotNull().collect { command ->
+            consume()
+            var answered = false
+            try {
+                reply(answer(command))
+                answered = true
+            } finally {
+                if (!answered) reply(UserPresenceSecretVault.CANCELLED_EVENT_JSON)
+            }
         }
     }
 }
