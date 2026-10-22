@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import uniffi.vauchi_platform.MobileEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -28,8 +29,8 @@ class UserPresenceRequestsTest {
     val composeRule = createComposeRule()
 
     private val requests = MutableStateFlow<UserPresenceCommand?>(null)
-    private val replies = mutableListOf<String>()
-    private val userAnswers = CompletableDeferred<String>()
+    private val replies = mutableListOf<MobileEvent>()
+    private val userAnswers = CompletableDeferred<MobileEvent>()
 
     // @scenario: privacy_compliance :: Without an app password, export uses the phone's own lock
     @Test
@@ -41,7 +42,7 @@ class UserPresenceRequestsTest {
         userAnswers.complete(REVEALED)
         composeRule.waitForIdle()
 
-        assertEquals(listOf(REVEALED), replies)
+        assertEquals(listOf<MobileEvent>(REVEALED), replies)
     }
 
     // @internal
@@ -55,7 +56,7 @@ class UserPresenceRequestsTest {
         shown = false
         composeRule.waitForIdle()
 
-        assertEquals(listOf(UserPresenceSecretVault.CANCELLED_EVENT_JSON), replies)
+        assertEquals(listOf<MobileEvent>(MobileEvent.UserPresenceCheckCancelled), replies)
     }
 
     @Composable
@@ -63,11 +64,11 @@ class UserPresenceRequestsTest {
         UserPresenceRequests(
             requests = requests,
             consume = { requests.value = null },
-            reply = { replies += it },
+            reply = { replies.add(it) },
         ) { userAnswers.await() }
     }
 
     private companion object {
-        const val REVEALED = """{"UserPresenceSecretRevealed":{"secret":[42]}}"""
+        val REVEALED = MobileEvent.UserPresenceSecretRevealed(secret = byteArrayOf(42))
     }
 }

@@ -5,31 +5,27 @@
 package app.vauchi.ui.coreui
 
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
+import uniffi.vauchi_platform.MobileEvent
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * Core's user-presence commands in, the event JSON core reads out
+ * Core's user-presence commands in, the event core reads out
  * (vauchi/private#712). Only the keystore and the OS prompt are faked: the
  * keystore with a software AES-GCM key, the prompt by handing back whatever
  * cipher it was given — the shape a `BiometricPrompt.CryptoObject` returns.
  */
 class UserPresenceSecretVaultTest {
     private val reason = "Confirm it is you"
-    private val unavailable = """{"HardwareUnavailable":{"transport":"user_presence"}}"""
-    private val cancelled = "\"UserPresenceCheckCancelled\""
+    private val unavailable = MobileEvent.HardwareUnavailable(transport = "user_presence")
+    private val cancelled = MobileEvent.UserPresenceCheckCancelled
 
     private val keystore = SoftwareKeystore()
     private val prompt = FakePrompt()
@@ -39,18 +35,19 @@ class UserPresenceSecretVaultTest {
     @Test
     fun create_answers_32_fresh_bytes_after_the_check_with_cores_reason() =
         runTest {
-            val event = vault.answer(CommandDTO.CreateUserPresenceSecret(reason))
+            val secret = createdSecret(vault.answer(CommandDTO.CreateUserPresenceSecret(reason)))
 
-            assertEquals(32, secretOf(event, "UserPresenceSecretCreated").size)
+            assertEquals(32, secret.size)
+            assertFalse("the vault wiped the secret core was handed", secret.all { it == 0.toByte() })
             assertEquals(listOf(reason), prompt.reasons)
         }
 
     @Test
     fun reveal_answers_the_secret_create_sealed() =
         runTest {
-            val created = secretOf(vault.answer(CommandDTO.CreateUserPresenceSecret(reason)), "UserPresenceSecretCreated")
+            val created = createdSecret(vault.answer(CommandDTO.CreateUserPresenceSecret(reason)))
 
-            val revealed = secretOf(vault.answer(CommandDTO.RevealUserPresenceSecret(reason)), "UserPresenceSecretRevealed")
+            val revealed = revealedSecret(vault.answer(CommandDTO.RevealUserPresenceSecret(reason)))
 
             assertArrayEquals(created, revealed)
         }
@@ -58,7 +55,7 @@ class UserPresenceSecretVaultTest {
     @Test
     fun only_the_wrapped_secret_is_stored() =
         runTest {
-            val created = secretOf(vault.answer(CommandDTO.CreateUserPresenceSecret(reason)), "UserPresenceSecretCreated")
+            val created = createdSecret(vault.answer(CommandDTO.CreateUserPresenceSecret(reason)))
 
             val sealed = store.load()!!
             assertEquals(created.size + GCM_TAG_BYTES, sealed.ciphertext.size)
@@ -69,9 +66,9 @@ class UserPresenceSecretVaultTest {
     fun a_second_create_replaces_the_sealed_secret() =
         runTest {
             vault.answer(CommandDTO.CreateUserPresenceSecret(reason))
-            val second = secretOf(vault.answer(CommandDTO.CreateUserPresenceSecret(reason)), "UserPresenceSecretCreated")
+            val second = createdSecret(vault.answer(CommandDTO.CreateUserPresenceSecret(reason)))
 
-            val revealed = secretOf(vault.answer(CommandDTO.RevealUserPresenceSecret(reason)), "UserPresenceSecretRevealed")
+            val revealed = revealedSecret(vault.answer(CommandDTO.RevealUserPresenceSecret(reason)))
 
             assertArrayEquals(second, revealed)
         }
@@ -150,25 +147,13 @@ class UserPresenceSecretVaultTest {
             assertEquals(emptyList<String>(), prompt.reasons)
         }
 
-    @Test
-    fun the_unavailable_answer_names_core_user_presence_transport() {
-        assertEquals(unavailable, UserPresenceSecretVault.UNAVAILABLE_EVENT_JSON)
-    }
+    private fun createdSecret(event: MobileEvent): ByteArray =
+        (event as? MobileEvent.UserPresenceSecretCreated)?.secret
+            ?: throw AssertionError("expected UserPresenceSecretCreated, got ${event::class.simpleName}")
 
-    private fun secretOf(
-        eventJson: String,
-        variant: String,
-    ): ByteArray {
-        val payload = Json.parseToJsonElement(eventJson).jsonObject
-        assertEquals(setOf(variant), payload.keys)
-        val secret = (payload.getValue(variant) as JsonObject).getValue("secret").jsonArray
-        return secret
-            .map {
-                it.jsonPrimitive.int
-                    .also { b -> require(b in 0..255) }
-                    .toByte()
-            }.toByteArray()
-    }
+    private fun revealedSecret(event: MobileEvent): ByteArray =
+        (event as? MobileEvent.UserPresenceSecretRevealed)?.secret
+            ?: throw AssertionError("expected UserPresenceSecretRevealed, got ${event::class.simpleName}")
 
     private class SoftwareKeystore : UserPresenceKeystore {
         var key: SecretKey? = null
