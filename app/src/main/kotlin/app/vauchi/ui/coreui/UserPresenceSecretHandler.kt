@@ -15,45 +15,61 @@ import app.vauchi.util.AndroidUserPresenceKeystore
 import app.vauchi.util.BiometricUserPresencePrompt
 import app.vauchi.util.SharedPreferencesWrappedSecretStore
 import app.vauchi.util.canSealUserPresence
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Fulfils core's `CreateUserPresenceSecret` / `RevealUserPresenceSecret`
  * (vauchi/private#712) with the Keystore and `BiometricPrompt`, answering
  * through [CoreAppViewModel.handleUserPresenceAnswer]. A host that cannot
- * show the check answers `HardwareUnavailable`, and a check torn down with
- * the screen answers cancelled, so core never waits on a prompt that will
- * not report back.
+ * show the check answers `HardwareUnavailable`.
  */
 @Composable
 fun UserPresenceSecretHandler(viewModel: CoreAppViewModel) {
     val context = LocalContext.current
-    val request by viewModel.userPresenceRequest.collectAsState()
-
-    LaunchedEffect(request) {
-        val command = request ?: return@LaunchedEffect
-        viewModel.consumeUserPresenceRequest()
+    UserPresenceRequests(
+        requests = viewModel.userPresenceRequest,
+        consume = viewModel::consumeUserPresenceRequest,
+        reply = viewModel::handleUserPresenceAnswer,
+    ) { command ->
         val activity = context as? FragmentActivity
         if (activity == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.R || !canSealUserPresence(context)) {
-            viewModel.handleUserPresenceAnswer(UserPresenceSecretVault.UNAVAILABLE_EVENT_JSON)
-            return@LaunchedEffect
+            return@UserPresenceRequests UserPresenceSecretVault.UNAVAILABLE_EVENT_JSON
         }
         val keystore =
             runCatching { AndroidUserPresenceKeystore() }.getOrElse {
-                viewModel.handleUserPresenceAnswer(UserPresenceSecretVault.UNAVAILABLE_EVENT_JSON)
-                return@LaunchedEffect
+                return@UserPresenceRequests UserPresenceSecretVault.UNAVAILABLE_EVENT_JSON
             }
-        val vault =
-            UserPresenceSecretVault(
-                keystore = keystore,
-                prompt = BiometricUserPresencePrompt(activity),
-                store = SharedPreferencesWrappedSecretStore(context),
-            )
+        UserPresenceSecretVault(
+            keystore = keystore,
+            prompt = BiometricUserPresencePrompt(activity),
+            store = SharedPreferencesWrappedSecretStore(context),
+        ).answer(command)
+    }
+}
+
+/**
+ * Runs [answer] for each request and replies with its event. A check torn
+ * down with the screen answers cancelled, so core never waits on a prompt
+ * that will not report back.
+ */
+@Composable
+internal fun UserPresenceRequests(
+    requests: StateFlow<UserPresenceCommand?>,
+    consume: () -> Unit,
+    reply: (String) -> Unit,
+    answer: suspend (UserPresenceCommand) -> String,
+) {
+    val request by requests.collectAsState()
+
+    LaunchedEffect(request) {
+        val command = request ?: return@LaunchedEffect
+        consume()
         var answered = false
         try {
-            viewModel.handleUserPresenceAnswer(vault.answer(command))
+            reply(answer(command))
             answered = true
         } finally {
-            if (!answered) viewModel.handleUserPresenceAnswer(UserPresenceSecretVault.CANCELLED_EVENT_JSON)
+            if (!answered) reply(UserPresenceSecretVault.CANCELLED_EVENT_JSON)
         }
     }
 }
