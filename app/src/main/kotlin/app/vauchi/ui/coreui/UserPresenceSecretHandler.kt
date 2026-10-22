@@ -15,6 +15,7 @@ import app.vauchi.util.SharedPreferencesWrappedSecretStore
 import app.vauchi.util.canSealUserPresence
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
+import uniffi.vauchi_platform.MobileEvent
 
 /**
  * Fulfils core's `CreateUserPresenceSecret` / `RevealUserPresenceSecret`
@@ -32,11 +33,11 @@ fun UserPresenceSecretHandler(viewModel: CoreAppViewModel) {
     ) { command ->
         val activity = context as? FragmentActivity
         if (activity == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.R || !canSealUserPresence(context)) {
-            return@UserPresenceRequests UserPresenceSecretVault.UNAVAILABLE_EVENT_JSON
+            return@UserPresenceRequests UserPresenceSecretVault.UNAVAILABLE
         }
         val keystore =
             runCatching { AndroidUserPresenceKeystore() }.getOrElse {
-                return@UserPresenceRequests UserPresenceSecretVault.UNAVAILABLE_EVENT_JSON
+                return@UserPresenceRequests UserPresenceSecretVault.UNAVAILABLE
             }
         UserPresenceSecretVault(
             keystore = keystore,
@@ -55,8 +56,8 @@ fun UserPresenceSecretHandler(viewModel: CoreAppViewModel) {
 internal fun UserPresenceRequests(
     requests: StateFlow<UserPresenceCommand?>,
     consume: () -> Unit,
-    reply: (String) -> Unit,
-    answer: suspend (UserPresenceCommand) -> String,
+    reply: (MobileEvent) -> Unit,
+    answer: suspend (UserPresenceCommand) -> MobileEvent,
 ) {
     // Keyed on the flow, not its value: consuming the request must not
     // restart the effect and cancel the prompt it is waiting on (#748).
@@ -68,7 +69,7 @@ internal fun UserPresenceRequests(
                 reply(answer(command))
                 answered = true
             } finally {
-                if (!answered) reply(UserPresenceSecretVault.CANCELLED_EVENT_JSON)
+                if (!answered) reply(UserPresenceSecretVault.CANCELLED)
             }
         }
     }

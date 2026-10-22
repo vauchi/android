@@ -266,9 +266,9 @@ class CoreAppViewModel(
         _userPresenceRequest.value = null
     }
 
-    /** [eventJson] is the answer [UserPresenceSecretVault] produced. */
-    fun handleUserPresenceAnswer(eventJson: String) {
-        hardwareEvents.send(OutgoingEvent.EventJson(eventJson, label = "UserPresence"))
+    /** [event] is the answer [UserPresenceSecretVault] produced. */
+    fun handleUserPresenceAnswer(event: MobileEvent) {
+        sendHardwareEvent(event)
     }
 
     /**
@@ -565,56 +565,25 @@ class CoreAppViewModel(
     // re-ordered notifications arriving milliseconds apart. See
     // `_private/docs/problems/2026-06-06-android-ble-execution/`.
     private val hardwareEvents =
-        FifoEventQueue<OutgoingEvent>(viewModelScope) { event ->
+        FifoEventQueue<MobileEvent>(viewModelScope) { event ->
             deliverHardwareEvent(event)
         }
 
     private fun sendHardwareEvent(event: MobileEvent) {
-        hardwareEvents.send(OutgoingEvent.Typed(event))
+        hardwareEvents.send(event)
     }
 
     private suspend fun deliverHardwareEvent(event: MobileEvent) {
-        deliverHardwareEvent(OutgoingEvent.Typed(event))
-    }
-
-    private suspend fun deliverHardwareEvent(event: OutgoingEvent) {
         try {
             val resultJson =
                 withContext(Dispatchers.IO) {
-                    appEngine.dispatchJson(eventJson = event.json())
+                    appEngine.dispatchJson(eventJson = hardwareEventJson(event))
                 }
             presentationMutex.withLock {
-                applyPresentationEnvelope(resultJson, source = "hardware:${event.label}")
+                applyPresentationEnvelope(resultJson, source = "hardware:${event::class.simpleName}")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to send hardware event", e)
-        }
-    }
-
-    /**
-     * An event on its way to core. The generated [MobileEvent] does not carry
-     * every core event (the user-presence answers, vauchi/private#712), so
-     * those travel as the event JSON `dispatchJson` reads.
-     */
-    private sealed interface OutgoingEvent {
-        val label: String
-
-        fun json(): String
-
-        data class Typed(
-            val event: MobileEvent,
-        ) : OutgoingEvent {
-            override val label: String get() = event::class.simpleName ?: "MobileEvent"
-
-            override fun json(): String = hardwareEventJson(event)
-        }
-
-        /** Not a data class, so no generated toString prints the secret it may carry. */
-        class EventJson(
-            private val eventJson: String,
-            override val label: String,
-        ) : OutgoingEvent {
-            override fun json(): String = eventJson
         }
     }
 

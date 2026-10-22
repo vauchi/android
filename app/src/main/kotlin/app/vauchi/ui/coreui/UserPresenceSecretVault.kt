@@ -4,9 +4,7 @@
 
 package app.vauchi.ui.coreui
 
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
+import uniffi.vauchi_platform.MobileEvent
 import java.security.SecureRandom
 import javax.crypto.Cipher
 
@@ -59,7 +57,7 @@ interface WrappedSecretStore {
 
 /**
  * Answers core's `CreateUserPresenceSecret` / `RevealUserPresenceSecret`
- * (vauchi/private#712) with the JSON of the event core expects.
+ * (vauchi/private#712) with the event core expects.
  *
  * The secret only ever exists unwrapped inside a cipher the OS unlocked for
  * this one use, so a prompt that reports success without unlocking the key
@@ -74,49 +72,49 @@ class UserPresenceSecretVault(
     private val store: WrappedSecretStore,
     private val random: SecureRandom = SecureRandom(),
 ) {
-    suspend fun answer(command: UserPresenceCommand): String =
+    suspend fun answer(command: UserPresenceCommand): MobileEvent =
         when (command) {
             is CommandDTO.CreateUserPresenceSecret -> create(command.prompt)
             is CommandDTO.RevealUserPresenceSecret -> reveal(command.prompt)
         }
 
-    private suspend fun create(reason: String): String {
+    private suspend fun create(reason: String): MobileEvent {
         store.clear()
-        val cipher = runCatching { keystore.newEncryptCipher() }.getOrNull() ?: return UNAVAILABLE_EVENT_JSON
+        val cipher = runCatching { keystore.newEncryptCipher() }.getOrNull() ?: return UNAVAILABLE
         val unlocked =
             when (val check = prompt.authenticate(reason, cipher)) {
                 is UserPresenceCheck.Unlocked -> check.cipher
-                UserPresenceCheck.Cancelled -> return CANCELLED_EVENT_JSON
-                UserPresenceCheck.Failed -> return UNAVAILABLE_EVENT_JSON
+                UserPresenceCheck.Cancelled -> return CANCELLED
+                UserPresenceCheck.Failed -> return UNAVAILABLE
             }
         val secret = ByteArray(SECRET_BYTES).also(random::nextBytes)
         try {
-            val ciphertext = runCatching { unlocked.doFinal(secret) }.getOrNull() ?: return UNAVAILABLE_EVENT_JSON
+            val ciphertext = runCatching { unlocked.doFinal(secret) }.getOrNull() ?: return UNAVAILABLE
             store.save(WrappedSecret(unlocked.iv, ciphertext))
-            return secretEventJson("UserPresenceSecretCreated", secret)
+            return MobileEvent.UserPresenceSecretCreated(secret.copyOf())
         } finally {
             secret.fill(0)
         }
     }
 
-    private suspend fun reveal(reason: String): String {
-        val wrapped = store.load() ?: return UNAVAILABLE_EVENT_JSON
+    private suspend fun reveal(reason: String): MobileEvent {
+        val wrapped = store.load() ?: return UNAVAILABLE
         val cipher = runCatching { keystore.decryptCipher(wrapped.iv) }.getOrNull()
         if (cipher == null) {
             store.clear()
             runCatching { keystore.delete() }
-            return UNAVAILABLE_EVENT_JSON
+            return UNAVAILABLE
         }
         val unlocked =
             when (val check = prompt.authenticate(reason, cipher)) {
                 is UserPresenceCheck.Unlocked -> check.cipher
-                UserPresenceCheck.Cancelled -> return CANCELLED_EVENT_JSON
-                UserPresenceCheck.Failed -> return UNAVAILABLE_EVENT_JSON
+                UserPresenceCheck.Cancelled -> return CANCELLED
+                UserPresenceCheck.Failed -> return UNAVAILABLE
             }
-        val secret = runCatching { unlocked.doFinal(wrapped.ciphertext) }.getOrNull() ?: return UNAVAILABLE_EVENT_JSON
+        val secret = runCatching { unlocked.doFinal(wrapped.ciphertext) }.getOrNull() ?: return UNAVAILABLE
         try {
-            if (secret.size != SECRET_BYTES) return UNAVAILABLE_EVENT_JSON
-            return secretEventJson("UserPresenceSecretRevealed", secret)
+            if (secret.size != SECRET_BYTES) return UNAVAILABLE
+            return MobileEvent.UserPresenceSecretRevealed(secret.copyOf())
         } finally {
             secret.fill(0)
         }
@@ -126,21 +124,8 @@ class UserPresenceSecretVault(
         private const val SECRET_BYTES = 32
 
         /** Core reads `HardwareUnavailable` for this transport as "no user-presence check here". */
-        const val UNAVAILABLE_EVENT_JSON = """{"HardwareUnavailable":{"transport":"user_presence"}}"""
+        val UNAVAILABLE = MobileEvent.HardwareUnavailable(transport = "user_presence")
 
-        const val CANCELLED_EVENT_JSON = "\"UserPresenceCheckCancelled\""
-
-        private fun secretEventJson(
-            variant: String,
-            secret: ByteArray,
-        ): String =
-            buildJsonObject {
-                put(
-                    variant,
-                    buildJsonObject {
-                        put("secret", JsonArray(secret.map { JsonPrimitive(it.toInt() and 0xFF) }))
-                    },
-                )
-            }.toString()
+        val CANCELLED = MobileEvent.UserPresenceCheckCancelled
     }
 }
