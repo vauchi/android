@@ -122,6 +122,7 @@ class ThemeManagerSharedPrefsTest {
 
     @Test
     fun `a theme reload keeps the dark theme the system asked for`() {
+        HostCoreLibrary.assumePresentInSharedSandbox()
         val mgr = newManager()
         mgr.applySelectedTheme(isDarkMode = true)
 
