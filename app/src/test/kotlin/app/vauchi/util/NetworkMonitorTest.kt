@@ -5,12 +5,16 @@
 package app.vauchi.util
 
 import android.content.Context
+import android.net.NetworkCapabilities
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowNetworkCapabilities
+import uniffi.vauchi_platform.MobileNetworkCost
 
 @RunWith(RobolectricTestRunner::class)
 class NetworkMonitorTest {
@@ -86,5 +90,38 @@ class NetworkMonitorTest {
     @Test
     fun `reports no address for an empty link`() {
         assertNull(NetworkMonitor.selectLocalAddress(emptyList()))
+    }
+
+    // ── network cost (vauchi/private#733 D6) ─────────────────────────
+
+    private fun capabilities(vararg capabilities: Int): NetworkCapabilities =
+        ShadowNetworkCapabilities.newInstance().also { caps ->
+            capabilities.forEach { shadowOf(caps).addCapability(it) }
+        }
+
+    @Test
+    fun `a network the OS calls not metered is unmetered`() {
+        val cost = NetworkMonitor.costOf(
+            capabilities(
+                NetworkCapabilities.NET_CAPABILITY_INTERNET,
+                NetworkCapabilities.NET_CAPABILITY_NOT_METERED,
+            )
+        )
+
+        assertEquals(MobileNetworkCost.UNMETERED, cost)
+    }
+
+    @Test
+    fun `a network without the not-metered capability is metered`() {
+        val cost = NetworkMonitor.costOf(
+            capabilities(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        )
+
+        assertEquals(MobileNetworkCost.METERED, cost)
+    }
+
+    @Test
+    fun `no active network has an unknown cost`() {
+        assertEquals(MobileNetworkCost.UNKNOWN, NetworkMonitor.costOf(null))
     }
 }

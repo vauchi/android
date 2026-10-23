@@ -19,6 +19,7 @@ import app.vauchi.screenshots.HostCoreLibrary
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.annotation.Config
 import org.robolectric.RuntimeEnvironment
+import uniffi.vauchi_platform.getDefaultThemeId
 
 /**
  * Pin the SharedPreferences-canonical contract for [ThemeManager]
@@ -117,6 +118,16 @@ class ThemeManagerSharedPrefsTest {
         )
         assertTrue("manager state reflects reset", mgr.followSystem.value)
         assertNull("manager state reflects reset", mgr.selectedThemeId.value)
+    }
+
+    @Test
+    fun `a theme reload keeps the dark theme the system asked for`() {
+        val mgr = newManager()
+        mgr.applySelectedTheme(isDarkMode = true)
+
+        mgr.reloadThemes()
+
+        assertEquals(getDefaultThemeId(true), mgr.currentTheme.value?.id)
     }
 
     @Test
