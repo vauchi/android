@@ -51,6 +51,7 @@ import uniffi.vauchi_platform.MobileAhaMoment
 import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileBleLinkDirection
 import uniffi.vauchi_platform.MobileEvent
+import uniffi.vauchi_platform.MobileNetworkCost
 import uniffi.vauchi_platform.PlatformAppEngine
 import uniffi.vauchi_platform.hardwareEventJson
 
@@ -72,6 +73,10 @@ class CoreAppViewModel(
      * `NetworkMonitor` so this stays free of a `Context` and testable.
      */
     private val localAddresses: Flow<String?> = emptyFlow(),
+    /** What the current network costs, for Core's Wi-Fi only setting. */
+    private val networkCosts: Flow<MobileNetworkCost> = emptyFlow(),
+    /** Re-applies the theme once Core downloaded new themes. */
+    private val onReloadTheme: () -> Unit = {},
 ) : ViewModel() {
     init {
         // Core cannot enumerate interfaces (ADR-030/031), so it learns where
@@ -82,6 +87,11 @@ class CoreAppViewModel(
         viewModelScope.launch {
             localAddresses.collect { address ->
                 deliverHardwareEvent(MobileEvent.LocalNetworkAddressChanged(address))
+            }
+        }
+        viewModelScope.launch {
+            networkCosts.collect { cost ->
+                deliverHardwareEvent(MobileEvent.NetworkCostChanged(cost))
             }
         }
     }
@@ -816,6 +826,10 @@ class CoreAppViewModel(
 
                 "ResetApplication" -> {
                     loadInitialPresentation()
+                }
+
+                "ReloadTheme" -> {
+                    onReloadTheme()
                 }
 
                 "PostNotification" -> {

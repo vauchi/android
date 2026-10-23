@@ -87,6 +87,7 @@ import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NetworkMonitor
 import app.vauchi.util.NotificationHelper
 import app.vauchi.util.NotificationPresentation
+import app.vauchi.util.ThemeManager
 import app.vauchi.worker.BackgroundSyncScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -334,6 +335,8 @@ fun MainScreen(
                 appEngine = engine,
                 onPresentationCommitted = viewModel::reconcilePresentationState,
                 localAddresses = networkMonitor.localAddress,
+                networkCosts = networkMonitor.cost,
+                onReloadTheme = { ThemeManager.getInstance(context).reloadThemes() },
             )
         }
 

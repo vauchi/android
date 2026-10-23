@@ -16,6 +16,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import uniffi.vauchi_platform.MobileNetworkCost
 
 class NetworkMonitor(context: Context) {
 
@@ -96,7 +97,47 @@ class NetworkMonitor(context: Context) {
         }
     }.distinctUntilChanged()
 
+    /**
+     * What the network apps use by default costs, so Core can keep a
+     * Wi-Fi only update off a paid connection (vauchi/private#733 D6).
+     */
+    val cost: Flow<MobileNetworkCost> = callbackFlow {
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onCapabilitiesChanged(
+                network: Network,
+                networkCapabilities: NetworkCapabilities
+            ) {
+                trySend(costOf(networkCapabilities))
+            }
+
+            override fun onLost(network: Network) {
+                trySend(MobileNetworkCost.UNKNOWN)
+            }
+        }
+
+        trySend(currentCost())
+
+        connectivityManager.registerDefaultNetworkCallback(callback)
+
+        awaitClose {
+            connectivityManager.unregisterNetworkCallback(callback)
+        }
+    }.distinctUntilChanged()
+
+    fun currentCost(): MobileNetworkCost {
+        val network = connectivityManager.activeNetwork ?: return MobileNetworkCost.UNKNOWN
+        return costOf(connectivityManager.getNetworkCapabilities(network))
+    }
+
     companion object {
+        fun costOf(capabilities: NetworkCapabilities?): MobileNetworkCost =
+            when {
+                capabilities == null -> MobileNetworkCost.UNKNOWN
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) ->
+                    MobileNetworkCost.UNMETERED
+                else -> MobileNetworkCost.METERED
+            }
+
         /**
          * Pick the address a peer on the same segment could reach, or `null`.
          *

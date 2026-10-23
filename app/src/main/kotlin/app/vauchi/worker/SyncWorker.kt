@@ -12,7 +12,10 @@ import androidx.work.await
 import app.vauchi.data.VauchiRepository
 import app.vauchi.ui.coreui.WakeupOutcome
 import app.vauchi.ui.coreui.toPresentation
+import app.vauchi.util.NetworkMonitor
 import kotlinx.serialization.json.Json
+import uniffi.vauchi_platform.MobileEvent
+import uniffi.vauchi_platform.hardwareEventJson
 
 class SyncWorker(
     context: Context,
@@ -73,6 +76,15 @@ class SyncWorker(
                     wakeupJson.decodeFromString<WakeupOutcome>(repository.appEngine.periodicSyncTick()).commands
                 }.getOrElse { emptyList() }
 
+            // A worker process has not heard the network cost from the
+            // app, and Core counts an unknown network as metered.
+            runCatching {
+                repository.appEngine.dispatchJson(
+                    eventJson = hardwareEventJson(
+                        MobileEvent.NetworkCostChanged(NetworkMonitor(applicationContext).currentCost()),
+                    ),
+                )
+            }.onFailure { Log.w(TAG, "network cost not reported: ${it.javaClass.simpleName}") }
             runCatching { repository.runContentUpdateCycle() }
                 .onFailure { Log.w(TAG, "[ContentUpdate] skipped: ${it.javaClass.simpleName}") }
 

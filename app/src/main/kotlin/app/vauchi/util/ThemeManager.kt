@@ -72,17 +72,25 @@ class ThemeManager(
     private val _selectedThemeId = MutableStateFlow<String?>(null)
     val selectedThemeId: StateFlow<String?> = _selectedThemeId.asStateFlow()
 
+    @Volatile
+    private var isDarkMode = false
+
     init {
-        loadThemes()
+        reloadThemes()
     }
 
-    private fun loadThemes() {
+    /**
+     * Core downloaded new themes (`ReloadTheme`, vauchi/private#733):
+     * the list and the selected theme are read again, in the appearance
+     * last applied.
+     */
+    fun reloadThemes() {
         try {
             _availableThemes.value = getAvailableThemes()
         } catch (_: LinkageError) {
             _availableThemes.value = emptyList()
         }
-        applySelectedTheme(isDarkMode = false)
+        applySelectedTheme(isDarkMode)
     }
 
     /**
@@ -123,6 +131,7 @@ class ThemeManager(
      * @param isDarkMode Current system dark mode setting
      */
     fun applySelectedTheme(isDarkMode: Boolean) {
+        this.isDarkMode = isDarkMode
         val followSystem = safeGetBoolean(KEY_FOLLOW_SYSTEM, true)
         val themeId = safeGetString(KEY_SELECTED_THEME, null)
         _followSystem.value = followSystem

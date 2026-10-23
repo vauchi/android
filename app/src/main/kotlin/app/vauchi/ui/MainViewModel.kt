@@ -167,34 +167,6 @@ class MainViewModel(
     init {
         checkIdentity()
         observeNetworkStateForCore()
-        runContentUpdateCycleOnLaunch()
-    }
-
-    /**
-     * Cadence Option 2 startup leg
-     * (2026-07-03-periodic-mobile-content-update-cadence): fire the
-     * content-update cycle once on foreground launch, off the main
-     * thread, best-effort. The recurring leg is handled by [SyncWorker].
-     * Applied content follows the next-resume refresh contract (it lands
-     * on disk; the foreground engine picks it up on navigation/resume),
-     * so no UI refresh is triggered here.
-     */
-    private fun runContentUpdateCycleOnLaunch() {
-        viewModelScope.launch(Dispatchers.IO) {
-            // Skip the content-update cycle until the user has an identity.
-            // On a fresh install the foreground is busy rendering onboarding;
-            // touching the shared engine with a content cycle that may reload
-            // cached locale/theme overlays can race against the initial render
-            // and transiently produce "Missing: ..." placeholders.
-            // Any failure skips it: Core starts locked until the user unlocks
-            // and then cannot answer, and this best-effort leg must neither
-            // crash the launch nor touch the UI, which Core's own screen owns.
-            val hasIdentity = runCatching { repository.hasIdentity() }.getOrDefault(false)
-            if (!hasIdentity) {
-                return@launch
-            }
-            runCatching { repository.runContentUpdateCycle() }
-        }
     }
 
     /**
