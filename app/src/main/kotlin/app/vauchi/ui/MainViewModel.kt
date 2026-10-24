@@ -203,10 +203,7 @@ class MainViewModel(
      * Called when core-driven onboarding completes — slice 32c moved
      * the identity creation + groups + fields persistence into
      * `AppEngine::handle_completion` (vauchi-app routing.rs), so this
-     * frontend hook no longer touches identity. It just flips the
-     * local onboarding-completed preference and refreshes UI state
-     * so MainActivity transitions from `UiState.Onboarding` to
-     * `UiState.Ready`.
+     * frontend hook refreshes UI state without creating another identity.
      *
      * Calling `repository.createIdentity` here would double-create
      * (or fail, depending on storage semantics) since PAE already
