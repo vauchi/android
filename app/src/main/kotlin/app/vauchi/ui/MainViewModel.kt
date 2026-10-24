@@ -11,7 +11,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.vauchi.data.DeviceNotSecureException
 import app.vauchi.data.VauchiRepository
-import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NetworkMonitor
 import app.vauchi.util.NotificationPresentation
 import kotlinx.coroutines.Dispatchers
@@ -22,30 +21,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileContactCard
-import uniffi.vauchi_platform.MobileException
-import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.PlatformAppEngine
-import java.time.Instant
-
-sealed class SyncState {
-    object Idle : SyncState()
-
-    object Syncing : SyncState()
-
-    data class Success(
-        val result: MobileSyncResult,
-    ) : SyncState()
-
-    data class Error(
-        val message: String,
-    ) : SyncState()
-
-    data class RateLimited(
-        val retryAfterSecs: Long,
-    ) : SyncState()
-}
 
 sealed class UiState {
     object Loading : UiState()
@@ -83,7 +60,6 @@ class MainViewModel(
     val appEngine: PlatformAppEngine
         get() = repository.appEngine
 
-    private val localizationManager = LocalizationManager.getInstance(application)
     private val networkMonitor = NetworkMonitor(application)
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
@@ -97,11 +73,6 @@ class MainViewModel(
     private val _snackbarMessage = MutableStateFlow<String?>(null)
     val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
 
-    private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
-    val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
-
-    private val _lastSyncTime = MutableStateFlow<Instant?>(null)
-    val lastSyncTime: StateFlow<Instant?> = _lastSyncTime.asStateFlow()
     private var presentationReconciliationInFlight = false
 
     fun clearSnackbar() {
@@ -158,10 +129,6 @@ class MainViewModel(
 
     fun showMessage(message: String) {
         _snackbarMessage.value = message
-    }
-
-    fun clearSyncState() {
-        _syncState.value = SyncState.Idle
     }
 
     init {
@@ -248,9 +215,6 @@ class MainViewModel(
     fun onCoreOnboardingComplete() {
         viewModelScope.launch {
             try {
-                withContext(Dispatchers.IO) {
-                    repository.setOnboardingCompleted(true)
-                }
                 loadUserData()
                 initDemoContactIfNeeded()
             } catch (e: Exception) {
@@ -281,91 +245,6 @@ class MainViewModel(
 
     fun retryStartup() {
         checkIdentity()
-    }
-
-    fun sync() {
-        viewModelScope.launch {
-            if (!repository.hasIdentity()) {
-                _syncState.value = SyncState.Idle
-                return@launch
-            }
-            _syncState.value = SyncState.Syncing
-            try {
-                val result =
-                    withContext(Dispatchers.IO) {
-                        repository.sync()
-                    }
-                _syncState.value = SyncState.Success(result)
-                _lastSyncTime.value = Instant.now()
-                loadUserData()
-
-                // Surface the first-update-received aha moment when this sync
-                // actually brought in changes.
-                // TODO(HUMBLE): D, P1. Frontend decides FIRST_UPDATE_RECEIVED aha
-                // moment from sync result counts. Fix: core returns moments
-                // directly. (see _private problem record
-                // 2026-07-06-mobile-domain-shell-violations)
-                if (result.hasChanges) {
-                    repository.tryTriggerAhaMoment(MobileAhaMomentType.FIRST_UPDATE_RECEIVED)?.let { moment ->
-                        showMessage(moment.message)
-                    }
-                }
-
-                // TODO(HUMBLE): T/W, P1. Assembles sync result copy from domain
-                // counts/names (updatedContactNames, contactsAdded, cardsUpdated).
-                // Fix: core returns localized summary or ShowToast. (see _private
-                // problem record 2026-07-06-mobile-domain-shell-violations)
-                val msg =
-                    if (result.updatedContactNames.isNotEmpty()) {
-                        if (result.updatedContactNames.size == 1) {
-                            localizationManager.t(
-                                "sync.updated_single",
-                                mapOf("name" to result.updatedContactNames.first()),
-                            )
-                        } else {
-                            localizationManager.t(
-                                "sync.updated_contacts",
-                                mapOf("names" to result.updatedContactNames.joinToString(", ")),
-                            )
-                        }
-                    } else if (result.contactsAdded > 0u || result.cardsUpdated > 0u) {
-                        localizationManager.t(
-                            "sync.message_format",
-                            mapOf(
-                                "cards_updated" to result.cardsUpdated.toString(),
-                                "updates_sent" to result.contactsAdded.toString(),
-                            ),
-                        )
-                    } else {
-                        localizationManager.t("sync.no_changes")
-                    }
-                showMessage(msg)
-            } catch (e: MobileException.RateLimited) {
-                _syncState.value = SyncState.RateLimited(e.retryAfterSecs.toLong())
-                showMessage(
-                    localizationManager.t(
-                        "rate_limit.retry_in",
-                        mapOf("seconds" to e.retryAfterSecs.toString()),
-                    ),
-                )
-            } catch (e: Exception) {
-                // Logging-rules.md format: `[<Module>] Failed: <error_type_only>`.
-                // The exception class (e.g. `MobileException$Other`) is not PII;
-                // captures enough to triage without surfacing message contents.
-                // F2-MED-2 needed exactly this signal — the previous catch
-                // swallowed the exception class entirely, leaving only the
-                // user-facing toast as a diagnostic.
-                Log.e("Vauchi", "[Sync] Failed: ${e.javaClass.simpleName}", e)
-                val errorMsg =
-                    if (!networkMonitor.isCurrentlyConnected()) {
-                        localizationManager.t("sync.offline_banner")
-                    } else {
-                        e.message ?: localizationManager.t("sync.error_failed")
-                    }
-                _syncState.value = SyncState.Error(errorMsg)
-                showMessage("${localizationManager.t("sync.error_failed")}: $errorMsg")
-            }
-        }
     }
 
     fun getRelayUrl(): String = repository.getRelayUrl()

@@ -48,64 +48,6 @@ class VauchiPreferencesTest {
         assertEquals("https://second", vauchiPrefs.getRelayUrl())
     }
 
-    // --- Onboarding ---
-
-    @Test
-    fun `hasCompletedOnboarding returns false by default`() {
-        assertFalse(vauchiPrefs.hasCompletedOnboarding())
-    }
-
-    @Test
-    fun `setOnboardingCompleted persists true`() {
-        vauchiPrefs.setOnboardingCompleted(true)
-        assertTrue(vauchiPrefs.hasCompletedOnboarding())
-    }
-
-    @Test
-    fun `setOnboardingCompleted can set back to false`() {
-        vauchiPrefs.setOnboardingCompleted(true)
-        vauchiPrefs.setOnboardingCompleted(false)
-        assertFalse(vauchiPrefs.hasCompletedOnboarding())
-    }
-
-    // --- Demo Contact ---
-
-    @Test
-    fun `hasDismissedDemoContact returns false by default`() {
-        assertFalse(vauchiPrefs.hasDismissedDemoContact())
-    }
-
-    @Test
-    fun `setDemoContactDismissed persists true`() {
-        vauchiPrefs.setDemoContactDismissed(true)
-        assertTrue(vauchiPrefs.hasDismissedDemoContact())
-    }
-
-    // --- Reset Onboarding ---
-
-    @Test
-    fun `resetOnboarding clears onboarding and demo contact flags`() {
-        vauchiPrefs.setOnboardingCompleted(true)
-        vauchiPrefs.setDemoContactDismissed(true)
-
-        vauchiPrefs.resetOnboarding()
-
-        assertFalse(vauchiPrefs.hasCompletedOnboarding())
-        assertFalse(vauchiPrefs.hasDismissedDemoContact())
-    }
-
-    @Test
-    fun `resetOnboarding does not affect other settings`() {
-        vauchiPrefs.setRelayUrl("https://custom.relay")
-        vauchiPrefs.setReduceMotion(true)
-        vauchiPrefs.setOnboardingCompleted(true)
-
-        vauchiPrefs.resetOnboarding()
-
-        assertEquals("https://custom.relay", vauchiPrefs.getRelayUrl())
-        assertTrue(vauchiPrefs.getReduceMotion())
-    }
-
     // --- Accessibility ---
 
     @Test

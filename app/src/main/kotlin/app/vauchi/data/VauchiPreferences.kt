@@ -17,8 +17,6 @@ class VauchiPreferences(
     companion object {
         const val PREFS_NAME = "vauchi_settings"
         const val KEY_RELAY_URL = "relay_url"
-        const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
-        const val KEY_DEMO_CONTACT_DISMISSED = "demo_contact_dismissed"
         const val DEFAULT_RELAY_URL = "https://relay.vauchi.app"
 
         const val KEY_REDUCE_MOTION = "accessibility_reduce_motion"
@@ -30,26 +28,6 @@ class VauchiPreferences(
 
     fun setRelayUrl(url: String) {
         prefs.edit().putString(KEY_RELAY_URL, url).apply()
-    }
-
-    fun hasCompletedOnboarding(): Boolean = prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
-
-    fun setOnboardingCompleted(completed: Boolean) {
-        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
-    }
-
-    fun hasDismissedDemoContact(): Boolean = prefs.getBoolean(KEY_DEMO_CONTACT_DISMISSED, false)
-
-    fun setDemoContactDismissed(dismissed: Boolean) {
-        prefs.edit().putBoolean(KEY_DEMO_CONTACT_DISMISSED, dismissed).apply()
-    }
-
-    fun resetOnboarding() {
-        prefs
-            .edit()
-            .remove(KEY_ONBOARDING_COMPLETED)
-            .remove(KEY_DEMO_CONTACT_DISMISSED)
-            .apply()
     }
 
     fun getReduceMotion(): Boolean = prefs.getBoolean(KEY_REDUCE_MOTION, false)

@@ -10,14 +10,13 @@ import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileContentCycleOutcome
 import uniffi.vauchi_platform.MobileDemoContact
 import uniffi.vauchi_platform.MobileException
-import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.PlatformAppEngine
 
 // Typed wrappers around `PlatformAppEngine.dispatchDomainCommand` for
 // the collapse-vauchi-platform migration. After retiring the test-only
 // domain-CRUD repository wrappers this file only contains the small set
 // of dispatch helpers still called by the Android repository shell
-// (identity/bootstrap, auth, sync, content-update cycle, and demo-contact
+// (identity/bootstrap, auth, content-update cycle, and demo-contact
 // init). All domain CRUD has moved into core-driven screens.
 
 private fun unexpectedResult(name: String): Nothing = throw MobileException.Other(detail = "$name: unexpected result variant")
@@ -63,12 +62,4 @@ fun PlatformAppEngine.runContentUpdateCycle(): MobileContentCycleOutcome {
 fun PlatformAppEngine.authenticate(password: String): MobileAuthMode {
     val result = dispatchDomainCommand(DomainCommand.Authenticate(password))
     return (result as? DomainCommandResult.AuthMode)?.mode ?: unexpectedResult("Authenticate")
-}
-
-// User-initiated relay sync (collapse-vauchi-platform G1). The engine owns
-// the connect lifecycle and honors the C1/C2 timing throttle: a throttled
-// (TooSoon) call comes back as a benign no-change MobileSyncResult.
-fun PlatformAppEngine.sync(): MobileSyncResult {
-    val result = dispatchDomainCommand(DomainCommand.Sync)
-    return (result as? DomainCommandResult.SyncResult)?.result ?: unexpectedResult("Sync")
 }

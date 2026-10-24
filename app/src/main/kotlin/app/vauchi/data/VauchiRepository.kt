@@ -11,14 +11,9 @@ import android.util.Log
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NotificationPresentation
 import app.vauchi.util.ThemeManager
-import app.vauchi.util.toPresentation
 import app.vauchi.util.pushDeviceCapabilities
-import uniffi.vauchi_platform.DomainCommand
-import uniffi.vauchi_platform.DomainCommandResult
-import uniffi.vauchi_platform.MobileAhaMoment
-import uniffi.vauchi_platform.MobileAhaMomentType
+import app.vauchi.util.toPresentation
 import uniffi.vauchi_platform.MobileContactCard
-import uniffi.vauchi_platform.MobileSyncResult
 import uniffi.vauchi_platform.PlatformAppEngine
 
 /**
@@ -154,16 +149,6 @@ class VauchiRepository internal constructor(
 
     fun setRelayUrl(url: String) = preferences.setRelayUrl(url)
 
-    fun hasCompletedOnboarding(): Boolean = preferences.hasCompletedOnboarding()
-
-    fun setOnboardingCompleted(completed: Boolean) = preferences.setOnboardingCompleted(completed)
-
-    fun hasDismissedDemoContact(): Boolean = preferences.hasDismissedDemoContact()
-
-    fun setDemoContactDismissed(dismissed: Boolean) = preferences.setDemoContactDismissed(dismissed)
-
-    fun resetOnboarding() = preferences.resetOnboarding()
-
     fun getReduceMotion(): Boolean = preferences.getReduceMotion()
 
     fun setReduceMotion(enabled: Boolean) = preferences.setReduceMotion(enabled)
@@ -175,36 +160,6 @@ class VauchiRepository internal constructor(
     fun getLargeTouchTargets(): Boolean = preferences.getLargeTouchTargets()
 
     fun setLargeTouchTargets(enabled: Boolean) = preferences.setLargeTouchTargets(enabled)
-
-    fun sync(): MobileSyncResult {
-        ensureInitialized()
-        val result = _appEngine.sync()
-        if (app.vauchi.BuildConfig.DEBUG) {
-            // Device-test diagnostics: numeric sync counts only (no PII /
-            // contact names) — localizes the send vs receive leg per device.
-            Log.d(
-                "VauchiSync",
-                "sync: contactsAdded=${result.contactsAdded} " +
-                    "cardsUpdated=${result.cardsUpdated} " +
-                    "updatesSent=${result.updatesSent} " +
-                    "blobsFetched=${result.blobsFetched} " +
-                    "rejected=${result.rejected} unresolved=${result.unresolved} " +
-                    "hasChanges=${result.hasChanges}",
-            )
-        }
-        return result
-    }
-
-    /**
-     * Try to trigger an aha [momentType] and return the localized moment if
-     * it should be shown now, or `null` if already seen. Errors are swallowed
-     * so a milestone failure never breaks the calling flow.
-     */
-    fun tryTriggerAhaMoment(momentType: MobileAhaMomentType): MobileAhaMoment? =
-        runCatching {
-            val result = appEngine.dispatchDomainCommand(DomainCommand.TryTriggerAhaMoment(momentType))
-            (result as? DomainCommandResult.AhaMomentOpt)?.moment
-        }.getOrNull()
 
     fun hasIdentity(): Boolean {
         ensureInitialized()
