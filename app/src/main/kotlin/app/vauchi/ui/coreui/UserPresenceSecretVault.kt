@@ -12,9 +12,9 @@ import javax.crypto.Cipher
 interface UserPresenceKeystore {
     /**
      * Replaces any existing key with a fresh one whose every use needs the
-     * user-presence check, and returns a cipher ready to wrap with it.
+     * check [binding] names, and returns a cipher ready to wrap with it.
      */
-    fun newEncryptCipher(): Cipher
+    fun newEncryptCipher(binding: UserPresenceBinding): Cipher
 
     /** A cipher to unwrap with the current key; `null` when it is gone or invalidated. */
     fun decryptCipher(iv: ByteArray): Cipher?
@@ -24,9 +24,11 @@ interface UserPresenceKeystore {
 
 /** The OS user-presence check, bound to the cipher it unlocks. */
 interface UserPresencePrompt {
+    /** [binding] is the check the key was sealed under; `null` for a key sealed before 0.88.0. */
     suspend fun authenticate(
         reason: String,
         cipher: Cipher,
+        binding: UserPresenceBinding?,
     ): UserPresenceCheck
 }
 
@@ -45,6 +47,7 @@ sealed interface UserPresenceCheck {
 class WrappedSecret(
     val iv: ByteArray,
     val ciphertext: ByteArray,
+    val binding: UserPresenceBinding? = null,
 )
 
 interface WrappedSecretStore {
@@ -62,9 +65,9 @@ interface WrappedSecretStore {
  * The secret only ever exists unwrapped inside a cipher the OS unlocked for
  * this one use, so a prompt that reports success without unlocking the key
  * yields no secret. Core keeps the secret's SHA-256 and enrols it once, so a
- * key the OS dropped (lock screen removed) cannot be recreated behind core's
- * back: the answer is `HardwareUnavailable` and core falls back to the app
- * password.
+ * key the OS dropped (lock screen removed, or a biometric enrolment changed)
+ * cannot be recreated behind core's back: the answer is
+ * `UserPresenceSecretMissing` and core decides the way back (#778).
  */
 class UserPresenceSecretVault(
     private val keystore: UserPresenceKeystore,
@@ -74,15 +77,18 @@ class UserPresenceSecretVault(
 ) {
     suspend fun answer(command: UserPresenceCommand): MobileEvent =
         when (command) {
-            is CommandDTO.CreateUserPresenceSecret -> create(command.prompt)
+            is CommandDTO.CreateUserPresenceSecret -> command.binding?.let { create(command.prompt, it) } ?: UNAVAILABLE
             is CommandDTO.RevealUserPresenceSecret -> reveal(command.prompt)
         }
 
-    private suspend fun create(reason: String): MobileEvent {
+    private suspend fun create(
+        reason: String,
+        binding: UserPresenceBinding,
+    ): MobileEvent {
         store.clear()
-        val cipher = runCatching { keystore.newEncryptCipher() }.getOrNull() ?: return UNAVAILABLE
+        val cipher = runCatching { keystore.newEncryptCipher(binding) }.getOrNull() ?: return UNAVAILABLE
         val unlocked =
-            when (val check = prompt.authenticate(reason, cipher)) {
+            when (val check = prompt.authenticate(reason, cipher, binding)) {
                 is UserPresenceCheck.Unlocked -> check.cipher
                 UserPresenceCheck.Cancelled -> return CANCELLED
                 UserPresenceCheck.Failed -> return UNAVAILABLE
@@ -90,7 +96,7 @@ class UserPresenceSecretVault(
         val secret = ByteArray(SECRET_BYTES).also(random::nextBytes)
         try {
             val ciphertext = runCatching { unlocked.doFinal(secret) }.getOrNull() ?: return UNAVAILABLE
-            store.save(WrappedSecret(unlocked.iv, ciphertext))
+            store.save(WrappedSecret(unlocked.iv, ciphertext, binding))
             return MobileEvent.UserPresenceSecretCreated(secret.copyOf())
         } finally {
             secret.fill(0)
@@ -98,15 +104,15 @@ class UserPresenceSecretVault(
     }
 
     private suspend fun reveal(reason: String): MobileEvent {
-        val wrapped = store.load() ?: return UNAVAILABLE
-        val cipher = runCatching { keystore.decryptCipher(wrapped.iv) }.getOrNull()
+        val wrapped = store.load() ?: return MISSING
+        val cipher = runCatching { keystore.decryptCipher(wrapped.iv) }.getOrElse { return UNAVAILABLE }
         if (cipher == null) {
             store.clear()
             runCatching { keystore.delete() }
-            return UNAVAILABLE
+            return MISSING
         }
         val unlocked =
-            when (val check = prompt.authenticate(reason, cipher)) {
+            when (val check = prompt.authenticate(reason, cipher, wrapped.binding)) {
                 is UserPresenceCheck.Unlocked -> check.cipher
                 UserPresenceCheck.Cancelled -> return CANCELLED
                 UserPresenceCheck.Failed -> return UNAVAILABLE
@@ -127,5 +133,8 @@ class UserPresenceSecretVault(
         val UNAVAILABLE = MobileEvent.HardwareUnavailable(transport = "user_presence")
 
         val CANCELLED = MobileEvent.UserPresenceCheckCancelled
+
+        /** The sealed secret or its key is gone; unlike [UNAVAILABLE], the check itself works here. */
+        val MISSING = MobileEvent.UserPresenceSecretMissing
     }
 }

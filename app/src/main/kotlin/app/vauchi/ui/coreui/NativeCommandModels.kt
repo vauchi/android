@@ -18,6 +18,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.float
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.intOrNull
@@ -160,6 +161,7 @@ sealed class CommandDTO {
 
     data class CreateUserPresenceSecret(
         override val prompt: String,
+        val binding: UserPresenceBinding?,
     ) : CommandDTO(),
         UserPresenceCommand
 
@@ -179,6 +181,23 @@ sealed class CommandDTO {
  */
 sealed interface UserPresenceCommand {
     val prompt: String
+}
+
+/** Which OS check guards a sealed secret (Core 0.88.0, vauchi/private#778). */
+enum class UserPresenceBinding(
+    val wire: String,
+) {
+    /** Only the strong biometrics enrolled when the secret was sealed. */
+    BIOMETRY("biometry"),
+
+    /** The device PIN, pattern or password. */
+    DEVICE_CREDENTIAL("device_credential"),
+    ;
+
+    companion object {
+        /** `null` for an unknown or absent binding, which seals nothing. */
+        fun fromWire(wire: String?): UserPresenceBinding? = entries.firstOrNull { it.wire == wire }
+    }
 }
 
 /** Mirrors Core's platform orientation tokens. */
@@ -380,8 +399,10 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
             }
 
             "CreateUserPresenceSecret" in element -> {
+                val payload = element.objectValue("CreateUserPresenceSecret")
                 CommandDTO.CreateUserPresenceSecret(
-                    element.objectValue("CreateUserPresenceSecret").value("prompt").content,
+                    payload.value("prompt").content,
+                    UserPresenceBinding.fromWire((payload["binding"] as? JsonPrimitive)?.contentOrNull),
                 )
             }
 
