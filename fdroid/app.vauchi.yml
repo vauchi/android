@@ -9,7 +9,10 @@ Categories:
   - Internet
   - Security
 
-License: GPL-3.0-or-later
+# The app is GPL-3.0-or-later and the bundled core (vauchi-platform) is
+# AGPL-3.0-or-later. F-Droid's lint takes one approved identifier, not an
+# SPDX expression, so the APK as a whole is listed under the stricter one.
+License: AGPL-3.0-or-later
 
 AuthorName: Mattia Egloff
 AuthorEmail: mattia.egloff@pm.me
