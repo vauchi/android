@@ -55,13 +55,32 @@ class NativeCommandModelsTest {
     }
 
     @Test
-    fun create_user_presence_secret_carries_cores_prompt() {
-        val command =
-            json.decodeFromString<CommandDTO>(
-                """{"CreateUserPresenceSecret":{"prompt":"Confirm it is you"}}""",
-            )
+    fun create_user_presence_secret_carries_cores_prompt_and_binding() {
+        for ((wire, binding) in listOf(
+            "biometry" to UserPresenceBinding.BIOMETRY,
+            "device_credential" to UserPresenceBinding.DEVICE_CREDENTIAL,
+        )) {
+            val command =
+                json.decodeFromString<CommandDTO>(
+                    """{"CreateUserPresenceSecret":{"prompt":"Confirm it is you","binding":"$wire"}}""",
+                )
 
-        assertEquals(CommandDTO.CreateUserPresenceSecret("Confirm it is you"), command)
+            assertEquals(wire, CommandDTO.CreateUserPresenceSecret("Confirm it is you", binding), command)
+        }
+    }
+
+    /** An unknown or absent binding must not pick a seal (vauchi/private#778). */
+    @Test
+    fun an_unknown_or_missing_binding_decodes_to_none() {
+        for (payload in listOf(
+            """{"prompt":"p","binding":"face_or_pin"}""",
+            """{"prompt":"p","binding":null}""",
+            """{"prompt":"p"}""",
+        )) {
+            val command = json.decodeFromString<CommandDTO>("""{"CreateUserPresenceSecret":$payload}""")
+
+            assertEquals(payload, CommandDTO.CreateUserPresenceSecret("p", null), command)
+        }
     }
 
     @Test

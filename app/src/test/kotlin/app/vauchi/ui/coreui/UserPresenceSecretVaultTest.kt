@@ -26,6 +26,8 @@ class UserPresenceSecretVaultTest {
     private val reason = "Confirm it is you"
     private val unavailable = MobileEvent.HardwareUnavailable(transport = "user_presence")
     private val cancelled = MobileEvent.UserPresenceCheckCancelled
+    private val missing = MobileEvent.UserPresenceSecretMissing
+    private val create = CommandDTO.CreateUserPresenceSecret(reason, UserPresenceBinding.BIOMETRY)
 
     private val keystore = SoftwareKeystore()
     private val prompt = FakePrompt()
@@ -35,7 +37,7 @@ class UserPresenceSecretVaultTest {
     @Test
     fun create_answers_32_fresh_bytes_after_the_check_with_cores_reason() =
         runTest {
-            val secret = createdSecret(vault.answer(CommandDTO.CreateUserPresenceSecret(reason)))
+            val secret = createdSecret(vault.answer(create))
 
             assertEquals(32, secret.size)
             assertFalse("the vault wiped the secret core was handed", secret.all { it == 0.toByte() })
@@ -45,7 +47,7 @@ class UserPresenceSecretVaultTest {
     @Test
     fun reveal_answers_the_secret_create_sealed() =
         runTest {
-            val created = createdSecret(vault.answer(CommandDTO.CreateUserPresenceSecret(reason)))
+            val created = createdSecret(vault.answer(create))
 
             val revealed = revealedSecret(vault.answer(CommandDTO.RevealUserPresenceSecret(reason)))
 
@@ -55,18 +57,68 @@ class UserPresenceSecretVaultTest {
     @Test
     fun only_the_wrapped_secret_is_stored() =
         runTest {
-            val created = createdSecret(vault.answer(CommandDTO.CreateUserPresenceSecret(reason)))
+            val created = createdSecret(vault.answer(create))
 
             val sealed = store.load()!!
             assertEquals(created.size + GCM_TAG_BYTES, sealed.ciphertext.size)
             assertEquals(false, sealed.ciphertext.copyOf(created.size).contentEquals(created))
         }
 
+    /**
+     * A biometric key stops opening when a fingerprint or face is enrolled,
+     * which needs only the PIN; the prompt asks for that check alone
+     * (vauchi/private#778).
+     */
+    @Test
+    fun create_seals_under_the_check_core_names_and_prompts_for_it() =
+        runTest {
+            for (binding in UserPresenceBinding.entries) {
+                createdSecret(vault.answer(CommandDTO.CreateUserPresenceSecret(reason, binding)))
+            }
+
+            assertEquals(UserPresenceBinding.entries, keystore.sealedBindings)
+            assertEquals(UserPresenceBinding.entries, prompt.bindings)
+        }
+
+    @Test
+    fun reveal_prompts_for_the_check_the_secret_was_sealed_under() =
+        runTest {
+            vault.answer(CommandDTO.CreateUserPresenceSecret(reason, UserPresenceBinding.DEVICE_CREDENTIAL))
+
+            revealedSecret(vault.answer(CommandDTO.RevealUserPresenceSecret(reason)))
+
+            assertEquals(
+                listOf(UserPresenceBinding.DEVICE_CREDENTIAL, UserPresenceBinding.DEVICE_CREDENTIAL),
+                prompt.bindings,
+            )
+        }
+
+    /** A secret sealed before 0.88.0 records no binding; its key takes either check. */
+    @Test
+    fun a_secret_sealed_without_a_binding_reveals_with_either_check() =
+        runTest {
+            val created = createdSecret(vault.answer(create))
+            val sealed = store.load()!!
+            store.save(WrappedSecret(sealed.iv, sealed.ciphertext))
+
+            assertArrayEquals(created, revealedSecret(vault.answer(CommandDTO.RevealUserPresenceSecret(reason))))
+            assertEquals(listOf(UserPresenceBinding.BIOMETRY, null), prompt.bindings)
+        }
+
+    @Test
+    fun create_without_a_binding_answers_unavailable_and_seals_nothing() =
+        runTest {
+            assertEquals(unavailable, vault.answer(CommandDTO.CreateUserPresenceSecret(reason, null)))
+            assertEquals(emptyList<String>(), prompt.reasons)
+            assertNull(store.load())
+            assertEquals(emptyList<UserPresenceBinding>(), keystore.sealedBindings)
+        }
+
     @Test
     fun a_second_create_replaces_the_sealed_secret() =
         runTest {
-            vault.answer(CommandDTO.CreateUserPresenceSecret(reason))
-            val second = createdSecret(vault.answer(CommandDTO.CreateUserPresenceSecret(reason)))
+            vault.answer(create)
+            val second = createdSecret(vault.answer(create))
 
             val revealed = revealedSecret(vault.answer(CommandDTO.RevealUserPresenceSecret(reason)))
 
@@ -76,7 +128,7 @@ class UserPresenceSecretVaultTest {
     @Test
     fun dismissing_the_check_on_reveal_answers_cancelled() =
         runTest {
-            vault.answer(CommandDTO.CreateUserPresenceSecret(reason))
+            vault.answer(create)
             prompt.next = { UserPresenceCheck.Cancelled }
 
             assertEquals(cancelled, vault.answer(CommandDTO.RevealUserPresenceSecret(reason)))
@@ -87,14 +139,14 @@ class UserPresenceSecretVaultTest {
         runTest {
             prompt.next = { UserPresenceCheck.Cancelled }
 
-            assertEquals(cancelled, vault.answer(CommandDTO.CreateUserPresenceSecret(reason)))
+            assertEquals(cancelled, vault.answer(create))
             assertNull(store.load())
         }
 
     @Test
     fun a_failed_check_answers_unavailable() =
         runTest {
-            vault.answer(CommandDTO.CreateUserPresenceSecret(reason))
+            vault.answer(create)
             prompt.next = { UserPresenceCheck.Failed }
 
             assertEquals(unavailable, vault.answer(CommandDTO.RevealUserPresenceSecret(reason)))
@@ -105,32 +157,48 @@ class UserPresenceSecretVaultTest {
         runTest {
             prompt.next = { UserPresenceCheck.Unlocked(Cipher.getInstance(TRANSFORMATION)) }
 
-            assertEquals(unavailable, vault.answer(CommandDTO.CreateUserPresenceSecret(reason)))
+            assertEquals(unavailable, vault.answer(create))
             assertNull(store.load())
         }
 
+    /**
+     * The secret is gone, or its key stopped opening after an enrolment
+     * change: core refuses there instead of falling back as it does for a
+     * device that cannot run the check (vauchi/private#778).
+     */
     @Test
-    fun reveal_without_a_sealed_secret_answers_unavailable_without_prompting() =
+    fun reveal_without_a_sealed_secret_answers_missing_without_prompting() =
         runTest {
-            assertEquals(unavailable, vault.answer(CommandDTO.RevealUserPresenceSecret(reason)))
+            assertEquals(missing, vault.answer(CommandDTO.RevealUserPresenceSecret(reason)))
             assertEquals(emptyList<String>(), prompt.reasons)
         }
 
     @Test
-    fun reveal_with_an_invalidated_key_answers_unavailable_and_drops_the_stale_secret() =
+    fun reveal_with_an_invalidated_key_answers_missing_and_drops_the_stale_secret() =
         runTest {
-            vault.answer(CommandDTO.CreateUserPresenceSecret(reason))
+            vault.answer(create)
             keystore.invalidated = true
 
-            assertEquals(unavailable, vault.answer(CommandDTO.RevealUserPresenceSecret(reason)))
+            assertEquals(missing, vault.answer(CommandDTO.RevealUserPresenceSecret(reason)))
             assertEquals(listOf(reason), prompt.reasons)
             assertNull(store.load())
         }
 
     @Test
+    fun a_keystore_that_cannot_open_the_key_answers_unavailable_and_keeps_the_secret() =
+        runTest {
+            vault.answer(create)
+            keystore.decryptBroken = true
+
+            assertEquals(unavailable, vault.answer(CommandDTO.RevealUserPresenceSecret(reason)))
+            assertEquals(listOf(reason), prompt.reasons)
+            assertEquals(false, store.load() == null)
+        }
+
+    @Test
     fun a_tampered_sealed_secret_answers_unavailable() =
         runTest {
-            vault.answer(CommandDTO.CreateUserPresenceSecret(reason))
+            vault.answer(create)
             val sealed = store.load()!!
             sealed.ciphertext[0] = (sealed.ciphertext[0].toInt() xor 0x01).toByte()
             store.save(sealed)
@@ -143,7 +211,7 @@ class UserPresenceSecretVaultTest {
         runTest {
             keystore.broken = true
 
-            assertEquals(unavailable, vault.answer(CommandDTO.CreateUserPresenceSecret(reason)))
+            assertEquals(unavailable, vault.answer(create))
             assertEquals(emptyList<String>(), prompt.reasons)
         }
 
@@ -159,9 +227,12 @@ class UserPresenceSecretVaultTest {
         var key: SecretKey? = null
         var invalidated = false
         var broken = false
+        var decryptBroken = false
+        val sealedBindings = mutableListOf<UserPresenceBinding>()
 
-        override fun newEncryptCipher(): Cipher {
+        override fun newEncryptCipher(binding: UserPresenceBinding): Cipher {
             check(!broken) { "no keystore" }
+            sealedBindings += binding
             val fresh = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
             key = fresh
             invalidated = false
@@ -169,6 +240,7 @@ class UserPresenceSecretVaultTest {
         }
 
         override fun decryptCipher(iv: ByteArray): Cipher? {
+            check(!decryptBroken) { "keystore unavailable" }
             val current = key ?: return null
             if (invalidated) return null
             return Cipher.getInstance(TRANSFORMATION).apply {
@@ -183,13 +255,16 @@ class UserPresenceSecretVaultTest {
 
     private class FakePrompt : UserPresencePrompt {
         val reasons = mutableListOf<String>()
+        val bindings = mutableListOf<UserPresenceBinding?>()
         var next: (Cipher) -> UserPresenceCheck = { UserPresenceCheck.Unlocked(it) }
 
         override suspend fun authenticate(
             reason: String,
             cipher: Cipher,
+            binding: UserPresenceBinding?,
         ): UserPresenceCheck {
             reasons += reason
+            bindings += binding
             return next(cipher)
         }
     }
@@ -198,10 +273,11 @@ class UserPresenceSecretVaultTest {
         private var sealed: WrappedSecret? = null
 
         override fun save(sealed: WrappedSecret) {
-            this.sealed = WrappedSecret(sealed.iv.copyOf(), sealed.ciphertext.copyOf())
+            this.sealed = WrappedSecret(sealed.iv.copyOf(), sealed.ciphertext.copyOf(), sealed.binding)
         }
 
-        override fun load(): WrappedSecret? = sealed?.let { WrappedSecret(it.iv.copyOf(), it.ciphertext.copyOf()) }
+        override fun load(): WrappedSecret? =
+            sealed?.let { WrappedSecret(it.iv.copyOf(), it.ciphertext.copyOf(), it.binding) }
 
         override fun clear() {
             sealed = null
