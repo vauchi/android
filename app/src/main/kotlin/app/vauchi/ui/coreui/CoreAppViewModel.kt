@@ -583,11 +583,16 @@ class CoreAppViewModel(
 
     private suspend fun deliverHardwareEvent(event: MobileEvent) {
         try {
-            val resultJson =
-                withContext(Dispatchers.IO) {
-                    appEngine.dispatchJson(eventJson = hardwareEventJson(event))
-                }
+            // Core's answer is a whole surface: asked for outside the lock,
+            // it could be built before a concurrent event changed Core's
+            // state and then overwrite that event's newer surface
+            // (vauchi/private#814: the follow-system theme lost to a network
+            // event's surface in the old colours).
             presentationMutex.withLock {
+                val resultJson =
+                    withContext(Dispatchers.IO) {
+                        appEngine.dispatchJson(eventJson = hardwareEventJson(event))
+                    }
                 applyPresentationEnvelope(resultJson, source = "hardware:${event::class.simpleName}")
             }
         } catch (e: Exception) {
