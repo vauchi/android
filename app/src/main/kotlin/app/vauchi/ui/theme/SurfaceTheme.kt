@@ -9,14 +9,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import app.vauchi.ui.presentation.PresentationColors
 
 /** Material roles painted from the colours Core prepared for the active surface (vauchi/private#814). */
 fun PresentationColors.toColorScheme(base: ColorScheme): ColorScheme {
     val surfaceColor = coreColor(surface)
     val textColor = coreColor(text)
+    val accentColor = coreColor(accent)
     return base.copy(
-        primary = coreColor(accent),
+        primary = accentColor,
+        // Core sends no darker accent; halfway to the background keeps the
+        // Exchange tab's unselected circle distinct from the selected one.
+        primaryContainer = lerp(accentColor, coreColor(background), 0.5f),
+        onPrimaryContainer = textColor,
         onPrimary = textOnAccent?.let(::coreColor) ?: base.onPrimary,
         background = coreColor(background),
         onBackground = textColor,
