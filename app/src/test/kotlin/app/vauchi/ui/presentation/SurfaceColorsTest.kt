@@ -7,6 +7,7 @@ package app.vauchi.ui.presentation
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import app.vauchi.ui.theme.statusColors
 import app.vauchi.ui.theme.toColorScheme
 import kotlinx.serialization.json.Json
@@ -98,6 +99,17 @@ class SurfaceColorsTest {
             assertEquals(Color(0xFF44475A), container)
         }
         assertEquals(Color(0xFFF8F8F2), scheme.onSecondaryContainer)
+    }
+
+    // @internal — the Exchange tab's circle fills with primaryContainer when
+    // not selected; Core sends no darker accent, so it sits halfway between
+    // the accent and the background.
+    @Test
+    fun `the primary container is the accent toward the background`() {
+        val scheme = decodeSurfaceColors(DRACULA)!!.toColorScheme(lightColorScheme())
+
+        assertEquals(lerp(Color(0xFFBD93F9), Color(0xFF282A36), 0.5f), scheme.primaryContainer)
+        assertEquals(Color(0xFFF8F8F2), scheme.onPrimaryContainer)
     }
 
     // @internal
