@@ -5,6 +5,7 @@
 package app.vauchi.ui.presentation
 
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import app.vauchi.ui.theme.statusColors
 import app.vauchi.ui.theme.toColorScheme
@@ -76,6 +77,27 @@ class SurfaceColorsTest {
         assertEquals(Color(0xFF282A36), scheme.onPrimary)
         assertEquals(Color(0xFF6272A4), scheme.outline)
         assertEquals(Color(0xFFFF5555), scheme.error)
+    }
+
+    // @internal — Material's navigation bar and menus fill with the container
+    // roles; left at the platform's, they stayed light under a dark theme.
+    @Test
+    fun `container roles take the theme's surface`() {
+        val scheme = decodeSurfaceColors(DRACULA)!!.toColorScheme(lightColorScheme())
+
+        for (container in listOf(
+            scheme.surfaceContainerLowest,
+            scheme.surfaceContainerLow,
+            scheme.surfaceContainer,
+            scheme.surfaceContainerHigh,
+            scheme.surfaceContainerHighest,
+            scheme.surfaceBright,
+            scheme.surfaceDim,
+            scheme.secondaryContainer,
+        )) {
+            assertEquals(Color(0xFF44475A), container)
+        }
+        assertEquals(Color(0xFFF8F8F2), scheme.onSecondaryContainer)
     }
 
     // @internal
