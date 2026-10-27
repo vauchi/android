@@ -23,7 +23,7 @@ import org.robolectric.RobolectricTestRunner
 class RenderContextPusherTest {
     @Test
     fun `following the system sends the system language and no picked language`() {
-        val json = JSONObject(buildRenderContextJson(themeId = null, locale = null, systemLocale = "fr-CH"))
+        val json = JSONObject(buildRenderContextJson(locale = null, systemLocale = "fr-CH"))
 
         assertEquals("fr-CH", json.getString("system_locale"))
         assertFalse(json.has("locale"))
@@ -32,16 +32,16 @@ class RenderContextPusherTest {
 
     @Test
     fun `a picked language still travels with the system language`() {
-        val json = JSONObject(buildRenderContextJson(themeId = "cyber", locale = "de", systemLocale = "fr-CH"))
+        val json = JSONObject(buildRenderContextJson(locale = "de", systemLocale = "fr-CH"))
 
         assertEquals("de", json.getString("locale"))
         assertEquals("fr-CH", json.getString("system_locale"))
-        assertEquals("cyber", json.getString("theme_id"))
+        assertFalse(json.has("theme_id"))
     }
 
     @Test
     fun `a quote or backslash in the system tag stays inside its string`() {
-        val json = JSONObject(buildRenderContextJson(themeId = null, locale = null, systemLocale = "x\"\\y"))
+        val json = JSONObject(buildRenderContextJson(locale = null, systemLocale = "x\"\\y"))
 
         assertEquals("x\"\\y", json.getString("system_locale"))
     }

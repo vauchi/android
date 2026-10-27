@@ -94,6 +94,25 @@ data class PresentationTokens(
     val spacingLarge: Int,
     val cornerRadius: Int,
     val minimumTargetSize: Int,
+    val colors: PresentationColors? = null,
+)
+
+/** The active theme's colours by role, as `#rrggbb`; a null role is one the theme leaves out. */
+data class PresentationColors(
+    val background: String,
+    val surface: String,
+    val text: String,
+    val textMuted: String,
+    val accent: String,
+    val border: String,
+    val success: String,
+    val warning: String,
+    val error: String,
+    val surfaceInput: String?,
+    val surfaceMuted: String?,
+    val surfaceElevated: String?,
+    val textOnAccent: String?,
+    val focusRing: String?,
 )
 
 data class ChoiceOption(

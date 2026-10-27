@@ -4,5 +4,5 @@
 
 package app.vauchi.ui.theme
 
-// Colors are loaded at runtime from the theme system (ThemeManager).
+// Core sends the active theme's colours on each surface (SurfaceTheme.kt).
 // Do not hardcode colors here — use VauchiTheme.colorScheme instead.

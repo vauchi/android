@@ -172,6 +172,7 @@ sealed interface PresentationEvent {
             height: Int,
             inputModes: List<InputMode>,
             reducedMotion: Boolean,
+            darkAppearance: Boolean? = null,
         ): PresentationEvent =
             Raw(
                 variant("PresentationEnvironmentChanged") {
@@ -186,6 +187,7 @@ sealed interface PresentationEvent {
                         },
                     )
                     put("motion", if (reducedMotion) "reduced" else "full")
+                    darkAppearance?.let { put("color_scheme", if (it) "dark" else "light") }
                 },
             )
 

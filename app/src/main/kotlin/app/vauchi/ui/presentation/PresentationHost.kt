@@ -21,6 +21,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,6 +41,7 @@ import app.vauchi.ui.coreui.BiometricUnlockHandler
 import app.vauchi.ui.coreui.FilePickHandler
 import app.vauchi.ui.coreui.LocalUseFrontCamera
 import app.vauchi.ui.coreui.UserPresenceSecretHandler
+import app.vauchi.ui.theme.SurfaceTheme
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -132,14 +134,16 @@ fun PresentationHost(
         val width = maxWidth.value.roundToInt()
         val height = maxHeight.value.roundToInt()
         val inputModes = inputModes(configuration)
+        val darkAppearance = isSystemInDarkTheme()
 
-        LaunchedEffect(width, height, inputModes, reducedMotion) {
+        LaunchedEffect(width, height, inputModes, reducedMotion, darkAppearance) {
             viewModel.dispatchPresentation(
                 PresentationEvent.environmentChanged(
                     width = width,
                     height = height,
                     inputModes = inputModes,
                     reducedMotion = reducedMotion,
+                    darkAppearance = darkAppearance,
                 ),
             )
         }
@@ -170,31 +174,33 @@ fun PresentationHost(
                     onDismissOverlay = viewModel::dismissPresentationOverlay,
                 )
             }
-        CompositionLocalProvider(LocalUseFrontCamera provides useFrontCamera) {
-            PresentationScreen(
-                state = state,
-                profile = profile,
-                activeSurfaceId = activeSurfaceId,
-                reducedMotion = reducedMotion,
-                focusedBindingId = focusedBindingId,
-                onFocusedBinding = onFocusedBinding,
-                actions = actions,
-                snackbarHost = { SnackbarHost(snackbarHostState) },
-                dialogs = {
-                    alertMessage?.let { (title, message) ->
-                        AlertDialog(
-                            onDismissRequest = viewModel::dismissAlert,
-                            title = { Text(title) },
-                            text = { Text(message) },
-                            confirmButton = {
-                                TextButton(onClick = viewModel::dismissAlert) {
-                                    Text(stringResource(android.R.string.ok))
-                                }
-                            },
-                        )
-                    }
-                },
-            )
+        SurfaceTheme(state.surfaces[activeSurfaceId]?.tokens?.colors) {
+            CompositionLocalProvider(LocalUseFrontCamera provides useFrontCamera) {
+                PresentationScreen(
+                    state = state,
+                    profile = profile,
+                    activeSurfaceId = activeSurfaceId,
+                    reducedMotion = reducedMotion,
+                    focusedBindingId = focusedBindingId,
+                    onFocusedBinding = onFocusedBinding,
+                    actions = actions,
+                    snackbarHost = { SnackbarHost(snackbarHostState) },
+                    dialogs = {
+                        alertMessage?.let { (title, message) ->
+                            AlertDialog(
+                                onDismissRequest = viewModel::dismissAlert,
+                                title = { Text(title) },
+                                text = { Text(message) },
+                                confirmButton = {
+                                    TextButton(onClick = viewModel::dismissAlert) {
+                                        Text(stringResource(android.R.string.ok))
+                                    }
+                                },
+                            )
+                        }
+                    },
+                )
+            }
         }
     }
 }

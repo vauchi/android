@@ -10,7 +10,6 @@ import android.content.SharedPreferences
 import android.util.Log
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NotificationPresentation
-import app.vauchi.util.ThemeManager
 import app.vauchi.util.pushDeviceCapabilities
 import app.vauchi.util.toPresentation
 import uniffi.vauchi_platform.MobileContactCard
@@ -69,12 +68,6 @@ class VauchiRepository internal constructor(
             instance ?: synchronized(this) {
                 instance ?: VauchiRepository(context.applicationContext).also { instance = it }
             }
-
-        // S4 of `2026-05-16-settings-storage-by-sensitivity`: render-
-        // context state (theme + locale) lives in the same OS-native
-        // SharedPreferences files [ThemeManager] / [LocalizationManager]
-        // already use. The migration below copies any existing vault row
-        // into these files exactly once per upgrade.
     }
 
     init {
@@ -122,7 +115,6 @@ class VauchiRepository internal constructor(
             _appEngine = PlatformAppEngine.openWithKeychain(dataDir, relayUrl, null, keychain)
             initialized = true
 
-            ThemeManager.getInstance(context).attachAppEngine(_appEngine)
             LocalizationManager.getInstance(context).attachAppEngine(_appEngine)
 
             // Report this device's exchange-relevant hardware to core so the

@@ -7,7 +7,6 @@ package app.vauchi.screenshots
 import androidx.lifecycle.ViewModelProvider
 import app.vauchi.data.VauchiRepository
 import app.vauchi.util.LocalizationManager
-import app.vauchi.util.ThemeManager
 
 /**
  * The app's process singletons outlive a Robolectric test's application
@@ -16,7 +15,7 @@ import app.vauchi.util.ThemeManager
  */
 object ProcessSingletons {
     fun reset() {
-        listOf(VauchiRepository::class.java, LocalizationManager::class.java, ThemeManager::class.java).forEach { cls ->
+        listOf(VauchiRepository::class.java, LocalizationManager::class.java).forEach { cls ->
             cls.getDeclaredField("instance").apply { isAccessible = true }.set(null, null)
         }
         // The default factory keeps the first test's Application, so a later

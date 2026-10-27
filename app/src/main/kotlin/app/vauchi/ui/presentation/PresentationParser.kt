@@ -124,6 +124,25 @@ object PresentationProtocol {
             spacingLarge = value.int("spacing_large"),
             cornerRadius = value.int("corner_radius"),
             minimumTargetSize = value.int("minimum_target_size"),
+            colors = value.nullableObject("colors")?.let(::colors),
+        )
+
+    private fun colors(value: JsonObject): PresentationColors =
+        PresentationColors(
+            background = value.string("background"),
+            surface = value.string("surface"),
+            text = value.string("text"),
+            textMuted = value.string("text_muted"),
+            accent = value.string("accent"),
+            border = value.string("border"),
+            success = value.string("success"),
+            warning = value.string("warning"),
+            error = value.string("error"),
+            surfaceInput = value.nullableString("surface_input"),
+            surfaceMuted = value.nullableString("surface_muted"),
+            surfaceElevated = value.nullableString("surface_elevated"),
+            textOnAccent = value.nullableString("text_on_accent"),
+            focusRing = value.nullableString("focus_ring"),
         )
 
     private fun contextBar(value: JsonObject): ContextBar =

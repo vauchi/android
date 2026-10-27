@@ -75,8 +75,6 @@ class CoreAppViewModel(
     private val localAddresses: Flow<String?> = emptyFlow(),
     /** What the current network costs, for Core's Wi-Fi only setting. */
     private val networkCosts: Flow<MobileNetworkCost> = emptyFlow(),
-    /** Re-applies the theme once Core downloaded new themes. */
-    private val onReloadTheme: () -> Unit = {},
 ) : ViewModel() {
     init {
         // Core cannot enumerate interfaces (ADR-030/031), so it learns where
@@ -829,7 +827,8 @@ class CoreAppViewModel(
                 }
 
                 "ReloadTheme" -> {
-                    onReloadTheme()
+                    // New themes arrive as colours on a re-presented surface (vauchi/private#814).
+                    dispatchPresentation(PresentationEvent.presentationInvalidated)
                 }
 
                 "PostNotification" -> {
