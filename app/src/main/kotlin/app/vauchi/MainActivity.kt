@@ -82,6 +82,7 @@ import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
 import app.vauchi.ui.presentation.PresentationEvent
 import app.vauchi.ui.presentation.PresentationHost
+import app.vauchi.ui.theme.SurfaceTheme
 import app.vauchi.ui.theme.VauchiTheme
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.NetworkMonitor
@@ -948,37 +949,42 @@ fun MainScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState)
-        },
-    ) { innerPadding ->
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-        ) {
-            when (val state = uiState) {
-                is UiState.Onboarding,
-                is UiState.Ready,
-                is UiState.Starting,
-                -> {
-                    PresentationHost(
-                        viewModel = coreAppViewModel,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+    // The padding around the host covers the transparent system bars, so
+    // it paints the active surface's colours too (vauchi/private#814).
+    val presentation by coreAppViewModel.presentationState.collectAsState()
+    SurfaceTheme(presentation.activeSurfaceId?.let(presentation.surfaces::get)?.tokens?.colors) {
+        Scaffold(
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState)
+            },
+        ) { innerPadding ->
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+            ) {
+                when (val state = uiState) {
+                    is UiState.Onboarding,
+                    is UiState.Ready,
+                    is UiState.Starting,
+                    -> {
+                        PresentationHost(
+                            viewModel = coreAppViewModel,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
 
-                // The gate above returns before the engine is acquired for
-                // these, so reaching them here would mean the two disagree.
-                // Routed through the same composable either way, so the two
-                // renderings cannot drift apart.
-                else -> {
-                    PreAuthContent(
-                        state = state,
-                        viewModel = viewModel,
-                    )
+                    // The gate above returns before the engine is acquired for
+                    // these, so reaching them here would mean the two disagree.
+                    // Routed through the same composable either way, so the two
+                    // renderings cannot drift apart.
+                    else -> {
+                        PreAuthContent(
+                            state = state,
+                            viewModel = viewModel,
+                        )
+                    }
                 }
             }
         }
