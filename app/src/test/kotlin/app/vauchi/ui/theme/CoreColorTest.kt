@@ -25,4 +25,12 @@ class CoreColorTest {
             assertEquals(Color.Transparent, coreColor(hex), hex)
         }
     }
+
+    // @internal — the status and gesture bars are transparent over the
+    // theme's background, so their icons follow its lightness.
+    @Test
+    fun `system bar icons are dark only on a light background`() {
+        assertEquals(false, coreColor("#282a36").wantsDarkSystemBarIcons())
+        assertEquals(true, coreColor("#eff1f5").wantsDarkSystemBarIcons())
+    }
 }
