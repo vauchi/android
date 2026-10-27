@@ -205,19 +205,6 @@ class VauchiRepository internal constructor(
      */
     fun authenticate(password: String): uniffi.vauchi_platform.MobileAuthMode = appEngine.authenticate(password)
 
-    // Based on: features/demo_contact.feature
-
-    /**
-     * Initialize demo contact if user has no real contacts.
-     * Call this after onboarding completes.
-     *
-     * @return The demo contact if created, null if user has contacts or demo was dismissed
-     */
-    fun initDemoContactIfNeeded(): uniffi.vauchi_platform.MobileDemoContact? {
-        ensureInitialized()
-        return appEngine.initDemoContactIfNeeded()
-    }
-
     /**
      * Poll for OS notifications produced by the app engine (E).
      */

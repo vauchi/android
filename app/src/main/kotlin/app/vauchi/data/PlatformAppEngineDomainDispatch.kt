@@ -8,7 +8,6 @@ import uniffi.vauchi_platform.DomainCommandResult
 import uniffi.vauchi_platform.MobileAuthMode
 import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.MobileContentCycleOutcome
-import uniffi.vauchi_platform.MobileDemoContact
 import uniffi.vauchi_platform.MobileException
 import uniffi.vauchi_platform.PlatformAppEngine
 
@@ -16,8 +15,7 @@ import uniffi.vauchi_platform.PlatformAppEngine
 // the collapse-vauchi-platform migration. After retiring the test-only
 // domain-CRUD repository wrappers this file only contains the small set
 // of dispatch helpers still called by the Android repository shell
-// (identity/bootstrap, auth, content-update cycle, and demo-contact
-// init). All domain CRUD has moved into core-driven screens.
+// (identity/bootstrap, auth and content-update cycle). All domain CRUD has moved into core-driven screens.
 
 private fun unexpectedResult(name: String): Nothing = throw MobileException.Other(detail = "$name: unexpected result variant")
 
@@ -43,14 +41,6 @@ fun PlatformAppEngine.getOwnCard(): MobileContactCard {
 fun PlatformAppEngine.contactCount(): UInt {
     val result = dispatchDomainCommand(DomainCommand.ContactCount)
     return (result as? DomainCommandResult.Count)?.value ?: unexpectedResult("ContactCount")
-}
-
-fun PlatformAppEngine.initDemoContactIfNeeded(): MobileDemoContact? {
-    val result = dispatchDomainCommand(DomainCommand.InitDemoContactIfNeeded)
-    val opt =
-        result as? DomainCommandResult.DemoContactOpt
-            ?: unexpectedResult("InitDemoContactIfNeeded")
-    return opt.contact
 }
 
 fun PlatformAppEngine.runContentUpdateCycle(): MobileContentCycleOutcome {

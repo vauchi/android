@@ -213,7 +213,6 @@ class MainViewModel(
         viewModelScope.launch {
             try {
                 loadUserData()
-                initDemoContactIfNeeded()
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(StartupErrorKind.Other, e.message)
             }
@@ -249,22 +248,6 @@ class MainViewModel(
     fun setRelayUrl(url: String) {
         repository.setRelayUrl(url)
         showMessage("Relay URL updated (restart app to apply)")
-    }
-
-    /**
-     * Initialize demo contact if user has no real contacts.
-     * Call this after onboarding completes.
-     */
-    fun initDemoContactIfNeeded() {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    repository.initDemoContactIfNeeded()
-                }
-            } catch (e: Exception) {
-                // Silently fail - demo is optional
-            }
-        }
     }
 
     /**
