@@ -356,6 +356,29 @@ fun MainScreen(
         }
     }
 
+    // The link-exchange Share button: Core hands over the URL, Android only
+    // opens the system share chooser with it (vauchi/private#272).
+    val shareUrlRequest by coreAppViewModel.shareUrlRequest.collectAsState()
+    LaunchedEffect(shareUrlRequest) {
+        shareUrlRequest?.let { url ->
+            val sendIntent =
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, url)
+                }
+            try {
+                context.startActivity(
+                    Intent.createChooser(sendIntent, null).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    },
+                )
+            } catch (e: ActivityNotFoundException) {
+                Log.w("MainActivity", "No activity can share a link", e)
+            }
+            coreAppViewModel.consumeShareUrlRequest()
+        }
+    }
+
     // Core owns the file bytes, name, and MIME type. Android only materializes
     // them into its cache and opens the native share destination chooser.
     val exportFileRequest by coreAppViewModel.exportFileRequest.collectAsState()

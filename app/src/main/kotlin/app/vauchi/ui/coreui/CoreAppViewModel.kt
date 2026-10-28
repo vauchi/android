@@ -6,6 +6,7 @@ package app.vauchi.ui.coreui
 
 import android.nfc.Tag
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.vauchi.ble.BleCommand
@@ -129,6 +130,15 @@ class CoreAppViewModel(
 
     fun consumeOpenUrlEvent() {
         _openUrlEvent.value = null
+    }
+
+    private val _shareUrlRequest = MutableStateFlow<String?>(null)
+
+    /** A link Core asks the system share sheet to send (`Command::ShowShareSheet`). */
+    val shareUrlRequest: StateFlow<String?> = _shareUrlRequest.asStateFlow()
+
+    fun consumeShareUrlRequest() {
+        _shareUrlRequest.value = null
     }
 
     private val _exportFileRequest =
@@ -1011,7 +1021,8 @@ class CoreAppViewModel(
      * MobileCommandHandler. Image picking commands are
      * dispatched to the UI layer via the `_imagePickEvent` flow.
      */
-    private fun handleExchangeCommands(commands: List<CommandDTO>) {
+    @VisibleForTesting
+    internal fun handleExchangeCommands(commands: List<CommandDTO>) {
         for (cmd in commands) {
             when (cmd) {
                 is CommandDTO.ScheduleWakeup -> {
@@ -1183,6 +1194,10 @@ class CoreAppViewModel(
                             uuid = cmd.uuid,
                         ),
                     )
+                }
+
+                is CommandDTO.ShowShareSheet -> {
+                    _shareUrlRequest.value = cmd.url
                 }
 
                 is CommandDTO.Unknown -> {
