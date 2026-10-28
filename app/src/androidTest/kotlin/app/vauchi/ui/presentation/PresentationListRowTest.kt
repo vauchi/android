@@ -83,12 +83,12 @@ class PresentationListRowTest {
     /**
      * A row whose control names the same thing as its title must not
      * announce that name twice: the row carried the Core label and so did
-     * the control, so TalkBack stopped on "Delivery Receipts" and then on
-     * "Delivery Receipts, switch" — the second stop the only operable one.
+     * the control, so TalkBack stopped on "Card Updates" and then on
+     * "Card Updates, switch" — the second stop the only operable one.
      */
     @Test
     fun aRowAndItsControlDoNotBothAnnounceTheSettingName() {
-        val name = "Delivery Receipts"
+        val name = "Card Updates"
         render(
             row(
                 title = name,
@@ -122,7 +122,7 @@ class PresentationListRowTest {
     fun rowControlSitsBesideTheTitleRatherThanBeneathIt() {
         render(
             row(
-                title = "Delivery Receipts",
+                title = "Card Updates",
                 controls =
                     listOf(
                         PresentationNode.Toggle(
@@ -130,7 +130,7 @@ class PresentationListRowTest {
                             label = "",
                             value = true,
                             enabled = true,
-                            accessibility = AccessibilitySpec("Delivery Receipts", null),
+                            accessibility = AccessibilitySpec("Card Updates", null),
                         ),
                     ),
             ),
@@ -138,7 +138,7 @@ class PresentationListRowTest {
 
         val title =
             composeTestRule
-                .onNodeWithText("Delivery Receipts")
+                .onNodeWithText("Card Updates")
                 .assertIsDisplayed()
                 .fetchSemanticsNode()
                 .boundsInRoot

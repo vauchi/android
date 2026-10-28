@@ -94,11 +94,11 @@ class PresentationTogglePrimitiveTest {
                 surfaceId = "surface-test",
                 node =
                     PresentationNode.Toggle(
-                        bindingId = "settings.delivery-receipts",
+                        bindingId = "settings.card-updates",
                         label = "",
                         value = true,
                         enabled = true,
-                        accessibility = AccessibilitySpec("Delivery Receipts toggle", null),
+                        accessibility = AccessibilitySpec("Card Updates toggle", null),
                     ),
                 onEvent = {},
                 onCameraPermissionDenied = {},
@@ -127,7 +127,7 @@ class PresentationTogglePrimitiveTest {
             toggleable.single().config[SemanticsProperties.ToggleableState],
         )
         assertEquals(
-            listOf("Delivery Receipts toggle"),
+            listOf("Card Updates toggle"),
             toggleable.single().config[SemanticsProperties.ContentDescription],
         )
     }
