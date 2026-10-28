@@ -4,6 +4,7 @@
 
 package app.vauchi.ui.coreui
 
+import android.app.KeyguardManager
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.vauchi.data.OldStorageKeyProvider
@@ -23,6 +24,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import uniffi.vauchi_platform.PlatformAppEngine
@@ -57,6 +59,9 @@ class ShareSheetCommandTest {
             .listFiles()
             .orEmpty()
             .forEach { it.deleteRecursively() }
+        // The repository refuses an insecure device (DeviceNotSecureException).
+        val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        shadowOf(keyguard).setIsDeviceSecure(true)
     }
 
     @After
