@@ -16,6 +16,7 @@ import androidx.camera.core.ImageAnalysis
  */
 class QrCodeAnalyzer(
     private val onQrCodeDetected: (String) -> Unit,
+    private val frameDump: FrameDump? = null,
 ) : ImageAnalysis.Analyzer {
     @androidx.camera.core.ExperimentalGetImage
     override fun analyze(imageProxy: androidx.camera.core.ImageProxy) {
@@ -44,6 +45,8 @@ class QrCodeAnalyzer(
                     }
                     data
                 }
+
+            frameDump?.offer(bytes, width, height, imageProxy.imageInfo.rotationDegrees)
 
             // rxing tryHarder via UniFFI (RqrrPreprocessed = rxing multi-decoder)
             val result =

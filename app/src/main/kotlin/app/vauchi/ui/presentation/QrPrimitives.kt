@@ -53,6 +53,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import app.vauchi.BuildConfig
+import app.vauchi.ui.components.FrameDump
 import app.vauchi.ui.components.PermissionRationaleDialog
 import app.vauchi.ui.components.QrCodeAnalyzer
 import app.vauchi.ui.components.rememberPermissionState
@@ -283,6 +285,12 @@ internal fun QrScanner(
                                             analysis.setAnalyzer(
                                                 executor,
                                                 QrCodeAnalyzer(
+                                                    frameDump =
+                                                        FrameDump.enabledIn(
+                                                            ctx.filesDir,
+                                                            debuggable = BuildConfig.DEBUG,
+                                                            runName = "run-${System.currentTimeMillis()}",
+                                                        ),
                                                     onQrCodeDetected = { code ->
                                                         // Diagnostics: the 4-char frame-type
                                                         // prefix is a public format constant
