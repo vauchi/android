@@ -16,9 +16,6 @@ import androidx.camera.core.ImageAnalysis
  */
 class QrCodeAnalyzer(
     private val onQrCodeDetected: (String) -> Unit,
-    @Suppress("unused") private val saveDir: java.io.File? = null,
-    @Suppress("unused") private val maxSaveFrames: Int = 10,
-    @Suppress("unused") private val isFrontCamera: Boolean = false,
 ) : ImageAnalysis.Analyzer {
     @androidx.camera.core.ExperimentalGetImage
     override fun analyze(imageProxy: androidx.camera.core.ImageProxy) {
