@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uniffi.vauchi_platform.MobileContactCard
 import uniffi.vauchi_platform.PlatformAppEngine
 
 sealed class UiState {
@@ -37,12 +36,7 @@ sealed class UiState {
      */
     object Starting : UiState()
 
-    data class Ready(
-        val displayName: String,
-        val publicId: String,
-        val card: MobileContactCard,
-        val contactCount: UInt,
-    ) : UiState()
+    object Ready : UiState()
 
     data class Error(
         val kind: StartupErrorKind,
@@ -99,7 +93,7 @@ class MainViewModel(
                     }
 
                     startState is UiState.Starting && identityExists == true -> {
-                        loadUserData()
+                        _uiState.value = UiState.Ready
                     }
 
                     startState is UiState.Starting && identityExists == false -> {
@@ -186,7 +180,7 @@ class MainViewModel(
                 }
 
                 when (withContext(Dispatchers.IO) { identityOnceOpen() }) {
-                    true -> loadUserData()
+                    true -> _uiState.value = UiState.Ready
                     false -> _uiState.value = UiState.Onboarding
                     null -> _uiState.value = UiState.Starting
                 }
@@ -210,33 +204,7 @@ class MainViewModel(
      * wrote the identity inside core.
      */
     fun onCoreOnboardingComplete() {
-        viewModelScope.launch {
-            try {
-                loadUserData()
-            } catch (e: Exception) {
-                _uiState.value = UiState.Error(StartupErrorKind.Other, e.message)
-            }
-        }
-    }
-
-    private suspend fun loadUserData() {
-        try {
-            val (displayName, publicId, card, contactCount) =
-                withContext(Dispatchers.IO) {
-                    Tuple4(
-                        repository.getDisplayName(),
-                        repository.getPublicId(),
-                        repository.getOwnCard(),
-                        repository.contactCount(),
-                    )
-                }
-            _uiState.value = UiState.Ready(displayName, publicId, card, contactCount)
-        } catch (e: DeviceNotSecureException) {
-            _uiState.value = UiState.Error(StartupErrorKind.DeviceNotSecure)
-        } catch (e: Exception) {
-            android.util.Log.e("Vauchi", "loadUserData: ${e.javaClass.simpleName}: ${e.message}", e)
-            _uiState.value = UiState.Error(StartupErrorKind.Other, e.message)
-        }
+        _uiState.value = UiState.Ready
     }
 
     fun retryStartup() {
@@ -255,12 +223,5 @@ class MainViewModel(
      */
     fun pollNotifications(): List<NotificationPresentation> = repository.pollNotifications()
 }
-
-private data class Tuple4<A, B, C, D>(
-    val a: A,
-    val b: B,
-    val c: C,
-    val d: D,
-)
 
 /** Core's `SetAuthenticationRequirement` value that asks for the app password. */

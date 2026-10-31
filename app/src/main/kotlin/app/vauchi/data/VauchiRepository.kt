@@ -178,8 +178,6 @@ class VauchiRepository internal constructor(
         return appEngine.getOwnCard()
     }
 
-    fun contactCount(): UInt = appEngine.contactCount()
-
     // Based on: features/content_updates.feature
 
     /**

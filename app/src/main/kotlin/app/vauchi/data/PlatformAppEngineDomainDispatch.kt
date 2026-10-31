@@ -38,11 +38,6 @@ fun PlatformAppEngine.getOwnCard(): MobileContactCard {
     return (result as? DomainCommandResult.ContactCardPayload)?.card ?: unexpectedResult("GetOwnCard")
 }
 
-fun PlatformAppEngine.contactCount(): UInt {
-    val result = dispatchDomainCommand(DomainCommand.ContactCount)
-    return (result as? DomainCommandResult.Count)?.value ?: unexpectedResult("ContactCount")
-}
-
 fun PlatformAppEngine.runContentUpdateCycle(): MobileContentCycleOutcome {
     val result = dispatchDomainCommand(DomainCommand.RunContentUpdateCycle)
     return (result as? DomainCommandResult.ContentUpdateCycle)?.outcome
