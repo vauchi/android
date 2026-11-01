@@ -430,6 +430,27 @@ class CoreAppViewModel(
     }
 
     /**
+     * The person granted a Bluetooth or camera prompt the shell raised itself.
+     * Reported as Core's PermissionGranted so a Glance search the prompt held
+     * up restarts its budget (vauchi/private#1022).
+     */
+    fun onPermissionGranted(transport: String) {
+        viewModelScope.launch {
+            try {
+                presentationMutex.withLock {
+                    val resultJson =
+                        withContext(Dispatchers.IO) {
+                            appEngine.dispatchJson(eventJson = PermissionGrantEvent.json(transport))
+                        }
+                    applyPresentationEnvelope(resultJson, source = "hardware:PermissionGranted")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to report a permission grant", e)
+            }
+        }
+    }
+
+    /**
      * BLE work items (Bump / Shake / Magic). Core emits BLE `Command`s; the
      * Activity owns the radio (BluetoothManager needs a Context) and dispatches
      * to BleCentral / BlePeripheral. A buffered SharedFlow (not a latest-only
@@ -1316,6 +1337,14 @@ sealed interface BrightnessRequest {
  * `CameraSelector.DEFAULT_BACK_CAMERA`.
  */
 val LocalUseFrontCamera = androidx.compose.runtime.compositionLocalOf { false }
+
+/**
+ * Reports a permission grant from a prompt a composable raised itself (the
+ * QR scanner's camera prompt) to [CoreAppViewModel.onPermissionGranted],
+ * without threading a callback through every renderer (vauchi/private#1022).
+ * Default no-op where no host provides it.
+ */
+val LocalPermissionGrantReporter = androidx.compose.runtime.staticCompositionLocalOf<(String) -> Unit> { {} }
 
 /**
  * Orientation lock request from core's `Command::SetOrientationLock`

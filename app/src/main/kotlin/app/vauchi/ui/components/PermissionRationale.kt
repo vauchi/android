@@ -69,6 +69,10 @@ fun rememberPermissionState(
     // (the callback fires only after the modal dismisses with a result). See
     // T0.3 design 2026-06-14-t03-camera-deny-forwarding-design.md §1.
     onDenied: (() -> Unit)? = null,
+    // Invoked once when the prompt resolves with a grant, so Core can restart
+    // a search the prompt held up (vauchi/private#1022). Not fired on resume:
+    // only the prompt result is a decision made just now.
+    onGranted: (() -> Unit)? = null,
 ): PermissionState {
     val context = LocalContext.current
     val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
@@ -84,12 +88,13 @@ fun rememberPermissionState(
     val launcher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             isGranted = granted
-            // Fire the denial hook only on a real negative decision — never on
-            // grant (the grant asymmetry: grants are re-learned via the in-app
-            // affordance, not an event). T0.3 §1. Rule extracted to
-            // [permissionResultIsDenial] so it is unit-testable without the OS
-            // prompt (CC-23).
-            if (permissionResultIsDenial(granted)) onDenied?.invoke()
+            // Denial and grant each fire their own hook on the prompt's
+            // result. Grants were once re-learned only through the in-app
+            // affordance (T0.3 §1); since 2026-11-01 the shell reports them
+            // too (vauchi/private#1022). Rule extracted to
+            // [permissionResultIsDenial] so it is unit-testable without the
+            // OS prompt (CC-23).
+            if (permissionResultIsDenial(granted)) onDenied?.invoke() else onGranted?.invoke()
         }
 
     // Re-check on resume so a grant made via the system dialog or the OS

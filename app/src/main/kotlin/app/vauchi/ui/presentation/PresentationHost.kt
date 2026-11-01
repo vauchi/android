@@ -39,6 +39,7 @@ import androidx.core.content.FileProvider
 import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.BiometricUnlockHandler
 import app.vauchi.ui.coreui.FilePickHandler
+import app.vauchi.ui.coreui.LocalPermissionGrantReporter
 import app.vauchi.ui.coreui.LocalUseFrontCamera
 import app.vauchi.ui.coreui.UserPresenceSecretHandler
 import app.vauchi.ui.theme.SurfaceTheme
@@ -175,7 +176,10 @@ fun PresentationHost(
                 )
             }
         SurfaceTheme(state.surfaces[activeSurfaceId]?.tokens?.colors) {
-            CompositionLocalProvider(LocalUseFrontCamera provides useFrontCamera) {
+            CompositionLocalProvider(
+                LocalUseFrontCamera provides useFrontCamera,
+                LocalPermissionGrantReporter provides viewModel::onPermissionGranted,
+            ) {
                 PresentationScreen(
                     state = state,
                     profile = profile,

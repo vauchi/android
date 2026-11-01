@@ -58,6 +58,8 @@ import app.vauchi.ui.components.FrameDump
 import app.vauchi.ui.components.PermissionRationaleDialog
 import app.vauchi.ui.components.QrCodeAnalyzer
 import app.vauchi.ui.components.rememberPermissionState
+import app.vauchi.camera.CameraFailure
+import app.vauchi.ui.coreui.LocalPermissionGrantReporter
 import app.vauchi.ui.coreui.LocalUseFrontCamera
 import app.vauchi.util.LocalizationManager
 import app.vauchi.util.generateQrBitmap
@@ -165,6 +167,7 @@ internal fun QrScanner(
     // no prompt and no recovery path — see
     // _private/docs/problems/2026-06-06-exchange-ritual-flow/ (B1).
     val localizationManager = remember(context) { LocalizationManager.getInstance(context) }
+    val reportGrant = LocalPermissionGrantReporter.current
     val cameraPermission =
         rememberPermissionState(
             permission = android.Manifest.permission.CAMERA,
@@ -175,6 +178,7 @@ internal fun QrScanner(
             onDenied = {
                 onPermissionDenied()
             },
+            onGranted = { reportGrant(CameraFailure.TRANSPORT) },
         )
     LaunchedEffect(Unit) { cameraPermission.request() }
     PermissionRationaleDialog(cameraPermission)

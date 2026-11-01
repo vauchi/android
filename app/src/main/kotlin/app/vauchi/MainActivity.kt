@@ -82,6 +82,7 @@ import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.celebrationHapticFeedback
 import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
+import app.vauchi.ui.coreui.PermissionGrantEvent
 import app.vauchi.ui.presentation.PresentationEvent
 import app.vauchi.ui.presentation.PresentationHost
 import app.vauchi.ui.theme.SurfaceTheme
@@ -847,6 +848,7 @@ fun MainScreen(
             deferredBleCommands.clear()
             val denied = grants.filterValues { !it }.keys
             if (denied.isEmpty()) {
+                if (PermissionGrantEvent.bleGranted(grants)) coreAppViewModel.onPermissionGranted("ble")
                 replay.forEach { executeBleCommand(it) }
             } else {
                 coreAppViewModel.onBleOperationFailed("Bluetooth permission denied: $denied")
