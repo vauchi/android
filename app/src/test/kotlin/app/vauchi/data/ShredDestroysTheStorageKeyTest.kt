@@ -61,7 +61,8 @@ class ShredDestroysTheStorageKeyTest {
     @After
     fun tearDown() {
         engines.forEach(PlatformAppEngine::close)
-        copyDir.deleteRecursively()
+        // setUp skips before copyDir is set when the host library is absent.
+        if (::copyDir.isInitialized) copyDir.deleteRecursively()
     }
 
     private fun open(): VauchiRepository = VauchiRepository(context, keyProvider).also { engines.add(it.appEngine) }
