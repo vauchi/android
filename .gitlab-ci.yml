@@ -786,15 +786,15 @@ test:screen-catalog:
     - |
       CATALOG="${CI_PROJECT_DIR}/app/build/screen_catalog_v1.json"
       CONTRACT="${CI_PROJECT_DIR}/app/build/presentation_contract_v1.json"
-      CORE_FILES="${CI_API_V4_URL}/projects/vauchi%2Fcore/repository/files"
+      CONTRACT_FILES="${CI_API_V4_URL}/projects/vauchi%2Fcontract/repository/files"
       mkdir -p "${CI_PROJECT_DIR}/app/build"
       if curl -fsSL -u "gitlab-ci-token:${CI_JOB_TOKEN}" \
-           "${CORE_FILES}/vauchi-app%2Ffixtures%2Fscreen_catalog_v1.json/raw?ref=main" -o "$CATALOG"; then
-        echo "📚 Catalogue source: core main vauchi-app/fixtures/screen_catalog_v1.json"
+           "${CONTRACT_FILES}/fixtures%2Fscreen_catalog_v1.json/raw?ref=main" -o "$CATALOG"; then
+        echo "📚 Catalogue source: contract main fixtures/screen_catalog_v1.json (ADR-078)"
       else
-        echo "⚠️  screen_catalog_v1.json not on core main — converting presentation_contract_v1.json"
+        echo "⚠️  screen_catalog_v1.json unreadable from the contract repository — converting presentation_contract_v1.json"
         curl -fsSL -u "gitlab-ci-token:${CI_JOB_TOKEN}" \
-          "${CORE_FILES}/vauchi-app%2Ffixtures%2Fpresentation_contract_v1.json/raw?ref=main" -o "$CONTRACT"
+          "${CONTRACT_FILES}/fixtures%2Fpresentation_contract_v1.json/raw?ref=main" -o "$CONTRACT"
         python3 - "$CONTRACT" "$CATALOG" <<'PY'
       import json, sys
       contract = json.load(open(sys.argv[1]))
@@ -806,7 +806,7 @@ test:screen-catalog:
       json.dump({"schema_version": 1, "screens": screens}, open(sys.argv[2], "w"))
       print(f"converted {len(screens)} contract batches")
       PY
-        echo "📚 Catalogue source: converted core main presentation_contract_v1.json"
+        echo "📚 Catalogue source: converted contract main presentation_contract_v1.json"
       fi
     - ./gradlew testDebugUnitTest --tests 'app.vauchi.screenshots.ScreenCatalogRenderTest' -Pvauchi.screenCatalog="${CI_PROJECT_DIR}/app/build/screen_catalog_v1.json"
     # The test skips itself without a catalogue, so zero PNGs means the
