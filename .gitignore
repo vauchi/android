@@ -41,3 +41,6 @@ app/native-host-libs/
 *.pem
 credentials.json
 service-account*.json
+
+# Core sources the native-host-lib jobs unpack (CI scratch)
+.core-checkout*/
