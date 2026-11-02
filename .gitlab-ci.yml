@@ -637,7 +637,14 @@ coverage:unit:
           -o ".vauchi-scripts/$f"
       done
       chmod +x .vauchi-scripts/ci/*.sh
-    - .vauchi-scripts/ci/push-coverage.sh app/build/reports/jacoco/jacocoDebugTestReport/jacocoDebugTestReport.xml android || true
+    # The pushed series carries no branch, so only main may write it.
+    - |
+      REPORT=app/build/reports/jacoco/jacocoDebugTestReport/jacocoDebugTestReport.xml
+      if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+        .vauchi-scripts/ci/push-coverage.sh "$REPORT" android || true
+      else
+        .vauchi-scripts/ci/push-coverage.sh "$REPORT" android --dry-run || true
+      fi
   coverage: '/Line Coverage:\s+(\d+(?:\.\d+)?%)/'
   artifacts:
     reports:
@@ -652,6 +659,11 @@ coverage:unit:
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_PIPELINE_SOURCE == "schedule"
+    # Playable on an MR that changes this job, which could otherwise only
+    # be checked after merging.
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
 
 test:screenshots:
   extends: [.android-job, .timeout-standard]
