@@ -797,7 +797,7 @@ test:screen-catalog:
       mkdir -p build
       curl --fail-with-body --silent --show-error \
         --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
-        "${CI_API_V4_URL}/projects/vauchi%2Fcontract/repository/files/ci%2Ffetch-screen-catalog.py/raw?ref=5c8409f776e60bc6d0748d46a3a4c93c08516a9d" \
+        "${CI_API_V4_URL}/projects/vauchi%2Fcontract/repository/files/ci%2Ffetch-screen-catalog.py/raw?ref=5ff7c6fe7240a69c2a5b901f5f62745ee5626b5a" \
         -o build/fetch-screen-catalog.py
       python3 build/fetch-screen-catalog.py app/build/screen_catalog_v1.json
     - ./gradlew testDebugUnitTest --tests 'app.vauchi.screenshots.ScreenCatalogRenderTest' -Pvauchi.screenCatalog="${CI_PROJECT_DIR}/app/build/screen_catalog_v1.json"
