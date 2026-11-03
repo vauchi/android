@@ -790,42 +790,24 @@ test:screenshots:
 # Renders Core's screen catalogue (one prepared command batch per app
 # screen) through the real Compose renderer under Robolectric — no device,
 # no engine, no JNA — so every MR publishes what each screen looks like in
-# light, dark, and large-font variants. The catalogue is fetched from Core
-# main; until it exists there the presentation contract fixture stands in.
+# light, dark, and large-font variants. The full catalogue is resolved from
+# the native dependency's Core release and records its contract revision.
 test:screen-catalog:
   extends: [.android-job, .timeout-standard]
   stage: test
   needs: []
-  allow_failure: true
+  allow_failure: false
   variables:
     VRT_PLATFORM: android
     VRT_SCREENSHOT_DIR: app/build/screen-catalog
   script:
     - |
-      CATALOG="${CI_PROJECT_DIR}/app/build/screen_catalog_v1.json"
-      CONTRACT="${CI_PROJECT_DIR}/app/build/presentation_contract_v1.json"
-      CONTRACT_FILES="${CI_API_V4_URL}/projects/vauchi%2Fcontract/repository/files"
-      mkdir -p "${CI_PROJECT_DIR}/app/build"
-      if curl -fsSL -u "gitlab-ci-token:${CI_JOB_TOKEN}" \
-           "${CONTRACT_FILES}/fixtures%2Fscreen_catalog_v1.json/raw?ref=main" -o "$CATALOG"; then
-        echo "📚 Catalogue source: contract main fixtures/screen_catalog_v1.json (ADR-078)"
-      else
-        echo "⚠️  screen_catalog_v1.json unreadable from the contract repository — converting presentation_contract_v1.json"
-        curl -fsSL -u "gitlab-ci-token:${CI_JOB_TOKEN}" \
-          "${CONTRACT_FILES}/fixtures%2Fpresentation_contract_v1.json/raw?ref=main" -o "$CONTRACT"
-        python3 - "$CONTRACT" "$CATALOG" <<'PY'
-      import json, sys
-      contract = json.load(open(sys.argv[1]))
-      batches = [contract["initial_commands"]] + [step["commands"] for step in contract["steps"]]
-      screens = []
-      for index, commands in enumerate(batches):
-          surface = next(c["ReplaceSurface"]["surface"] for c in commands if isinstance(c, dict) and "ReplaceSurface" in c)
-          screens.append({"code_id": f"contract_step_{index}", "title": surface["title"], "locale": "en", "commands": commands})
-      json.dump({"schema_version": 1, "screens": screens}, open(sys.argv[2], "w"))
-      print(f"converted {len(screens)} contract batches")
-      PY
-        echo "📚 Catalogue source: converted contract main presentation_contract_v1.json"
-      fi
+      mkdir -p build
+      curl --fail-with-body --silent --show-error \
+        --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+        "${CI_API_V4_URL}/projects/vauchi%2Fcontract/repository/files/ci%2Ffetch-screen-catalog.py/raw?ref=5c8409f776e60bc6d0748d46a3a4c93c08516a9d" \
+        -o build/fetch-screen-catalog.py
+      python3 build/fetch-screen-catalog.py app/build/screen_catalog_v1.json
     - ./gradlew testDebugUnitTest --tests 'app.vauchi.screenshots.ScreenCatalogRenderTest' -Pvauchi.screenCatalog="${CI_PROJECT_DIR}/app/build/screen_catalog_v1.json"
     # The test skips itself without a catalogue, so zero PNGs means the
     # property never reached the test JVM — fail, not pass.
@@ -841,6 +823,8 @@ test:screen-catalog:
   artifacts:
     when: always
     paths:
+      - app/build/screen_catalog_v1.json
+      - app/build/screen_catalog_v1.provenance.json
       - app/build/screen-catalog/
     reports:
       junit: app/build/test-results/testDebugUnitTest/TEST-*ScreenCatalog*.xml
