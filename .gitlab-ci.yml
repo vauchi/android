@@ -670,64 +670,52 @@ test:screenshots:
   stage: test
   needs: []
   # Host .so built from core tag matching AAR version (v0.12.2).
-  # Falls back to main if tag missing — verify tags exist before bumping AAR.
+  # The host library comes from Core's release for the pinned AAR version.
   variables:
     VRT_PLATFORM: android
     # The Robolectric screen walk writes the real Core-driven screens here;
     # the layoutlib preview baselines stay under app/src/screenshotTestDebug.
     VRT_SCREENSHOT_DIR: app/build/screenshots
   script:
-    # Build host-platform native library so layoutlib can load UniFFI types.
-    # Uses the same core ref that produced the published AAR bindings.
-    # The self-hosted runner has Rust installed (shared with vauchi/core).
+    # The host-platform native library lets layoutlib load UniFFI types; it
+    # is Core's release artifact for the version of the published AAR.
     - |
       AAR_VERSION=$(grep 'vauchi-platform:' app/build.gradle.kts | sed -n 's/.*vauchi-platform:\([0-9.]*\).*/\1/p' | head -1)
       CORE_REF="v${AAR_VERSION:-main}"
       NATIVE_LIB="app/native-host-libs/libvauchi_platform.so"
       VERSION_STAMP="app/native-host-libs/.version"
-      # Rebuild if lib missing or version changed.
-      # Always clean the cargo target dir on rebuild to prevent stale object
-      # files from causing UniFFI API checksum mismatches at runtime.
+      # Fetch again when the lib is missing or the pinned version changed.
       if [ -f "$NATIVE_LIB" ] && [ -f "$VERSION_STAMP" ] && [ "$(cat "$VERSION_STAMP")" = "$CORE_REF" ]; then
         echo "✅ Native library cached for ${CORE_REF}: $NATIVE_LIB"
       else
-        echo "📦 Building libvauchi_platform.so for host platform (${CORE_REF})..."
-        rm -rf "${CI_PROJECT_DIR}/.cargo-target" app/native-host-libs
+        # Core's release publishes this library (build:platform-host-linux),
+        # so this repo never builds Core (ADR-025, VCI01, private#972). A Core
+        # tag without the package fails here rather than building from main.
+        echo "📦 Downloading the host libvauchi_platform.so for ${CORE_REF}..."
+        rm -rf app/native-host-libs
         mkdir -p app/native-host-libs
-        CORE_DIR="${CI_PROJECT_DIR}/.core-checkout"
-        rm -rf "$CORE_DIR"
-        # Download core source at the exact tag via GitLab API archive.
-        # git clone --depth=1 --branch=TAG fails for tags with CI_JOB_TOKEN,
-        # and fetch-by-SHA is unreliable. The API archive is always correct.
-        ARCHIVE_URL="${CI_SERVER_URL}/api/v4/projects/vauchi%2Fcore/repository/archive.tar.gz?sha=${CORE_REF}"
-        mkdir -p "$CORE_DIR"
-        if curl -fsSL --header "JOB-TOKEN: ${CI_JOB_TOKEN}" "$ARCHIVE_URL" | tar xz --strip-components=1 -C "$CORE_DIR"; then
-          echo "✅ Downloaded core archive at ${CORE_REF}"
-        else
-          echo "⚠️  Archive download failed for ${CORE_REF} — cloning main"
-          rm -rf "$CORE_DIR"
-          git clone --depth=1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
-        fi
-        # Clone-or-refresh themes repo — required by include_bytes! in vauchi-platform.
-        # Mirrors the clone-if-absent + pull-if-present pattern in
-        # scripts/ci-templates/rust-base.yml .clone-themes (can't use the
-        # anchor directly because android needs themes at $CI_PROJECT_DIR/themes,
-        # not the sibling-of-project path the anchor assumes).
-        THEMES_DIR="${CI_PROJECT_DIR}/themes"
-        if [ ! -d "$THEMES_DIR" ]; then
-          git clone --depth=1 --branch=main \
-            "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/themes.git" "$THEMES_DIR"
-        else
-          git -C "$THEMES_DIR" pull --ff-only 2>/dev/null || true
-        fi
-        python3 "$THEMES_DIR/scripts/generate.py"
-        export CARGO_HOME="${CI_PROJECT_DIR}/.cargo-screenshots"
-        export CARGO_TARGET_DIR="${CI_PROJECT_DIR}/.cargo-target"
-        cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
-        mkdir -p app/native-host-libs
-        cp "$CARGO_TARGET_DIR/release/libvauchi_platform.so" "$NATIVE_LIB"
+        HOST_DIR="$(mktemp -d)"
+        CORE_VERSION="${CORE_REF#v}"
+        BASE="${CI_API_V4_URL}/projects/77874344/packages/generic/vauchi-platform-host-linux/${CORE_VERSION}"
+        for file in libvauchi_platform.so libvauchi_platform.so.sha256 libvauchi_platform.so.sha256.bundle; do
+          curl --fail-with-body -sSL -u "gitlab-ci-token:${CI_JOB_TOKEN}" --retry 2 \
+            -o "${HOST_DIR}/${file}" "${BASE}/${file}" \
+            || { echo "ERROR: ${file} is not published for Core ${CORE_VERSION}"; exit 1; }
+        done
+        # Same cosign release as windows' DLL check.
+        curl --fail-with-body -sSL --retry 2 -o "${HOST_DIR}/cosign" \
+          "https://github.com/sigstore/cosign/releases/download/v3.0.5/cosign-linux-amd64"
+        chmod +x "${HOST_DIR}/cosign"
+        "${HOST_DIR}/cosign" verify-blob --key cosign.pub \
+          --bundle "${HOST_DIR}/libvauchi_platform.so.sha256.bundle" \
+          "${HOST_DIR}/libvauchi_platform.so.sha256" \
+          || { echo "ERROR: the host library's checksum signature does not verify"; exit 1; }
+        ACTUAL=$(sha256sum "${HOST_DIR}/libvauchi_platform.so" | awk '{print $1}')
+        [ "$ACTUAL" = "$(cat "${HOST_DIR}/libvauchi_platform.so.sha256")" ] \
+          || { echo "ERROR: libvauchi_platform.so does not match its signed checksum"; exit 1; }
+        cp "${HOST_DIR}/libvauchi_platform.so" "$NATIVE_LIB"
         echo "$CORE_REF" > "$VERSION_STAMP"
-        echo "✅ Native library built from ${CORE_REF}: $(ls -lh "$NATIVE_LIB" | awk '{print $5}')"
+        echo "✅ Native library verified for ${CORE_REF}: $(ls -lh "$NATIVE_LIB" | awk '{print $5}')"
       fi
     # Every JVM test that drives the real engine runs here, the only job with
     # the host library: the screen walk (onboarding via the context bar, then
@@ -858,7 +846,7 @@ test:snapshots:record:
   allow_failure: true
   script:
     - echo "📸 Recording screenshot baselines..."
-    # Build host-platform native library (same as test:screenshots)
+    # Fetch the host-platform native library (same as test:screenshots)
     - |
       AAR_VERSION=$(grep 'vauchi-platform:' app/build.gradle.kts | sed -n 's/.*vauchi-platform:\([0-9.]*\).*/\1/p' | head -1)
       CORE_REF="v${AAR_VERSION:-main}"
@@ -867,41 +855,34 @@ test:snapshots:record:
       if [ -f "$NATIVE_LIB" ] && [ -f "$VERSION_STAMP" ] && [ "$(cat "$VERSION_STAMP")" = "$CORE_REF" ]; then
         echo "✅ Native library cached for ${CORE_REF}: $NATIVE_LIB"
       else
-        rm -rf "${CI_PROJECT_DIR}/.cargo-target" app/native-host-libs
+        # Core's release publishes this library (build:platform-host-linux),
+        # so this repo never builds Core (ADR-025, VCI01, private#972). A Core
+        # tag without the package fails here rather than building from main.
+        echo "📦 Downloading the host libvauchi_platform.so for ${CORE_REF}..."
+        rm -rf app/native-host-libs
         mkdir -p app/native-host-libs
-        CORE_DIR="${CI_PROJECT_DIR}/.core-checkout"
-        rm -rf "$CORE_DIR"
-        # Download core source at the exact tag via GitLab API archive.
-        # git clone --depth=1 --branch=TAG fails for tags with CI_JOB_TOKEN,
-        # and fetch-by-SHA is unreliable. The API archive is always correct.
-        ARCHIVE_URL="${CI_SERVER_URL}/api/v4/projects/vauchi%2Fcore/repository/archive.tar.gz?sha=${CORE_REF}"
-        mkdir -p "$CORE_DIR"
-        if curl -fsSL --header "JOB-TOKEN: ${CI_JOB_TOKEN}" "$ARCHIVE_URL" | tar xz --strip-components=1 -C "$CORE_DIR"; then
-          echo "✅ Downloaded core archive at ${CORE_REF}"
-        else
-          echo "⚠️  Archive download failed for ${CORE_REF} — cloning main"
-          rm -rf "$CORE_DIR"
-          git clone --depth=1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/core.git" "$CORE_DIR"
-        fi
-        # Clone-or-refresh themes repo — required by include_bytes! in vauchi-platform.
-        # Mirrors the clone-if-absent + pull-if-present pattern in
-        # scripts/ci-templates/rust-base.yml .clone-themes (can't use the
-        # anchor directly because android needs themes at $CI_PROJECT_DIR/themes,
-        # not the sibling-of-project path the anchor assumes).
-        THEMES_DIR="${CI_PROJECT_DIR}/themes"
-        if [ ! -d "$THEMES_DIR" ]; then
-          git clone --depth=1 --branch=main \
-            "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/vauchi/themes.git" "$THEMES_DIR"
-        else
-          git -C "$THEMES_DIR" pull --ff-only 2>/dev/null || true
-        fi
-        python3 "$THEMES_DIR/scripts/generate.py"
-        export CARGO_HOME="${CI_PROJECT_DIR}/.cargo-record"
-        export CARGO_TARGET_DIR="${CI_PROJECT_DIR}/.cargo-target"
-        cargo build -p vauchi-platform --release --manifest-path "$CORE_DIR/Cargo.toml"
-        mkdir -p app/native-host-libs
-        cp "$CARGO_TARGET_DIR/release/libvauchi_platform.so" "$NATIVE_LIB"
+        HOST_DIR="$(mktemp -d)"
+        CORE_VERSION="${CORE_REF#v}"
+        BASE="${CI_API_V4_URL}/projects/77874344/packages/generic/vauchi-platform-host-linux/${CORE_VERSION}"
+        for file in libvauchi_platform.so libvauchi_platform.so.sha256 libvauchi_platform.so.sha256.bundle; do
+          curl --fail-with-body -sSL -u "gitlab-ci-token:${CI_JOB_TOKEN}" --retry 2 \
+            -o "${HOST_DIR}/${file}" "${BASE}/${file}" \
+            || { echo "ERROR: ${file} is not published for Core ${CORE_VERSION}"; exit 1; }
+        done
+        # Same cosign release as windows' DLL check.
+        curl --fail-with-body -sSL --retry 2 -o "${HOST_DIR}/cosign" \
+          "https://github.com/sigstore/cosign/releases/download/v3.0.5/cosign-linux-amd64"
+        chmod +x "${HOST_DIR}/cosign"
+        "${HOST_DIR}/cosign" verify-blob --key cosign.pub \
+          --bundle "${HOST_DIR}/libvauchi_platform.so.sha256.bundle" \
+          "${HOST_DIR}/libvauchi_platform.so.sha256" \
+          || { echo "ERROR: the host library's checksum signature does not verify"; exit 1; }
+        ACTUAL=$(sha256sum "${HOST_DIR}/libvauchi_platform.so" | awk '{print $1}')
+        [ "$ACTUAL" = "$(cat "${HOST_DIR}/libvauchi_platform.so.sha256")" ] \
+          || { echo "ERROR: libvauchi_platform.so does not match its signed checksum"; exit 1; }
+        cp "${HOST_DIR}/libvauchi_platform.so" "$NATIVE_LIB"
         echo "$CORE_REF" > "$VERSION_STAMP"
+        echo "✅ Native library verified for ${CORE_REF}: $(ls -lh "$NATIVE_LIB" | awk '{print $5}')"
       fi
     - |
       # Namespace /tmp by CI_JOB_ID so concurrent/prior jobs on the same
