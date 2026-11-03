@@ -702,9 +702,13 @@ test:screenshots:
             -o "${HOST_DIR}/${file}" "${BASE}/${file}" \
             || { echo "ERROR: ${file} is not published for Core ${CORE_VERSION}"; exit 1; }
         done
-        # Same cosign release as windows' DLL check.
+        # cosign v3.0.5, pinned to the SHA-256 in sigstore's release checksums
+        # and in core's .cosign-install: the verifier is verified first.
         curl --fail-with-body -sSL --retry 2 -o "${HOST_DIR}/cosign" \
           "https://github.com/sigstore/cosign/releases/download/v3.0.5/cosign-linux-amd64"
+        echo "db15cc99e6e4837daabab023742aaddc3841ce57f193d11b7c3e06c8003642b2  ${HOST_DIR}/cosign" \
+          | sha256sum -c - \
+          || { echo "ERROR: the cosign binary does not match its pinned checksum"; exit 1; }
         chmod +x "${HOST_DIR}/cosign"
         "${HOST_DIR}/cosign" verify-blob --key cosign.pub \
           --bundle "${HOST_DIR}/libvauchi_platform.so.sha256.bundle" \
@@ -869,9 +873,13 @@ test:snapshots:record:
             -o "${HOST_DIR}/${file}" "${BASE}/${file}" \
             || { echo "ERROR: ${file} is not published for Core ${CORE_VERSION}"; exit 1; }
         done
-        # Same cosign release as windows' DLL check.
+        # cosign v3.0.5, pinned to the SHA-256 in sigstore's release checksums
+        # and in core's .cosign-install: the verifier is verified first.
         curl --fail-with-body -sSL --retry 2 -o "${HOST_DIR}/cosign" \
           "https://github.com/sigstore/cosign/releases/download/v3.0.5/cosign-linux-amd64"
+        echo "db15cc99e6e4837daabab023742aaddc3841ce57f193d11b7c3e06c8003642b2  ${HOST_DIR}/cosign" \
+          | sha256sum -c - \
+          || { echo "ERROR: the cosign binary does not match its pinned checksum"; exit 1; }
         chmod +x "${HOST_DIR}/cosign"
         "${HOST_DIR}/cosign" verify-blob --key cosign.pub \
           --bundle "${HOST_DIR}/libvauchi_platform.so.sha256.bundle" \
