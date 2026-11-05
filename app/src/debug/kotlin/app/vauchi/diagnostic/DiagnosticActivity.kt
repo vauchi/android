@@ -108,6 +108,7 @@ class DiagnosticActivity : ComponentActivity() {
                 "lifecycle_emit_replace", "lifecycle_record_replace",
                 "lifecycle_callback_record_stop", "lifecycle_callback_record_replace",
                 "lifecycle_callback_emit_stop", "lifecycle_callback_emit_replace",
+                "lifecycle_duplex",
                 -> {
                     runTest { log ->
                         NativeAudioLifecycleDiagnostic(this@DiagnosticActivity).run(testName, log)

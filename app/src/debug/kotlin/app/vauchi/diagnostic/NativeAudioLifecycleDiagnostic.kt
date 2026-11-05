@@ -21,7 +21,7 @@ internal class NativeAudioLifecycleDiagnostic(
         name: String,
         log: MutableList<String>,
     ) {
-        val recording = name.contains("record")
+        val recording = name.contains("record") || name == "lifecycle_duplex"
         val permission = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
         if (recording && permission != PackageManager.PERMISSION_GRANTED) {
             DiagnosticLogger.logError(name, "lifecycle", "microphone permission not granted")
@@ -33,6 +33,12 @@ internal class NativeAudioLifecycleDiagnostic(
         service.stop()
         DiagnosticLogger.logResult(name, "lifecycle", message = "START silence=true samples_saved=false")
         try {
+            if (name == "lifecycle_duplex") {
+                val message = duplexReport(service)
+                log.add(message)
+                DiagnosticLogger.logResult(name, "lifecycle", message = message)
+                return
+            }
             if (name.contains("callback")) {
                 val message = callbackReport(name, service)
                 log.add(message)
@@ -60,6 +66,37 @@ internal class NativeAudioLifecycleDiagnostic(
             service.stop()
             audio.setStreamVolume(AudioManager.STREAM_MUSIC, volume, 0)
         }
+    }
+
+    private fun duplexReport(service: AudioProximityService): String {
+        val captured = CountDownLatch(1)
+        val emitted = CountDownLatch(1)
+        val samples = AtomicInteger()
+        val captureStillActive = AtomicBoolean(false)
+        val error =
+            java.util.concurrent.atomic
+                .AtomicReference("")
+        service.receiveSignal(3000uL, 44_100u) { pcm, _ ->
+            samples.set(pcm.size)
+            captured.countDown()
+        }
+        val deadline = System.nanoTime() + 5_000_000_000L
+        while (!service.isActive() && System.nanoTime() < deadline) Thread.sleep(5)
+        val initiallyActive = service.isActive()
+        Thread.sleep(250)
+        service.emitSignal(List(44_100) { 0f }, 44_100u) {
+            error.set(it)
+            captureStillActive.set(service.isActive())
+            emitted.countDown()
+        }
+        val emitReturned = emitted.await(5, TimeUnit.SECONDS)
+        val captureReturned = captured.await(5, TimeUnit.SECONDS)
+        val observed =
+            initiallyActive && emitReturned && captureReturned && captureStillActive.get() &&
+                error.get().isEmpty() && samples.get() > 0
+        return "duplex_status=${if (observed) "observed" else "inconclusive"} " +
+            "initial_capture_active=$initiallyActive emit_returned=$emitReturned capture_returned=$captureReturned " +
+            "capture_active_after_emit=${captureStillActive.get()} capture_samples=${samples.get()} error=${error.get()}"
     }
 
     private fun callbackReport(
