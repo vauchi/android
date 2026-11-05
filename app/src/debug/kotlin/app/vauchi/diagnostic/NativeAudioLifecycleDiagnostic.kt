@@ -9,6 +9,9 @@ import android.content.pm.PackageManager
 import android.media.AudioManager
 import androidx.core.content.ContextCompat
 import app.vauchi.proximity.AudioProximityService
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 internal class NativeAudioLifecycleDiagnostic(
     private val context: Context,
@@ -33,8 +36,22 @@ internal class NativeAudioLifecycleDiagnostic(
                 AudioLifecycleProbe(
                     operation = { duration ->
                         if (recording) {
-                            val count = service.receiveSignalSync(duration.toULong(), 44_100u).size
-                            AudioProbeOutcome(samples = count)
+                            if (name.contains("callback")) {
+                                val count = AtomicInteger()
+                                val returned = CountDownLatch(1)
+                                service.receiveSignal(duration.toULong(), 44_100u) { samples, _ ->
+                                    count.set(samples.size)
+                                    returned.countDown()
+                                }
+                                if (returned.await(7, TimeUnit.SECONDS)) {
+                                    AudioProbeOutcome(samples = count.get())
+                                } else {
+                                    AudioProbeOutcome(error = "Capture callback did not return")
+                                }
+                            } else {
+                                val count = service.receiveSignalSync(duration.toULong(), 44_100u).size
+                                AudioProbeOutcome(samples = count)
+                            }
                         } else {
                             val samples = List((duration * 44_100 / 1_000).toInt()) { 0f }
                             AudioProbeOutcome(error = service.emitSignal(samples, 44_100u))

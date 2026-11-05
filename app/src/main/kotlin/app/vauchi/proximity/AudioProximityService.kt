@@ -17,7 +17,6 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Ultrasonic audio proximity verification service for Android.
@@ -41,14 +40,11 @@ class AudioProximityService(
             }
     }
 
-    private val isRecording = AtomicBoolean(false)
-    private val isPlaying = AtomicBoolean(false)
-    private var audioRecord: AudioRecord? = null
-    private var audioTrack: AudioTrack? = null
-    private var cachedRecord: AudioRecord? = null
-    private var cachedSampleRate: Int = 0
+    private val capture = AudioOperationSlot()
+    private val playback = AudioOperationSlot()
     private val recordExecutor =
-        Executors.newSingleThreadExecutor { r ->
+        // Replacement must enter the owner while the previous read is in flight.
+        Executors.newFixedThreadPool(2) { r ->
             Thread(r, "AudioProximityRecord").apply { isDaemon = true }
         }
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -103,74 +99,66 @@ class AudioProximityService(
         }
 
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val originalVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val sampleRateInt = sampleRate.toInt()
+        val bufferSize =
+            AudioTrack.getMinBufferSize(
+                sampleRateInt,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_FLOAT,
+            )
 
+        if (bufferSize <= 0) return "Invalid buffer size for audio playback"
+        var track: AudioTrack? = null
+        var originalVolume: Int? = null
         return try {
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxVolume, 0)
-
-            val sampleRateInt = sampleRate.toInt()
-            val bufferSize =
-                AudioTrack.getMinBufferSize(
-                    sampleRateInt,
-                    AudioFormat.CHANNEL_OUT_MONO,
-                    AudioFormat.ENCODING_PCM_FLOAT,
-                )
-
-            if (bufferSize == AudioTrack.ERROR || bufferSize == AudioTrack.ERROR_BAD_VALUE) {
-                return "Invalid buffer size for audio playback"
-            }
-
-            val track =
-                AudioTrack
-                    .Builder()
-                    .setAudioFormat(
-                        AudioFormat
+            playback.run(
+                start = {
+                    originalVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                    val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxVolume, 0)
+                    val created =
+                        AudioTrack
                             .Builder()
-                            .setSampleRate(sampleRateInt)
-                            .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
-                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                            .build(),
-                    ).setBufferSizeInBytes(maxOf(bufferSize, samples.size * 4))
-                    .setTransferMode(AudioTrack.MODE_STATIC)
-                    .build()
-
-            audioTrack = track
-            isPlaying.set(true)
-
-            val floatArray = samples.toFloatArray()
-
-            track.write(floatArray, 0, floatArray.size, AudioTrack.WRITE_BLOCKING)
-            track.play()
-
-            val durationMs = (samples.size.toLong() * 1000) / sampleRateInt
-            Thread.sleep(durationMs + 100)
-
-            track.stop()
-            track.release()
-            audioTrack = null
-            isPlaying.set(false)
-
+                            .setAudioFormat(
+                                AudioFormat
+                                    .Builder()
+                                    .setSampleRate(sampleRateInt)
+                                    .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
+                                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                    .build(),
+                            ).setBufferSizeInBytes(maxOf(bufferSize, samples.size * 4))
+                            .setTransferMode(AudioTrack.MODE_STATIC)
+                            .build()
+                    track = created
+                    val pcm = samples.toFloatArray()
+                    check(created.write(pcm, 0, pcm.size, AudioTrack.WRITE_BLOCKING) == pcm.size) {
+                        "Incomplete audio playback buffer"
+                    }
+                    created.play()
+                },
+                stop = {
+                    try {
+                        if (track?.playState == AudioTrack.PLAYSTATE_PLAYING) track?.stop()
+                    } finally {
+                        try {
+                            track?.release()
+                        } finally {
+                            originalVolume?.let { audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, it, 0) }
+                        }
+                    }
+                },
+            ) { operation ->
+                val durationMs = (samples.size.toLong() * 1000) / sampleRateInt
+                operation.await(durationMs + 100)
+            }
             "" // Success
         } catch (e: Exception) {
-            isPlaying.set(false)
-            audioTrack?.release()
-            audioTrack = null
             "Emit failed: ${e.message}"
-        } finally {
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, originalVolume, 0)
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun getOrCreateAudioRecord(sampleRateInt: Int): AudioRecord? {
-        cachedRecord?.let { record ->
-            if (cachedSampleRate == sampleRateInt && record.state == AudioRecord.STATE_INITIALIZED) {
-                return record
-            }
-            record.release()
-        }
-
+    private fun createAudioRecord(sampleRateInt: Int): AudioRecord? {
         val bufferSize =
             AudioRecord.getMinBufferSize(
                 sampleRateInt,
@@ -196,8 +184,6 @@ class AudioProximityService(
             return null
         }
 
-        cachedRecord = record
-        cachedSampleRate = sampleRateInt
         return record
     }
 
@@ -245,39 +231,45 @@ class AudioProximityService(
             return Pair(emptyList(), 0u)
         }
 
+        var record: AudioRecord? = null
         return try {
-            val sampleRateInt = sampleRate.toInt()
-            val record = getOrCreateAudioRecord(sampleRateInt) ?: return Pair(emptyList(), 0u)
-
-            audioRecord = record
-            isRecording.set(true)
-
-            val recordedRate = record.sampleRate.toUInt()
-            val bufferSize = record.bufferSizeInFrames
-            val samples = mutableListOf<Float>()
-            val buffer = FloatArray(bufferSize)
-
-            record.startRecording()
-
-            val startTime = System.currentTimeMillis()
-            val timeoutMsLong = timeoutMs.toLong()
-
-            while (isRecording.get() && (System.currentTimeMillis() - startTime) < timeoutMsLong) {
-                val read = record.read(buffer, 0, buffer.size, AudioRecord.READ_BLOCKING)
-                if (read > 0) {
-                    for (i in 0 until read) {
-                        samples.add(buffer[i])
+            capture.run(
+                start = {
+                    val created = checkNotNull(createAudioRecord(sampleRate.toInt())) { "Audio recording unavailable" }
+                    record = created
+                    created.startRecording()
+                },
+                stop = {
+                    try {
+                        if (record?.recordingState == AudioRecord.RECORDSTATE_RECORDING) record?.stop()
+                    } finally {
+                        record?.release()
                     }
+                },
+            ) { operation ->
+                val ownedRecord = checkNotNull(record)
+                val recordedRate = ownedRecord.sampleRate.toUInt()
+                val samples = mutableListOf<Float>()
+                val buffer = FloatArray(ownedRecord.bufferSizeInFrames)
+                val startTime = System.nanoTime()
+                val timeoutMsLong = timeoutMs.coerceAtMost(Long.MAX_VALUE.toULong()).toLong()
+                while (operation.isActive && (System.nanoTime() - startTime) / 1_000_000 < timeoutMsLong) {
+                    val read =
+                        try {
+                            ownedRecord.read(buffer, 0, buffer.size, AudioRecord.READ_BLOCKING)
+                        } catch (error: IllegalStateException) {
+                            if (operation.isActive) throw error
+                            break
+                        }
+                    if (read < 0) {
+                        check(!operation.isActive) { "AudioRecord read failed: $read" }
+                        break
+                    }
+                    for (i in 0 until read) samples.add(buffer[i])
                 }
+                Pair(samples, recordedRate)
             }
-
-            record.stop()
-            // Do NOT release — keep cached for reuse
-            isRecording.set(false)
-
-            Pair(samples, recordedRate)
         } catch (e: Exception) {
-            isRecording.set(false)
             Pair(emptyList(), 0u)
         }
     }
@@ -285,33 +277,17 @@ class AudioProximityService(
     /**
      * Check if audio is currently active.
      */
-    fun isActive(): Boolean = isRecording.get() || isPlaying.get()
+    fun isActive(): Boolean = capture.isActive || playback.isActive
 
     /**
      * Stop any ongoing audio operation.
      */
     fun stop() {
-        isRecording.set(false)
-        isPlaying.set(false)
-
-        cachedRecord?.let {
-            try {
-                it.stop()
-                it.release()
-            } catch (_: Exception) {
-            }
+        try {
+            playback.stop()
+        } finally {
+            capture.stop()
         }
-        cachedRecord = null
-        audioRecord = null
-
-        audioTrack?.let {
-            try {
-                it.stop()
-                it.release()
-            } catch (_: Exception) {
-            }
-        }
-        audioTrack = null
     }
 
     private fun getOptimalSampleRate(): Int {
