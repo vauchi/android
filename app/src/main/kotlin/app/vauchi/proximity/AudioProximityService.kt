@@ -268,7 +268,7 @@ class AudioProximityService(
                     for (i in 0 until read) samples.add(buffer[i])
                 }
                 Pair(samples, recordedRate)
-            }
+            } ?: Pair(emptyList(), 0u)
         } catch (e: Exception) {
             Pair(emptyList(), 0u)
         }

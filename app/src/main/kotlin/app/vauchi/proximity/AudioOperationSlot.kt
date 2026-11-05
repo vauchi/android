@@ -9,6 +9,8 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 internal class AudioOperationSlot {
+    internal class Request
+
     internal class Operation(
         private val stop: () -> Unit,
     ) {
@@ -23,19 +25,45 @@ internal class AudioOperationSlot {
             cancelled.countDown()
             stop()
         }
+
+        fun interrupt() {
+            cancelled.countDown()
+        }
     }
 
     private val lock = ReentrantLock()
     private var current: Operation? = null
+    private var latest: Request? = null
     val isActive: Boolean get() = lock.withLock { current != null }
 
+    fun reserve(): Request =
+        lock.withLock {
+            val request = Request()
+            latest = request
+            current?.interrupt()
+            request
+        }
+
+    fun deliver(
+        request: Request,
+        body: () -> Unit,
+    ): Boolean =
+        lock.withLock {
+            if (latest !== request) return false
+            body()
+            true
+        }
+
     fun <T> run(
+        request: Request? = null,
         start: () -> Unit,
         stop: () -> Unit,
         work: (Operation) -> T,
-    ): T {
+    ): T? {
         val operation =
             lock.withLock {
+                val desired = request ?: reserve()
+                if (latest !== desired) return null
                 cancelCurrent()
                 val next = Operation(stop)
                 current = next
@@ -54,7 +82,11 @@ internal class AudioOperationSlot {
         }
     }
 
-    fun stop() = lock.withLock { cancelCurrent() }
+    fun stop() =
+        lock.withLock {
+            latest = null
+            cancelCurrent()
+        }
 
     private fun cancelCurrent() {
         val operation = current ?: return
