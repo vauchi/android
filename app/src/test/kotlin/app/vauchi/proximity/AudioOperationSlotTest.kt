@@ -13,6 +13,43 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
 class AudioOperationSlotTest {
+    @Test
+    fun `stop invalidates work that has not entered its owner`() {
+        val slot = AudioOperationSlot()
+        val request = slot.reserve()
+        slot.stop()
+        var started = false
+        val result = slot.run(request = request, start = { started = true }, stop = {}) { 42 }
+        assertEquals(null, result)
+        assertFalse(started)
+        assertFalse(slot.isActive)
+    }
+
+    @Test
+    fun `older pending work cannot replace newer work`() {
+        val slot = AudioOperationSlot()
+        val older = slot.reserve()
+        val newer = slot.reserve()
+        val observed = mutableListOf<Int>()
+        slot.run(request = newer, start = { observed.add(2) }, stop = {}) { Unit }
+        slot.run(request = older, start = { observed.add(1) }, stop = {}) { Unit }
+        assertEquals(listOf(2), observed)
+    }
+
+    @Test
+    fun `only latest unstopped request delivers a callback`() {
+        val slot = AudioOperationSlot()
+        val older = slot.reserve()
+        val newer = slot.reserve()
+        val delivered = mutableListOf<Int>()
+        assertFalse(slot.deliver(older) { delivered.add(1) })
+        slot.run(request = newer, start = {}, stop = {}) { Unit }
+        assertTrue(slot.deliver(newer) { delivered.add(2) })
+        slot.stop()
+        assertFalse(slot.deliver(newer) { delivered.add(3) })
+        assertEquals(listOf(2), delivered)
+    }
+
     // Feature: contact_exchange.feature — native audio resource lifetime.
     @Test
     fun `stop releases resource and wakes worker`() {
