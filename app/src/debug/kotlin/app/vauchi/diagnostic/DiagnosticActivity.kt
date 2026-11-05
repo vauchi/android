@@ -4,9 +4,6 @@
 
 package app.vauchi.diagnostic
 
-import androidx.compose.ui.res.stringResource
-import app.vauchi.R
-
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -40,9 +37,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.vauchi.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -105,6 +104,14 @@ class DiagnosticActivity : ComponentActivity() {
             Thread.sleep(500)
             micPermissionGranted = true // Already granted via adb shell pm grant
             when (testName) {
+                "lifecycle_emit_stop", "lifecycle_record_stop",
+                "lifecycle_emit_replace", "lifecycle_record_replace",
+                -> {
+                    runTest { log ->
+                        NativeAudioLifecycleDiagnostic(this@DiagnosticActivity).run(testName, log)
+                    }
+                }
+
                 "loopback" -> {
                     runTest { testLoopback(it) }
                 }
