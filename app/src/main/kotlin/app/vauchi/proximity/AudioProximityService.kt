@@ -48,6 +48,10 @@ class AudioProximityService(
             Thread(r, "AudioProximityRecord").apply { isDaemon = true }
         }
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val playbackExecutor =
+        Executors.newFixedThreadPool(2) { r ->
+            Thread(r, "AudioProximityPlayback").apply { isDaemon = true }
+        }
 
     /**
      * Check device capability for ultrasonic audio.
@@ -93,10 +97,29 @@ class AudioProximityService(
     fun emitSignal(
         samples: List<Float>,
         sampleRate: UInt,
+    ): String = emitOwnedSignal(samples, sampleRate, null)
+
+    fun emitSignal(
+        samples: List<Float>,
+        sampleRate: UInt,
+        completion: (String) -> Unit,
+    ) {
+        val request = playback.reserve()
+        playbackExecutor.execute {
+            val result = emitOwnedSignal(samples, sampleRate, request)
+            mainHandler.post { playback.deliver(request) { completion(result) } }
+        }
+    }
+
+    private fun emitOwnedSignal(
+        samples: List<Float>,
+        sampleRate: UInt,
+        request: AudioOperationSlot.Request?,
     ): String {
         if (samples.isEmpty()) {
             return "No samples to emit"
         }
+        val desired = request ?: playback.reserve()
 
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val sampleRateInt = sampleRate.toInt()
@@ -112,6 +135,7 @@ class AudioProximityService(
         var originalVolume: Int? = null
         return try {
             playback.run(
+                request = desired,
                 start = {
                     originalVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
                     val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
@@ -201,9 +225,10 @@ class AudioProximityService(
         sampleRate: UInt,
         completion: (List<Float>, UInt) -> Unit,
     ) {
+        val request = capture.reserve()
         recordExecutor.execute {
-            val (samples, recordedRate) = recordSamples(timeoutMs, sampleRate)
-            mainHandler.post { completion(samples, recordedRate) }
+            val (samples, recordedRate) = recordSamples(timeoutMs, sampleRate, request)
+            mainHandler.post { capture.deliver(request) { completion(samples, recordedRate) } }
         }
     }
 
@@ -220,6 +245,7 @@ class AudioProximityService(
     private fun recordSamples(
         timeoutMs: ULong,
         sampleRate: UInt,
+        request: AudioOperationSlot.Request? = null,
     ): Pair<List<Float>, UInt> {
         val hasPermission =
             ContextCompat.checkSelfPermission(
@@ -231,9 +257,11 @@ class AudioProximityService(
             return Pair(emptyList(), 0u)
         }
 
+        val desired = request ?: capture.reserve()
         var record: AudioRecord? = null
         return try {
             capture.run(
+                request = desired,
                 start = {
                     val created = checkNotNull(createAudioRecord(sampleRate.toInt())) { "Audio recording unavailable" }
                     record = created

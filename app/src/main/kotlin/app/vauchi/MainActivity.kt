@@ -79,10 +79,10 @@ import app.vauchi.ui.StartupErrorKind
 import app.vauchi.ui.UiState
 import app.vauchi.ui.coreui.BrightnessRequest
 import app.vauchi.ui.coreui.CoreAppViewModel
-import app.vauchi.ui.coreui.celebrationHapticFeedback
 import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
 import app.vauchi.ui.coreui.PermissionGrantEvent
+import app.vauchi.ui.coreui.celebrationHapticFeedback
 import app.vauchi.ui.presentation.PresentationEvent
 import app.vauchi.ui.presentation.PresentationHost
 import app.vauchi.ui.theme.SurfaceTheme
@@ -606,9 +606,7 @@ fun MainScreen(
     val audioEmitRequest by coreAppViewModel.audioEmitRequest.collectAsState()
     LaunchedEffect(audioEmitRequest) {
         val req = audioEmitRequest ?: return@LaunchedEffect
-        withContext(Dispatchers.IO) {
-            AudioProximityService.getInstance(context).emitSignal(req.samples, req.sampleRate)
-        }
+        AudioProximityService.getInstance(context).emitSignal(req.samples, req.sampleRate) { }
         coreAppViewModel.consumeAudioEmitRequest()
     }
     val audioListenRequest by coreAppViewModel.audioListenRequest.collectAsState()
@@ -987,7 +985,12 @@ fun MainScreen(
     // The padding around the host covers the transparent system bars, so
     // it paints the active surface's colours too (vauchi/private#814).
     val presentation by coreAppViewModel.presentationState.collectAsState()
-    SurfaceTheme(presentation.activeSurfaceId?.let(presentation.surfaces::get)?.tokens?.colors) {
+    SurfaceTheme(
+        presentation.activeSurfaceId
+            ?.let(presentation.surfaces::get)
+            ?.tokens
+            ?.colors,
+    ) {
         Scaffold(
             snackbarHost = {
                 SnackbarHost(hostState = snackbarHostState)

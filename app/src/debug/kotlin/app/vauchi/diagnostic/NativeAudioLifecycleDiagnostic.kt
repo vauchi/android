@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import app.vauchi.proximity.AudioProximityService
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 internal class NativeAudioLifecycleDiagnostic(
@@ -32,26 +33,18 @@ internal class NativeAudioLifecycleDiagnostic(
         service.stop()
         DiagnosticLogger.logResult(name, "lifecycle", message = "START silence=true samples_saved=false")
         try {
+            if (name.contains("callback")) {
+                val message = callbackReport(name, service)
+                log.add(message)
+                DiagnosticLogger.logResult(name, "lifecycle", message = message)
+                return
+            }
             val probe =
                 AudioLifecycleProbe(
                     operation = { duration ->
                         if (recording) {
-                            if (name.contains("callback")) {
-                                val count = AtomicInteger()
-                                val returned = CountDownLatch(1)
-                                service.receiveSignal(duration.toULong(), 44_100u) { samples, _ ->
-                                    count.set(samples.size)
-                                    returned.countDown()
-                                }
-                                if (returned.await(7, TimeUnit.SECONDS)) {
-                                    AudioProbeOutcome(samples = count.get())
-                                } else {
-                                    AudioProbeOutcome(error = "Capture callback did not return")
-                                }
-                            } else {
-                                val count = service.receiveSignalSync(duration.toULong(), 44_100u).size
-                                AudioProbeOutcome(samples = count)
-                            }
+                            val count = service.receiveSignalSync(duration.toULong(), 44_100u).size
+                            AudioProbeOutcome(samples = count)
                         } else {
                             val samples = List((duration * 44_100 / 1_000).toInt()) { 0f }
                             AudioProbeOutcome(error = service.emitSignal(samples, 44_100u))
@@ -67,5 +60,55 @@ internal class NativeAudioLifecycleDiagnostic(
             service.stop()
             audio.setStreamVolume(AudioManager.STREAM_MUSIC, volume, 0)
         }
+    }
+
+    private fun callbackReport(
+        name: String,
+        service: AudioProximityService,
+    ): String {
+        val cancelledCallback = AtomicBoolean(false)
+        val replacementSamples = AtomicInteger(-1)
+        val replacementReturned = CountDownLatch(1)
+        val error =
+            java.util.concurrent.atomic
+                .AtomicReference("")
+        val recording = name.contains("record")
+
+        fun launch(
+            duration: Long,
+            completion: (Int) -> Unit,
+        ) {
+            if (recording) {
+                service.receiveSignal(duration.toULong(), 44_100u) { samples, _ -> completion(samples.size) }
+            } else {
+                service.emitSignal(List((duration * 44_100 / 1000).toInt()) { 0f }, 44_100u) {
+                    error.set(it)
+                    completion(-1)
+                }
+            }
+        }
+        launch(2000) { cancelledCallback.set(true) }
+        val deadline = System.nanoTime() + 5_000_000_000L
+        while (!service.isActive() && System.nanoTime() < deadline) Thread.sleep(5)
+        val initiallyActive = service.isActive()
+        Thread.sleep(250)
+        val replace = name.endsWith("replace")
+        val actionTime = System.nanoTime()
+        if (replace) {
+            launch(3000) {
+                replacementSamples.set(it)
+                replacementReturned.countDown()
+            }
+        } else {
+            service.stop()
+        }
+        val replacementDelivered = if (replace) replacementReturned.await(5, TimeUnit.SECONDS) else false
+        if (!replace) Thread.sleep(2200)
+        val windowMs = (System.nanoTime() - actionTime) / 1_000_000
+        val observed = initiallyActive && !cancelledCallback.get() && (!replace || replacementDelivered) && error.get().isEmpty()
+        return "callback_status=${if (observed) "observed" else "inconclusive"} " +
+            "initial_active=$initiallyActive cancelled_callback_delivered=${cancelledCallback.get()} " +
+            "replacement_callback_delivered=$replacementDelivered replacement_samples=${replacementSamples.get()} " +
+            "observation_window_ms=$windowMs error=${error.get()}"
     }
 }
