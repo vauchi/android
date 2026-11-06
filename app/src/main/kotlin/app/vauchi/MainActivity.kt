@@ -67,6 +67,7 @@ import app.vauchi.ble.BleCommand
 import app.vauchi.ble.BlePeripheral
 import app.vauchi.ble.BlePeripheralListener
 import app.vauchi.ble.BleUuids
+import app.vauchi.ble.mustWaitForPermission
 import app.vauchi.data.VauchiRepository
 import app.vauchi.debug.OnboardingWalker
 import app.vauchi.debug.StagedInputFiller
@@ -785,6 +786,14 @@ fun MainScreen(
                     }
             }
 
+            is BleCommand.StopScanning -> {
+                bleCentral.stopScanning()
+            }
+
+            is BleCommand.StopAdvertising -> {
+                blePeripheral.stopAdvertising()
+            }
+
             is BleCommand.Connect -> {
                 bleCentral
                     .connect(cmd.deviceId)
@@ -859,16 +868,16 @@ fun MainScreen(
                     ContextCompat.checkSelfPermission(context, it) ==
                         PackageManager.PERMISSION_GRANTED
                 }
-            if (missing.isEmpty()) {
+            val alreadyQueued = deferredBleCommands.isNotEmpty()
+            if (missing.isEmpty() || !cmd.mustWaitForPermission(alreadyQueued)) {
                 executeBleCommand(cmd)
                 return@collect
             }
             // Queue first, then prompt only on the transition into an empty
             // queue: core emits scan and advertise back to back, and two
             // launches would stack two system dialogs on one decision.
-            val alreadyPrompting = deferredBleCommands.isNotEmpty()
             deferredBleCommands.add(cmd)
-            if (!alreadyPrompting) {
+            if (!alreadyQueued) {
                 blePermissionLauncher.launch(blePermissions)
             }
         }

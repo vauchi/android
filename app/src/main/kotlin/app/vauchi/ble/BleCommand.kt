@@ -30,6 +30,12 @@ sealed interface BleCommand {
         val payload: ByteArray,
     ) : BleCommand
 
+    /** `Command::BleStopScanning` — central stops scanning. */
+    data object StopScanning : BleCommand
+
+    /** `Command::BleStopAdvertising` — peripheral withdraws and closes its GATT server. */
+    data object StopAdvertising : BleCommand
+
     /** `Command::BleConnect` — central connects to a discovered peripheral. */
     data class Connect(
         val deviceId: String,
@@ -58,4 +64,14 @@ sealed interface BleCommand {
         val direction: MobileBleLinkDirection,
         val uuid: String,
     ) : BleCommand
+}
+
+/**
+ * Stopping needs no Bluetooth permission, so it must not raise a prompt. Once
+ * commands are queued behind a prompt it still waits its turn: running ahead
+ * of a queued start would leave the radio on after replay.
+ */
+fun BleCommand.mustWaitForPermission(commandsQueued: Boolean): Boolean {
+    val isStop = this is BleCommand.StopScanning || this is BleCommand.StopAdvertising
+    return commandsQueued || !isStop
 }

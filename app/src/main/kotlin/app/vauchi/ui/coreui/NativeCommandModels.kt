@@ -50,6 +50,10 @@ sealed class CommandDTO {
         val payload: List<Int>,
     ) : CommandDTO()
 
+    data object BleStopScanning : CommandDTO()
+
+    data object BleStopAdvertising : CommandDTO()
+
     data class BleConnect(
         val deviceId: String,
     ) : CommandDTO()
@@ -232,6 +236,8 @@ internal object CommandDTOSerializer : KSerializer<CommandDTO> {
             "QrRequestScan" -> CommandDTO.QrRequestScan
             "NfcDeactivate" -> CommandDTO.NfcDeactivate
             "AudioStop" -> CommandDTO.AudioStop
+            "BleStopScanning" -> CommandDTO.BleStopScanning
+            "BleStopAdvertising" -> CommandDTO.BleStopAdvertising
             "AccelerometerStart" -> CommandDTO.AccelerometerStart
             "AccelerometerStop" -> CommandDTO.AccelerometerStop
             "ImagePickFromLibrary" -> CommandDTO.ImagePickFromLibrary

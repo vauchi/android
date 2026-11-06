@@ -1183,6 +1183,14 @@ class CoreAppViewModel(
                     )
                 }
 
+                is CommandDTO.BleStopScanning -> {
+                    _bleCommands.tryEmit(BleCommand.StopScanning)
+                }
+
+                is CommandDTO.BleStopAdvertising -> {
+                    _bleCommands.tryEmit(BleCommand.StopAdvertising)
+                }
+
                 is CommandDTO.BleConnect -> {
                     _bleCommands.tryEmit(BleCommand.Connect(cmd.deviceId))
                 }
