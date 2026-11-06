@@ -25,6 +25,18 @@ class NativeCommandModelsTest {
     }
 
     @Test
+    fun ble_stop_commands_decode_from_their_wire_strings() {
+        assertEquals(
+            CommandDTO.BleStopAdvertising,
+            json.decodeFromString<CommandDTO>("\"BleStopAdvertising\""),
+        )
+        assertEquals(
+            CommandDTO.BleStopScanning,
+            json.decodeFromString<CommandDTO>("\"BleStopScanning\""),
+        )
+    }
+
+    @Test
     fun unknown_native_command_fails_visible() {
         val command = json.decodeFromString<CommandDTO>("""{"FutureEffect":{}}""")
 

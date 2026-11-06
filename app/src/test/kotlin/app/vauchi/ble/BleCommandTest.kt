@@ -5,6 +5,8 @@
 package app.vauchi.ble
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import uniffi.vauchi_platform.MobileBleLinkDirection
 
@@ -46,5 +48,24 @@ class BleCommandTest {
 
         assertEquals("AA:BB:CC:DD:EE:FF", command.deviceId)
         assertEquals(MobileBleLinkDirection.OUTBOUND, command.direction)
+    }
+
+    @Test
+    fun `a stop asks for no permission when nothing is queued`() {
+        assertFalse(BleCommand.StopAdvertising.mustWaitForPermission(commandsQueued = false))
+        assertFalse(BleCommand.StopScanning.mustWaitForPermission(commandsQueued = false))
+    }
+
+    @Test
+    fun `a stop keeps its place behind a queued start`() {
+        assertTrue(BleCommand.StopAdvertising.mustWaitForPermission(commandsQueued = true))
+        assertTrue(BleCommand.StopScanning.mustWaitForPermission(commandsQueued = true))
+    }
+
+    @Test
+    fun `a start always waits for permission`() {
+        val start = BleCommand.StartScan(serviceUuid = BleUuids.SERVICE)
+
+        assertTrue(start.mustWaitForPermission(commandsQueued = false))
     }
 }
