@@ -104,6 +104,10 @@ class DiagnosticActivity : ComponentActivity() {
             Thread.sleep(500)
             micPermissionGranted = true // Already granted via adb shell pm grant
             when (testName) {
+                "capture_startup" -> {
+                    runTest { log -> AudioCaptureStartupDiagnostic(this@DiagnosticActivity).run(log) }
+                }
+
                 "lifecycle_emit_stop", "lifecycle_record_stop",
                 "lifecycle_emit_replace", "lifecycle_record_replace",
                 "lifecycle_callback_record_stop", "lifecycle_callback_record_replace",
