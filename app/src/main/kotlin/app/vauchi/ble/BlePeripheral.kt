@@ -41,6 +41,17 @@ interface BlePeripheralListener {
         uuid: String,
         data: ByteArray,
     )
+
+    fun onMtuChanged(
+        deviceId: String,
+        mtu: Int,
+    )
+
+    /** The central can now receive frames; see [BleGattReadiness]. */
+    fun onGattReady(deviceId: String)
+
+    /** Advertising could not start, after [BlePeripheral.startAdvertising] returned. */
+    fun onStartFailed(error: String)
 }
 
 /**
@@ -132,6 +143,8 @@ class BlePeripheral(
             object : AdvertiseCallback() {
                 override fun onStartFailure(errorCode: Int) {
                     Log.e(TAG, "BLE advertise failed: $errorCode")
+                    if (advertiseCallback !== this) return
+                    BleFailure.advertiseStartFailure(errorCode)?.let(listener::onStartFailed)
                 }
             }
         advertiseCallback = cb
@@ -140,6 +153,7 @@ class BlePeripheral(
         } catch (e: SecurityException) {
             advertiseCallback = null
             Log.e(TAG, "BLE advertise: missing BLUETOOTH_ADVERTISE permission")
+            listener.onStartFailed("Missing BLUETOOTH_ADVERTISE permission")
         }
     }
 
@@ -283,6 +297,7 @@ class BlePeripheral(
                     beginAdvertising()
                 } else {
                     Log.e(TAG, "GATT addService failed: $status")
+                    listener.onStartFailed("BLE GATT addService failed: $status")
                 }
             }
 
@@ -347,6 +362,20 @@ class BlePeripheral(
                 if (responseNeeded) {
                     gattServer?.sendResponse(device, requestId, 0 /* GATT_SUCCESS */, offset, value)
                 }
+                val isReady =
+                    BleGattReadiness.isDataSubscription(
+                        descriptor.characteristic.uuid.toString(),
+                        descriptor.uuid.toString(),
+                        value,
+                    )
+                if (isReady) listener.onGattReady(device.address)
+            }
+
+            override fun onMtuChanged(
+                device: BluetoothDevice,
+                mtu: Int,
+            ) {
+                listener.onMtuChanged(device.address, mtu)
             }
 
             override fun onNotificationSent(

@@ -482,6 +482,17 @@ class CoreAppViewModel(
         sendHardwareEvent(MobileEvent.BleConnected(deviceId = deviceId, direction = direction))
     }
 
+    fun onBleMtuNegotiated(
+        deviceId: String,
+        mtu: Int,
+    ) {
+        sendHardwareEvent(MobileEvent.BleMtuNegotiated(deviceId = deviceId, mtu = mtu.toUInt()))
+    }
+
+    fun onBleGattReady(deviceId: String) {
+        sendHardwareEvent(MobileEvent.BleGattReady(deviceId = deviceId))
+    }
+
     /** One addressed GATT link dropped. */
     fun onBleDisconnected(
         deviceId: String,

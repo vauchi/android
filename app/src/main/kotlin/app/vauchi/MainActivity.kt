@@ -692,6 +692,8 @@ fun MainScreen(
             BleCentral(
                 context,
                 object : BleCentralListener {
+                    override fun onStartFailed(error: String) = coreAppViewModel.onBleOperationFailed(error)
+
                     override fun onDeviceDiscovered(
                         id: String,
                         rssi: Short,
@@ -738,6 +740,15 @@ fun MainScreen(
             BlePeripheral(
                 context,
                 object : BlePeripheralListener {
+                    override fun onMtuChanged(
+                        deviceId: String,
+                        mtu: Int,
+                    ) = coreAppViewModel.onBleMtuNegotiated(deviceId, mtu)
+
+                    override fun onGattReady(deviceId: String) = coreAppViewModel.onBleGattReady(deviceId)
+
+                    override fun onStartFailed(error: String) = coreAppViewModel.onBleOperationFailed(error)
+
                     override fun onConnected(deviceId: String) = coreAppViewModel.onBleConnected(deviceId, MobileBleLinkDirection.INBOUND)
 
                     override fun onDisconnected(

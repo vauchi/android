@@ -28,6 +28,9 @@ import java.util.UUID
  * `CoreAppViewModel.onBle*` → `MobileEvent`.
  */
 interface BleCentralListener {
+    /** Scanning could not start, after [BleCentral.startScanning] returned. */
+    fun onStartFailed(error: String)
+
     fun onDeviceDiscovered(
         id: String,
         rssi: Short,
@@ -158,6 +161,8 @@ class BleCentral(
 
                 override fun onScanFailed(errorCode: Int) {
                     Log.e(TAG, "BLE scan failed: $errorCode")
+                    if (scanCallback !== this) return
+                    BleFailure.scanStartFailure(errorCode)?.let(listener::onStartFailed)
                 }
             }
         scanCallback = cb

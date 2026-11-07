@@ -4,6 +4,8 @@
 
 package app.vauchi.ble
 
+import android.bluetooth.le.AdvertiseCallback
+import android.bluetooth.le.ScanCallback
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import uniffi.vauchi_platform.MobileEvent
@@ -18,7 +20,7 @@ class BleFailureTest {
     @Test
     fun scan_permission_failure_maps_to_permission_denied() {
         assertEquals(
-            MobileEvent.PermissionDenied("ble"),
+            MobileEvent.PermissionDenied("BLE"),
             BleFailure.toEvent("Missing BLUETOOTH_SCAN permission"),
         )
     }
@@ -26,7 +28,7 @@ class BleFailureTest {
     @Test
     fun connect_permission_failure_maps_to_permission_denied() {
         assertEquals(
-            MobileEvent.PermissionDenied("ble"),
+            MobileEvent.PermissionDenied("BLE"),
             BleFailure.toEvent("Missing BLUETOOTH_CONNECT permission"),
         )
     }
@@ -34,7 +36,7 @@ class BleFailureTest {
     @Test
     fun gatt_server_permission_failure_maps_to_permission_denied() {
         assertEquals(
-            MobileEvent.PermissionDenied("ble"),
+            MobileEvent.PermissionDenied("BLE"),
             BleFailure.toEvent("BLE permission not granted"),
         )
     }
@@ -42,7 +44,7 @@ class BleFailureTest {
     @Test
     fun adapter_off_maps_to_hardware_unavailable() {
         assertEquals(
-            MobileEvent.HardwareUnavailable("ble"),
+            MobileEvent.HardwareUnavailable("BLE"),
             BleFailure.toEvent("BLE adapter off"),
         )
     }
@@ -50,7 +52,7 @@ class BleFailureTest {
     @Test
     fun scanner_unavailable_maps_to_hardware_unavailable() {
         assertEquals(
-            MobileEvent.HardwareUnavailable("ble"),
+            MobileEvent.HardwareUnavailable("BLE"),
             BleFailure.toEvent("BLE scanner unavailable (adapter off?)"),
         )
     }
@@ -58,8 +60,37 @@ class BleFailureTest {
     @Test
     fun empty_error_maps_to_hardware_unavailable() {
         assertEquals(
-            MobileEvent.HardwareUnavailable("ble"),
+            MobileEvent.HardwareUnavailable("BLE"),
             BleFailure.toEvent(""),
+        )
+    }
+
+    @Test
+    fun an_advertisement_already_running_is_not_a_failure() {
+        assertEquals(
+            null,
+            BleFailure.advertiseStartFailure(AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED),
+        )
+    }
+
+    @Test
+    fun too_many_advertisers_is_a_failure() {
+        assertEquals(
+            "BLE advertise failed: 2",
+            BleFailure.advertiseStartFailure(AdvertiseCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS),
+        )
+    }
+
+    @Test
+    fun a_scan_already_running_is_not_a_failure() {
+        assertEquals(null, BleFailure.scanStartFailure(ScanCallback.SCAN_FAILED_ALREADY_STARTED))
+    }
+
+    @Test
+    fun a_scan_the_app_may_not_register_is_a_failure() {
+        assertEquals(
+            "BLE scan failed: 2",
+            BleFailure.scanStartFailure(ScanCallback.SCAN_FAILED_APPLICATION_REGISTRATION_FAILED),
         )
     }
 }
