@@ -25,7 +25,7 @@
 # Usage:
 #   check-no-hardcoded-strings.sh <kotlin-file-or-dir> [more...]
 #
-# Exit code 1 if any violation is found.
+# Exit 1 for violations; >1 when the scan could not complete.
 #
 # History: audit 18 C1 (`_private!2026-05-21-android-mainactivity-hardcoded-strings`)
 # G2 + G3 — shell-based gate instead of a custom Detekt plugin,
@@ -50,13 +50,21 @@ for s in "${ALLOWLIST[@]}"; do
 done
 
 # rg with -g is portable across alpine (CI) and GNU/BSD hosts.
-matches=$(rg --no-heading --line-number --with-filename \
+if matches=$(rg --no-heading --line-number --with-filename \
   -g '*.kt' \
   -e 'Text\("[A-Z][^"]*"\)' \
   -e '\.setTitle\("[A-Z][^"]*"\)' \
   -e '\.setSubtitle\("[A-Z][^"]*"\)' \
   -e 'contentDescription = "[A-Z][^"]*"' \
-  "$@" 2>/dev/null || true)
+  "$@"); then
+  :
+else
+  search_status=$?
+  if [[ "$search_status" -ne 1 ]]; then
+    echo "ERROR: hardcoded-string scan could not complete" >&2
+    exit "$search_status"
+  fi
+fi
 
 if [[ -z "$matches" ]]; then
   echo "OK: no hardcoded user-visible strings under: $*"

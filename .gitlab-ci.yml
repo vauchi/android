@@ -398,6 +398,7 @@ lint:cross-cutting-blocking:
     - echo "=== Cross-cutting blocking lint checks ==="
     - bash ../locales/scripts/check-locale-key-coverage.sh
         app/src/main ../locales '*.kt'
+    - python3 scripts/tests/check-no-hardcoded-strings.test.py
     - bash scripts/check-no-hardcoded-strings.sh
         app/src/main/kotlin/app/vauchi
     - python3 .ratchet-scripts/humble_check.py --repo "${CI_PROJECT_NAME}" --repo-path "${CI_PROJECT_DIR}" --config .ratchet-scripts/humble_check_rules.json --check .ratchet-scripts/humble_check.baseline.json
