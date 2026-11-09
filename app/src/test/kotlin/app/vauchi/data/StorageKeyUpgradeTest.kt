@@ -121,7 +121,7 @@ class StorageKeyUpgradeTest {
         assertTrue(!surface(engine).startsWith("storage_lock"))
         assertTrue(engine.hasIdentity())
         assertEquals(1u, contactCount(engine))
-        assertEquals(listOf("smk"), keychainNames())
+        assertEquals(listOf("brk", "smk"), keychainNames())
         assertNull(oldKeyBlob())
     }
 
@@ -156,7 +156,7 @@ class StorageKeyUpgradeTest {
         runBlocking { withTimeout(30_000) { opened.await() } }
         assertTrue(engine.hasIdentity())
         assertEquals(1u, contactCount(engine))
-        assertEquals(listOf("smk"), keychainNames())
+        assertEquals(listOf("brk", "smk"), keychainNames())
         assertNull(oldKeyBlob())
     }
 
