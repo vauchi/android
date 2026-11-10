@@ -34,6 +34,21 @@ class SyncWorker(
      */
     internal var repositoryFactory: (Context) -> VauchiRepository = VauchiRepository::getInstance
 
+    /**
+     * On locked storage the identity check throws. The scheduler tick then
+     * leaves Core the record it shows on My Info after the unlock
+     * (vauchi/private#1093) and fails the same way, so the check's error
+     * still reaches the retry below (#603).
+     */
+    private fun hasIdentityOrRecordMissedRun(repository: VauchiRepository): Boolean =
+        try {
+            repository.hasIdentity()
+        } catch (e: Exception) {
+            runCatching { repository.appEngine.periodicSyncTick() }
+                .onFailure { Log.d(TAG, "missed-run tick ended: ${it.javaClass.simpleName}") }
+            throw e
+        }
+
     override suspend fun doWork(): Result {
         Log.d(TAG, "Starting background sync")
 
@@ -56,7 +71,7 @@ class SyncWorker(
             //
             // Inside the guard, not above it: storage initialises lazily behind
             // this call, so on a locked device it throws instead of answering.
-            if (!repository.hasIdentity()) {
+            if (!hasIdentityOrRecordMissedRun(repository)) {
                 Log.d(TAG, "No identity yet; skipping background sync")
                 rearm(emptyList())
                 return Result.success()
