@@ -34,9 +34,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.FileProvider
+import app.vauchi.ui.coreui.CELEBRATION_BEAT_MILLIS
 import app.vauchi.ui.coreui.CoreAppViewModel
+import app.vauchi.ui.coreui.celebrationAnimationPlays
+import app.vauchi.ui.coreui.celebrationHapticFeedback
 import app.vauchi.ui.coreui.BiometricUnlockHandler
 import app.vauchi.ui.coreui.FilePickHandler
 import app.vauchi.ui.coreui.LocalPermissionGrantReporter
@@ -44,6 +48,7 @@ import app.vauchi.ui.coreui.LocalUseFrontCamera
 import app.vauchi.ui.coreui.UserPresenceSecretHandler
 import app.vauchi.ui.theme.SurfaceTheme
 import java.io.File
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 @Composable
@@ -56,6 +61,9 @@ fun PresentationHost(
     val alertMessage by viewModel.alertMessage.collectAsState()
     val imagePickEvent by viewModel.imagePickEvent.collectAsState()
     val useFrontCamera by viewModel.useFrontCamera.collectAsState()
+    val celebrateRequest by viewModel.celebrateRequest.collectAsState()
+    var celebrating by remember { mutableStateOf(false) }
+    val hostView = LocalView.current
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -97,6 +105,19 @@ fun PresentationHost(
                 1f,
             ) == 0f
         }.getOrDefault(false)
+
+    // Exchange success (Command::Celebrate): the haptic Core names, then one
+    // beat of the flash unless the OS asks for reduced motion.
+    LaunchedEffect(celebrateRequest) {
+        val request = celebrateRequest ?: return@LaunchedEffect
+        viewModel.consumeCelebrateRequest()
+        celebrationHapticFeedback(request.haptic)?.let { hostView.performHapticFeedback(it) }
+        if (celebrationAnimationPlays(request.animation, reducedMotion)) {
+            celebrating = true
+            delay(CELEBRATION_BEAT_MILLIS)
+            celebrating = false
+        }
+    }
 
     FilePickHandler(viewModel)
     BiometricUnlockHandler(viewModel)
@@ -185,6 +206,7 @@ fun PresentationHost(
                     profile = profile,
                     activeSurfaceId = activeSurfaceId,
                     reducedMotion = reducedMotion,
+                    celebrating = celebrating,
                     focusedBindingId = focusedBindingId,
                     onFocusedBinding = onFocusedBinding,
                     actions = actions,

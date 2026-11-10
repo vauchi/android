@@ -49,6 +49,7 @@ fun PresentationScreen(
     onFocusedBinding: (String, Boolean) -> Unit,
     actions: PresentationScreenActions,
     modifier: Modifier = Modifier,
+    celebrating: Boolean = false,
     snackbarHost: @Composable () -> Unit = {},
     dialogs: @Composable () -> Unit = {},
 ) {
@@ -150,6 +151,8 @@ fun PresentationScreen(
                         onDismiss = actions.onDismissOverlay,
                     )
                 }
+
+                CelebrationFlash(visible = celebrating, tokens = tokens)
 
                 dialogs()
             }

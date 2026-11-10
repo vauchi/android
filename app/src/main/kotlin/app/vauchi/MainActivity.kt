@@ -42,7 +42,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -83,7 +82,6 @@ import app.vauchi.ui.coreui.CoreAppViewModel
 import app.vauchi.ui.coreui.OrientationDTO
 import app.vauchi.ui.coreui.OrientationLockRequest
 import app.vauchi.ui.coreui.PermissionGrantEvent
-import app.vauchi.ui.coreui.celebrationHapticFeedback
 import app.vauchi.ui.presentation.PresentationEvent
 import app.vauchi.ui.presentation.PresentationHost
 import app.vauchi.ui.theme.SurfaceTheme
@@ -670,14 +668,6 @@ fun MainScreen(
             pendingLocationTimeout.value = timeout
             locationPermissionLauncher.launch(locationPerms)
         }
-    }
-    // Exchange success (Command::Celebrate): fire the haptic Core names.
-    val celebrateRequest by coreAppViewModel.celebrateRequest.collectAsState()
-    val hostView = LocalView.current
-    LaunchedEffect(celebrateRequest) {
-        val request = celebrateRequest ?: return@LaunchedEffect
-        coreAppViewModel.consumeCelebrateRequest()
-        celebrationHapticFeedback(request.haptic)?.let { hostView.performHapticFeedback(it) }
     }
     DisposableEffect(Unit) {
         onDispose { AudioProximityService.getInstance(context).stop() }
