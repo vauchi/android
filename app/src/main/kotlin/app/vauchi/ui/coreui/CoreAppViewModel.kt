@@ -47,9 +47,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import uniffi.vauchi_platform.DomainCommand
-import uniffi.vauchi_platform.DomainCommandResult
-import uniffi.vauchi_platform.MobileAhaMoment
-import uniffi.vauchi_platform.MobileAhaMomentType
 import uniffi.vauchi_platform.MobileBleLinkDirection
 import uniffi.vauchi_platform.MobileEvent
 import uniffi.vauchi_platform.MobileNetworkCost
@@ -171,19 +168,6 @@ class CoreAppViewModel(
 
     fun consumeCelebrateRequest() {
         _celebrateRequest.value = null
-    }
-
-    /**
-     * Aha-moment toast request tied to the exchange-success ceremony. When
-     * `Command::Celebrate` arrives we also ask core for the
-     * `firstContactAdded` milestone. If reduce-motion is enabled the Compose
-     * layer surfaces this as a toast instead of the animated checkmark.
-     */
-    private val _ahaMomentRequest = MutableStateFlow<MobileAhaMoment?>(null)
-    val ahaMomentRequest: StateFlow<MobileAhaMoment?> = _ahaMomentRequest.asStateFlow()
-
-    fun consumeAhaMomentRequest() {
-        _ahaMomentRequest.value = null
     }
 
     /**
@@ -1031,20 +1015,6 @@ class CoreAppViewModel(
     }
 
     /**
-     * Ask core to trigger an aha [momentType] and return the localized moment
-     * if it should be shown now, or `null` if already seen. Errors are logged
-     * and ignored — a missed milestone is non-fatal.
-     */
-    private fun tryTriggerAhaMoment(momentType: MobileAhaMomentType): MobileAhaMoment? =
-        try {
-            val result = appEngine.dispatchDomainCommand(DomainCommand.TryTriggerAhaMoment(momentType))
-            (result as? DomainCommandResult.AhaMomentOpt)?.moment
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to trigger aha moment $momentType", e)
-            null
-        }
-
-    /**
      * Dispatch native [CommandDTO] effects emitted by core presentation or
      * hardware-event processing.
      *
@@ -1174,11 +1144,6 @@ class CoreAppViewModel(
                             sound = cmd.sound,
                             animation = cmd.animation,
                         )
-                    // Mark the first-contact milestone as seen and stash the
-                    // returned moment. CoreScreenView renders it as a toast
-                    // when reduce-motion is enabled; otherwise the celebrate
-                    // animation carries the moment and the toast is skipped.
-                    _ahaMomentRequest.value = tryTriggerAhaMoment(MobileAhaMomentType.FIRST_CONTACT_ADDED)
                 }
 
                 is CommandDTO.BleStartScanning -> {
