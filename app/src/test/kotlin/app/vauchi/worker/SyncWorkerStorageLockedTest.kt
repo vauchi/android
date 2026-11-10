@@ -15,7 +15,9 @@ import app.vauchi.data.installFromBefore
 import app.vauchi.screenshots.FakeAndroidKeyStore
 import app.vauchi.screenshots.HostCoreLibrary
 import kotlinx.coroutines.runBlocking
+import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -64,5 +66,26 @@ class SyncWorkerStorageLockedTest {
         val result = runBlocking { worker.doWork() }
 
         assertEquals(ListenableWorker.Result.retry(), result)
+    }
+
+    /**
+     * A run that finds storage locked leaves the record Core shows on My
+     * Info after the unlock (vauchi/private#1093), so a missed background
+     * check is not silent.
+     */
+    @Test
+    fun aLockedRunLeavesTheMissedRunRecordForTheUnlock() {
+        val provider = OldStorageKeyProvider()
+        installFromBefore(context, provider)
+        provider.failure = AuthenticationRequiredException("Device must be unlocked to access encryption keys")
+        val record = File(context.filesDir, "missed_background_run")
+        record.delete()
+        val worker = TestListenableWorkerBuilder<SyncWorker>(context).build()
+        worker.repositoryFactory = { VauchiRepository(it, provider) }
+
+        val result = runBlocking { worker.doWork() }
+
+        assertEquals(ListenableWorker.Result.retry(), result)
+        assertTrue("the missed run is recorded for the unlock", record.isFile)
     }
 }
