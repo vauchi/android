@@ -44,6 +44,8 @@ class LocalizationManager(
     @Volatile
     private var appEngine: PlatformAppEngine? = null
 
+    private var localeOverrideForTesting: String? = null
+
     /** Language code of the locale in effect */
     var currentLocale: String by mutableStateOf(ENGLISH)
         private set
@@ -181,8 +183,14 @@ class LocalizationManager(
      * Apply the currently selected locale.
      */
     fun applySelectedLocale() {
-        followSystem = safeGetBoolean(KEY_FOLLOW_SYSTEM, true)
-        selectedLocaleCode = safeGetString(KEY_SELECTED_LOCALE, null)
+        val testingLocale = localeOverrideForTesting.takeIf { BuildConfig.DEBUG }
+        if (testingLocale != null) {
+            followSystem = false
+            selectedLocaleCode = testingLocale
+        } else {
+            followSystem = safeGetBoolean(KEY_FOLLOW_SYSTEM, true)
+            selectedLocaleCode = safeGetString(KEY_SELECTED_LOCALE, null)
+        }
         currentLocale =
             try {
                 val explicit = selectedLocaleCode
@@ -196,6 +204,13 @@ class LocalizationManager(
                 Log.e(TAG, "Failed to apply selected locale: native library not loaded", e)
                 ENGLISH
             }
+    }
+
+    fun setLocaleOverrideForTesting(code: String?) {
+        if (!BuildConfig.DEBUG) return
+        localeOverrideForTesting = code
+        applySelectedLocale()
+        pushRenderContext(appContext, appEngine)
     }
 
     private fun safeGetBoolean(

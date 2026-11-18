@@ -212,6 +212,11 @@ class MainActivity : FragmentActivity() {
     private val _navigateTo = mutableStateOf<String?>(null)
 
     private fun handleIncomingIntent(intent: Intent?) {
+        if (BuildConfig.DEBUG) {
+            intent?.getStringExtra("test_locale")?.let { locale ->
+                LocalizationManager.getInstance(this).setLocaleOverrideForTesting(locale)
+            }
+        }
         if (intent?.action == Intent.ACTION_VIEW) {
             _deepLinkUri.value = intent.data
         }

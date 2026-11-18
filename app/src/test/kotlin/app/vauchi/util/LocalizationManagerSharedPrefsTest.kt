@@ -123,6 +123,29 @@ class LocalizationManagerSharedPrefsTest {
     }
 
     @Test
+    fun `debug locale override is temporary and does not change saved preferences`() {
+        prefs
+            .edit()
+            .putString("selected_locale_code", "fr")
+            .putBoolean("follow_system", false)
+            .commit()
+        val mgr = newManager()
+
+        mgr.setLocaleOverrideForTesting("en")
+
+        assertEquals("override controls the effective locale", "en", mgr.currentLocale)
+        assertEquals("override reaches the render context", "en", mgr.selectedLocaleCode)
+        assertFalse("override is explicit rather than system-derived", mgr.followSystem)
+        assertEquals("saved locale is untouched", "fr", prefs.getString("selected_locale_code", null))
+
+        mgr.setLocaleOverrideForTesting(null)
+
+        assertEquals("clearing restores the saved locale", "fr", mgr.currentLocale)
+        assertEquals("clearing restores the saved render context", "fr", mgr.selectedLocaleCode)
+        assertFalse("clearing restores the saved follow-system choice", mgr.followSystem)
+    }
+
+    @Test
     fun `corrupted boolean falls back to default without crash`() {
         // Inject a string where a boolean is expected — simulates a
         // SharedPreferences file rewritten by a buggy build or an
