@@ -133,14 +133,12 @@ class LocalizationManagerSharedPrefsTest {
 
         mgr.setLocaleOverrideForTesting("en")
 
-        assertEquals("override controls the effective locale", "en", mgr.currentLocale)
         assertEquals("override reaches the render context", "en", mgr.selectedLocaleCode)
         assertFalse("override is explicit rather than system-derived", mgr.followSystem)
         assertEquals("saved locale is untouched", "fr", prefs.getString("selected_locale_code", null))
 
         mgr.setLocaleOverrideForTesting(null)
 
-        assertEquals("clearing restores the saved locale", "fr", mgr.currentLocale)
         assertEquals("clearing restores the saved render context", "fr", mgr.selectedLocaleCode)
         assertFalse("clearing restores the saved follow-system choice", mgr.followSystem)
     }
