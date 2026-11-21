@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +37,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 
@@ -130,6 +132,22 @@ internal fun PresentationSurface(
                             )
                         }
                     }
+                }
+                // A decision that must not scroll away: under the content
+                // and out of its scroll, one action under the other in
+                // Core's order (vauchi/private#1304).
+                bar?.pinned?.forEachIndexed { index, action ->
+                    PinnedActionButton(
+                        surfaceId = surface.surfaceId,
+                        action = action,
+                        index = index,
+                        onEvent = onEvent,
+                        modifier =
+                            Modifier.padding(
+                                horizontal = surface.tokens.spacingLarge.dp,
+                                vertical = surface.tokens.spacingSmall.dp,
+                            ),
+                    )
                 }
                 // Only when Core sends one: a fixed-layout surface keeps it
                 // in view below the weighted content above, a scrolling
@@ -256,6 +274,32 @@ private fun PrimaryActionButton(
             )
         }
         Text(action.label)
+    }
+}
+
+/**
+ * One of Core's pinned actions: full width, its label wrapping instead of
+ * being cut, and outlined, so no answer reads as the suggested one.
+ */
+@Composable
+private fun PinnedActionButton(
+    surfaceId: String,
+    action: ActionSpec,
+    index: Int,
+    onEvent: (PresentationEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedButton(
+        onClick = { onEvent(PresentationEvent.ActionActivated(surfaceId, action.interactionId)) },
+        enabled = action.enabled,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .testTag("contextbar.pinned.$index")
+                .semantics { contentDescription = action.accessibilityLabel },
+    ) {
+        Text(action.label, textAlign = TextAlign.Center)
     }
 }
 

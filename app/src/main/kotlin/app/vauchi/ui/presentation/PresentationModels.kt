@@ -38,6 +38,11 @@ data class ContextBar(
     val secondary: ActionSpec?,
     /** Explains the surface (vauchi/private#479); absent from a Core without text for it. */
     val info: ActionSpec? = null,
+    /**
+     * A decision Core wants kept in view under the content, in this order
+     * (vauchi/private#1304); empty from a Core that predates the slot.
+     */
+    val pinned: List<ActionSpec> = emptyList(),
 )
 
 data class NavigationItem(

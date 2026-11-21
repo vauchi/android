@@ -188,6 +188,9 @@ sealed interface PresentationEvent {
                     )
                     put("motion", if (reducedMotion) "reduced" else "full")
                     darkAppearance?.let { put("color_scheme", if (it) "dark" else "light") }
+                    // This shell keeps `ContextBar.pinned` in view; Core pins
+                    // nothing for a shell that does not say so (vauchi/private#1304).
+                    put("pinned_actions", true)
                 },
             )
 

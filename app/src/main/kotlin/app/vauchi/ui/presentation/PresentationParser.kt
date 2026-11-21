@@ -152,6 +152,7 @@ object PresentationProtocol {
             primary = value.nullableObject("primary")?.let(::action),
             secondary = value.nullableObject("secondary")?.let(::action),
             info = value.nullableObject("info")?.let(::action),
+            pinned = value.nullableArray("pinned")?.map { action(it.jsonObject) }.orEmpty(),
         )
 
     private fun action(value: JsonObject): ActionSpec =
