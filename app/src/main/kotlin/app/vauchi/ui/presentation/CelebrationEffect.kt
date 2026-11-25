@@ -26,13 +26,14 @@ internal fun rememberCelebrating(
     val hostView = LocalView.current
     LaunchedEffect(request) {
         val celebration = request ?: return@LaunchedEffect
-        consumeRequest()
         celebrationHapticFeedback(celebration.haptic)?.let { hostView.performHapticFeedback(it) }
         if (celebrationAnimationPlays(celebration.animation, reducedMotion)) {
             celebrating = true
             delay(CELEBRATION_BEAT_MILLIS)
             celebrating = false
         }
+        // Clearing the effect's key before the delay cancels its cleanup (#276).
+        consumeRequest()
     }
     return celebrating
 }
