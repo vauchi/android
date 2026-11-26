@@ -27,6 +27,9 @@ import org.robolectric.annotation.Implements
 import org.robolectric.shadow.api.Shadow.extract
 import org.robolectric.shadows.ShadowActivity
 import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -153,6 +156,55 @@ class ActivityFilePickerHostTest {
         assertTrue(picker.get().isFinishing)
         assertEquals(null, shadowOf(picker.get()).nextStartedActivity)
         assertEquals(emptyList<FilePickOutcome>(), answers)
+    }
+
+    @Test
+    fun cancellationClosesAnAcquiredStreamEvenWhenItIgnoresInterruption() {
+        val started = CountDownLatch(1)
+        val closed = CountDownLatch(1)
+        val stream =
+            object : InputStream() {
+                override fun read(): Int {
+                    started.countDown()
+                    while (closed.count > 0) {
+                        try {
+                            if (!closed.await(10, TimeUnit.SECONDS)) throw IOException("test read timed out")
+                        } catch (_: InterruptedException) {
+                            // Native file streams may keep reading after Future.cancel(true).
+                        }
+                    }
+                    return -1
+                }
+
+                override fun close() {
+                    closed.countDown()
+                }
+            }
+        val uri = Uri.parse("content://picked/blocked")
+        shadowOf(activity.contentResolver).registerInputStream(uri, stream)
+        val lease = host.pick(command, answers::add)
+        val (picker, native) = open()
+        shadowOf(picker).receiveResult(native, Activity.RESULT_OK, Intent().setData(uri))
+        try {
+            assertTrue(started.await(10, TimeUnit.SECONDS))
+            lease.close()
+            assertTrue("cancel must close the native stream", closed.await(1, TimeUnit.SECONDS))
+            io.submit {}.get(10, TimeUnit.SECONDS)
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(emptyList<FilePickOutcome>(), answers)
+        } finally {
+            stream.close()
+        }
+    }
+
+    @Test
+    fun nativeFiltersCannotChangeAfterTheirRequestIsAccepted() {
+        val filters = mutableListOf("text/vcard")
+        host.pick(command.copy(acceptedMimeTypes = filters), answers::add)
+        filters[0] = "image/png"
+        val (_, native) = open()
+        assertEquals("text/vcard", native.type)
+        assertEquals(listOf("text/vcard"), native.getStringArrayExtra(Intent.EXTRA_MIME_TYPES)!!.toList())
     }
 }
 

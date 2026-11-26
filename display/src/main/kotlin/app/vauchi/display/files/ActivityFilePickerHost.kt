@@ -41,8 +41,13 @@ class ActivityFilePickerHost internal constructor(
             onFinished(FilePickOutcome.Failed(FilePickFailure.ReadFailed))
             return AutoCloseable {}
         }
+        val snapshot =
+            command.copy(
+                acceptedMimeTypes = command.acceptedMimeTypes.toList(),
+                acceptedExtensions = command.acceptedExtensions.toList(),
+            )
         val request =
-            NativeFilePick(owner, command, io) { result ->
+            NativeFilePick(owner, snapshot, io) { result ->
                 active = null
                 onFinished(result)
             }
@@ -68,9 +73,12 @@ class ActivityFilePickerHost internal constructor(
         requireMainThread()
         if (closed) return
         closed = true
-        active?.close()
-        active = null
-        io.shutdownNow()
+        try {
+            active?.close()
+        } finally {
+            active = null
+            io.shutdownNow()
+        }
     }
 
     private fun requireMainThread() {

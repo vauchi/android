@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Binder
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -14,9 +15,11 @@ import androidx.lifecycle.LifecycleOwner
 import app.vauchi.contract.Command
 import app.vauchi.contract.FilePickFailure
 import app.vauchi.contract.FilePickOutcome
+import java.io.InputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 internal class NativeFilePick(
     private var owner: ComponentActivity?,
@@ -28,6 +31,7 @@ internal class NativeFilePick(
     LifecycleEventObserver {
     private val main = Handler(Looper.getMainLooper())
     private val canceled = AtomicBoolean(false)
+    private val input = AtomicReference<InputStream?>(null)
     private var picker: DocumentPickerActivity? = null
     private var reading = false
     private var future: Future<*>? = null
@@ -53,8 +57,25 @@ internal class NativeFilePick(
         try {
             future =
                 io.submit {
-                    val result = PickedDocumentReader(resolver).read(uri, command.maxBytes, canceled::get)
-                    main.post { finish(result) }
+                    val result =
+                        try {
+                            PickedDocumentReader(resolver).read(
+                                uri,
+                                command.maxBytes,
+                                onOpened = { stream ->
+                                    input.set(stream)
+                                    if (canceled.get()) input.getAndSet(null)?.close()
+                                },
+                                isCancelled = canceled::get,
+                            )
+                        } finally {
+                            input.set(null)
+                        }
+                    if (!canceled.get()) {
+                        main.postAtTime({ finish(result) }, this, SystemClock.uptimeMillis())
+                        // Close may race between the first check and posting a payload-owning callback.
+                        if (canceled.get()) main.removeCallbacksAndMessages(this)
+                    }
                 }
         } catch (_: Exception) {
             finish(FilePickOutcome.Failed(FilePickFailure.ReadFailed))
@@ -90,8 +111,15 @@ internal class NativeFilePick(
         owner = null
         future?.cancel(true)
         future = null
+        main.removeCallbacksAndMessages(this)
         val activity = picker
         picker = null
-        activity?.dismissChild()
+        try {
+            input.getAndSet(null)?.close()
+        } catch (_: Exception) {
+            // A provider close failure must not retain the native picker or its callbacks.
+        } finally {
+            activity?.dismissChild()
+        }
     }
 }

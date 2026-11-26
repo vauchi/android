@@ -20,6 +20,7 @@ class PickedDocumentReader(
     fun read(
         uri: Uri,
         maxBytes: ULong,
+        onOpened: (InputStream) -> Unit = {},
         isCancelled: () -> Boolean = { false },
     ): FilePickOutcome {
         if (isCancelled()) return FilePickOutcome.Cancelled
@@ -31,7 +32,10 @@ class PickedDocumentReader(
             }
             if (isCancelled()) return FilePickOutcome.Cancelled
             val stream = resolver.openInputStream(uri) ?: return failed(FilePickFailure.ReadFailed)
-            stream.use { readBounded(it, name, maxBytes, isCancelled) }
+            stream.use {
+                onOpened(it)
+                readBounded(it, name, maxBytes, isCancelled)
+            }
         } catch (_: Exception) {
             if (isCancelled()) FilePickOutcome.Cancelled else failed(FilePickFailure.ReadFailed)
         }
