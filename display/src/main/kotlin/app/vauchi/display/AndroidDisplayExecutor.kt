@@ -66,6 +66,7 @@ class AndroidDisplayExecutor(
         synchronized(guard) {
             if (closed) return
             closed = true
+            session.release()
         }
         main.execute {
             try {

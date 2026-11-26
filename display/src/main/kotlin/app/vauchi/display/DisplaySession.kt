@@ -86,5 +86,11 @@ class DisplaySession(
         }
     }
 
+    internal fun release() {
+        synchronized(monitor) {
+            mutableState.value = DisplaySnapshot()
+        }
+    }
+
     fun report(event: Event) = onEvent(event)
 }

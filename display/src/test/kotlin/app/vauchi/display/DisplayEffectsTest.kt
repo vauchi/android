@@ -86,4 +86,23 @@ class DisplayEffectsTest {
             compose.runOnIdle { assertEquals(emptyList<DisplayEffect>(), owner.state.value.effects) }
         }
     }
+
+    @Test
+    fun closingTheOwnerRemovesNativeFeedbackAndReleasesItsPreparedState() {
+        compose.mainClock.autoAdvance = false
+        AndroidDisplayExecutor(application) { true }.use { owner ->
+            prepareDisplay(owner)
+            owner.execute(Command.PresentAlert(AlertSpec("Private message", "Private title")))
+            owner.execute(Command.Celebrate(AnimationToken.CardsMeet, HapticPattern.None, SoundToken.None))
+            compose.setContent { DisplayContent(owner, TestMedia) }
+            advance(200)
+            compose.onNodeWithText("Private title").assertIsDisplayed()
+            compose.onNodeWithTag(CELEBRATION_FLASH_TAG).assertIsDisplayed()
+            compose.runOnIdle { owner.close() }
+            advance(1000)
+            compose.onNodeWithText("Private title").assertDoesNotExist()
+            compose.onNodeWithTag(CELEBRATION_FLASH_TAG).assertDoesNotExist()
+            compose.runOnIdle { assertEquals(DisplaySnapshot(), owner.state.value) }
+        }
+    }
 }

@@ -94,9 +94,10 @@ class DisplayContentTest {
                 refuse = true
             }
             compose.onNodeWithText("Prepared action").performClick()
-            compose.onNodeWithText("Prepared action").performClick()
+            compose.onNodeWithText("Prepared action").assertDoesNotExist()
             compose.runOnIdle {
                 assertEquals(listOf(Event.SurfaceActivated("opaque-surface")), offered)
+                assertFalse(owner.report(Event.ActionActivated("opaque-action", "opaque-surface")))
                 assertFalse(owner.execute(Command.ShowToast(ToastSpec("not admitted"))))
             }
         }
