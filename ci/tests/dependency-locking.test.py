@@ -12,20 +12,22 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class DependencyLockingTest(unittest.TestCase):
     def test_a_missing_runtime_lock_cannot_compile(self):
-        lock = ROOT / "app/gradle.lockfile"
-        original = lock.read_bytes() if lock.exists() else None
-        try:
-            if lock.exists():
-                lock.unlink()
-            result = subprocess.run(
-                [str(ROOT / "gradlew"), ":app:compileDebugKotlin", "--offline", "--quiet"],
-                cwd=ROOT, capture_output=True, text=True, timeout=180, check=False,
-            )
-            self.assertNotEqual(0, result.returncode, "Gradle compiled without the app dependency lock")
-            self.assertIn("does not have lock state", result.stderr)
-        finally:
-            if original is not None:
-                lock.write_bytes(original)
+        for module in ("app", "display"):
+            with self.subTest(module=module):
+                lock = ROOT / module / "gradle.lockfile"
+                original = lock.read_bytes() if lock.exists() else None
+                try:
+                    if lock.exists():
+                        lock.unlink()
+                    result = subprocess.run(
+                        [str(ROOT / "gradlew"), f":{module}:compileDebugKotlin", "--offline", "--quiet"],
+                        cwd=ROOT, capture_output=True, text=True, timeout=180, check=False,
+                    )
+                    self.assertNotEqual(0, result.returncode, f"Gradle compiled without the {module} dependency lock")
+                    self.assertIn("does not have lock state", result.stderr)
+                finally:
+                    if original is not None:
+                        lock.write_bytes(original)
 
 
 if __name__ == "__main__":
