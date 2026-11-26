@@ -14,6 +14,7 @@ import app.vauchi.contract.FilePickOutcome
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,10 +49,12 @@ class ActivityFilePickerHostTest {
 
     private fun open(): Pair<DocumentPickerActivity, Intent> {
         val launch = shadowOf(activity).nextStartedActivity
+        assertEquals(launch, shadowOf(activity).nextStartedActivityForResult.intent)
         assertEquals(DocumentPickerActivity::class.java.name, launch.component!!.className)
         val picker = Robolectric.buildActivity(DocumentPickerActivity::class.java, launch).setup()
         pickers += picker
         val native = shadowOf(picker.get()).nextStartedActivityForResult
+        assertEquals(native.intent, shadowOf(picker.get()).nextStartedActivity)
         nativeCodes[picker.get()] = native.requestCode
         return picker.get() to native.intent
     }
@@ -205,6 +208,21 @@ class ActivityFilePickerHostTest {
         val (_, native) = open()
         assertEquals("text/vcard", native.type)
         assertEquals(listOf("text/vcard"), native.getStringArrayExtra(Intent.EXTRA_MIME_TYPES)!!.toList())
+    }
+
+    @Test
+    fun proxyRecreationKeepsThePendingNativeResultWithoutOpeningASecondPicker() {
+        host.pick(command, answers::add)
+        val (original, _) = open()
+        val requestCode = nativeCodes.getValue(original)
+        val controller = pickers.last().recreate()
+        val recreated = controller.get()
+        assertNotSame(original, recreated)
+        assertEquals(null, shadowOf(recreated).nextStartedActivity)
+        assertEquals(emptyList<FilePickOutcome>(), answers)
+        shadowOf(recreated).internalCallDispatchActivityResult(null, requestCode, Activity.RESULT_CANCELED, null)
+        assertEquals(listOf(FilePickOutcome.Cancelled), answers)
+        assertTrue(recreated.isFinishing)
     }
 }
 

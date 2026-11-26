@@ -5,6 +5,7 @@ package app.vauchi.display.files
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ProviderInfo
 import android.net.Uri
 import android.os.Looper
 import androidx.activity.ComponentActivity
@@ -22,6 +23,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowContentResolver
 import java.io.InputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -121,6 +123,37 @@ class NativeFilePickerCancellationTest {
             host.pick(command.copy(requestId = "next"), answers::add)
             val next = select(uri)
             assertTrue(next.isFinishing)
+            assertEquals(listOf(FilePickOutcome.Failed(FilePickFailure.ReadFailed)), answers)
+        } finally {
+            released.countDown()
+            assertTrue(returned.await(10, TimeUnit.SECONDS))
+        }
+    }
+
+    @Test
+    fun aBlockedProviderQueryRemainsBoundedAndCannotHoldNativeUiOpen() {
+        val started = CountDownLatch(1)
+        val released = CountDownLatch(1)
+        val returned = CountDownLatch(1)
+        val provider =
+            SelectedDocumentProvider().apply {
+                beforeQuery = {
+                    started.countDown()
+                    awaitIgnoringInterruption(released)
+                    returned.countDown()
+                }
+            }
+        provider.attachInfo(owner.get(), ProviderInfo().apply { authority = "picked" })
+        ShadowContentResolver.registerProviderInternal("picked", provider)
+        val uri = Uri.parse("content://picked/query-blocked")
+        val lease = host.pick(command, answers::add)
+        val picker = select(uri)
+        try {
+            assertTrue(started.await(10, TimeUnit.SECONDS))
+            lease.close()
+            assertTrue(picker.isFinishing)
+            host.pick(command.copy(requestId = "next"), answers::add)
+            assertTrue(select(uri).isFinishing)
             assertEquals(listOf(FilePickOutcome.Failed(FilePickFailure.ReadFailed)), answers)
         } finally {
             released.countDown()
