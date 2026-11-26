@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.painterResource
-import app.vauchi.R
+import app.vauchi.display.R
 
 /**
  * What a core icon token draws as: a Material glyph, or one of Vauchi's

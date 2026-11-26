@@ -52,6 +52,7 @@ fun PresentationScreen(
     celebrating: Boolean = false,
     snackbarHost: @Composable () -> Unit = {},
     dialogs: @Composable () -> Unit = {},
+    media: PresentationMedia? = null,
 ) {
     // PersistentNavigationBar and PresentationOverlay sit beside, not
     // below, PresentationSurface — which provides the token for its own
@@ -59,7 +60,10 @@ fun PresentationScreen(
     // again here to size their own touch targets.
     val tokens = state.surfaces[activeSurfaceId]?.tokens ?: DefaultPresentationTokens
     val navigationShown = NavigationBarModel(state.activeNavigation?.items.orEmpty()).isVisible
-    CompositionLocalProvider(LocalPresentationTokens provides tokens) {
+    CompositionLocalProvider(
+        LocalPresentationTokens provides tokens,
+        LocalPresentationMedia provides (media ?: LocalPresentationMedia.current),
+    ) {
         Scaffold(
             modifier =
                 modifier

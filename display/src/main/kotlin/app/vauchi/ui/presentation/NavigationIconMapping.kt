@@ -132,84 +132,44 @@ fun navigationIcon(token: String): ImageVector =
 fun statusIcon(token: String): ImageVector? =
     when (token) {
         "lock" -> Icons.Filled.Lock
-
         "warning", "exclamationmark.triangle" -> Icons.Filled.Warning
-
         "info" -> Icons.Filled.Info
-
         "people" -> Icons.Filled.People
-
         "person" -> Icons.Filled.Person
-
         "shield" -> Icons.Filled.Shield
-
         "checkmark.shield" -> Icons.Filled.VerifiedUser
-
         "exclamationmark.shield" -> Icons.Filled.GppMaybe
-
         "checkmark.seal" -> Icons.Filled.Verified
-
         "checkmark" -> Icons.Filled.Check
-
         "checkmark.circle", "checkmark.circle.fill" -> Icons.Filled.CheckCircle
-
         "xmark" -> Icons.Filled.Close
-
         "xmark.circle" -> Icons.Filled.Cancel
-
         "devices" -> Icons.Filled.Devices
-
         "swap", "arrow.left.arrow.right" -> Icons.Filled.SwapHoriz
-
         "qrcode", "qr" -> Icons.Filled.QrCode2
-
         "key" -> Icons.Filled.Key
-
         "folder" -> Icons.Filled.Folder
-
         "eye" -> Icons.Filled.Visibility
-
         "delete", "trash" -> Icons.Filled.Delete
-
         "link" -> Icons.Filled.Link
-
         "lifebuoy" -> Icons.Filled.Support
-
         "sparkles" -> Icons.Filled.AutoAwesome
-
         "camera" -> Icons.Filled.CameraAlt
-
         "camera.slash" -> Icons.Filled.NoPhotography
-
         "photo" -> Icons.Filled.Photo
-
         "wifi" -> Icons.Filled.Wifi
-
         "dot.radiowaves.left.and.right" -> Icons.Filled.Sensors
-
         "cloud" -> Icons.Filled.Cloud
-
         "drive" -> Icons.Filled.Storage
-
         "clock" -> Icons.Filled.Schedule
-
         "clock.arrow.circlepath" -> Icons.Filled.History
-
         "textformat" -> Icons.Filled.TextFormat
-
         "sun.min" -> Icons.Filled.BrightnessLow
-
         "sun.max" -> Icons.Filled.BrightnessHigh
-
         "id_card" -> Icons.Filled.Badge
-
         "heart" -> Icons.Filled.Favorite
-
         "more" -> Icons.Filled.MoreHoriz
-
         "github" -> Icons.Filled.Code
-
         "liberapay" -> Icons.Filled.VolunteerActivism
-
         else -> null
     }

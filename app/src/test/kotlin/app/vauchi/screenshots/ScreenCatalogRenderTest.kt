@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.unit.Density
 import androidx.test.core.app.ActivityScenario
+import app.vauchi.ui.presentation.AppPresentationMedia
 import app.vauchi.ui.presentation.PresentationScreen
 import app.vauchi.ui.presentation.PresentationScreenActions
 import app.vauchi.ui.theme.LocalStatusColors
@@ -121,6 +122,7 @@ class ScreenCatalogRenderTest {
                 typography = Typography,
             ) {
                 PresentationScreen(
+                    media = AppPresentationMedia,
                     state = entry.state,
                     profile = entry.profile,
                     activeSurfaceId = entry.activeSurfaceId,

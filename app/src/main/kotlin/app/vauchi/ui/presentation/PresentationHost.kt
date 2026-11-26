@@ -184,6 +184,7 @@ fun PresentationHost(
                 LocalPermissionGrantReporter provides viewModel::onPermissionGranted,
             ) {
                 PresentationScreen(
+                    media = AppPresentationMedia,
                     state = state,
                     profile = profile,
                     activeSurfaceId = activeSurfaceId,

@@ -41,7 +41,7 @@ internal fun contextualShortcut(
     return action?.takeIf(ActionSpec::enabled)
 }
 
-internal fun rememberFocusedBinding(
+fun rememberFocusedBinding(
     current: String?,
     bindingId: String,
     focused: Boolean,

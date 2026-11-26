@@ -499,6 +499,7 @@ internal fun PresentationNodeRenderer(
         }
 
         is PresentationNode.Qr -> {
+            val media = checkNotNull(LocalPresentationMedia.current) { "Presentation media host missing" }
             val fillsRemaining = LocalFillsRemainingHeight.current
             // A camera filling a fixed screen takes its width from its
             // height; claiming the full width would starve its siblings.
@@ -531,7 +532,7 @@ internal fun PresentationNodeRenderer(
                             },
                         contentAlignment = Alignment.BottomCenter,
                     ) {
-                        QrScanner(
+                        media.Scanner(
                             accessibilityLabel = node.accessibility.label,
                             onScanned = {
                                 onEvent(
@@ -561,7 +562,7 @@ internal fun PresentationNodeRenderer(
                     }
                 } else {
                     node.payloads.firstOrNull()?.let {
-                        QrDisplay(
+                        media.Code(
                             data = it,
                             accessibilityLabel = node.accessibility.label,
                             placement = node.placement,

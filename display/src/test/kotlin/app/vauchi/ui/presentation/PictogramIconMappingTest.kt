@@ -8,10 +8,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.QrCode2
-import app.vauchi.R
+import app.vauchi.display.R
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import java.io.File
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 

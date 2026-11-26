@@ -42,7 +42,7 @@ internal fun toneColors(
     placement: ActionPlacement = ActionPlacement.CommandBar,
 ): ActionToneStyle =
     when (tone) {
-        ActionTone.Standard ->
+        ActionTone.Standard -> {
             ActionToneStyle(
                 // A sheet of filled primaries has no hierarchy: the canvas
                 // draws these affordances outlined and keeps the fill for the
@@ -54,6 +54,13 @@ internal fun toneColors(
                 },
                 colorScheme.primary,
             )
-        ActionTone.Destructive -> ActionToneStyle(ActionToneEmphasis.Filled, colorScheme.error)
-        ActionTone.Serious -> ActionToneStyle(ActionToneEmphasis.Outlined, statusColors.warning)
+        }
+
+        ActionTone.Destructive -> {
+            ActionToneStyle(ActionToneEmphasis.Filled, colorScheme.error)
+        }
+
+        ActionTone.Serious -> {
+            ActionToneStyle(ActionToneEmphasis.Outlined, statusColors.warning)
+        }
     }
