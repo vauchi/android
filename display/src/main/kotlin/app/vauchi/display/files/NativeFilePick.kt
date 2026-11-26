@@ -18,6 +18,7 @@ import app.vauchi.contract.FilePickOutcome
 import java.io.InputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -25,6 +26,7 @@ internal class NativeFilePick(
     private var owner: ComponentActivity?,
     val command: Command.PickFile,
     private val io: ExecutorService,
+    private val cleanup: ExecutorService,
     private var onFinished: ((FilePickOutcome) -> Unit)?,
 ) : Binder(),
     AutoCloseable,
@@ -114,12 +116,25 @@ internal class NativeFilePick(
         main.removeCallbacksAndMessages(this)
         val activity = picker
         picker = null
+        val stream = input.getAndSet(null)
         try {
-            input.getAndSet(null)?.close()
-        } catch (_: Exception) {
-            // A provider close failure must not retain the native picker or its callbacks.
-        } finally {
             activity?.dismissChild()
+        } catch (_: Exception) {
+            // A disappearing native owner must not retain the read or completion callback.
+        } finally {
+            if (stream != null) {
+                try {
+                    cleanup.execute {
+                        try {
+                            stream.close()
+                        } catch (_: Exception) {
+                            // The IO worker still owns the stream's final use/close path.
+                        }
+                    }
+                } catch (_: RejectedExecutionException) {
+                    // Quarantine an unresponsive provider; never queue unbounded disposal work.
+                }
+            }
         }
     }
 }

@@ -18,12 +18,11 @@ import java.util.concurrent.TimeUnit
 class ActivityFilePickerHost internal constructor(
     private val activity: () -> ComponentActivity?,
     private val io: ExecutorService,
+    private val cleanup: ExecutorService = fileExecutor("vauchi-document-close"),
 ) : AutoCloseable {
     constructor(activity: () -> ComponentActivity?) : this(
         activity,
-        ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, SynchronousQueue()) { task ->
-            Thread(task, "vauchi-document-read").apply { isDaemon = true }
-        },
+        fileExecutor("vauchi-document-read"),
     )
 
     private var active: NativeFilePick? = null
@@ -47,7 +46,7 @@ class ActivityFilePickerHost internal constructor(
                 acceptedExtensions = command.acceptedExtensions.toList(),
             )
         val request =
-            NativeFilePick(owner, snapshot, io) { result ->
+            NativeFilePick(owner, snapshot, io, cleanup) { result ->
                 active = null
                 onFinished(result)
             }
@@ -78,6 +77,7 @@ class ActivityFilePickerHost internal constructor(
         } finally {
             active = null
             io.shutdownNow()
+            cleanup.shutdown()
         }
     }
 
@@ -85,3 +85,8 @@ class ActivityFilePickerHost internal constructor(
         check(Looper.myLooper() == Looper.getMainLooper()) { "File picker requires main thread" }
     }
 }
+
+private fun fileExecutor(name: String): ExecutorService =
+    ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, SynchronousQueue()) { task ->
+        Thread(task, name).apply { isDaemon = true }
+    }

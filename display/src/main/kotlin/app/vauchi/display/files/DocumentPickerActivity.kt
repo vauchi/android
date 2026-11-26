@@ -49,8 +49,11 @@ class DocumentPickerActivity : Activity() {
     }
 
     internal fun dismissChild() {
-        finishActivity(DOCUMENT)
-        finish()
+        try {
+            finishActivity(DOCUMENT)
+        } finally {
+            finish()
+        }
     }
 
     override fun onDestroy() {
