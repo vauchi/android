@@ -30,3 +30,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Vauchi"
 include(":app")
+include(":display")

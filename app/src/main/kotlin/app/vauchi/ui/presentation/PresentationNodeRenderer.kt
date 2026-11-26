@@ -653,13 +653,14 @@ internal fun PresentationNodeRenderer(
         }
 
         is PresentationNode.Progress -> {
+            val value = node.value
             Column(modifier = modifier.fillMaxWidth()) {
                 node.label?.let { Text(it) }
-                if (node.value == null) {
+                if (value == null) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 } else {
                     LinearProgressIndicator(
-                        progress = { node.value.toFloat().coerceIn(0f, 1f) },
+                        progress = { value.toFloat().coerceIn(0f, 1f) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }

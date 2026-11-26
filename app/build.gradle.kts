@@ -244,6 +244,7 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
+    implementation(project(":display"))
     // Core Android
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
