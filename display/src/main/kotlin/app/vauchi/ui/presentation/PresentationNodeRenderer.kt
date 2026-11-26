@@ -574,7 +574,7 @@ internal fun PresentationNodeRenderer(
                             // only for this user.
                             modifier =
                                 Modifier
-                                    .widthIn(max = qrSquareMaxDp(node.size).dp)
+                                    .widthIn(max = (if (node.size == "compact") 240 else 320).dp)
                                     .fillMaxWidth()
                                     .zIndex(1f),
                         )

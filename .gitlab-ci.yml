@@ -567,10 +567,7 @@ build:debug:
   stage: build
   needs: []
   script:
-    - ./gradlew assembleDebug lint
-    - python3 ci/android-lint-codequality.py --root .
-        app/build/reports/lint-results-debug.xml display/build/reports/lint-results-debug.xml
-        > gl-code-quality-report.json
+    - sh ci/build-debug.sh
   artifacts:
     when: always
     paths:
@@ -597,6 +594,8 @@ build:debug:
           - "ci/tests/dependency-locking.test.py"
           - "ci/android-lint-codequality.py"
           - "ci/tests/android-lint-codequality.test.py"
+          - "ci/build-debug.sh"
+          - "ci/tests/build-debug.test.py"
           - ".gitlab-ci.yml"
 
 build:release:
@@ -653,6 +652,7 @@ test:unit:
     - ./gradlew test
     - python3 ci/tests/dependency-locking.test.py
     - python3 ci/tests/android-lint-codequality.test.py
+    - python3 ci/tests/build-debug.test.py
   artifacts:
     reports:
       junit:
@@ -673,6 +673,8 @@ test:unit:
           - "ci/tests/dependency-locking.test.py"
           - "ci/android-lint-codequality.py"
           - "ci/tests/android-lint-codequality.test.py"
+          - "ci/build-debug.sh"
+          - "ci/tests/build-debug.test.py"
           - ".gitlab-ci.yml"
 
 coverage:unit:
