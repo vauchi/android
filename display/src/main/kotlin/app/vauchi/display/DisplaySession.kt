@@ -6,12 +6,15 @@ package app.vauchi.display
 import app.vauchi.contract.Command
 import app.vauchi.contract.ContractJson
 import app.vauchi.contract.Event
+import app.vauchi.ui.presentation.OverlayKind
 import app.vauchi.ui.presentation.PresentationProtocol
 import app.vauchi.ui.presentation.PresentationReducer
 import app.vauchi.ui.presentation.PresentationState
+import app.vauchi.ui.presentation.RevisionedOverlay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import app.vauchi.contract.OverlayKind as ContractOverlayKind
 
 data class DisplayEffect(
     val token: ULong,
@@ -85,6 +88,21 @@ class DisplaySession(
             mutableState.value = current.copy(effects = current.effects.filterNot { it.token == token })
         }
     }
+
+    internal fun dismissOverlay(expected: RevisionedOverlay): Event? =
+        synchronized(monitor) {
+            val current = mutableState.value
+            if (current.presentation.activeOverlay != expected) return null
+            val kind =
+                when (expected.overlay.kind) {
+                    OverlayKind.Navigation -> ContractOverlayKind.Navigation
+                    OverlayKind.ActionMenu -> ContractOverlayKind.ActionMenu
+                    OverlayKind.Information -> ContractOverlayKind.Information
+                }
+            // OverlayDismissed acknowledges native removal; Core may return no command (private#1358).
+            mutableState.value = current.copy(presentation = current.presentation.copy(overlay = null))
+            Event.OverlayDismissed(kind, expected.surfaceId)
+        }
 
     internal fun release() {
         synchronized(monitor) {

@@ -87,9 +87,7 @@ fun DisplayContent(
                     onSurfaceActivated = { owner.report(Event.SurfaceActivated(it)) },
                     onCameraPermissionDenied = { owner.report(Event.PermissionDenied("camera")) },
                     onDismissOverlay = {
-                        state.activeOverlay?.let { overlay ->
-                            report(PresentationEvent.OverlayDismissed(overlay.surfaceId, overlay.overlay.kind))
-                        }
+                        state.activeOverlay?.let(owner::dismissOverlay)
                     },
                 )
             }

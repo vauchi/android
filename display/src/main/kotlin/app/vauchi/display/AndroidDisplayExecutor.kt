@@ -11,6 +11,7 @@ import app.vauchi.display.files.ActivityFilePickerHost
 import app.vauchi.display.files.AndroidFilePickerPort
 import app.vauchi.display.permissions.AndroidPermissionPort
 import app.vauchi.display.permissions.PermissionRequestHost
+import app.vauchi.ui.presentation.RevisionedOverlay
 
 /**
  * [onEvent] admits typed events to the host-owned bounded inbox; it must not
@@ -47,6 +48,12 @@ class AndroidDisplayExecutor(
             if (!closed) session.consumeEffect(token)
         }
     }
+
+    internal fun dismissOverlay(expected: RevisionedOverlay): Boolean =
+        synchronized(guard) {
+            if (closed) return false
+            session.dismissOverlay(expected)?.let(::report) ?: false
+        }
 
     fun report(event: Event): Boolean {
         val accepted =
