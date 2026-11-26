@@ -105,10 +105,10 @@ sealed interface PresentationEvent {
                 put("surface_id", surfaceId)
                 put(
                     "kind",
-                    if (kind == OverlayKind.Navigation) {
-                        "navigation"
-                    } else {
-                        "action_menu"
+                    when (kind) {
+                        OverlayKind.Navigation -> "navigation"
+                        OverlayKind.ActionMenu -> "action_menu"
+                        OverlayKind.Information -> "information"
                     },
                 )
             }
