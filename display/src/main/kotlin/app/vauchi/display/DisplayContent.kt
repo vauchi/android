@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -37,15 +38,22 @@ import kotlin.math.roundToInt
 /**
  * Renders the executor owned by the assembly; composition does not close it.
  * Events are admitted to that owner's host inbox, never dispatched to Core here.
+ * Supplying [previewHost] replaces legacy scanning with the prepared neutral
+ * viewport; hardware owns capture and reports its events independently.
  */
 @Composable
 fun DisplayContent(
     owner: AndroidDisplayExecutor,
     media: PresentationMedia,
     modifier: Modifier = Modifier,
+    previewHost: PreviewSurfaceHost? = null,
 ) {
     val snapshot by owner.state.collectAsState()
     val state = snapshot.presentation
+    val presentationMedia =
+        remember(owner, media, previewHost, snapshot.previewId) {
+            if (previewHost == null) media else NativePreviewMedia(snapshot.previewId, previewHost, media)
+        }
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val darkAppearance = isSystemInDarkTheme()
@@ -92,21 +100,23 @@ fun DisplayContent(
                 )
             }
         SurfaceTheme(state.surfaces[surfaceId]?.tokens?.colors) {
-            PresentationScreen(
-                state = state,
-                profile = profile,
-                activeSurfaceId = surfaceId,
-                reducedMotion = reducedMotion,
-                focusedBindingId = focusedBindingId,
-                onFocusedBinding = { binding, focused ->
-                    focusedBindingId = rememberFocusedBinding(focusedBindingId, binding, focused)
-                },
-                actions = actions,
-                media = media,
-                celebrating = effects.celebrating,
-                snackbarHost = { SnackbarHost(effects.snackbar) },
-                dialogs = { DisplayAlert(effects.alert, owner) },
-            )
+            key(owner) {
+                PresentationScreen(
+                    state = state,
+                    profile = profile,
+                    activeSurfaceId = surfaceId,
+                    reducedMotion = reducedMotion,
+                    focusedBindingId = focusedBindingId,
+                    onFocusedBinding = { binding, focused ->
+                        focusedBindingId = rememberFocusedBinding(focusedBindingId, binding, focused)
+                    },
+                    actions = actions,
+                    media = presentationMedia,
+                    celebrating = effects.celebrating,
+                    snackbarHost = { SnackbarHost(effects.snackbar) },
+                    dialogs = { DisplayAlert(effects.alert, owner) },
+                )
+            }
         }
     }
 }
