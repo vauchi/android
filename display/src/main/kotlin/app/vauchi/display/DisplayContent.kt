@@ -50,9 +50,15 @@ fun DisplayContent(
 ) {
     val snapshot by owner.state.collectAsState()
     val state = snapshot.presentation
+    val nativePreviewHost =
+        remember(owner, previewHost) {
+            previewHost?.let { host ->
+                ReportingPreviewSurfaceHost(host) { owner.report(Event.HardwareError(it, "camera")) }
+            }
+        }
     val presentationMedia =
-        remember(owner, media, previewHost, snapshot.previewId) {
-            if (previewHost == null) media else NativePreviewMedia(snapshot.previewId, previewHost, media)
+        remember(owner, media, nativePreviewHost, snapshot.previewId) {
+            if (nativePreviewHost == null) media else NativePreviewMedia(snapshot.previewId, nativePreviewHost, media)
         }
     val context = LocalContext.current
     val configuration = LocalConfiguration.current

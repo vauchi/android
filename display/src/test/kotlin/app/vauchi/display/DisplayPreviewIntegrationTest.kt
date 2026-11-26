@@ -15,9 +15,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import app.vauchi.contract.Command
+import app.vauchi.contract.Event
 import app.vauchi.ui.presentation.PresentationMedia
 import app.vauchi.ui.presentation.QrPlacement
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -122,6 +124,109 @@ class DisplayPreviewIntegrationTest {
                         host.events,
                     )
                 }
+            }
+        }
+    }
+
+    @Test
+    fun changingOnlyTheCodeAttachmentDoesNotRestartTheNativePreview() {
+        val host = Host()
+        val media = mutableStateOf<PresentationMedia>(TestMedia)
+        AndroidDisplayExecutor(context) { true }.use { owner ->
+            prepareDisplay(owner, CAPTURE_NODE)
+            owner.execute(Command.CameraViewport("stable-preview"))
+            compose.setContent { DisplayContent(owner, media.value, previewHost = host) }
+            compose.runOnIdle {
+                assertEquals(listOf("attach:stable-preview"), host.events)
+                media.value = object : PresentationMedia by TestMedia {}
+            }
+            compose.runOnIdle { assertEquals(listOf("attach:stable-preview"), host.events) }
+        }
+    }
+
+    @Test
+    fun aNativeAttachmentFailureReportsOnlyAFixedTypedErrorAndLeavesThePreparedScreen() {
+        val events = mutableListOf<Event>()
+        val host = PreviewSurfaceHost { _, _ -> throw IllegalStateException("private native detail") }
+        AndroidDisplayExecutor(context) { events.add(it) }.use { owner ->
+            prepareDisplay(owner, CAPTURE_NODE)
+            owner.execute(Command.CameraViewport("opaque-preview"))
+            compose.setContent { DisplayContent(owner, TestMedia, previewHost = host) }
+            compose.onNodeWithText("Prepared title").assertIsDisplayed()
+            compose.onNodeWithText("Native scan").assertDoesNotExist()
+            compose.runOnIdle {
+                assertEquals(
+                    listOf(Event.HardwareError("camera_preview_failed", "camera")),
+                    events.filterNot {
+                        it is Event.PresentationEnvironmentChanged
+                    },
+                )
+                assertEquals("opaque-preview", owner.state.value.previewId)
+            }
+        }
+    }
+
+    @Test
+    fun aRefusedNativeFailureClosesAdmissionWithoutThrowingOrRetainingThePreparedUi() {
+        val events = mutableListOf<Event>()
+        val host = PreviewSurfaceHost { _, _ -> throw IllegalStateException("private native detail") }
+        AndroidDisplayExecutor(context) { event ->
+            events.add(event)
+            event !is Event.HardwareError
+        }.use { owner ->
+            prepareDisplay(owner, CAPTURE_NODE)
+            owner.execute(Command.CameraViewport("opaque-preview"))
+            compose.setContent { DisplayContent(owner, TestMedia, previewHost = host) }
+            compose.onNodeWithText("Prepared title").assertDoesNotExist()
+            compose.runOnIdle {
+                assertEquals(
+                    listOf(Event.HardwareError("camera_preview_failed", "camera")),
+                    events.filterNot {
+                        it is Event.PresentationEnvironmentChanged
+                    },
+                )
+                assertEquals(DisplaySnapshot(), owner.state.value)
+                assertFalse(owner.execute(Command.CameraViewport("late-preview")))
+            }
+        }
+    }
+
+    @Test
+    fun cleanupFailureDoesNotPreventViewportReplacementOrEscapeOwnerClosure() {
+        val events = mutableListOf<Event>()
+        val native = mutableListOf<String>()
+        val host =
+            PreviewSurfaceHost { id, _ ->
+                native.add("attach:$id")
+                AutoCloseable {
+                    native.add("close:$id")
+                    throw IllegalStateException("private cleanup detail")
+                }
+            }
+        AndroidDisplayExecutor(context) { events.add(it) }.use { owner ->
+            prepareDisplay(owner, CAPTURE_NODE)
+            owner.execute(Command.CameraViewport("first"))
+            compose.setContent { DisplayContent(owner, TestMedia, previewHost = host) }
+            compose.runOnIdle { owner.execute(Command.CameraViewport("second")) }
+            compose.runOnIdle {
+                assertEquals(listOf("attach:first", "close:first", "attach:second"), native)
+                assertEquals(
+                    listOf(Event.HardwareError("camera_preview_cleanup_failed", "camera")),
+                    events.filterNot {
+                        it is Event.PresentationEnvironmentChanged
+                    },
+                )
+                owner.close()
+            }
+            compose.runOnIdle {
+                assertEquals(listOf("attach:first", "close:first", "attach:second", "close:second"), native)
+                assertEquals(
+                    listOf(Event.HardwareError("camera_preview_cleanup_failed", "camera")),
+                    events.filterNot {
+                        it is Event.PresentationEnvironmentChanged
+                    },
+                )
+                assertEquals(DisplaySnapshot(), owner.state.value)
             }
         }
     }
