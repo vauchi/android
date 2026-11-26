@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import app.vauchi.R
+import app.vauchi.display.R
 
 /**
  * Bricolage Grotesque (variable: opsz, wdth, wght) — the brand's display

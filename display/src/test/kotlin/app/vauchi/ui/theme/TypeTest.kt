@@ -6,7 +6,7 @@ package app.vauchi.ui.theme
 
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import app.vauchi.R
+import app.vauchi.display.R
 import app.vauchi.ui.presentation.TextRole
 import app.vauchi.ui.presentation.TextTypography
 import app.vauchi.ui.presentation.textRoleStyle
