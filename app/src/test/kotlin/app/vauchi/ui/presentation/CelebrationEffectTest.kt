@@ -38,7 +38,10 @@ class CelebrationEffectTest {
         scenario.onActivity { activity ->
             activity.setContent {
                 val celebrating = rememberCelebrating(request, reducedMotion = false) { request = null }
-                CelebrationFlash(visible = celebrating, tokens = DefaultPresentationTokens)
+                CelebrationFlash(
+                    visible = celebrating,
+                    tokens = PresentationTokens(4, 8, 16, 8, 48),
+                )
             }
         }
     }
