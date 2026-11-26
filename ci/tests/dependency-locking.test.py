@@ -22,7 +22,7 @@ class DependencyLockingTest(unittest.TestCase):
                 cwd=ROOT, capture_output=True, text=True, timeout=180, check=False,
             )
             self.assertNotEqual(0, result.returncode, "Gradle compiled without the app dependency lock")
-            self.assertIn("Locking is set to be strict", result.stderr)
+            self.assertIn("does not have lock state", result.stderr)
         finally:
             if original is not None:
                 lock.write_bytes(original)

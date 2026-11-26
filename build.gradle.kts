@@ -7,3 +7,10 @@ plugins {
     id("com.android.compose.screenshot") version "0.0.1-alpha13" apply false
     id("com.github.triplet.play") version "4.0.0" apply false
 }
+
+allprojects {
+    dependencyLocking {
+        lockAllConfigurations()
+        lockMode.set(LockMode.STRICT)
+    }
+}

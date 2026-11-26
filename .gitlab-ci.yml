@@ -545,7 +545,9 @@ lint:no-proprietary-deps:
       changes:
         compare_to: refs/heads/main
         paths:
-          - "app/build.gradle*"
+          - "**/build.gradle*"
+          - "**/gradle.lockfile"
+          - "settings.gradle*"
           - "build.gradle*"
           - "gradle/libs.versions.toml"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -576,7 +578,10 @@ build:debug:
           - "**/*.java"
           - "**/*.xml"
           - "build.gradle*"
-          - "app/build.gradle*"
+          - "**/build.gradle*"
+          - "**/gradle.lockfile"
+          - "settings.gradle*"
+          - "ci/tests/dependency-locking.test.py"
           - ".gitlab-ci.yml"
 
 build:release:
@@ -614,6 +619,7 @@ test:unit:
       artifacts: false  # Build cache on persistent disk handles reuse, not artifacts
   script:
     - ./gradlew test
+    - python3 ci/tests/dependency-locking.test.py
   artifacts:
     reports:
       junit: app/build/test-results/**/TEST-*.xml
@@ -626,7 +632,10 @@ test:unit:
           - "**/*.kt"
           - "**/*.java"
           - "build.gradle*"
-          - "app/build.gradle*"
+          - "**/build.gradle*"
+          - "**/gradle.lockfile"
+          - "settings.gradle*"
+          - "ci/tests/dependency-locking.test.py"
           - ".gitlab-ci.yml"
 
 coverage:unit:
@@ -779,7 +788,9 @@ test:screenshots:
           - "**/*.kt"
           - "**/*.java"
           - "build.gradle*"
-          - "app/build.gradle*"
+          - "**/build.gradle*"
+          - "**/gradle.lockfile"
+          - "settings.gradle*"
           - "gradle.properties"
           - ".gitlab-ci.yml"
     # Run on main too so the committed baselines upload to VRT every merge,
@@ -957,7 +968,9 @@ test:snapshots:record:
           - "**/*.kt"
           - "**/*.java"
           - "build.gradle*"
-          - "app/build.gradle*"
+          - "**/build.gradle*"
+          - "**/gradle.lockfile"
+          - "settings.gradle*"
           - "gradle.properties"
           - ".gitlab-ci.yml"
 
@@ -987,7 +1000,9 @@ gate:app-size:debug:
           - "**/*.java"
           - "**/*.xml"
           - "build.gradle*"
-          - "app/build.gradle*"
+          - "**/build.gradle*"
+          - "**/gradle.lockfile"
+          - "settings.gradle*"
           - ".gitlab-ci.yml"
 
 gate:app-size:release:
@@ -1031,7 +1046,9 @@ gemnasium-dependency_scanning:
         compare_to: refs/heads/main
         paths:
           - "build.gradle*"
-          - "app/build.gradle*"
+          - "**/build.gradle*"
+          - "**/gradle.lockfile"
+          - "settings.gradle*"
           - "gradle.properties"
           - ".gitlab-ci.yml"
     - if: $CI_PIPELINE_SOURCE == "schedule"

@@ -89,7 +89,7 @@ SPDX-License-Identifier = "Apache-2.0"
 
 # Android build files
 [[annotations]]
-path = ["**/*.kts", "**/proguard-rules.pro", "**/*.gradle", "**/*.properties"]
+path = ["**/*.kts", "**/proguard-rules.pro", "**/*.gradle", "**/*.properties", "**/gradle.lockfile", "gradle.lockfile"]
 SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
 
