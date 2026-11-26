@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import app.vauchi.contract.ContractJson
+import app.vauchi.contract.ContractJsonException
 import app.vauchi.contract.Event
 import app.vauchi.ui.presentation.PresentationEvent
 import app.vauchi.ui.presentation.PresentationMedia
@@ -54,7 +55,7 @@ fun DisplayContent(
         }.getOrDefault(false)
     val effects = rememberDisplayEffects(owner, snapshot.effects, reducedMotion)
     var focusedBindingId by rememberSaveable(owner) { mutableStateOf<String?>(null) }
-    val report: (PresentationEvent) -> Boolean = { owner.report(ContractJson.decodeEvent(it.toJson())) }
+    val report: (PresentationEvent) -> Boolean = { event -> decodeInput(owner, event)?.let(owner::report) ?: false }
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val width = maxWidth.value.roundToInt()
@@ -80,7 +81,8 @@ fun DisplayContent(
             remember(owner, state.activeOverlay) {
                 PresentationScreenActions(
                     onEvent = { target, event ->
-                        if (owner.report(Event.SurfaceActivated(target))) report(event)
+                        val input = decodeInput(owner, event)
+                        if (input != null && owner.report(Event.SurfaceActivated(target))) owner.report(input)
                     },
                     onSurfaceActivated = { owner.report(Event.SurfaceActivated(it)) },
                     onCameraPermissionDenied = { owner.report(Event.PermissionDenied("camera")) },
@@ -110,3 +112,14 @@ fun DisplayContent(
         }
     }
 }
+
+private fun decodeInput(
+    owner: AndroidDisplayExecutor,
+    event: PresentationEvent,
+): Event? =
+    try {
+        ContractJson.decodeEvent(event.toJson())
+    } catch (_: ContractJsonException) {
+        owner.close()
+        null
+    }
