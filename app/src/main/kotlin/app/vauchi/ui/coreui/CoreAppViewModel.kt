@@ -927,13 +927,12 @@ class CoreAppViewModel(
      */
     suspend fun onWakeup(): WakeupOutcome {
         val outcomeJson =
-            withContext(Dispatchers.IO) {
-                appEngine.onWakeup()
+            presentationMutex.withLock {
+                val envelope = withContext(Dispatchers.IO) { appEngine.onWakeup() }
+                applyPresentationEnvelope(envelope, source = "wakeup")
+                envelope
             }
         val outcome = json.decodeFromString<WakeupOutcome>(outcomeJson)
-        if (outcome.commands.isNotEmpty()) {
-            handleExchangeCommands(outcome.commands)
-        }
         loadInitialPresentation()
         return outcome
     }
