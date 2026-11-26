@@ -620,6 +620,8 @@ test:unit:
   script:
     - ./gradlew test
     - python3 ci/tests/dependency-locking.test.py
+    - python3 scripts/tests/check-display-boundary.test.py
+    - python3 scripts/check-display-boundary.py display
   artifacts:
     reports:
       junit: app/build/test-results/**/TEST-*.xml
