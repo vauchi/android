@@ -10,10 +10,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalView
-import app.vauchi.ui.coreui.CELEBRATION_BEAT_MILLIS
+import app.vauchi.display.CELEBRATION_BEAT_MILLIS
+import app.vauchi.display.celebrationAnimationPlays
+import app.vauchi.display.celebrationHapticFeedback
 import app.vauchi.ui.coreui.CelebrateRequest
-import app.vauchi.ui.coreui.celebrationAnimationPlays
-import app.vauchi.ui.coreui.celebrationHapticFeedback
 import kotlinx.coroutines.delay
 
 @Composable

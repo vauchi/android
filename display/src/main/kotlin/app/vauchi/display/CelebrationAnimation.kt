@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-package app.vauchi.ui.coreui
+package app.vauchi.display
 
 /** One beat: long enough to register, short enough never to outlive the moment. */
 const val CELEBRATION_BEAT_MILLIS = 600L
