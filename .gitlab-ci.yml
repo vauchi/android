@@ -375,8 +375,12 @@ lint:cross-cutting-blocking:
           check-no-direct-clipboard-writes.sh \
           check-no-domain-imports-in-views.sh \
           check-no-core-build.sh; do
+        script_ref="${VAUCHI_BOUNDARY_RULES_REF}"
+        if [ "$script" = check-no-core-build.sh ]; then
+          script_ref="${VAUCHI_SCRIPTS_REF}"
+        fi
         curl --silent --fail \
-          "${CI_API_V4_URL}/projects/vauchi%2Fscripts/repository/files/scripts%2F${script}/raw?ref=${VAUCHI_SCRIPTS_REF}" \
+          "${CI_API_V4_URL}/projects/vauchi%2Fscripts/repository/files/scripts%2F${script}/raw?ref=${script_ref}" \
           -o ".ratchet-scripts/${script}"
         chmod +x ".ratchet-scripts/${script}"
       done
