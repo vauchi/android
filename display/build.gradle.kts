@@ -29,6 +29,7 @@ dependencies {
     api("app.vauchi:contract:0.102.0")
     api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    api("androidx.activity:activity:1.9.3")
     implementation("com.google.zxing:core:3.5.4")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))

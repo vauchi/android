@@ -60,10 +60,6 @@ class DisplaySession(
                             pending.copy(previewId = command.previewId)
                         }
 
-                        is Command.CameraStop -> {
-                            pending.copy(previewId = pending.previewId.takeUnless { it == command.previewId })
-                        }
-
                         is Command.ShowToast,
                         is Command.PresentAlert,
                         is Command.Celebrate,

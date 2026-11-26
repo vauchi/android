@@ -13,6 +13,15 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class DisplaySessionTest {
+    @Test
+    fun hardwareCameraStopDoesNotCrossTheDisplayCommandBoundary() {
+        val session = DisplaySession { }
+        assertEquals(setOf(0), session.apply(listOf(Command.CameraViewport("opaque-preview"))))
+        val before = session.state.value
+        assertEquals(emptySet<Int>(), session.apply(listOf(Command.CameraStop("opaque-preview"))))
+        assertEquals(before, session.state.value)
+    }
+
     private fun surface(revision: ULong): Command =
         ContractJson.decodeCommand(
             """{"ReplaceSurface":{"surface":{"surface_id":"surface","revision":$revision,"title":"Title", "subtitle":null,
