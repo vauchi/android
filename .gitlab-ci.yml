@@ -568,12 +568,19 @@ build:debug:
   needs: []
   script:
     - ./gradlew assembleDebug lint
+    - python3 ci/android-lint-codequality.py --root .
+        app/build/reports/lint-results-debug.xml display/build/reports/lint-results-debug.xml
+        > gl-code-quality-report.json
   artifacts:
+    when: always
     paths:
       - app/build/outputs/apk/debug/
       - app/build/reports/lint-results-*.html
+      - app/build/reports/lint-results-*.xml
+      - display/build/reports/lint-results-*.html
+      - display/build/reports/lint-results-*.xml
     reports:
-      codequality: app/build/reports/lint-results-debug.xml
+      codequality: gl-code-quality-report.json
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -588,6 +595,8 @@ build:debug:
           - "**/gradle.lockfile"
           - "settings.gradle*"
           - "ci/tests/dependency-locking.test.py"
+          - "ci/android-lint-codequality.py"
+          - "ci/tests/android-lint-codequality.test.py"
           - ".gitlab-ci.yml"
 
 build:release:
@@ -643,9 +652,12 @@ test:unit:
   script:
     - ./gradlew test
     - python3 ci/tests/dependency-locking.test.py
+    - python3 ci/tests/android-lint-codequality.test.py
   artifacts:
     reports:
-      junit: app/build/test-results/**/TEST-*.xml
+      junit:
+        - app/build/test-results/**/TEST-*.xml
+        - display/build/test-results/**/TEST-*.xml
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -659,6 +671,8 @@ test:unit:
           - "**/gradle.lockfile"
           - "settings.gradle*"
           - "ci/tests/dependency-locking.test.py"
+          - "ci/android-lint-codequality.py"
+          - "ci/tests/android-lint-codequality.test.py"
           - ".gitlab-ci.yml"
 
 coverage:unit:
