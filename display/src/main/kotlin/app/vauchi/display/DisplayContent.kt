@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,6 +52,7 @@ fun DisplayContent(
         runCatching {
             Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
         }.getOrDefault(false)
+    val effects = rememberDisplayEffects(owner, snapshot.effects, reducedMotion)
     var focusedBindingId by rememberSaveable(owner) { mutableStateOf<String?>(null) }
     val report: (PresentationEvent) -> Boolean = { owner.report(ContractJson.decodeEvent(it.toJson())) }
 
@@ -67,7 +69,11 @@ fun DisplayContent(
             surfaceId?.let { owner.report(Event.BackRequested(it)) }
         }
         if (profile == null || surfaceId == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+                SnackbarHost(effects.snackbar, Modifier.align(Alignment.BottomCenter))
+            }
+            DisplayAlert(effects.alert, owner)
             return@BoxWithConstraints
         }
         val actions =
@@ -97,6 +103,9 @@ fun DisplayContent(
                 },
                 actions = actions,
                 media = media,
+                celebrating = effects.celebrating,
+                snackbarHost = { SnackbarHost(effects.snackbar) },
+                dialogs = { DisplayAlert(effects.alert, owner) },
             )
         }
     }
