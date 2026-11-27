@@ -76,7 +76,7 @@ class ActivityFileExportTest {
         val uri = send.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)!!
         assertEquals(uri, send.clipData!!.getItemAt(0).uri)
         assertEquals(1, send.clipData!!.itemCount)
-        assertEquals(Intent.FLAG_GRANT_READ_URI_PERMISSION, send.flags)
+        assertEquals(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK, send.flags)
         assertNull(send.component)
         assertNull(send.data)
         assertNull(send.getStringExtra(Intent.EXTRA_TEXT))
