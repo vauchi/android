@@ -6,6 +6,8 @@ package app.vauchi.display.files
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import app.vauchi.contract.FilePickFailure
+import app.vauchi.contract.FilePickOutcome
 
 /** A private proxy owns a native request code so cancellation can dismiss its child. */
 class DocumentPickerActivity : Activity() {
@@ -32,10 +34,7 @@ class DocumentPickerActivity : Activity() {
                 DOCUMENT,
             )
         } catch (_: Exception) {
-            pending.finish(
-                app.vauchi.contract.FilePickOutcome
-                    .Failed(app.vauchi.contract.FilePickFailure.ReadFailed),
-            )
+            pending.finish(FilePickOutcome.Failed(FilePickFailure.ReadFailed))
         }
     }
 
@@ -45,7 +44,13 @@ class DocumentPickerActivity : Activity() {
         data: Intent?,
     ) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == DOCUMENT) request?.selected(if (resultCode == RESULT_OK) data?.data else null)
+        if (requestCode != DOCUMENT) return
+        val uri = data?.data
+        when {
+            resultCode != RESULT_OK -> request?.selected(null)
+            uri == null -> request?.finish(FilePickOutcome.Failed(FilePickFailure.ReadFailed))
+            else -> request?.selected(uri)
+        }
     }
 
     internal fun dismissChild() {

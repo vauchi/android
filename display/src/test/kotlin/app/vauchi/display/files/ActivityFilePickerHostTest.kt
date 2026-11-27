@@ -93,6 +93,18 @@ class ActivityFilePickerHostTest {
     }
 
     @Test
+    fun successfulResultsWithoutAUriAreFailuresRatherThanUserCancellation() {
+        for ((index, data) in listOf(null, Intent()).withIndex()) {
+            host.pick(command, answers::add)
+            val (picker, native) = open()
+            shadowOf(picker).receiveResult(native, Activity.RESULT_OK, data)
+            shadowOf(picker).receiveResult(native, Activity.RESULT_OK, data)
+            assertEquals(List(index + 1) { FilePickOutcome.Failed(FilePickFailure.ReadFailed) }, answers)
+            assertTrue(picker.isFinishing)
+        }
+    }
+
+    @Test
     fun selectedContentIsReadOffTheUiThreadBeforeReturningTypedBytes() {
         host.pick(command, answers::add)
         val (picker, native) = open()
