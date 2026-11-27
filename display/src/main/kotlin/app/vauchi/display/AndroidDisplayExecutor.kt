@@ -17,6 +17,8 @@ import app.vauchi.display.permissions.PermissionRequestHost
 import app.vauchi.display.window.AndroidWindowPort
 import app.vauchi.display.window.WindowControlHost
 import app.vauchi.ui.presentation.RevisionedOverlay
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * [onEvent] admits typed events to the host-owned bounded inbox; it must not
@@ -39,6 +41,14 @@ class AndroidDisplayExecutor(
     private val externalIntents = AndroidExternalIntentPort(externalIntentHost, ::report)
     private val session = DisplaySession { report(it) }
     val state = session.state
+
+    suspend fun executeAsync(command: Command): Boolean {
+        currentCoroutineContext().ensureActive()
+        if (command !is Command.ExportFile) return execute(command)
+        if (synchronized(guard) { closed }) return false
+        report(Event.HardwareUnavailable("file_export"))
+        return true
+    }
 
     fun execute(command: Command): Boolean =
         synchronized(guard) {
