@@ -78,6 +78,40 @@ class FileExportCacheLimitsTest {
     }
 
     @Test
+    fun loweringTheFileLimitStillPrunesExpiredFilesFromEarlierValidHosts() {
+        var now = System.currentTimeMillis()
+        val previous =
+            rig.owner(
+                rig.host(FileExportLimits(maxFileBytes = 4, maxCacheBytes = 8, maxFiles = 2, retentionMillis = 10), { now }),
+            )
+        runBlocking {
+            assertTrue(previous.executeAsync(Command.ExportFile(rig.spec)))
+            val first = rig.takeUri()
+            assertTrue(previous.executeAsync(Command.ExportFile(rig.spec)))
+            val second = rig.takeUri()
+            for (file in rig.directory.listFiles()!!) assertTrue(file.setLastModified(now))
+            previous.close()
+            val current =
+                rig.owner(
+                    rig.host(FileExportLimits(maxFileBytes = 4, maxCacheBytes = 8, maxFiles = 1, retentionMillis = 10), { now }),
+                )
+            assertTrue(current.executeAsync(Command.ExportFile(rig.spec)))
+            assertEquals(listOf(Event.HardwareError("file_export_cache_full", "file_export")), rig.events)
+            assertNull(shadowOf(rig.activity).nextStartedActivity)
+            assertArrayEquals(byteArrayOf(0, -1, 3), rig.read(first))
+            assertArrayEquals(byteArrayOf(0, -1, 3), rig.read(second))
+            now += 11
+            assertTrue(current.executeAsync(Command.ExportFile(rig.spec)))
+            val replacement = rig.takeUri()
+            assertArrayEquals(byteArrayOf(0, -1, 3), rig.read(replacement))
+            assertEquals(1, rig.directory.listFiles()!!.size)
+            assertEquals(1, rig.events.size)
+            assertThrows(FileNotFoundException::class.java) { rig.read(first) }
+            assertThrows(FileNotFoundException::class.java) { rig.read(second) }
+        }
+    }
+
+    @Test
     fun byteQuotaNeverDeletesYoungSharedFiles() {
         val owner = rig.owner(rig.host(FileExportLimits(maxFileBytes = 4, maxCacheBytes = 5)))
         runBlocking {

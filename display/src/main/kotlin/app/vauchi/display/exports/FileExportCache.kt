@@ -87,7 +87,8 @@ internal class FileExportCache(
         size: Int,
     ) {
         val files = directory.listFiles() ?: throw FileExportFailure("file_export_cache_unavailable")
-        if (files.size > limits.maxFiles) throw FileExportFailure("file_export_cache_full")
+        // Earlier owners can have a larger quota; allow their expired files to retire (#773).
+        if (files.size > MAX_EXPORT_CACHE_FILES) throw FileExportFailure("file_export_cache_full")
         val now = clock()
         if (now < 0) throw FileExportFailure("file_export_cache_unavailable")
         var count = 0

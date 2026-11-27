@@ -5,6 +5,8 @@ package app.vauchi.display.exports
 
 import app.vauchi.contract.ExportFileSpec
 
+internal const val MAX_EXPORT_CACHE_FILES = 1024
+
 data class FileExportLimits(
     val maxFileBytes: Int = 128 * 1024 * 1024,
     val maxCacheBytes: Long = 256L * 1024 * 1024,
@@ -13,7 +15,7 @@ data class FileExportLimits(
 ) {
     init {
         require(maxFileBytes >= 0 && maxCacheBytes > 0 && maxCacheBytes >= maxFileBytes) { "Invalid export byte limits" }
-        require(maxFiles in 1..1024 && retentionMillis > 0) { "Invalid export cache limits" }
+        require(maxFiles in 1..MAX_EXPORT_CACHE_FILES && retentionMillis > 0) { "Invalid export cache limits" }
     }
 }
 
