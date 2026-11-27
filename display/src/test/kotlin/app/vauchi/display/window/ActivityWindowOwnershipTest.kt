@@ -21,6 +21,8 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 // Feature: generic_presentation_protocol.feature — native presentation ownership.
 @RunWith(RobolectricTestRunner::class)
@@ -78,5 +80,28 @@ class ActivityWindowOwnershipTest {
         assertEquals(0.24f, activity.window.attributes.screenBrightness)
         assertFalse(current.execute(Command.SetScreenBrightness(0.9f)))
         assertEquals(emptyList<Event>(), events)
+    }
+
+    @Test
+    fun aMainThreadRepeatCloseFinishesPendingWorkerRetirementBeforeHandoff() {
+        activity.window.attributes = activity.window.attributes.apply { screenBrightness = 0.24f }
+        val old = owner()
+        old.execute(Command.SetScreenBrightness(0.65f))
+        val worker = Executors.newSingleThreadExecutor()
+        try {
+            worker.submit { old.close() }.get(10, TimeUnit.SECONDS)
+            old.close()
+            val next = owner()
+            next.execute(Command.SetScreenBrightness(0.9f))
+            assertEquals(0.9f, activity.window.attributes.screenBrightness)
+            main.idle()
+            assertEquals(0.9f, activity.window.attributes.screenBrightness)
+            next.close()
+            main.idle()
+            assertEquals(0.24f, activity.window.attributes.screenBrightness)
+            assertEquals(emptyList<Event>(), events)
+        } finally {
+            worker.shutdownNow()
+        }
     }
 }

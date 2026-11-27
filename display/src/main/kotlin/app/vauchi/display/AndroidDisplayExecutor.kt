@@ -88,13 +88,19 @@ class AndroidDisplayExecutor(
     }
 
     override fun close() {
-        synchronized(guard) {
-            if (closed) return
-            closed = true
-            session.release()
-        }
+        val first =
+            synchronized(guard) {
+                if (closed) {
+                    false
+                } else {
+                    closed = true
+                    session.release()
+                    true
+                }
+            }
         // Retire the previous window before a same-frame display handoff (#773).
         if (Looper.myLooper() == Looper.getMainLooper()) windows.close()
+        if (!first) return
         main.execute {
             for (resource in listOf(permissions, files, windows)) {
                 try {
