@@ -8,6 +8,7 @@ import android.os.Looper
 import androidx.core.content.ContextCompat
 import app.vauchi.contract.Command
 import app.vauchi.contract.Event
+import app.vauchi.display.exports.ActivityFileExportHost
 import app.vauchi.display.files.ActivityFilePickerHost
 import app.vauchi.display.files.AndroidFilePickerPort
 import app.vauchi.display.intents.ActivityExternalIntentHost
@@ -30,6 +31,7 @@ class AndroidDisplayExecutor(
     filePickerHost: ActivityFilePickerHost? = null,
     windowHost: WindowControlHost? = null,
     externalIntentHost: ActivityExternalIntentHost? = null,
+    private val fileExportHost: ActivityFileExportHost? = null,
     private val onEvent: (Event) -> Boolean,
 ) : AutoCloseable {
     private val guard = Any()
@@ -46,7 +48,10 @@ class AndroidDisplayExecutor(
         currentCoroutineContext().ensureActive()
         if (command !is Command.ExportFile) return execute(command)
         if (synchronized(guard) { closed }) return false
-        report(Event.HardwareUnavailable("file_export"))
+        val host = fileExportHost
+        val failure = if (host == null) Event.HardwareUnavailable("file_export") else host.export(command.file)
+        currentCoroutineContext().ensureActive()
+        if (failure != null) report(failure)
         return true
     }
 
@@ -113,6 +118,7 @@ class AndroidDisplayExecutor(
                 }
             }
         externalIntents.close()
+        fileExportHost?.close()
         // Retire the previous window before a same-frame display handoff (#773).
         if (Looper.myLooper() == Looper.getMainLooper()) windows.close()
         if (!first) return

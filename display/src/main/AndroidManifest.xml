@@ -3,6 +3,15 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
+        <provider
+            android:name="app.vauchi.display.exports.ExportFileProvider"
+            android:authorities="${applicationId}.vauchi.display.exports"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/vauchi_display_export_paths" />
+        </provider>
         <activity
             android:name="app.vauchi.display.files.DocumentPickerActivity"
             android:excludeFromRecents="true"
