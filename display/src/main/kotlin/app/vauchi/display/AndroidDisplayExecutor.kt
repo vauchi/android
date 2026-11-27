@@ -10,6 +10,8 @@ import app.vauchi.contract.Command
 import app.vauchi.contract.Event
 import app.vauchi.display.files.ActivityFilePickerHost
 import app.vauchi.display.files.AndroidFilePickerPort
+import app.vauchi.display.intents.ActivityExternalIntentHost
+import app.vauchi.display.intents.AndroidExternalIntentPort
 import app.vauchi.display.permissions.AndroidPermissionPort
 import app.vauchi.display.permissions.PermissionRequestHost
 import app.vauchi.display.window.AndroidWindowPort
@@ -25,6 +27,7 @@ class AndroidDisplayExecutor(
     permissionHost: PermissionRequestHost? = null,
     filePickerHost: ActivityFilePickerHost? = null,
     windowHost: WindowControlHost? = null,
+    externalIntentHost: ActivityExternalIntentHost? = null,
     private val onEvent: (Event) -> Boolean,
 ) : AutoCloseable {
     private val guard = Any()
@@ -33,26 +36,16 @@ class AndroidDisplayExecutor(
     private val permissions = AndroidPermissionPort(context, permissionHost, ::report)
     private val files = AndroidFilePickerPort(filePickerHost, ::report)
     private val windows = AndroidWindowPort(windowHost, ::report)
+    private val externalIntents = AndroidExternalIntentPort(externalIntentHost, ::report)
     private val session = DisplaySession { report(it) }
     val state = session.state
 
     fun execute(command: Command): Boolean =
         synchronized(guard) {
             if (closed) return false
-            permissions.execute(command) || files.execute(command) || windows.execute(command) || externalIntent(command) ||
+            permissions.execute(command) || files.execute(command) || windows.execute(command) || externalIntents.execute(command) ||
                 session.apply(listOf(command)).contains(0)
         }
-
-    private fun externalIntent(command: Command): Boolean {
-        val transport =
-            when (command) {
-                is Command.OpenExternalUrl -> "external_url"
-                is Command.ShowShareSheet -> "share_sheet"
-                else -> return false
-            }
-        report(Event.HardwareUnavailable(transport))
-        return true
-    }
 
     fun publishCapabilities() {
         synchronized(guard) {
@@ -109,6 +102,7 @@ class AndroidDisplayExecutor(
                     true
                 }
             }
+        externalIntents.close()
         // Retire the previous window before a same-frame display handoff (#773).
         if (Looper.myLooper() == Looper.getMainLooper()) windows.close()
         if (!first) return
