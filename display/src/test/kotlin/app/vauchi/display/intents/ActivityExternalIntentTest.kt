@@ -13,6 +13,11 @@ import androidx.test.core.app.ApplicationProvider
 import app.vauchi.contract.Command
 import app.vauchi.contract.Event
 import app.vauchi.display.AndroidDisplayExecutor
+import io.kotest.property.Arb
+import io.kotest.property.arbitrary.element
+import io.kotest.property.arbitrary.string
+import io.kotest.property.checkAll
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -73,6 +78,38 @@ class ActivityExternalIntentTest {
         assertNull(shadowOf(activity).nextStartedActivity)
         assertEquals(before, owner.state.value)
         assertEquals(emptyList<Event>(), events)
+    }
+
+    @Test
+    fun generatedPreparedPayloadsRemainDataThroughBothNativeLaunches() {
+        val owner = owner()
+        runBlocking {
+            checkAll(
+                100,
+                Arb.string(0..128),
+                Arb.element("", "é🔐", "\u0000", "\"\\\n", "#Intent;component=other/.Private;end"),
+            ) { generated, edge ->
+                val url = "https://example.test/$generated$edge"
+                assertTrue(owner.execute(Command.OpenExternalUrl(url)))
+                val view = shadowOf(activity).nextStartedActivity
+                assertEquals(Intent.ACTION_VIEW, view.action)
+                assertEquals(url, view.data.toString())
+                assertNull(view.component)
+                assertNull(view.extras)
+                assertTrue(owner.execute(Command.ShowShareSheet(url)))
+                val chooser = shadowOf(activity).nextStartedActivity
+                assertEquals(Intent.ACTION_CHOOSER, chooser.action)
+                val send = chooser.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!
+                assertEquals(Intent.ACTION_SEND, send.action)
+                assertEquals(url, send.getStringExtra(Intent.EXTRA_TEXT))
+                assertNull(send.component)
+                assertNull(send.clipData!!.getItemAt(0).uri)
+                assertNull(send.clipData!!.getItemAt(0).intent)
+            }
+        }
+        assertNull(shadowOf(activity).nextStartedActivity)
+        assertEquals(emptyList<Event>(), events)
+        assertEquals(emptyList<Any>(), owner.state.value.effects)
     }
 
     @Test
