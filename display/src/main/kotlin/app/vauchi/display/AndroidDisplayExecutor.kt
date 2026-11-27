@@ -34,8 +34,21 @@ class AndroidDisplayExecutor(
     fun execute(command: Command): Boolean =
         synchronized(guard) {
             if (closed) return false
-            permissions.execute(command) || files.execute(command) || session.apply(listOf(command)).contains(0)
+            permissions.execute(command) || files.execute(command) || windowUnavailable(command) ||
+                session.apply(listOf(command)).contains(0)
         }
+
+    private fun windowUnavailable(command: Command): Boolean {
+        val transport =
+            when (command) {
+                is Command.SetScreenBrightness -> "screen_brightness"
+                is Command.SetIdleTimerDisabled -> "idle_timer"
+                is Command.SetOrientationLock -> "orientation_lock"
+                else -> return false
+            }
+        report(Event.HardwareUnavailable(transport))
+        return true
+    }
 
     fun publishCapabilities() {
         synchronized(guard) {
