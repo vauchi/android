@@ -5,7 +5,11 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    `maven-publish`
 }
+
+group = "app.vauchi"
+version = "0.1.0"
 
 android {
     namespace = "app.vauchi.display"
@@ -16,6 +20,9 @@ android {
     }
     buildFeatures { compose = true }
     testOptions { unitTests.isIncludeAndroidResources = true }
+    publishing {
+        singleVariant("release") { withSourcesJar() }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -55,4 +62,74 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+}
+
+val releaseVersion = version.toString()
+val releaseTag = providers.environmentVariable("CI_COMMIT_TAG").orElse("").get()
+val releaseProject = providers.environmentVariable("CI_PROJECT_PATH").orElse("").get()
+val releaseProjectId = providers.environmentVariable("CI_PROJECT_ID").orElse("").get()
+val releaseTokenPresent = providers.environmentVariable("CI_JOB_TOKEN").orElse("").get().isNotBlank()
+
+val verifyMavenRelease by tasks.registering {
+    inputs.properties(mapOf(
+        "version" to releaseVersion,
+        "tag" to releaseTag,
+        "project" to releaseProject,
+        "projectId" to releaseProjectId,
+        "tokenPresent" to releaseTokenPresent,
+    ))
+    doLast {
+        require(releaseVersion.matches(Regex("""(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"""))) {
+            "Maven releases require a stable semantic version"
+        }
+        require(releaseTag == "v$releaseVersion") { "Release tag must match v$releaseVersion" }
+        require(releaseProject == "vauchi/android-display") { "Publish only from vauchi/android-display" }
+        require(releaseProjectId.matches(Regex("[1-9][0-9]*"))) { "A GitLab project ID is required" }
+        require(releaseTokenPresent) { "A CI job token is required" }
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "Local"
+            url = file(providers.gradleProperty("vauchiPublicationDir").orElse(
+                layout.buildDirectory.dir("maven-repository").map { it.asFile.absolutePath },
+            ).get()).toURI()
+        }
+        maven {
+            name = "GitLab"
+            url = uri("https://gitlab.com/api/v4/projects/${releaseProjectId.ifEmpty { "0" }}/packages/maven")
+            credentials(HttpHeaderCredentials::class) {
+                name = "Job-Token"
+                value = providers.environmentVariable("CI_JOB_TOKEN").orNull
+            }
+            authentication { create<HttpHeaderAuthentication>("header") }
+        }
+    }
+    publications {
+        register<MavenPublication>("release") {
+            artifactId = "android-display"
+            pom {
+                name.set("Vauchi Android display")
+                description.set("Android display adapters for Vauchi's command/event contract")
+                url.set("https://gitlab.com/vauchi/android-display")
+                licenses {
+                    license {
+                        name.set("GPL-3.0-or-later")
+                        url.set("https://www.gnu.org/licenses/gpl-3.0.html")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:https://gitlab.com/vauchi/android-display.git")
+                    url.set("https://gitlab.com/vauchi/android-display")
+                }
+            }
+            afterEvaluate { from(components["release"]) }
+        }
+    }
+}
+
+tasks.withType<PublishToMavenRepository>().configureEach {
+    if (name.endsWith("ToGitLabRepository")) dependsOn(verifyMavenRelease)
 }

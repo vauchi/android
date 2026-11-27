@@ -646,6 +646,29 @@ lint:display-boundary:
         - scripts/tests/check-display-boundary.test.py
         - .gitlab-ci.yml
 
+test:display-publication:
+  extends: [.android-job, .timeout-standard]
+  stage: test
+  needs: []
+  script:
+    - ./gradlew --no-daemon --no-configuration-cache :display:publishReleasePublicationToLocalRepository
+    - 'VAUCHI_PUBLICATION_TASK_PREFIX=:display: bash display/publication-test/release-guards.sh'
+    - ./gradlew --no-daemon --no-configuration-cache -p display/publication-test compileDebugKotlin verifyPublishedDependencies
+    - ./gradlew --no-daemon --no-configuration-cache -p display/publication-test compileDebugKotlin verifyPublishedDependencies -PvauchiPomOnly=true --rerun-tasks
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - display/build/maven-repository/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - display/**/*
+        - build.gradle.kts
+        - settings.gradle.kts
+        - gradle.properties
+        - gradle/wrapper/**/*
+        - .gitlab-ci.yml
+
 test:unit:
   extends: [.android-job, .timeout-standard]
   stage: test
