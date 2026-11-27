@@ -37,6 +37,7 @@ class WindowLifecycleTest {
     private val activity = newActivity()
     private val main = shadowOf(Looper.getMainLooper())
     private val owners = mutableListOf<AndroidDisplayExecutor>()
+    private val ports = mutableListOf<AndroidWindowPort>()
     private val events = mutableListOf<Event>()
 
     private fun newActivity(): ComponentActivity =
@@ -52,6 +53,7 @@ class WindowLifecycleTest {
     @After
     fun release() {
         owners.forEach(AndroidDisplayExecutor::close)
+        ports.forEach(AndroidWindowPort::close)
         main.idle()
         for (controller in controllers) {
             val activity = controller.get()
@@ -155,6 +157,34 @@ class WindowLifecycleTest {
             assertFalse(owner.execute(Command.SetScreenBrightness(0.9f)))
             main.idle()
             assertEquals(0.24f, activity.window.attributes.screenBrightness)
+        } finally {
+            worker.shutdownNow()
+        }
+    }
+
+    @Test
+    fun aDirectPortWorkerCloseRefusesBeforeFencingItsMainThreadCleanup() {
+        activity.window.attributes = activity.window.attributes.apply { screenBrightness = 0.24f }
+        val port = AndroidWindowPort(ActivityWindowHost { activity }, events::add).also(ports::add)
+        port.execute(Command.SetScreenBrightness(0.65f))
+        val worker = Executors.newSingleThreadExecutor()
+        try {
+            val failure =
+                worker
+                    .submit<Exception?> {
+                        try {
+                            port.close()
+                            null
+                        } catch (error: Exception) {
+                            error
+                        }
+                    }.get(10, TimeUnit.SECONDS)
+            assertEquals(IllegalStateException::class.java, failure?.javaClass)
+            assertEquals("Window cleanup requires main thread", failure?.message)
+            assertEquals(0.65f, activity.window.attributes.screenBrightness)
+            port.close()
+            assertEquals(0.24f, activity.window.attributes.screenBrightness)
+            assertEquals(emptyList<Event>(), events)
         } finally {
             worker.shutdownNow()
         }

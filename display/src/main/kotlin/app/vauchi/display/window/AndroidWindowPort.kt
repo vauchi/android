@@ -3,9 +3,11 @@
 
 package app.vauchi.display.window
 
+import android.os.Looper
 import app.vauchi.contract.Command
 import app.vauchi.contract.Event
 
+/** Serialize calls with the display owner; native cleanup requires Android's main thread. */
 class AndroidWindowPort(
     private val host: WindowControlHost?,
     private val onEvent: (Event) -> Unit,
@@ -57,6 +59,7 @@ class AndroidWindowPort(
 
     override fun close() {
         if (closed) return
+        check(Looper.myLooper() == Looper.getMainLooper()) { "Window cleanup requires main thread" }
         closed = true
         try {
             host?.close()
