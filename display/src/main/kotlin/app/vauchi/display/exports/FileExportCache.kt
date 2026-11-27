@@ -11,6 +11,7 @@ import java.io.File
 import java.io.OutputStream
 import java.io.RandomAccessFile
 import java.nio.channels.OverlappingFileLockException
+import java.nio.file.Files
 
 internal class PreparedFileExport(
     val file: File,
@@ -86,7 +87,10 @@ internal class FileExportCache(
         directory: File,
         size: Int,
     ) {
-        val files = directory.listFiles() ?: throw FileExportFailure("file_export_cache_unavailable")
+        val files =
+            Files.newDirectoryStream(directory.toPath()).use { entries ->
+                entries.take(MAX_EXPORT_CACHE_FILES + 1).map { it.toFile() }
+            }
         // Earlier owners can have a larger quota; allow their expired files to retire (#773).
         if (files.size > MAX_EXPORT_CACHE_FILES) throw FileExportFailure("file_export_cache_full")
         val now = clock()
