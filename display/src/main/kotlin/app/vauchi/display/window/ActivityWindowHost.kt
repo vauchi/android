@@ -33,7 +33,7 @@ class ActivityWindowHost(
         if (closed) throw WindowHostUnavailable()
         try {
             val owner = activity() ?: throw WindowHostUnavailable()
-            if (owner.isDestroyed || owner.isFinishing || owner.lifecycle.currentState == Lifecycle.State.DESTROYED) {
+            if (closed || owner.isDestroyed || owner.isFinishing || owner.lifecycle.currentState == Lifecycle.State.DESTROYED) {
                 throw WindowHostUnavailable()
             }
             active?.let { if (!it.belongsTo(owner)) retire(it) }

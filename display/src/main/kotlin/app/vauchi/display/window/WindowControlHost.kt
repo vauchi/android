@@ -5,7 +5,7 @@ package app.vauchi.display.window
 
 import app.vauchi.contract.Orientation
 
-/** Native presentation changes and their outstanding restoration, owned by one display. */
+/** Main-thread native presentation changes and restoration, owned by one display. */
 interface WindowControlHost : AutoCloseable {
     fun setBrightness(level: Float?)
 

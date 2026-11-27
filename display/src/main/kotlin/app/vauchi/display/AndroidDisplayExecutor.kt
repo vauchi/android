@@ -4,6 +4,7 @@
 package app.vauchi.display
 
 import android.content.Context
+import android.os.Looper
 import androidx.core.content.ContextCompat
 import app.vauchi.contract.Command
 import app.vauchi.contract.Event
@@ -92,6 +93,8 @@ class AndroidDisplayExecutor(
             closed = true
             session.release()
         }
+        // Retire the previous window before a same-frame display handoff (#773).
+        if (Looper.myLooper() == Looper.getMainLooper()) windows.close()
         main.execute {
             for (resource in listOf(permissions, files, windows)) {
                 try {
