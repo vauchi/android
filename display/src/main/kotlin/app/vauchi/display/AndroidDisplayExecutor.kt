@@ -44,6 +44,11 @@ class AndroidDisplayExecutor(
     private val session = DisplaySession { report(it) }
     val state = session.state
 
+    /**
+     * File exports enter on Main with a stable read-only payload until return.
+     * Returns whether the command was handled; recipients own file delivery.
+     * Cancellation propagates. Other commands retain [execute]'s contract.
+     */
     suspend fun executeAsync(command: Command): Boolean {
         currentCoroutineContext().ensureActive()
         if (command !is Command.ExportFile) return execute(command)
