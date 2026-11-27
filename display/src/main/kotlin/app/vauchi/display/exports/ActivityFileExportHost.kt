@@ -53,7 +53,7 @@ class ActivityFileExportHost internal constructor(
                 requireActivity()
                 ExportMetadata.from(file, limits)
             } catch (error: FileExportFailure) {
-                return Event.HardwareError(error.code, "file_export")
+                return failureEvent(error)
             } catch (_: Exception) {
                 return Event.HardwareUnavailable("file_export")
             }
@@ -98,7 +98,7 @@ class ActivityFileExportHost internal constructor(
         } catch (error: CancellationException) {
             cancellation = error
         } catch (error: FileExportFailure) {
-            result = Event.HardwareError(error.code, "file_export")
+            result = failureEvent(error)
         } catch (_: Exception) {
             result = Event.HardwareError("file_export_failed", "file_export")
         } finally {
@@ -115,6 +115,15 @@ class ActivityFileExportHost internal constructor(
         cancellation?.let { throw it }
         return result
     }
+
+    private fun failureEvent(error: FileExportFailure): Event =
+        if (error.code ==
+            "file_export_unavailable"
+        ) {
+            Event.HardwareUnavailable("file_export")
+        } else {
+            Event.HardwareError(error.code, "file_export")
+        }
 
     private fun requireActivity(): ComponentActivity {
         val source = provider.get() ?: throw FileExportFailure("file_export_unavailable")
