@@ -39,9 +39,20 @@ class AndroidDisplayExecutor(
     fun execute(command: Command): Boolean =
         synchronized(guard) {
             if (closed) return false
-            permissions.execute(command) || files.execute(command) || windows.execute(command) ||
+            permissions.execute(command) || files.execute(command) || windows.execute(command) || externalIntent(command) ||
                 session.apply(listOf(command)).contains(0)
         }
+
+    private fun externalIntent(command: Command): Boolean {
+        val transport =
+            when (command) {
+                is Command.OpenExternalUrl -> "external_url"
+                is Command.ShowShareSheet -> "share_sheet"
+                else -> return false
+            }
+        report(Event.HardwareUnavailable(transport))
+        return true
+    }
 
     fun publishCapabilities() {
         synchronized(guard) {
