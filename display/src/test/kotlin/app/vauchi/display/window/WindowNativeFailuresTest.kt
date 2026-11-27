@@ -134,9 +134,13 @@ class WindowNativeFailuresTest {
     fun aFailingPermissionLeaseCannotCrashOrPreventWindowCleanup() {
         shadowOf(application).denyPermissions(Manifest.permission.CAMERA)
         activity.window.attributes = activity.window.attributes.apply { screenBrightness = 0.24f }
+        var releases = 0
         val permissionHost =
             PermissionRequestHost { _, _, _ ->
-                AutoCloseable { throw IllegalStateException("private native permission detail") }
+                AutoCloseable {
+                    releases++
+                    throw IllegalStateException("private native permission detail")
+                }
             }
         val old =
             AndroidDisplayExecutor(
@@ -148,6 +152,7 @@ class WindowNativeFailuresTest {
         old.execute(Command.SetScreenBrightness(0.65f))
         old.close()
         main.idle()
+        assertEquals(1, releases)
         assertEquals(0.24f, activity.window.attributes.screenBrightness)
         assertFalse(old.execute(Command.RequestPermission("camera")))
         val next = owner()
