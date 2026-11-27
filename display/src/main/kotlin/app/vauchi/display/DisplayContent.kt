@@ -48,12 +48,22 @@ fun DisplayContent(
     modifier: Modifier = Modifier,
     previewHost: PreviewSurfaceHost? = null,
 ) {
+    key(owner) { OwnedDisplayContent(owner, media, modifier, previewHost) }
+}
+
+@Composable
+private fun OwnedDisplayContent(
+    owner: AndroidDisplayExecutor,
+    media: PresentationMedia,
+    modifier: Modifier,
+    previewHost: PreviewSurfaceHost?,
+) {
     val snapshot by owner.state.collectAsState()
     val state = snapshot.presentation
     val nativePreviewHost =
         remember(owner, previewHost) {
             previewHost?.let { host ->
-                ReportingPreviewSurfaceHost(host) { owner.report(Event.HardwareError(it, "camera")) }
+                ReportingPreviewSurfaceHost(host, owner)
             }
         }
     val presentationMedia =
@@ -106,23 +116,21 @@ fun DisplayContent(
                 )
             }
         SurfaceTheme(state.surfaces[surfaceId]?.tokens?.colors) {
-            key(owner) {
-                PresentationScreen(
-                    state = state,
-                    profile = profile,
-                    activeSurfaceId = surfaceId,
-                    reducedMotion = reducedMotion,
-                    focusedBindingId = focusedBindingId,
-                    onFocusedBinding = { binding, focused ->
-                        focusedBindingId = rememberFocusedBinding(focusedBindingId, binding, focused)
-                    },
-                    actions = actions,
-                    media = presentationMedia,
-                    celebrating = effects.celebrating,
-                    snackbarHost = { SnackbarHost(effects.snackbar) },
-                    dialogs = { DisplayAlert(effects.alert, owner) },
-                )
-            }
+            PresentationScreen(
+                state = state,
+                profile = profile,
+                activeSurfaceId = surfaceId,
+                reducedMotion = reducedMotion,
+                focusedBindingId = focusedBindingId,
+                onFocusedBinding = { binding, focused ->
+                    focusedBindingId = rememberFocusedBinding(focusedBindingId, binding, focused)
+                },
+                actions = actions,
+                media = presentationMedia,
+                celebrating = effects.celebrating,
+                snackbarHost = { SnackbarHost(effects.snackbar) },
+                dialogs = { DisplayAlert(effects.alert, owner) },
+            )
         }
     }
 }

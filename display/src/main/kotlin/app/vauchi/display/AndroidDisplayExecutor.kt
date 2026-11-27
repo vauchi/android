@@ -55,6 +55,18 @@ class AndroidDisplayExecutor(
             session.dismissOverlay(expected)?.let(::report) ?: false
         }
 
+    internal fun acquirePreview(acquire: () -> AutoCloseable): AutoCloseable? =
+        synchronized(guard) {
+            if (closed) return null
+            val lease = acquire()
+            if (closed) {
+                lease.close()
+                null
+            } else {
+                lease
+            }
+        }
+
     fun report(event: Event): Boolean {
         val accepted =
             synchronized(guard) {

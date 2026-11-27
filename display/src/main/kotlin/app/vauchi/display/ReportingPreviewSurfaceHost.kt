@@ -4,26 +4,33 @@
 package app.vauchi.display
 
 import android.view.SurfaceView
+import app.vauchi.contract.Event
 
 internal class ReportingPreviewSurfaceHost(
     private val delegate: PreviewSurfaceHost,
-    private val reportFailure: (String) -> Unit,
+    private val owner: AndroidDisplayExecutor,
 ) : PreviewSurfaceHost {
     override fun attach(
         previewId: String,
         view: SurfaceView,
-    ): AutoCloseable =
-        try {
-            val lease = delegate.attach(previewId, view)
+    ): AutoCloseable {
+        val lease =
+            try {
+                owner.acquirePreview { delegate.attach(previewId, view) }
+            } catch (_: Exception) {
+                owner.report(Event.HardwareError("camera_preview_failed", "camera"))
+                null
+            }
+        return if (lease == null) {
+            AutoCloseable { }
+        } else {
             AutoCloseable {
                 try {
                     lease.close()
                 } catch (_: Exception) {
-                    reportFailure("camera_preview_cleanup_failed")
+                    owner.report(Event.HardwareError("camera_preview_cleanup_failed", "camera"))
                 }
             }
-        } catch (_: Exception) {
-            reportFailure("camera_preview_failed")
-            AutoCloseable { }
         }
+    }
 }
