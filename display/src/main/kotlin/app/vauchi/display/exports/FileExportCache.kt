@@ -12,7 +12,7 @@ import java.io.OutputStream
 import java.io.RandomAccessFile
 import java.nio.channels.OverlappingFileLockException
 
-internal data class PreparedFileExport(
+internal class PreparedFileExport(
     val file: File,
     val uri: Uri,
 )

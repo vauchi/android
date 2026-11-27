@@ -62,6 +62,7 @@ class ActivityFileExportHost internal constructor(
         if (!permit.tryAcquire()) return Event.HardwareError("file_export_busy", "file_export")
         val operation = Job(caller[Job])
         if (!active.compareAndSet(null, operation) || provider.get() == null) {
+            active.compareAndSet(operation, null)
             operation.complete()
             permit.release()
             return Event.HardwareUnavailable("file_export")

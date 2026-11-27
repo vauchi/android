@@ -17,7 +17,7 @@ data class FileExportLimits(
     }
 }
 
-internal data class ExportMetadata(
+internal class ExportMetadata(
     val name: String,
     val mime: String,
 ) {
