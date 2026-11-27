@@ -77,6 +77,7 @@ class ActivityFileExportHost internal constructor(
                     // Capture ownership before prompt cancellation can discard the IO result (#773).
                     prepared =
                         cache.prepare(file, metadata) {
+                            operation.ensureActive()
                             if (provider.get() == null ||
                                 Thread.currentThread().isInterrupted
                             ) {

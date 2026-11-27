@@ -136,6 +136,65 @@ class FileExportCancellationTest {
     }
 
     @Test
+    fun callerCancellationStopsFurtherChunksWhenNativeIoConsumesTheInterrupt() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val writes = AtomicInteger()
+        val writtenBytes = AtomicInteger()
+        val firstWriteBytes = AtomicInteger()
+        val owner =
+            rig.owner(
+                rig.host(openOutput = { file ->
+                    object : FilterOutputStream(FileOutputStream(file)) {
+                        override fun write(
+                            bytes: ByteArray,
+                            offset: Int,
+                            length: Int,
+                        ) {
+                            if (writes.incrementAndGet() == 1) {
+                                firstWriteBytes.set(length)
+                                entered.countDown()
+                                while (release.count > 0) {
+                                    try {
+                                        check(release.await(10, TimeUnit.SECONDS))
+                                    } catch (_: InterruptedException) {
+                                    }
+                                }
+                                Thread.interrupted()
+                            }
+                            out.write(bytes, offset, length)
+                            writtenBytes.addAndGet(length)
+                        }
+                    }
+                }),
+            )
+        runBlocking {
+            val file = rig.spec.copy(data = List(8193) { 1u.toUByte() })
+            val operation = async(start = CoroutineStart.UNDISPATCHED) { owner.executeAsync(Command.ExportFile(file)) }
+            try {
+                assertTrue(entered.await(10, TimeUnit.SECONDS))
+                operation.cancel()
+                release.countDown()
+                try {
+                    operation.await()
+                    fail("Caller cancellation must propagate")
+                } catch (_: CancellationException) {
+                }
+                assertTrue(operation.isCancelled)
+                assertEquals(1, writes.get())
+                assertEquals(firstWriteBytes.get(), writtenBytes.get())
+                assertEquals(emptyList<String>(), rig.directory.list()!!.toList())
+                assertNull(shadowOf(rig.activity).nextStartedActivity)
+                assertEquals(emptyList<Event>(), rig.events)
+            } finally {
+                release.countDown()
+                operation.cancel()
+                operation.join()
+            }
+        }
+    }
+
+    @Test
     fun cancellationAfterIoCompletesStillRemovesOutputBeforeAnyUiLaunch() {
         val executor = Executors.newSingleThreadExecutor()
         val dispatcher = executor.asCoroutineDispatcher()
