@@ -885,7 +885,7 @@ test:screen-catalog:
         "${CI_API_V4_URL}/projects/vauchi%2Fcontract/repository/files/ci%2Ffetch-screen-catalog.py/raw?ref=57defdf7231a592049a8fcab45cd8603e3ab5d40" \
         -o build/fetch-screen-catalog.py
       python3 build/fetch-screen-catalog.py app/build/screen_catalog_v1.json --assembly
-    - ./gradlew testDebugUnitTest --tests 'app.vauchi.screenshots.ScreenCatalogRenderTest' -Pvauchi.screenCatalog="${CI_PROJECT_DIR}/app/build/screen_catalog_v1.json"
+    - ./gradlew :app:testDebugUnitTest --tests 'app.vauchi.screenshots.ScreenCatalogRenderTest' -Pvauchi.screenCatalog="${CI_PROJECT_DIR}/app/build/screen_catalog_v1.json"
     # The test skips itself without a catalogue, so zero PNGs means the
     # property never reached the test JVM — fail, not pass.
     - |
