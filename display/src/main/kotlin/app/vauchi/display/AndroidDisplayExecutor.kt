@@ -11,6 +11,8 @@ import app.vauchi.display.files.ActivityFilePickerHost
 import app.vauchi.display.files.AndroidFilePickerPort
 import app.vauchi.display.permissions.AndroidPermissionPort
 import app.vauchi.display.permissions.PermissionRequestHost
+import app.vauchi.display.window.AndroidWindowPort
+import app.vauchi.display.window.WindowControlHost
 import app.vauchi.ui.presentation.RevisionedOverlay
 
 /**
@@ -21,6 +23,7 @@ class AndroidDisplayExecutor(
     context: Context,
     permissionHost: PermissionRequestHost? = null,
     filePickerHost: ActivityFilePickerHost? = null,
+    windowHost: WindowControlHost? = null,
     private val onEvent: (Event) -> Boolean,
 ) : AutoCloseable {
     private val guard = Any()
@@ -28,27 +31,16 @@ class AndroidDisplayExecutor(
     private var closed = false
     private val permissions = AndroidPermissionPort(context, permissionHost, ::report)
     private val files = AndroidFilePickerPort(filePickerHost, ::report)
+    private val windows = AndroidWindowPort(windowHost, ::report)
     private val session = DisplaySession { report(it) }
     val state = session.state
 
     fun execute(command: Command): Boolean =
         synchronized(guard) {
             if (closed) return false
-            permissions.execute(command) || files.execute(command) || windowUnavailable(command) ||
+            permissions.execute(command) || files.execute(command) || windows.execute(command) ||
                 session.apply(listOf(command)).contains(0)
         }
-
-    private fun windowUnavailable(command: Command): Boolean {
-        val transport =
-            when (command) {
-                is Command.SetScreenBrightness -> "screen_brightness"
-                is Command.SetIdleTimerDisabled -> "idle_timer"
-                is Command.SetOrientationLock -> "orientation_lock"
-                else -> return false
-            }
-        report(Event.HardwareUnavailable(transport))
-        return true
-    }
 
     fun publishCapabilities() {
         synchronized(guard) {
@@ -101,10 +93,12 @@ class AndroidDisplayExecutor(
             session.release()
         }
         main.execute {
-            try {
-                permissions.close()
-            } finally {
-                files.close()
+            for (resource in listOf(permissions, files, windows)) {
+                try {
+                    resource.close()
+                } catch (_: Exception) {
+                    // Closed owners cannot publish cleanup failures (#773).
+                }
             }
         }
     }
