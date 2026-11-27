@@ -11,6 +11,8 @@ import androidx.activity.ComponentActivity
 import app.vauchi.contract.Event
 import app.vauchi.contract.ExportFileSpec
 import app.vauchi.display.AndroidDisplayExecutor
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowContentResolver
@@ -39,8 +41,9 @@ internal class ExportTestRig : AutoCloseable {
         limits: FileExportLimits = FileExportLimits(),
         clock: () -> Long = System::currentTimeMillis,
         activity: () -> ComponentActivity? = { this.activity },
+        io: CoroutineDispatcher = Dispatchers.IO,
         openOutput: (File) -> OutputStream = ::FileOutputStream,
-    ): ActivityFileExportHost = ActivityFileExportHost(this.activity, activity, limits, clock, openOutput).also(hosts::add)
+    ): ActivityFileExportHost = ActivityFileExportHost(this.activity, activity, limits, clock, io, openOutput).also(hosts::add)
 
     fun owner(host: ActivityFileExportHost = host()): AndroidDisplayExecutor =
         AndroidDisplayExecutor(activity, fileExportHost = host) { events.add(it) }.also(owners::add)

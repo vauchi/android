@@ -12,6 +12,7 @@ import androidx.lifecycle.Lifecycle
 import app.vauchi.contract.Event
 import app.vauchi.contract.ExportFileSpec
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -35,10 +36,11 @@ class ActivityFileExportHost internal constructor(
     activity: () -> ComponentActivity?,
     private val limits: FileExportLimits,
     clock: () -> Long,
+    private val io: CoroutineDispatcher = Dispatchers.IO,
     openOutput: (File) -> OutputStream,
 ) : AutoCloseable {
     constructor(context: Context, activity: () -> ComponentActivity?, limits: FileExportLimits = FileExportLimits()) :
-        this(context, activity, limits, System::currentTimeMillis, ::FileOutputStream)
+        this(context, activity, limits, System::currentTimeMillis, Dispatchers.IO, ::FileOutputStream)
 
     private val provider = AtomicReference<(() -> ComponentActivity?)?>(activity)
     private val active = AtomicReference<Job?>(null)
@@ -70,7 +72,7 @@ class ActivityFileExportHost internal constructor(
         var cancellation: CancellationException? = null
         try {
             withContext(operation) {
-                runInterruptible(Dispatchers.IO) {
+                runInterruptible(io) {
                     // Capture ownership before prompt cancellation can discard the IO result (#773).
                     prepared =
                         cache.prepare(file, metadata) {
@@ -103,7 +105,7 @@ class ActivityFileExportHost internal constructor(
             result = Event.HardwareError("file_export_failed", "file_export")
         } finally {
             try {
-                if (!published) prepared?.let { output -> withContext(NonCancellable + Dispatchers.IO) { cache.discard(output.file) } }
+                if (!published) prepared?.let { output -> withContext(NonCancellable + io) { cache.discard(output.file) } }
             } catch (_: Exception) {
                 if (cancellation == null) result = Event.HardwareError("file_export_cleanup_failed", "file_export")
             } finally {
