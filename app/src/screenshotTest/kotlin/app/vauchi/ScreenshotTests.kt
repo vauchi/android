@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import app.vauchi.ui.SyncState
 import app.vauchi.ui.theme.VauchiTheme
 import com.android.tools.screenshot.PreviewTest
 import uniffi.vauchi_platform.MobileContactCard
